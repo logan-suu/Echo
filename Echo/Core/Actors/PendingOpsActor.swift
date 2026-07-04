@@ -61,11 +61,11 @@ public actor PendingOpsActor {
     /// 删除已完成的操作
     @discardableResult
     public func remove(operationId: String) async throws -> Bool {
-        try await db.executeWrite(
+        let changes = try await db.executeWrite(
             sql: "DELETE FROM PendingOperations WHERE operationId = ?",
             bindings: [.text(operationId)]
         )
-        return true
+        return changes > 0
     }
 
     /// 获取所有待重试操作

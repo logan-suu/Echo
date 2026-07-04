@@ -92,10 +92,10 @@ public actor ProgressActor {
     /// 删除指定任务的进度（US-SYS-001 AC-4：任务完成后立即删除）
     @discardableResult
     public func delete(taskId: String) async throws -> Bool {
-        try await db.executeWrite(
+        let changes = try await db.executeWrite(
             sql: "DELETE FROM TaskProgress WHERE taskId = ?",
             bindings: [.text(taskId)]
         )
-        return true
+        return changes > 0
     }
 }

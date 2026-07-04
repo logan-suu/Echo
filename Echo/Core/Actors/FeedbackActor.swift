@@ -150,10 +150,10 @@ public actor FeedbackActor {
     /// 撤销单条反馈（US-FBK-003）
     @discardableResult
     public func revoke(feedbackId: UUID) async throws -> Bool {
-        try await db.executeWrite(
+        let changes = try await db.executeWrite(
             sql: "DELETE FROM FeedbackStore WHERE feedbackId = ?",
             bindings: [.text(feedbackId.uuidString)]
         )
-        return true
+        return changes > 0
     }
 }
