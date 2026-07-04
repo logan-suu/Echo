@@ -55,7 +55,8 @@
           "id": "1.4",
           "title": "集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表",
           "story": null,
-          "status": "review",
+          "status": "done",
+          "merged_at": "2026-07-04T10:40:00Z",
           "pr": "https://github.com/LOGANSWP/Echo/pull/4",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
