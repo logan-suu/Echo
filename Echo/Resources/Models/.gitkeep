@@ -1,13 +1,13 @@
 # Echo Models Directory
 #
-# 此目录存放 v5.1 模型选型刷新后的三个端侧模型（随 App Bundle 分发）：
+# v5.1b 端侧模型（随 App Bundle 分发）：
 #
-#   MobileCLIP2-S4-Image.mlmodelc   (~420MB INT8)   - 视觉编码器（图像）
-#   MobileCLIP2-S4-Text.mlmodelc    (~120MB INT8)   - 视觉编码器（文本）
-#   Qwen3-Embedding-0.6B.mlmodelc   (~400MB INT4)   - 文本嵌入模型
-#   sensevoice-small-q4_k.gguf      (~129MB)        - ASR 语音转写
+#   MobileCLIP-B-lt_image.mlmodelc       (~165MB)    - 视觉编码器（图像）
+#   MobileCLIP-B-lt_text.mlmodelc        (~121MB)    - 视觉编码器（文本）
+#   MultilingualE5Small.mlmodelc         (~224MB)    - 文本嵌入模型
+#   SenseVoiceSmall_int8.mlmodelc        (~226MB)    - ASR（Core ML INT8）
+#   SenseVoicePreprocessor.mlmodelc      (~2.9MB)    - 语音预处理
+#   sensevoice-small-q4_k.gguf           (~144MB)    - ASR（GGUF 备选）
 #
-# 总计约 ~1,000MB（原 v4.6 方案 ~1,600MB，-37%）。
-#
-# 模型文件通过 Scripts/prepare_models.sh 脚本下载和转换。
-# 模型文件不入 Git（通过 .gitignore 排除），CI 环境通过脚本拉取。
+# 总计 ~883MB。
+# 模型通过 Scripts/prepare_models.sh 下载，不入 Git。

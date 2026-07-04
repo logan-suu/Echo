@@ -55,10 +55,10 @@ download_mobileclip() {
     fi
 
     log_info "  Downloading from apple/coreml-mobileclip ..."
-    HF_ENDPOINT=https://hf-mirror.com python3 -c "
+    HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" python3 -c "
 import os, shutil
 from huggingface_hub import snapshot_download
-target = '$MODELS_DIR'
+target = os.environ['MODELS_DIR']
 path = snapshot_download('apple/coreml-mobileclip', local_dir=os.path.join(target, '_tmp'), resume_download=True)
 for item in os.listdir(path):
     if 'mobileclip_blt' in item and item.endswith('.mlpackage'):
@@ -86,10 +86,10 @@ download_e5() {
     fi
 
     log_info "  Downloading from tamikisg/multilingual-e5-small-coreml ..."
-    HF_ENDPOINT=https://hf-mirror.com python3 -c "
+    HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" python3 -c "
 import os, shutil
 from huggingface_hub import snapshot_download
-target = '$MODELS_DIR'
+target = os.environ['MODELS_DIR']
 path = snapshot_download('tamikisg/multilingual-e5-small-coreml', local_dir=os.path.join(target, '_tmp'), resume_download=True)
 for item in os.listdir(path):
     if 'E5' in item and item.endswith('.mlpackage'):
@@ -120,10 +120,10 @@ download_sensevoice() {
     # CoreML
     if [ ! -d "$cml" ]; then
         log_info "  Downloading CoreML INT8 ..."
-        HF_ENDPOINT=https://hf-mirror.com python3 -c "
+        HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" python3 -c "
 import os, shutil
 from huggingface_hub import snapshot_download
-target = '$MODELS_DIR'
+target = os.environ['MODELS_DIR']
 path = snapshot_download('FluidInference/sensevoice-small-coreml', local_dir=os.path.join(target, '_tmp'), resume_download=True)
 for item in os.listdir(path):
     full = os.path.join(path, item)

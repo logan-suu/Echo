@@ -64,11 +64,3 @@ struct ModelBundleTests {
     }
 }
 
-// MARK: - Helpers
-
-private func fileSize(at url: URL) -> Int? {
-    guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .totalFileSizeKey]) else {
-        return nil
-    }
-    return values.totalFileSize ?? values.fileSize
-}
