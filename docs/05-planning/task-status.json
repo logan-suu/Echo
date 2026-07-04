@@ -47,7 +47,8 @@
           ],
           "dependencies": ["1.1"],
           "test_file": "EchoTests/VectorStoreActorTests.swift",
-          "notes": "使用 ProximaKit 1.7.0 替代 LanceDB Mobile（LanceDB 无官方 Swift SDK）。纯 Swift HNSW + 余弦相似度，零依赖，Actor 原生，21 个单元测试全部通过。"
+          "notes": "使用 ProximaKit 1.7.0 替代 LanceDB Mobile（LanceDB 无官方 Swift SDK）。纯 Swift HNSW + 余弦相似度，零依赖，Actor 原生，21 个单元测试全部通过。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/3"
         },
         {
           "id": "1.4",
