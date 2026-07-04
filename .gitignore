@@ -33,8 +33,6 @@ Echo/Resources/Models/*.aimodel/
 # Keep .gitkeep to preserve directory structure
 !Echo/Resources/Models/.gitkeep
 
-# Development/Ci source models (in ModelSources/)
-ModelSources/
 
 # Build artifacts
 *.ipa
