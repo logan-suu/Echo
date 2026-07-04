@@ -24,14 +24,14 @@ struct BundleModelManifest {
     /// 实际文件名以 prepare_models.sh 下载结果为准
     static let requiredModels: [(name: String, pathPattern: String, minSizeBytes: Int, format: String)] = [
         (
-            name: "MobileCLIP2-S4 (Visual Encoder)",
-            pathPattern: "MobileCLIP2-S4",
+            name: "MobileCLIP-B LT (Visual Encoder)",
+            pathPattern: "MobileCLIP-B-lt",
             minSizeBytes: 100_000_000,  // PyTorch ~1.7GB, Core ML INT8 ~420MB
             format: "Core ML (.mlmodelc/.mlpackage) or PyTorch (.pt)"
         ),
         (
-            name: "Qwen3-Embedding-0.6B (Text Embedding)",
-            pathPattern: "Qwen3-Embedding-0.6B",
+            name: "multilingual-e5-small (Text Embedding)",
+            pathPattern: "MultilingualE5Small",
             minSizeBytes: 100_000_000,  // CoreAI ~1.1GB, INT4 ~400MB
             format: "Core ML (.mlmodelc/.mlpackage) or CoreAI (.aimodel)"
         ),
@@ -51,9 +51,9 @@ struct BundleModelManifest {
 
 struct ModelBundleTests {
 
-    // MARK: AC-VISION: MobileCLIP2-S4 模型存在
+    // MARK: AC-VISION: MobileCLIP-B LT 模型存在
 
-    @Test func testMobileCLIP2S4ModelExists() async throws {
+    @Test func testMobileCLIPBLTModelExists() async throws {
         let model = BundleModelManifest.requiredModels[0]
         let found = findAnyModelResource(matching: model.pathPattern)
 
@@ -68,9 +68,9 @@ struct ModelBundleTests {
         }
     }
 
-    // MARK: AC-EMBED: Qwen3-Embedding-0.6B 模型存在
+    // MARK: AC-EMBED: multilingual-e5-small 模型存在
 
-    @Test func testQwen3EmbeddingModelExists() async throws {
+    @Test func testMultilingualE5SmallModelExists() async throws {
         let model = BundleModelManifest.requiredModels[2]
         let found = findModelResource(matching: model.pathPattern, format: "mlmodelc")
             ?? findModelResource(matching: model.pathPattern, format: "mlpackage")
@@ -148,7 +148,7 @@ struct ModelBundleTests {
     // MARK: 模型数量完整性
 
     @Test func testModelCountMatchesManifest() {
-        let expectedCount = 3  // MobileCLIP2-S4 + Qwen3-Embedding + SenseVoice
+        let expectedCount = 3  // MobileCLIP-B LT + multilingual-e5-small + SenseVoice
         let actualCount = BundleModelManifest.requiredModels.count
         #expect(actualCount == expectedCount,
                 "模型清单数量应为 \(expectedCount)，实际为 \(actualCount)")
