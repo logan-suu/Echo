@@ -7,7 +7,8 @@
     {
       "id": 1,
       "name": "基础设施搭建",
-      "status": "in_progress",
+          "status": "review",
+          "last_updated": "2026-07-04T19:20:00Z",
       "integration_test": "pending",
       "tasks": [
         {
@@ -69,7 +70,8 @@
           "id": "1.5",
           "title": "将 MobileCLIP2-S4, Qwen3-Embedding-0.6B, SenseVoice Small 模型打包到 Bundle",
           "story": null,
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-07-04T19:20:00Z",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md"
           ],
