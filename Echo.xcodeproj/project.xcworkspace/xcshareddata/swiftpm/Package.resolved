@@ -1,0 +1,15 @@
+{
+  "originHash" : "d45524dd1ad476e01e84cc58a2ac2c34caeef1db4fb8454ec041b10918d6138b",
+  "pins" : [
+    {
+      "identity" : "proximakit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/vivekptnk/ProximaKit.git",
+      "state" : {
+        "revision" : "aaaab80a377fdae4d9333d9332d8a51ccd14b6ec",
+        "version" : "1.7.0"
+      }
+    }
+  ],
+  "version" : 3
+}
