@@ -7,7 +7,8 @@
     {
       "id": 1,
       "name": "基础设施搭建",
-      "status": "in_progress",
+          "status": "review",
+          "last_updated": "2026-07-04T19:20:00Z",
       "integration_test": "pending",
       "tasks": [
         {
@@ -67,14 +68,17 @@
         },
         {
           "id": "1.5",
-          "title": "将 SigLIP, MobileCLIP, GTE-Qwen2, Whisper 模型打包到 Bundle",
+          "title": "将 MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small 模型打包到 Bundle",
           "story": null,
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-07-04T20:00:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/5",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md"
           ],
           "dependencies": [],
-          "test_file": "Tests/UnitTests/ModelBundleTests.swift"
+          "test_file": "EchoTests/ModelBundleTests.swift",
+          "notes": "v5.1b 最终可用方案 (2026-07-04): MobileCLIP-B LT (286MB) + multilingual-e5-small (224MB) + SenseVoice (373MB) = 883MB。MobileCLIP2-S4 + Qwen3-0.6B 标记为 Phase 2 优化目标。"
         },
         {
           "id": "1.6",

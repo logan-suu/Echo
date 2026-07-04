@@ -22,6 +22,18 @@ Packages/
 .AppleDouble
 .LSOverride
 
+# ==========================================
+# Model Files (large binaries, fetched via Scripts/prepare_models.sh)
+# ==========================================
+# Production bundle models (in Echo/Resources/Models/)
+Echo/Resources/Models/*.mlmodelc/
+Echo/Resources/Models/*.mlpackage/
+Echo/Resources/Models/*.gguf
+Echo/Resources/Models/*.aimodel/
+# Keep .gitkeep to preserve directory structure
+!Echo/Resources/Models/.gitkeep
+
+
 # Build artifacts
 *.ipa
 *.dSYM.zip

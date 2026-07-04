@@ -1,0 +1,13 @@
+# Echo Models Directory
+#
+# v5.1b 端侧模型（随 App Bundle 分发）：
+#
+#   MobileCLIP-B-lt_image.mlmodelc       (~165MB)    - 视觉编码器（图像）
+#   MobileCLIP-B-lt_text.mlmodelc        (~121MB)    - 视觉编码器（文本）
+#   MultilingualE5Small.mlmodelc         (~224MB)    - 文本嵌入模型
+#   SenseVoiceSmall_int8.mlmodelc        (~226MB)    - ASR（Core ML INT8）
+#   SenseVoicePreprocessor.mlmodelc      (~2.9MB)    - 语音预处理
+#   sensevoice-small-q4_k.gguf           (~144MB)    - ASR（GGUF 备选）
+#
+# 总计 ~883MB。
+# 模型通过 Scripts/prepare_models.sh 下载，不入 Git。
