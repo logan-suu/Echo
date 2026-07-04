@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-04T10:00:00Z",
+  "last_updated": "2026-07-04T10:05:00Z",
   "current_phase": 1,
   "phases": [
     {
@@ -56,6 +56,7 @@
           "title": "集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表",
           "story": null,
           "status": "review",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/4",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/01-spec/用户故事与验收标准规格书.md"
