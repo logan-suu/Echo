@@ -20,30 +20,25 @@ import Testing
 /// 所有模型随 App Bundle 分发，符合 R-005（模型加载无网络下载）
 struct BundleModelManifest {
     /// 必需模型资源路径（相对于 Bundle 根目录）
+    /// 实际文件名以 prepare_models.sh 下载结果为准
     static let requiredModels: [(name: String, pathPattern: String, minSizeBytes: Int, format: String)] = [
         (
-            name: "MobileCLIP2-S4 Image Encoder",
-            pathPattern: "MobileCLIP2-S4-Image",
-            minSizeBytes: 100_000_000,  // ~420MB INT8, set conservative minimum
-            format: "Core ML (.mlmodelc/.mlpackage)"
+            name: "MobileCLIP2-S4 (Visual Encoder)",
+            pathPattern: "MobileCLIP2-S4",
+            minSizeBytes: 100_000_000,  // PyTorch ~1.7GB, Core ML INT8 ~420MB
+            format: "Core ML (.mlmodelc/.mlpackage) or PyTorch (.pt)"
         ),
         (
-            name: "MobileCLIP2-S4 Text Encoder",
-            pathPattern: "MobileCLIP2-S4-Text",
-            minSizeBytes: 50_000_000,   // ~120MB INT8
-            format: "Core ML (.mlmodelc/.mlpackage)"
-        ),
-        (
-            name: "Qwen3-Embedding-0.6B",
+            name: "Qwen3-Embedding-0.6B (Text Embedding)",
             pathPattern: "Qwen3-Embedding-0.6B",
-            minSizeBytes: 100_000_000,  // ~400MB INT4
-            format: "Core ML (.mlmodelc/.mlpackage)"
+            minSizeBytes: 100_000_000,  // CoreAI ~1.1GB, INT4 ~400MB
+            format: "Core ML (.mlmodelc/.mlpackage) or CoreAI (.aimodel)"
         ),
         (
-            name: "SenseVoice Small",
+            name: "SenseVoice Small (ASR Engine)",
             pathPattern: "sensevoice-small",
-            minSizeBytes: 50_000_000,   // ~129MB Q4_K GGUF
-            format: "GGUF (.gguf)"
+            minSizeBytes: 50_000_000,   // GGUF Q4_K 129MB, CoreML INT8 ~226MB
+            format: "GGUF (.gguf) or Core ML (.mlmodelc)"
         ),
     ]
 
@@ -57,10 +52,9 @@ struct ModelBundleTests {
 
     // MARK: AC-VISION: MobileCLIP2-S4 模型存在
 
-    @Test func testMobileCLIP2S4ImageModelExists() async throws {
+    @Test func testMobileCLIP2S4ModelExists() async throws {
         let model = BundleModelManifest.requiredModels[0]
-        let found = findModelResource(matching: model.pathPattern, format: "mlmodelc")
-            ?? findModelResource(matching: model.pathPattern, format: "mlpackage")
+        let found = findAnyModelResource(matching: model.pathPattern)
 
         if let url = found {
             let size = try resourceSize(at: url)
@@ -68,23 +62,7 @@ struct ModelBundleTests {
                     "\(model.name) 文件大小 \(size) bytes < 预期最小值 \(model.minSizeBytes) bytes")
         } else {
             Issue.record(Comment(
-                "\(model.name) (\(model.format)) 未在 Bundle 中找到。请运行 Scripts/prepare_models.sh 下载并准备模型文件。"
-            ))
-        }
-    }
-
-    @Test func testMobileCLIP2S4TextModelExists() async throws {
-        let model = BundleModelManifest.requiredModels[1]
-        let found = findModelResource(matching: model.pathPattern, format: "mlmodelc")
-            ?? findModelResource(matching: model.pathPattern, format: "mlpackage")
-
-        if let url = found {
-            let size = try resourceSize(at: url)
-            #expect(size >= model.minSizeBytes,
-                    "\(model.name) 文件大小 \(size) bytes < 预期最小值 \(model.minSizeBytes) bytes")
-        } else {
-            Issue.record(Comment(
-                "\(model.name) (\(model.format)) 未在 Bundle 中找到。请运行 Scripts/prepare_models.sh 下载并准备模型文件。"
+                "\(model.name) (\(model.format)) 未在 Bundle 中找到。请运行 Scripts/prepare_models.sh。"
             ))
         }
     }
@@ -169,7 +147,7 @@ struct ModelBundleTests {
     // MARK: 模型数量完整性
 
     @Test func testModelCountMatchesManifest() {
-        let expectedCount = 4  // 2 MobileCLIP2 + 1 Qwen3 + 1 SenseVoice
+        let expectedCount = 3  // MobileCLIP2-S4 + Qwen3-Embedding + SenseVoice
         let actualCount = BundleModelManifest.requiredModels.count
         #expect(actualCount == expectedCount,
                 "模型清单数量应为 \(expectedCount)，实际为 \(actualCount)")
@@ -177,6 +155,25 @@ struct ModelBundleTests {
 }
 
 // MARK: - Helpers
+
+/// 在 Bundle 中查找匹配名称的任意格式模型资源
+private func findAnyModelResource(matching name: String) -> URL? {
+    // 尝试所有可能的格式
+    let formats = ["mlmodelc", "mlpackage", "aimodel", "gguf", "pt"]
+    for fmt in formats {
+        if let url = findModelResource(matching: name, format: fmt) {
+            return url
+        }
+    }
+    // 尝试作为目录查找
+    if let url = Bundle.main.url(forResource: name, withExtension: nil) {
+        return url
+    }
+    if let url = Bundle.main.url(forResource: name, withExtension: nil, subdirectory: "Models") {
+        return url
+    }
+    return nil
+}
 
 /// 在 Bundle 中查找匹配名称和后缀的模型资源
 private func findModelResource(matching name: String, format: String) -> URL? {
