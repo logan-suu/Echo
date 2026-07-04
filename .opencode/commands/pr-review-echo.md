@@ -12,7 +12,7 @@ agent: build
    - 如果用户提供了 PR 编号（如 `pr-review-echo 42`），直接使用。
    - 如果未提供，检查当前分支是否有对应的 PR（通过 GitHub API `GET /repos/:owner/:repo/pulls?head=:head`）。
    - 如果有 PR，自动使用该编号。
-   - 如果都没有，提示用户输入 PR 编号或确认使用 `git diff` 对比本地分支与 main。
+    - 如果都没有，提示用户输入 PR 编号或确认使用 `git diff` 对比本地分支与 dev-1.0。
 2. 使用 **GitHub API**（优先）或 `git diff` 获取变更文件列表。
 3. **审查范围**：
    - 仅审查 **新增或修改** 的文件（`git diff --name-only --diff-filter=AM`）。
