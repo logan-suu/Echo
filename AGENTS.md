@@ -116,7 +116,7 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 | UI 框架    | SwiftUI + `@Observable` (iOS 18 Observation) | 最低 iOS 18.0                       |
 | 并发模型   | Swift Concurrency (Actor, Task, AsyncStream) | 禁止 GCD/Combine                    |
 | 状态管理   | `@Observable` ViewModel                      | 禁止手动 `objectWillChange.send()`  |
-| 向量数据库 | LanceDB Mobile                               | 随 App 打包                         |
+| 向量数据库 | ProximaKit 1.7 (HNSW)                        | 通过 VectorStoreActor 封装          |
 | 关系数据库 | SQLite (通过 GRDB 或原生)                    | 表结构见规格书附录                  |
 | 推理引擎   | Core ML (主力) + Whisper.cpp (ASR 专用)      | Core ML 模型随 App 打包             |
 | 模型格式   | Core ML (.mlmodelc) + GGUF (Whisper)         | 禁止运行时转换                      |
@@ -325,7 +325,7 @@ Pipeline 契约:
 
 ```yaml
 Actor 契约:
-  - 可变状态封装: 所有 SQLite/LanceDB 写操作封装在 Actor 中
+  - 可变状态封装: 所有 SQLite/VectorStoreActor 写操作封装在 Actor 中
   - 串行执行: 同一 Actor 的操作串行执行，无数据竞争
   - 仅值类型传递: 跨 Actor 传递参数必须为 Sendable 值类型
   - 禁止闭包传递: 跨 Actor 禁止传递闭包作为参数
@@ -339,7 +339,7 @@ Actor 契约:
 ```yaml
 TaskQueue 契约:
   - 串行执行: 索引构建与数据同步必须串行，通过 TaskQueueActor
-  - 入队所有写入任务: 任何写入 LanceDB 的长任务必须入队
+  - 入队所有写入任务: 任何写入 VectorStoreActor 的长任务必须入队
   - 支持暂停/取消: 任务实现 Cancellable 协议
   - 进度报告: 通过 ProgressActor 持久化到 SQLite TaskProgress 表
   - 完成后清理: 任务完成或失败后删除 TaskProgress 记录
@@ -359,7 +359,7 @@ TaskQueue 契约:
 
 ```yaml
 断点续传契约:
-  - 进度存储: 使用 SQLite TaskProgress 表 (独立于 LanceDB)
+  - 进度存储: 使用 SQLite TaskProgress 表 (独立于向量存储)
   - 存储内容: taskId, taskType, lastProcessedIndex, totalCount, resumeData
   - 原子写入: 使用事务确保进度不丢失
   - 自动清理: 任务完成后立即删除记录
@@ -375,7 +375,7 @@ TaskQueue 契约:
 
 | 存储类型                   | 用途                    | 封装 Actor            |
 | -------------------------- | ----------------------- | --------------------- |
-| LanceDB                    | 768 维向量存储与检索    | `VectorStoreActor`    |
+| ProximaKit HNSW (via VectorStoreActor) | 768 维向量存储与检索    | `VectorStoreActor`    |
 | SQLite - ExcludedAssets    | 用户排除的资产 ID       | `ExcludedAssetsActor` |
 | SQLite - FeedbackStore     | 点赞/点踩/Bad Case 反馈 | `FeedbackActor`       |
 | SQLite - TaskProgress      | 断点续传进度            | `ProgressActor`       |
