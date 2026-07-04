@@ -572,36 +572,6 @@
         "AI Native 手册 §1: 人机协同门禁示例从 'PR 要求人类 reviewer' 改为 'PR 合并需人类手动执行'",
         "AI Native 手册 §4.3: 代码审查场景描述更新，反映 CI 自动批准机制"
       ]
-    },
-    {
-      "id": "ADR-001",
-      "date": "2026-07-04T10:45:00Z",
-      "title": "选择系统 SQLite3 而非 GRDB.swift",
-      "description": "Task 1.4 SQLite 集成：在系统 SQLite3（零外部依赖，Actor 串行隔离）和 GRDB.swift（类型安全 ORM，额外 SPM 依赖）之间选择。",
-      "status": "accepted",
-      "decision_maker": "AI Agent (Task 1.4)",
-      "resolution": "选择系统 SQLite3，通过 DatabaseManager actor 集中管理 SQL 执行。",
-      "file": "docs/decisions/ADR-001-system-sqlite3.md"
-    },
-    {
-      "id": "ADR-002",
-      "date": "2026-07-04T10:45:00Z",
-      "title": "MainActor 隔离下的 nonisolated 模型属性标注策略",
-      "description": "SWIFT_DEFAULT_ACTOR_ISOLATION=MainActor 导致 Sendable struct 的属性和 init 被自动 MainActor 隔离，无法在 actor 上下文中自由传递。",
-      "status": "accepted",
-      "decision_maker": "AI Agent (Task 1.4)",
-      "resolution": "所有数据 struct 的属性和 init 显式标注 nonisolated，暂时移除 Equatable 遵循。",
-      "file": "docs/decisions/ADR-002-nonisolated-model-properties.md"
-    },
-    {
-      "id": "ADR-003",
-      "date": "2026-07-04T11:00:00Z",
-      "title": "DatabaseManager 集中式 SQL 执行 —— 不跨 Actor 传递 OpaquePointer",
-      "description": "SQLite statement handle (OpaquePointer) 非 Sendable，无法跨 Actor 传递。Swift 6 strict-concurrency 编译报错。",
-      "status": "accepted",
-      "decision_maker": "AI Agent (Task 1.4)",
-      "resolution": "所有 SQL 生命周期（prepare→bind→step→finalize）在 DatabaseManager actor 内部完成，跨边界仅传递 Sendable 值类型 DBBinding/DBValue。",
-      "file": "docs/decisions/ADR-003-centralized-sql-execution.md"
     }
   ]
 }
