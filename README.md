@@ -264,6 +264,6 @@ swift test --filter IntegrationTests
 
 **文档维护声明**
 
-本 README 与 Echo v4.6 全量规格书、AGENTS.md v5.5 及所有 docs/ 文档协同维护。任何重大变更需同步更新本文档。
+本 README 与 Echo v4.6 全量规格书、AGENTS.md v5.7 及所有 docs/ 文档协同维护。任何重大变更需同步更新本文档。
 
 **下次全面复审日期**：2026-07-16（与开发计划阶段1结束同步）

@@ -843,7 +843,7 @@ stateDiagram-v2
     in_progress --> blocked: 发现文档问题
     blocked --> in_progress: 人类决策后继续
     in_progress --> review: 代码完成，PR 提交
-    review --> approved: 人类审查通过
+    review --> approved: CI + 门禁通过
     approved --> merged: 人类手动合并
     merged --> done
     done --> [*]
@@ -858,7 +858,7 @@ stateDiagram-v2
 | `in_progress` | Agent 正在执行        | Agent 自动        |
 | `blocked`     | 等待人类决策          | Agent 自动 + 人类 |
 | `review`      | PR 已提交，等待审查   | Agent 自动        |
-| `approved`    | PR 已获批准，等待合并 | 人类              |
+| `approved`    | PR 已获批准，等待合并 | Agent 自动 (CI)   |
 | `merged`      | PR 已合并             | 人类              |
 | `done`        | 任务完成              | 人类              |
 
