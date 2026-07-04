@@ -1,6 +1,10 @@
 # OpenCode agent runtime data
 .omo/
 
+# Legacy tool artifacts (not used)
+.codex/
+.codegraph/
+
 # Xcode
 *.xcuserdata
 *.xcworkspace/xcuserdata/
