@@ -11,6 +11,8 @@ import SwiftUI
 
 @main
 struct EchoApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
         WindowGroup {
             ContentView()

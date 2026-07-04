@@ -20,7 +20,7 @@
             "AGENTS.md"
           ],
           "dependencies": [],
-          "test_file": "Tests/UnitTests/ProjectConfigTests.swift"
+          "test_file": "EchoTests/ProjectConfigTests.swift"
         },
         {
           "id": "1.2",
