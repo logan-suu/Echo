@@ -70,8 +70,9 @@
           "id": "1.5",
           "title": "将 MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small 模型打包到 Bundle",
           "story": null,
-          "status": "review",
-          "last_updated": "2026-07-04T20:00:00Z",
+          "status": "done",
+          "last_updated": "2026-07-04T21:10:00Z",
+          "merged_at": "2026-07-04T21:10:00Z",
           "pr": "https://github.com/LOGANSWP/Echo/pull/5",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md"
