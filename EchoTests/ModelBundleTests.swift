@@ -1,14 +1,15 @@
 // ==========================================
 // 文件: ModelBundleTests.swift
-// 对应规格: docs/02-architecture/技术选型文档.md v5.1 §1~3
-// 任务: 1.5 - 将 MobileCLIP2-S4, Qwen3-Embedding-0.6B, SenseVoice Small 模型打包到 Bundle
+// 对应规格: docs/02-architecture/技术选型文档.md v5.1b §1~3
+// 任务: 1.5 - 将 MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small 模型打包到 Bundle
 // AC 覆盖:
-//   - AC-VISION: MobileCLIP2-S4 (image + text) Core ML 模型存在于 Bundle
-//   - AC-EMBED: Qwen3-Embedding-0.6B Core ML 模型存在于 Bundle
-//   - AC-ASR: SenseVoice Small GGUF 模型存在于 Bundle
+//   - AC-VISION: MobileCLIP-B LT (image + text) Core ML 模型存在于 Bundle
+//   - AC-EMBED: multilingual-e5-small Core ML 模型存在于 Bundle
+//   - AC-ASR: SenseVoice Small (CoreML + GGUF) 模型存在于 Bundle
 //   - AC-NO-NETWORK: 所有模型通过 Bundle 加载，不发起网络请求 (R-005)
 // 架构约束: 遵循 AGENTS.md §1.2 R-005 (模型加载无网络下载)
 // 生成时间: 2026-07-04
+// 更新: v5.1b — 最终可用方案
 // ==========================================
 
 import Foundation

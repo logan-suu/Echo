@@ -98,7 +98,7 @@ Echo/
 │   ├── ViewModels/
 │   └── Views/
 ├── Resources/
-│   ├── Models/ (MobileCLIP2-S4, Qwen3-Embedding-0.6B, SenseVoice Small)
+│   ├── Models/ (MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small)
 │   └── StringCatalog/
 ├── Tests/
 │   ├── UnitTests/
