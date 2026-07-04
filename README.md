@@ -65,7 +65,7 @@ flowchart TB
 | UI 框架    | SwiftUI + `@Observable` (iOS 18 Observation) |
 | 并发模型   | Swift Concurrency (Actor, Task, AsyncStream) |
 | 向量数据库 | ProximaKit 1.7 (HNSW)                        |
-| 关系数据库 | SQLite (GRDB)                                |
+| 关系数据库 | SQLite3 (系统内置)                          |
 | 推理引擎   | Core ML (主力) + Whisper.cpp (ASR)           |
 
 ---

@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.7  
+**版本**：v5.8  
 **生效日期**：2026-06-30  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -117,7 +117,7 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 | 并发模型   | Swift Concurrency (Actor, Task, AsyncStream) | 禁止 GCD/Combine                    |
 | 状态管理   | `@Observable` ViewModel                      | 禁止手动 `objectWillChange.send()`  |
 | 向量数据库 | ProximaKit 1.7 (HNSW)                        | 通过 VectorStoreActor 封装          |
-| 关系数据库 | SQLite (通过 GRDB 或原生)                    | 表结构见规格书附录                  |
+| 关系数据库 | SQLite3 (系统内置，通过 DatabaseManager actor 集中管理) | 表结构见规格书附录 |
 | 推理引擎   | Core ML (主力) + Whisper.cpp (ASR 专用)      | Core ML 模型随 App 打包             |
 | 模型格式   | Core ML (.mlmodelc) + GGUF (Whisper)         | 禁止运行时转换                      |
 | 依赖管理   | SPM (Swift Package Manager)                  | 仅白名单包                          |
@@ -1184,3 +1184,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.5 | 2026-06-30 | 新增 `docs/INDEX.md` 配合：更新 §0.1 文档目录新增 INDEX.md 条目；更新 §0.2 任务映射表新增“初次启动/建立全局认知”和“查阅文档索引”两行；更新 §0.3 Agent 文档读取规范，启动时必须读取 INDEX.md；更新 §12.2 Agent 启动强制检查，新增读取 INDEX.md 步骤；更新头部文档索引说明 | AI 架构师 |
 | v5.6 | 2026-07-04 | 移除 15.2 人类 Reviewer 批准要求：CI + 门禁通过即视为批准；同步更新 15.1 权限矩阵 | AI 架构师 |
 | v5.7 | 2026-07-04 | 新增 §3.1.1 分支生命周期规范：PR 合并后分支必须保留，禁止删除。同步更新 §11.4 禁忌清单、§12.3 第 9 步、§15.1 权限矩阵；更新向量数据库选型为 ProximaKit 1.7 | AI 架构师 |
+| v5.8 | 2026-07-04 | Task 1.4 集成 SQLite：关系数据库选型从「GRDB 或原生」确定为「系统 SQLite3 + DatabaseManager actor 集中管理」。同步更新避坑手册 §2 (ACT-010) 和 §7 (STORE-010)；新增 ADR-001/002/003 于 docs/decisions/ | AI 架构师 |
