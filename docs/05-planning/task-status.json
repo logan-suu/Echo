@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-04T07:35:00Z",
+  "last_updated": "2026-07-04T08:50:00Z",
   "current_phase": 1,
   "phases": [
     {
@@ -38,15 +38,17 @@
         },
         {
           "id": "1.3",
-          "title": "集成 LanceDB Mobile，封装 VectorStoreActor",
+          "title": "集成 ProximaKit HNSW，封装 VectorStoreActor",
           "story": null,
-          "status": "ready",
+          "status": "review",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md",
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["1.1"],
-          "test_file": "Tests/UnitTests/VectorStoreActorTests.swift"
+          "test_file": "EchoTests/VectorStoreActorTests.swift",
+          "notes": "使用 ProximaKit 1.7.0 替代 LanceDB Mobile（LanceDB 无官方 Swift SDK）。纯 Swift HNSW + 余弦相似度，零依赖，Actor 原生，21 个单元测试全部通过。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/3"
         },
         {
           "id": "1.4",
