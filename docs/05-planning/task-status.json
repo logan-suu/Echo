@@ -592,6 +592,16 @@
       "decision_maker": "AI Agent (Task 1.4)",
       "resolution": "所有数据 struct 的属性和 init 显式标注 nonisolated，暂时移除 Equatable 遵循。",
       "file": "docs/decisions/ADR-002-nonisolated-model-properties.md"
+    },
+    {
+      "id": "ADR-003",
+      "date": "2026-07-04T11:00:00Z",
+      "title": "DatabaseManager 集中式 SQL 执行 —— 不跨 Actor 传递 OpaquePointer",
+      "description": "SQLite statement handle (OpaquePointer) 非 Sendable，无法跨 Actor 传递。Swift 6 strict-concurrency 编译报错。",
+      "status": "accepted",
+      "decision_maker": "AI Agent (Task 1.4)",
+      "resolution": "所有 SQL 生命周期（prepare→bind→step→finalize）在 DatabaseManager actor 内部完成，跨边界仅传递 Sendable 值类型 DBBinding/DBValue。",
+      "file": "docs/decisions/ADR-003-centralized-sql-execution.md"
     }
   ]
 }
