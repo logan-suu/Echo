@@ -1,0 +1,24 @@
+# OpenCode agent runtime data
+.omo/
+
+# Xcode
+*.xcuserdata
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.xcresult
+*.xcbkptlist
+
+# Swift Package Manager
+.build/
+Packages/
+*.xcodeproj/xcshareddata/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build artifacts
+*.ipa
+*.dSYM.zip
+*.dSYM

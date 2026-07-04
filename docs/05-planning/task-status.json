@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-06-28T09:00:00Z",
+  "last_updated": "2026-07-04T07:20:00Z",
   "current_phase": 1,
   "phases": [
     {
@@ -14,13 +14,13 @@
           "id": "1.1",
           "title": "创建 Xcode 项目，配置 Swift 6 并发严格模式",
           "story": null,
-          "status": "ready",
+          "status": "review",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md",
             "AGENTS.md"
           ],
           "dependencies": [],
-          "test_file": "Tests/UnitTests/ProjectConfigTests.swift"
+          "test_file": "EchoTests/ProjectConfigTests.swift"
         },
         {
           "id": "1.2",
