@@ -53,10 +53,15 @@ agent: build
 
 ### 第四步：等待人类确认后更新状态
 1. 输出：“✅ 合并前检查全部通过。请在 GitHub 上手动合并该 PR。”
-2. 用户确认合并完成后，执行以下更新：
-   - 将 `docs/05-planning/task-status.json` 中该任务的 `status` 更新为 `done`。
-   - 记录 `merged_at` 时间戳。
-   - 更新 `last_updated` 时间戳。
+2. 用户确认合并完成后，**必须按以下顺序操作**：
+   - **首先** `git checkout dev-1.0`（切到 dev-1.0 分支）
+   - **然后** `git pull origin dev-1.0`（拉取合并后的最新代码）
+   - **接着在 dev-1.0 上**更新 `docs/05-planning/task-status.json`：
+     - 将任务的 `status` 更新为 `done`。
+     - 记录 `merged_at` 时间戳。
+     - 更新 `last_updated` 时间戳。
+   - **最后** `git add` → `git commit` → `git push origin dev-1.0`
+   - ⚠️ **禁止在 feature 分支上更新 task-status.json**，必须切到 dev-1.0 操作。
 3. 输出任务完成摘要：
    - 任务 ID 和标题。
    - 关联的用户故事。
