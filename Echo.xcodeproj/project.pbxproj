@@ -112,6 +112,7 @@
 			);
 			name = Echo;
 			packageProductDependencies = (
+				231256F12FE983AE0065B780 /* ProximaKit */,
 			);
 			productName = Echo;
 			productReference = 231256BF2FE983AE0065B780 /* Echo.app */;
@@ -135,6 +136,7 @@
 			);
 			name = EchoTests;
 			packageProductDependencies = (
+				231256F22FE983AE0065B780 /* ProximaKit */,
 			);
 			productName = EchoTests;
 			productReference = 231256CC2FE983AF0065B780 /* EchoTests.xctest */;
@@ -196,6 +198,9 @@
 			mainGroup = 231256B62FE983AE0065B780;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				231256F02FE983AE0065B780 /* XCRemoteSwiftPackageReference "ProximaKit" */,
+			);
 			productRefGroup = 231256C02FE983AE0065B780 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -595,6 +600,31 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		231256F02FE983AE0065B780 /* XCRemoteSwiftPackageReference "ProximaKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/vivekptnk/ProximaKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		231256F12FE983AE0065B780 /* ProximaKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 231256F02FE983AE0065B780 /* XCRemoteSwiftPackageReference "ProximaKit" */;
+			productName = ProximaKit;
+		};
+		231256F22FE983AE0065B780 /* ProximaKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 231256F02FE983AE0065B780 /* XCRemoteSwiftPackageReference "ProximaKit" */;
+			productName = ProximaKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+
 	};
 	rootObject = 231256B72FE983AE0065B780 /* Project object */;
 }

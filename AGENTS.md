@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.6  
+**版本**：v5.8  
 **生效日期**：2026-06-30  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -116,8 +116,8 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 | UI 框架    | SwiftUI + `@Observable` (iOS 18 Observation) | 最低 iOS 18.0                       |
 | 并发模型   | Swift Concurrency (Actor, Task, AsyncStream) | 禁止 GCD/Combine                    |
 | 状态管理   | `@Observable` ViewModel                      | 禁止手动 `objectWillChange.send()`  |
-| 向量数据库 | LanceDB Mobile                               | 随 App 打包                         |
-| 关系数据库 | SQLite (通过 GRDB 或原生)                    | 表结构见规格书附录                  |
+| 向量数据库 | ProximaKit 1.7 (HNSW)                        | 通过 VectorStoreActor 封装          |
+| 关系数据库 | SQLite3 (系统内置，通过 DatabaseManager actor 集中管理) | 表结构见规格书附录 |
 | 推理引擎   | Core ML (主力) + Whisper.cpp (ASR 专用)      | Core ML 模型随 App 打包             |
 | 模型格式   | Core ML (.mlmodelc) + GGUF (Whisper)         | 禁止运行时转换                      |
 | 依赖管理   | SPM (Swift Package Manager)                  | 仅白名单包                          |
@@ -179,6 +179,19 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 - `my-branch`（缺少 type 和 US 编号）
 - `feature/修复搜索`（使用了中文）
 - `feature/search`（未关联用户故事）
+
+### 3.1.1 分支生命周期
+
+**PR 合并后，分支必须保留，禁止删除。** 原因：
+- 保留完整开发历史，便于追溯每个任务的代码变更
+- 分支名称包含任务编号，是任务 → 代码的自然索引
+- 远程仓库（GitHub）有足够的存储空间，无需清理
+
+仅以下情况允许删除分支：
+- 分支被明确拒绝且永远不会合并（如废弃的实验性分支）
+- 人类开发者明确要求删除
+
+> Agent 在任何情况下都**不得**删除已合并的分支。
 
 ### 3.2 Commit Message 规范
 
@@ -325,7 +338,7 @@ Pipeline 契约:
 
 ```yaml
 Actor 契约:
-  - 可变状态封装: 所有 SQLite/LanceDB 写操作封装在 Actor 中
+  - 可变状态封装: 所有 SQLite/VectorStoreActor 写操作封装在 Actor 中
   - 串行执行: 同一 Actor 的操作串行执行，无数据竞争
   - 仅值类型传递: 跨 Actor 传递参数必须为 Sendable 值类型
   - 禁止闭包传递: 跨 Actor 禁止传递闭包作为参数
@@ -339,7 +352,7 @@ Actor 契约:
 ```yaml
 TaskQueue 契约:
   - 串行执行: 索引构建与数据同步必须串行，通过 TaskQueueActor
-  - 入队所有写入任务: 任何写入 LanceDB 的长任务必须入队
+  - 入队所有写入任务: 任何写入 VectorStoreActor 的长任务必须入队
   - 支持暂停/取消: 任务实现 Cancellable 协议
   - 进度报告: 通过 ProgressActor 持久化到 SQLite TaskProgress 表
   - 完成后清理: 任务完成或失败后删除 TaskProgress 记录
@@ -359,7 +372,7 @@ TaskQueue 契约:
 
 ```yaml
 断点续传契约:
-  - 进度存储: 使用 SQLite TaskProgress 表 (独立于 LanceDB)
+  - 进度存储: 使用 SQLite TaskProgress 表 (独立于向量存储)
   - 存储内容: taskId, taskType, lastProcessedIndex, totalCount, resumeData
   - 原子写入: 使用事务确保进度不丢失
   - 自动清理: 任务完成后立即删除记录
@@ -375,7 +388,7 @@ TaskQueue 契约:
 
 | 存储类型                   | 用途                    | 封装 Actor            |
 | -------------------------- | ----------------------- | --------------------- |
-| LanceDB                    | 768 维向量存储与检索    | `VectorStoreActor`    |
+| ProximaKit HNSW (via VectorStoreActor) | 768 维向量存储与检索    | `VectorStoreActor`    |
 | SQLite - ExcludedAssets    | 用户排除的资产 ID       | `ExcludedAssetsActor` |
 | SQLite - FeedbackStore     | 点赞/点踩/Bad Case 反馈 | `FeedbackActor`       |
 | SQLite - TaskProgress      | 断点续传进度            | `ProgressActor`       |
@@ -810,6 +823,7 @@ flowchart TD
 | 未按 §0.2 读取文档就编码    | PR 阻断            | 强制溯源，防止幻觉            |
 | 跳过任务状态更新            | PR 阻断            | task-status.json 必须同步更新 |
 | **Agent 自动合并 PR**       | PR 阻断            | 合并必须由人类手动执行        |
+| **Agent 删除已合并分支**     | PR 阻断            | 分支合并后必须保留，禁止删除（§3.1.1） |
 
 ---
 
@@ -829,7 +843,7 @@ stateDiagram-v2
     in_progress --> blocked: 发现文档问题
     blocked --> in_progress: 人类决策后继续
     in_progress --> review: 代码完成，PR 提交
-    review --> approved: 人类审查通过
+    review --> approved: CI + 门禁通过
     approved --> merged: 人类手动合并
     merged --> done
     done --> [*]
@@ -844,7 +858,7 @@ stateDiagram-v2
 | `in_progress` | Agent 正在执行        | Agent 自动        |
 | `blocked`     | 等待人类决策          | Agent 自动 + 人类 |
 | `review`      | PR 已提交，等待审查   | Agent 自动        |
-| `approved`    | PR 已获批准，等待合并 | 人类              |
+| `approved`    | PR 已获批准，等待合并 | Agent 自动 (CI)   |
 | `merged`      | PR 已合并             | 人类              |
 | `done`        | 任务完成              | 人类              |
 
@@ -933,6 +947,8 @@ PR 合并后，人类（或人类触发的 GitHub Actions）更新 `task-status.
 - 将任务 `status` 从 `review` 改为 `done`
 - 记录 `merged_at` 时间戳
 - 更新 `last_updated` 时间戳
+
+> ⚠️ **分支保留**：合并后**禁止删除分支**（本地和远程）。分支是任务 → 代码的永久索引。详见 §3.1.1。
 
 ### 12.4 文档问题处理流程
 
@@ -1104,6 +1120,7 @@ ADR 存入 `docs/decisions/`，Agent 在遇到相关上下文时自动加载。
 | **更新任务状态** | PR 事件触发                | ❌ 自动           | 同步更新 task-status.json               |
 | **通过 PR 审查** | PR 所有检查通过            | ❌ 自动           | 无需人类 Reviewer，CI + 门禁通过即视为批准 |
 | **合并 PR**      | 所有检查通过               | ✅ **必须**       | 需要人类手动点击“合并”按钮              |
+| **删除分支**      | 任何时候                   | ❌ **禁止**       | 分支合并后保留，禁止删除（§3.1.1）       |
 | **关闭 PR**      | PR 被拒绝或任务取消        | ✅ **必须**       | 需要人类确认                            |
 
 ### 15.2 合并前强制门禁
@@ -1113,7 +1130,7 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 1. ✅ 所有 CI 检查通过（单元测试、集成测试、SwiftLint、覆盖率）
 2. ✅ `task-status.json` 中对应任务状态为 `review`
 3. ✅ 无未解决的对话线程
-4. ✅ 分支与目标分支（main）无冲突
+4. ✅ 分支与目标分支（dev-1.0）无冲突
 
 ### 15.3 自动化评论规范
 
@@ -1166,3 +1183,5 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.4 | 2026-06-29 | 移除 `.opencode/config.toml` 相关引用                        | AI 架构师 |
 | v5.5 | 2026-06-30 | 新增 `docs/INDEX.md` 配合：更新 §0.1 文档目录新增 INDEX.md 条目；更新 §0.2 任务映射表新增“初次启动/建立全局认知”和“查阅文档索引”两行；更新 §0.3 Agent 文档读取规范，启动时必须读取 INDEX.md；更新 §12.2 Agent 启动强制检查，新增读取 INDEX.md 步骤；更新头部文档索引说明 | AI 架构师 |
 | v5.6 | 2026-07-04 | 移除 15.2 人类 Reviewer 批准要求：CI + 门禁通过即视为批准；同步更新 15.1 权限矩阵 | AI 架构师 |
+| v5.7 | 2026-07-04 | 新增 §3.1.1 分支生命周期规范：PR 合并后分支必须保留，禁止删除。同步更新 §11.4 禁忌清单、§12.3 第 9 步、§15.1 权限矩阵；更新向量数据库选型为 ProximaKit 1.7 | AI 架构师 |
+| v5.8 | 2026-07-04 | Task 1.4 集成 SQLite：关系数据库选型从「GRDB 或原生」确定为「系统 SQLite3 + DatabaseManager actor 集中管理」。同步更新避坑手册 §2 (ACT-010) 和 §7 (STORE-010)；新增 ADR-001/002/003 于 docs/decisions/ | AI 架构师 |

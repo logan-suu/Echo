@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-04T07:20:00Z",
+  "last_updated": "2026-07-04T10:30:00Z",
   "current_phase": 1,
   "phases": [
     {
@@ -27,7 +27,8 @@
           "id": "1.2",
           "title": "编写根目录 AGENTS.md，整合避坑手册核心规则",
           "story": null,
-          "status": "ready",
+          "status": "done",
+          "merged_at": "2026-07-04T07:35:00Z",
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/04-ai-native/AI Native开发理念与实战技巧手册.md"
@@ -37,21 +38,25 @@
         },
         {
           "id": "1.3",
-          "title": "集成 LanceDB Mobile，封装 VectorStoreActor",
+          "title": "集成 ProximaKit HNSW，封装 VectorStoreActor",
           "story": null,
-          "status": "ready",
+          "status": "done",
+          "merged_at": "2026-07-04T09:15:00Z",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md",
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["1.1"],
-          "test_file": "Tests/UnitTests/VectorStoreActorTests.swift"
+          "test_file": "EchoTests/VectorStoreActorTests.swift",
+          "notes": "使用 ProximaKit 1.7.0 替代 LanceDB Mobile（LanceDB 无官方 Swift SDK）。纯 Swift HNSW + 余弦相似度，零依赖，Actor 原生，21 个单元测试全部通过。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/3"
         },
         {
           "id": "1.4",
           "title": "集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表",
           "story": null,
-          "status": "ready",
+          "status": "review",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/4",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/01-spec/用户故事与验收标准规格书.md"
@@ -551,5 +556,22 @@
     }
   ],
   "documentation_conflicts": [],
-  "decisions": []
+  "decisions": [
+    {
+      "id": "DOC-SYNC-20260704-001",
+      "date": "2026-07-04T10:30:00Z",
+      "title": "文档同步：v5.6/v5.7 AGENTS.md 决策传播至所有关联文档",
+      "description": "v5.6（移除人类 Reviewer 批准要求，CI+门禁=批准）和 v5.7（禁止删除已合并分支、ProximaKit 1.7）的决策未完全同步到 README.md、架构文档状态图、AI Native 手册等关联文档。",
+      "status": "resolved",
+      "decision_maker": "AI 架构师 (Agent)",
+      "resolution": "方案 A: 全部同步更新。",
+      "changes": [
+        "README.md: 版本引用 v5.5 → v5.7",
+        "AGENTS.md §12.1: 状态图 review→approved 标签从 '人类审查通过' 改为 'CI + 门禁通过'",
+        "AGENTS.md §12.1: approved 状态 '谁可以变更' 从 '人类' 改为 'Agent 自动 (CI)'",
+        "AI Native 手册 §1: 人机协同门禁示例从 'PR 要求人类 reviewer' 改为 'PR 合并需人类手动执行'",
+        "AI Native 手册 §4.3: 代码审查场景描述更新，反映 CI 自动批准机制"
+      ]
+    }
+  ]
 }

@@ -48,7 +48,7 @@ flowchart TB
     end
 
     subgraph Storage["💾 Local Storage"]
-        LanceDB[("LanceDB")]
+        VectorStoreActor[("ProximaKit\nHNSW")]
         SQLite[("SQLite")]
     end
 
@@ -64,8 +64,8 @@ flowchart TB
 | 语言       | Swift 6 (`-strict-concurrency=complete`)     |
 | UI 框架    | SwiftUI + `@Observable` (iOS 18 Observation) |
 | 并发模型   | Swift Concurrency (Actor, Task, AsyncStream) |
-| 向量数据库 | LanceDB Mobile                               |
-| 关系数据库 | SQLite (GRDB)                                |
+| 向量数据库 | ProximaKit 1.7 (HNSW)                        |
+| 关系数据库 | SQLite3 (系统内置)                          |
 | 推理引擎   | Core ML (主力) + Whisper.cpp (ASR)           |
 
 ---
@@ -257,13 +257,13 @@ swift test --filter IntegrationTests
 
 - [OpenCode 桌面版](https://opencode.ai)
 - [Swift 6 并发](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/concurrency/)
-- [LanceDB Mobile](https://lancedb.github.io/lancedb/)
+- [ProximaKit](https://github.com/vivekptnk/ProximaKit)
 - [Core ML](https://developer.apple.com/documentation/coreml)
 
 ---
 
 **文档维护声明**
 
-本 README 与 Echo v4.6 全量规格书、AGENTS.md v5.5 及所有 docs/ 文档协同维护。任何重大变更需同步更新本文档。
+本 README 与 Echo v4.6 全量规格书、AGENTS.md v5.7 及所有 docs/ 文档协同维护。任何重大变更需同步更新本文档。
 
 **下次全面复审日期**：2026-07-16（与开发计划阶段1结束同步）

@@ -83,7 +83,7 @@
 | 视觉编码   | SigLIP-SO400M (INT4)，降级 MobileCLIP-B | `技术选型文档.md` §1 |
 | 语音转写   | Whisper.cpp base INT4                   | `技术选型文档.md` §2 |
 | 文本嵌入   | GTE-Qwen2-1.5B-Instruct INT4            | `技术选型文档.md` §3 |
-| 向量数据库 | LanceDB Mobile                          | `技术选型文档.md` §4 |
+| 向量数据库 | ProximaKit 1.7 (HNSW)                   | `技术选型文档.md` §4 |
 | 推理框架   | Core ML (主力) + Whisper.cpp (ASR)      | `技术选型文档.md` §5 |
 | 应用架构   | `@Observable` + Actor Isolation         | `技术选型文档.md` §6 |
 | 本地化     | String Catalog + 术语表 JSON            | `技术选型文档.md` §7 |
