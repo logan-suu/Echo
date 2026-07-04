@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-04T07:20:00Z",
+  "last_updated": "2026-07-04T07:35:00Z",
   "current_phase": 1,
   "phases": [
     {
@@ -27,7 +27,8 @@
           "id": "1.2",
           "title": "编写根目录 AGENTS.md，整合避坑手册核心规则",
           "story": null,
-          "status": "ready",
+          "status": "done",
+          "merged_at": "2026-07-04T07:35:00Z",
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/04-ai-native/AI Native开发理念与实战技巧手册.md"
