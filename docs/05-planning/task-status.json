@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-04T08:50:00Z",
+  "last_updated": "2026-07-04T09:15:00Z",
   "current_phase": 1,
   "phases": [
     {
@@ -40,7 +40,8 @@
           "id": "1.3",
           "title": "集成 ProximaKit HNSW，封装 VectorStoreActor",
           "story": null,
-          "status": "review",
+          "status": "done",
+          "merged_at": "2026-07-04T09:15:00Z",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md",
             "docs/02-architecture/架构设计文档.md"
