@@ -31,13 +31,6 @@ struct VectorStoreActorTests {
         return (0..<dimension).map { _ in Float.random(in: -1...1, using: &rng) }
     }
 
-    /// L2-normalizes a vector in-place
-    func normalize(_ v: [Float]) -> [Float] {
-        let norm = sqrt(v.reduce(0) { $0 + $1 * $1 })
-        guard norm > 0 else { return v }
-        return v.map { $0 / norm }
-    }
-
     // MARK: - Initialization Tests
 
     @Test("init creates actor with specified dimension")

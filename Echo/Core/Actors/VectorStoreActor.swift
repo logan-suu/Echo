@@ -71,11 +71,20 @@ public actor VectorStoreActor {
 
     /// 批量摄入向量。
     ///
+    /// 先校验所有向量维度，再逐条写入——避免部分写入成功、部分失败的不一致状态。
+    ///
     /// - Parameter entries: 向量、ID、元数据三元组数组
-    /// - Throws: `VectorStoreError.dimensionMismatch` 若任一向量维度不匹配
+    /// - Throws: `VectorStoreError.dimensionMismatch` 若任一向量维度不匹配（在写入前检测，已写入数据不受影响）
     public func batchIngest(_ entries: [(vector: [Float], id: UUID, metadata: Data?)]) async throws {
+        // Phase 1: pre-validate all dimensions before any write
         for entry in entries {
-            try await ingest(vector: entry.vector, id: entry.id, metadata: entry.metadata)
+            guard entry.vector.count == dimension else {
+                throw VectorStoreError.dimensionMismatch(expected: dimension, got: entry.vector.count)
+            }
+        }
+        // Phase 2: all-clear — write sequentially
+        for entry in entries {
+            try await index.add(Vector(entry.vector), id: entry.id, metadata: entry.metadata)
         }
     }
 
@@ -129,6 +138,7 @@ public actor VectorStoreActor {
     public func save(to url: URL) async throws {
         do {
             try await index.save(to: url)
+            try (url as NSURL).setResourceValue(URLFileProtection.complete, forKey: .fileProtectionKey)
         } catch {
             throw VectorStoreError.persistenceFailed(underlying: error)
         }
