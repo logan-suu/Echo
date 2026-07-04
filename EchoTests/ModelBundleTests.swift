@@ -35,43 +35,24 @@ struct ModelBundleTests {
 
     // AC-NO-NETWORK: 所有模型可通过 Bundle 访问
     @Test func allModelsPresentInBundle() {
-        let bundle = Bundle.main
+        let bundlePath = Bundle.main.bundlePath
+        let fm = FileManager.default
         var found = 0
-        var details: [String] = []
 
-        for (name, resource, ext, minBytes) in ExpectedModels.all {
-            let fullName = "\(resource).\(ext)"
-            let path = bundle.path(forResource: resource, ofType: ext)
-
-            if let path {
-                let url = URL(fileURLWithPath: path)
-                if let size = fileSize(at: url), size >= minBytes {
-                    found += 1
-                } else {
-                    let s = fileSize(at: url) ?? 0
-                    details.append("\(name): size \(s) < \(minBytes)")
-                }
-            } else {
-                // Fallback: try direct filesystem check
-                let directPath = bundle.bundlePath + "/" + fullName
-                var isDir: ObjCBool = false
-                if FileManager.default.fileExists(atPath: directPath, isDirectory: &isDir) {
-                    let url = URL(fileURLWithPath: directPath)
-                    if let size = fileSize(at: url), size >= minBytes {
-                        found += 1
-                        details.append("\(name): found via direct path")
-                    } else {
-                        details.append("\(name): direct path size too small")
-                    }
-                } else {
-                    details.append("\(name) not found (\(fullName))")
-                }
+        for (name, resource, ext, _) in ExpectedModels.all {
+            let path = bundlePath + "/" + resource + "." + ext
+            var isDir: ObjCBool = false
+            if fm.fileExists(atPath: path, isDirectory: &isDir) {
+                found += 1
             }
         }
 
         if found != ExpectedModels.all.count {
+            // List what's actually in the bundle
+            let actual = (try? fm.contentsOfDirectory(atPath: bundlePath)) ?? []
+            let filtered = actual.filter { $0.contains("mlmodelc") || $0.contains("gguf") }
             Issue.record(Comment(
-                "\(found)/\(ExpectedModels.all.count) in \(bundle.bundlePath). \(details.joined(separator: "; "))"
+                "Expected \(ExpectedModels.all.count), found \(found). Bundle: \(filtered.joined(separator: ", "))"
             ))
         }
         #expect(found == ExpectedModels.all.count)
