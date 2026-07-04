@@ -14,7 +14,8 @@
           "id": "1.1",
           "title": "创建 Xcode 项目，配置 Swift 6 并发严格模式",
           "story": null,
-          "status": "review",
+          "status": "done",
+          "merged_at": "2026-07-04T07:28:00Z",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md",
             "AGENTS.md"
