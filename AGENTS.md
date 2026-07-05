@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.10  
+**版本**：v5.11  
 **生效日期**：2026-06-30  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -162,13 +162,14 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 | `fix`      | Bug 修复               | `fix/excludedassets-cascade-US-PRV-007` |
 | `docs`     | 文档更新               | `docs/update-agents-md`                 |
 | `refactor` | 代码重构（不改变功能） | `refactor/actor-isolation`              |
-| `test`     | 测试补充或修复         | `test/golden-dataset-expand`            |
+| `test`     | 测试补充/修复/阶段集成测试 | `test/phase1-integration-test-1.9`    |
 | `chore`    | 构建/工具/依赖更新     | `chore/upgrade-spm-deps`                |
 
 **Description 命名规则**：
 - 使用小写字母和连字符（`-`）连接
 - 应使用**英文**，简洁描述分支目的
-- **必须**包含关联的用户故事编号（`US-XXX`）
+- **必须**包含关联的用户故事编号（`US-XXX`）。
+  - **例外**：阶段集成测试任务无关联用户故事时，使用任务 ID 替代（如 `test/phase1-integration-test-1.9`）。
 
 **正确示例**：
 - `feature/search-pipeline-US-RET-001`
@@ -1196,3 +1197,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.8 | 2026-07-04 | Task 1.4 集成 SQLite：关系数据库选型从「GRDB 或原生」确定为「系统 SQLite3 + DatabaseManager actor 集中管理」。同步更新避坑手册 §2 (ACT-010) 和 §7 (STORE-010)；新增 ADR-001/002/003 于 docs/decisions/ | AI 架构师 |
 | v5.9 | 2026-07-05 | 重构 §12.6 阶段集成测试为正式任务（每阶段最后一个任务，走分支→TDD→PR 流程，不再由命令自动触发）。同步更新 `test-phase-echo` 命令、`README.md` 测试章节、`task-status.json` 各阶段追加集成测试任务（1.9/2.14/3.10/4.11/5.5） | AI 架构师 |
 | v5.10 | 2026-07-05 | 新增跨阶段阻断规则（§12.6）：执行阶段 N 任务前必须验证 N-1 集成测试任务为 `done`，防止跳过集成测试直接进入下一阶段。同步更新 `next-task-echo`、`do-task-echo`、`init-session-echo` 三个命令加入阻断检查。 | AI 架构师 |
+| v5.11 | 2026-07-05 | 明确阶段集成测试任务分支使用 `test/` 前缀（如 `test/phase1-integration-test-1.9`），非 `feature/`。更新 §3.1 分支命名规范：`test` 类型扩展为"测试补充/修复/阶段集成测试"，无关联用户故事时使用任务 ID 替代 US-XXX。 | AI 架构师 |
