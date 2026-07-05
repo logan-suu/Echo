@@ -93,6 +93,7 @@
           ],
           "dependencies": ["1.5"],
           "test_file": "EchoTests/ModelLoaderActorTests.swift",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/6",
           "notes": "20 个单元测试全部通过，覆盖 US-RES-004 全部 8 条 AC。实现 ModelLoaderActor 管理 6 个本地模型的加载、状态追踪、手动重试（无自动重试）、审计错误类型。Core ML .mlmodelc 通过 MLModel.load 加载，GGUF 验证文件可读性。遵循 Actor 隔离契约、仅 Bundle 本地加载、禁止网络下载。"
         },
         {
