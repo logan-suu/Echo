@@ -1,0 +1,7 @@
+# Nested SwiftLint config for UI test target — relax style rules
+disabled_rules:
+  - required_deinit
+  - empty_xctest_method
+  - vertical_whitespace_opening_braces
+  - vertical_whitespace_closing_braces
+  - static_over_final_class

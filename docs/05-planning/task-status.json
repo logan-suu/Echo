@@ -101,7 +101,9 @@
           "id": "1.7",
           "title": "搭建 CI（GitHub Actions）：SwiftLint, 单元测试, 覆盖率",
           "story": null,
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-07-05T08:00:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/8",
           "documents_required": [
             "AGENTS.md"
           ],

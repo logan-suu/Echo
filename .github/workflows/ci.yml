@@ -1,0 +1,196 @@
+# ==========================================
+# 文件: .github/workflows/ci.yml
+# 对应规格: AGENTS.md §9.3 (CI 门禁清单)
+# 任务: 1.7 - 搭建 CI（GitHub Actions）
+# 架构约束: Swift 6 strict concurrency, SwiftLint 0 violations
+# 生成时间: 2026-07-05
+# ==========================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, "dev-*"]
+  pull_request:
+    branches: [main, "dev-*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══════════════════════════════════════════════════════════
+  # Job 1: Build + Lint + Test + Coverage
+  # ═══════════════════════════════════════════════════════════
+  build-lint-test:
+    name: Build, Lint & Test
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Cache SPM dependencies ──
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('Echo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      # ── Install SwiftLint ──
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Show environment
+        run: |
+          echo "SwiftLint version: $(swiftlint version)"
+          echo "Xcode version: $(xcodebuild -version)"
+          echo "Swift version: $(swift --version)"
+
+      # ── SwiftLint ──
+      - name: SwiftLint
+        run: |
+          swiftlint lint --reporter github-actions-logging --quiet
+
+      # ── Static Analysis: R-007 enforcement ──
+      # KEEP IN SYNC: directory scope (App/ Core/ UI/) must match
+      # the exclusion patterns in .swiftlint.yml custom_rules
+      # (EchoTests/.* | EchoUITests/.* are excluded there).
+      - name: Static Analysis (R-007)
+        run: |
+          echo "::group::Checking for @unchecked Sendable"
+          if grep -rq "@unchecked.*Sendable" \
+            --include="*.swift" \
+            --exclude-dir=.build \
+            --exclude-dir=DerivedData \
+            --exclude-dir=.omo \
+            App/ Core/ UI/; then
+            echo "::error::@unchecked Sendable found — violates AGENTS.md R-007"
+            exit 1
+          fi
+          echo "✅ No @unchecked Sendable found"
+          echo "::endgroup::"
+
+          echo "::group::Checking for nonisolated(unsafe)"
+          if grep -rq "nonisolated(unsafe)" \
+            --include="*.swift" \
+            --exclude-dir=.build \
+            --exclude-dir=DerivedData \
+            --exclude-dir=.omo \
+            App/ Core/ UI/; then
+            echo "::error::nonisolated(unsafe) found — violates AGENTS.md R-007"
+            exit 1
+          fi
+          echo "✅ No nonisolated(unsafe) found"
+          echo "::endgroup::"
+
+          echo "::group::Checking for Combine imports"
+          if grep -rq "^import Combine" \
+            --include="*.swift" \
+            --exclude-dir=.build \
+            --exclude-dir=DerivedData \
+            --exclude-dir=.omo \
+            App/ Core/ UI/; then
+            echo "::error::Combine import found — violates AGENTS.md R-007"
+            exit 1
+          fi
+          echo "✅ No Combine imports found"
+          echo "::endgroup::"
+
+      # ── Resolve SPM dependencies ──
+      - name: Resolve package dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project Echo.xcodeproj \
+            -scmProvider system
+
+      # ── Build (strict concurrency mode) ──
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project Echo.xcodeproj \
+            -scheme Echo \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath DerivedData \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            2>&1 | tee build.log
+        env:
+          NSUnbufferedIO: YES
+
+      # ── Unit Tests with Coverage ──
+      - name: Run tests with coverage
+        run: |
+          xcodebuild test \
+            -project Echo.xcodeproj \
+            -scheme Echo \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath DerivedData \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult \
+            2>&1 | tee test.log
+        env:
+          NSUnbufferedIO: YES
+
+      # ── Coverage Report ──
+      - name: Generate coverage report
+        if: always()
+        run: |
+          set +e
+          if [ -d "TestResults.xcresult" ]; then
+            echo "::group::Coverage Report"
+            xcrun xccov view --report TestResults.xcresult 2>/dev/null || echo "(Coverage report unavailable)"
+            echo "::endgroup::"
+          else
+            echo "::warning::TestResults.xcresult not found — coverage report skipped"
+          fi
+
+      # ── Upload test results ──
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          retention-days: 7
+
+      # ── Upload build log on failure ──
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-log
+          path: |
+            build.log
+            test.log
+          retention-days: 3
+
+  # ═══════════════════════════════════════════════════════════
+  # Job 2: Nightly Performance (Phase 4 skeleton)
+  # ═══════════════════════════════════════════════════════════
+  performance:
+    name: Nightly Performance
+    runs-on: macos-15
+    timeout-minutes: 60
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Cron schedule: daily at 02:00 UTC
+    # Uncomment when Phase 4 performance tests are in place:
+    # on:
+    #   schedule:
+    #     - cron: '0 2 * * *'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Performance benchmark (placeholder)
+        run: |
+          echo "::notice::Performance benchmarks will be added in Phase 4"
+          echo "Expected checks per AGENTS.md §9.3:"
+          echo "  - 检索 P95 < 200ms"
+          echo "  - 内存峰值 < 1.5GB"
+          echo "  - 跨语言 Recall@10 ≥ 85%"

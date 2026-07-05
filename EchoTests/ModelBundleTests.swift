@@ -21,11 +21,11 @@ struct ExpectedModels {
     /// (name, bundleResourceName, extension, minBytes)
     static let all: [(String, String, String, Int)] = [
         ("MobileCLIP-B LT image", "MobileCLIP-B-lt_image", "mlmodelc", 10_000_000),
-        ("MobileCLIP-B LT text",  "MobileCLIP-B-lt_text",  "mlmodelc", 10_000_000),
-        ("multilingual-e5-small", "MultilingualE5Small",   "mlmodelc", 10_000_000),
-        ("SenseVoice INT8",       "SenseVoiceSmall_int8",  "mlmodelc", 10_000_000),
-        ("SenseVoice Preprocessor","SenseVoicePreprocessor","mlmodelc",   1_000_000),
-        ("SenseVoice GGUF",       "sensevoice-small-q4_k",  "gguf",    50_000_000),
+        ("MobileCLIP-B LT text", "MobileCLIP-B-lt_text", "mlmodelc", 10_000_000),
+        ("multilingual-e5-small", "MultilingualE5Small", "mlmodelc", 10_000_000),
+        ("SenseVoice INT8", "SenseVoiceSmall_int8", "mlmodelc", 10_000_000),
+        ("SenseVoice Preprocessor", "SenseVoicePreprocessor", "mlmodelc", 1_000_000),
+        ("SenseVoice GGUF", "sensevoice-small-q4_k", "gguf", 50_000_000),
     ]
 }
 
@@ -63,4 +63,3 @@ struct ModelBundleTests {
         #expect(ExpectedModels.all.count == 6)
     }
 }
-
