@@ -1032,7 +1032,7 @@ Agent 在创建或修改核心架构文件时，**必须在文件头部注入溯
 |------|------|
 | **任务 ID** | 该阶段最后一个编号（如 `1.9`、`2.14`） |
 | **依赖** | 该阶段所有其他任务（全部 `done` 后才变为 `ready`） |
-| **测试文件** | `EchoTests/Phase{阶段ID}IntegrationTests.swift` |
+| **测试文件** | `EchoTests/Phase{阶段ID}/Phase{阶段ID}IntegrationTests.swift` |
 | **测试范围** | 该阶段所有 Actor/Pipeline 的跨模块联调场景 |
 | **执行方式** | 通过 `test-phase-echo` 或 `do-task-echo {id}` 执行，走完整分支→TDD→PR→合并流程 |
 

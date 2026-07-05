@@ -10,7 +10,7 @@
           "status": "done",
           "last_updated": "2026-07-05T10:52:00Z",
       "integration_test": "passed",
-      "integration_test_file": "EchoTests/Phase1IntegrationTests.swift",
+      "integration_test_file": "EchoTests/Phase1/Phase1IntegrationTests.swift",
       "integration_test_cases": 52,
       "tasks": [
         {
@@ -24,7 +24,7 @@
             "AGENTS.md"
           ],
           "dependencies": [],
-          "test_file": "EchoTests/ProjectConfigTests.swift"
+          "test_file": "EchoTests/Phase1/ProjectConfigTests.swift"
         },
         {
           "id": "1.2",
@@ -50,7 +50,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["1.1"],
-          "test_file": "EchoTests/VectorStoreActorTests.swift",
+          "test_file": "EchoTests/Phase1/VectorStoreActorTests.swift",
           "notes": "使用 ProximaKit 1.7.0 替代 LanceDB Mobile（LanceDB 无官方 Swift SDK）。纯 Swift HNSW + 余弦相似度，零依赖，Actor 原生，21 个单元测试全部通过。",
           "pr": "https://github.com/LOGANSWP/Echo/pull/3"
         },
@@ -80,7 +80,7 @@
             "docs/02-architecture/技术选型文档.md"
           ],
           "dependencies": [],
-          "test_file": "EchoTests/ModelBundleTests.swift",
+          "test_file": "EchoTests/Phase1/ModelBundleTests.swift",
           "notes": "v5.1b 最终可用方案 (2026-07-04): MobileCLIP-B LT (286MB) + multilingual-e5-small (224MB) + SenseVoice (373MB) = 883MB。MobileCLIP2-S4 + Qwen3-0.6B 标记为 Phase 2 优化目标。"
         },
         {
@@ -95,7 +95,7 @@
             "docs/03-implementation/开发避坑与关键注意点手册.md"
           ],
           "dependencies": ["1.5"],
-          "test_file": "EchoTests/ModelLoaderActorTests.swift",
+          "test_file": "EchoTests/Phase1/ModelLoaderActorTests.swift",
           "pr": "https://github.com/LOGANSWP/Echo/pull/6",
           "notes": "20 个单元测试全部通过，覆盖 US-RES-004 全部 8 条 AC。实现 ModelLoaderActor 管理 6 个本地模型的加载、状态追踪、手动重试（无自动重试）、审计错误类型。Core ML .mlmodelc 通过 MLModel.load 加载，GGUF 验证文件可读性。遵循 Actor 隔离契约、仅 Bundle 本地加载、禁止网络下载。"
         },
@@ -124,7 +124,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["1.2"],
-          "test_file": "EchoTests/PrivacyActorTests.swift",
+          "test_file": "EchoTests/Phase1/PrivacyActorTests.swift",
           "pr": "https://github.com/LOGANSWP/Echo/pull/9",
           "notes": "创建 PrivacyActor.swift (Stub) + 11 个单元测试全部通过。Stub 实现 validate(operation:traceID:sourceTypes:) 基于 UserPolicy.authorizedSourceTypes 做授权检查，返回 PrivacyCheckpoint(.allowed/.denied)。包含 PrivacyOperation 枚举、PrivacyDecision 枚举、PrivacyCheckpoint 结构体、UserPolicy 结构体。完整授权逻辑与审计日志写入留待 Task 2.1 实现。测试文件位于 EchoTests/ 目录（Xcode 测试目标），Tests/UnitTests/ 目录预留为未来 SPM 测试目标。"
         },
@@ -139,7 +139,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8"],
-          "test_file": "EchoTests/Phase1IntegrationTests.swift",
+          "test_file": "EchoTests/Phase1/Phase1IntegrationTests.swift",
           "notes": "52 个集成测试全部通过。覆盖 DatabaseManager + 6 个 Actor 的跨模块联调：数据库表结构、ExcludedAssets 增删查恢复、Feedback 记录与阈值过滤、Progress 持久化、PendingOps 重试、VectorStore 摄入检索持久化、Privacy 授权拒绝、跨 Actor 全链路。"
         }
       ]
@@ -318,7 +318,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7", "2.8", "2.9", "2.10", "2.11", "2.12", "2.13"],
-          "test_file": "EchoTests/Phase2IntegrationTests.swift"
+          "test_file": "EchoTests/Phase2/Phase2IntegrationTests.swift"
         }
       ]
     },
@@ -440,7 +440,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9"],
-          "test_file": "EchoTests/Phase3IntegrationTests.swift"
+          "test_file": "EchoTests/Phase3/Phase3IntegrationTests.swift"
         }
       ]
     },
@@ -567,7 +567,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["4.1", "4.2", "4.3", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "4.10"],
-          "test_file": "EchoTests/Phase4IntegrationTests.swift"
+          "test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift"
         }
       ]
     },

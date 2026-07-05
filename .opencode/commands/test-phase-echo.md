@@ -29,7 +29,7 @@ agent: build
 ### 第三步：执行（仅当 status=ready）
 调用 `do-task-echo {集成测试任务ID}`，按 AGENTS.md §12.3 九步法执行：
 1. 查阅文档并引用原文
-2. 编写集成测试用例（`EchoTests/Phase{阶段ID}IntegrationTests.swift`）
+2. 编写集成测试用例（`EchoTests/Phase{阶段ID}/Phase{阶段ID}IntegrationTests.swift`）
 3. TDD 增量实现
 4. 运行测试：`swift test --filter "Phase{阶段ID}Integration"`
 5. 更新任务状态为 `review`
