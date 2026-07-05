@@ -85,13 +85,15 @@
           "id": "1.6",
           "title": "实现 ModelLoaderActor 手动加载/重试机制",
           "story": "US-RES-004",
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-07-05T06:30:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md"
           ],
           "dependencies": ["1.5"],
-          "test_file": "Tests/UnitTests/ModelLoaderActorTests.swift"
+          "test_file": "EchoTests/ModelLoaderActorTests.swift",
+          "notes": "20 个单元测试全部通过，覆盖 US-RES-004 全部 8 条 AC。实现 ModelLoaderActor 管理 6 个本地模型的加载、状态追踪、手动重试（无自动重试）、审计错误类型。Core ML .mlmodelc 通过 MLModel.load 加载，GGUF 验证文件可读性。遵循 Actor 隔离契约、仅 Bundle 本地加载、禁止网络下载。"
         },
         {
           "id": "1.7",
