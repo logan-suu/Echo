@@ -115,8 +115,9 @@
           "id": "1.8",
           "title": "搭建单元测试框架，编写第一个 Actor 测试用例",
           "story": null,
-          "status": "review",
-          "last_updated": "2026-07-05T12:20:00Z",
+          "status": "done",
+          "last_updated": "2026-07-05T12:28:38Z",
+          "merged_at": "2026-07-05T10:28:38Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
