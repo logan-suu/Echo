@@ -14,7 +14,17 @@ agent: build
 
 ### 第一步：定位任务
 1. 读取 `docs/05-planning/task-status.json`
-2. 找到当前阶段中第一个 `status: ready` 的任务
+2. **跨阶段阻断检查（AGENTS.md §12.6）**：
+   - 获取 `current_phase`（如 2）。
+   - 如果 `current_phase > 1`，找到阶段 `current_phase - 1` 的最后一个任务（该阶段的集成测试任务，如 Phase 1→1.9）。
+   - 检查该集成测试任务的状态是否为 `done`。
+   - 如果不是 `done`，**阻断**并输出：
+     ```
+     ⛔ 阶段 [N-1] 的集成测试任务 [任务ID] 尚未完成（当前状态：[status]）。
+     请先执行 `do-task-echo [任务ID]` 完成该阶段的集成测试，再继续阶段 N 的任务。
+     ```
+   - 如果前一阶段所有任务（包括集成测试）均为 `done`，继续下一步。
+3. 找到当前阶段中第一个 `status: ready` 的任务
 3. 如果找不到 ready 任务：
    - 输出：“✅ 当前没有待执行的任务。”
    - 检查是否有 `in_progress` 的任务：如果有，询问是否继续该任务。

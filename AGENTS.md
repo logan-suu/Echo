@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.9  
+**版本**：v5.10  
 **生效日期**：2026-06-30  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -1040,6 +1040,8 @@ Agent 在创建或修改核心架构文件时，**必须在文件头部注入溯
 - 集成测试任务**必须**开分支、写测试、创建 PR，与其他任务无差别
 - 测试通过后，`task-status.json` 中该阶段 `status` 更新为 `done`，`current_phase` 推进到下一阶段
 
+**跨阶段阻断规则**：`current_phase` 为 N 时，阶段 N-1 的集成测试任务（如 1.9、2.14）必须为 `done` 状态，`current_phase` 方可指向 N。Agent 在 `do-task-echo`、`next-task-echo`、`init-session-echo` 中执行任何阶段 N 的任务前，**必须**检查阶段 N-1 的集成测试任务是否为 `done`——如未完成，阻断并提示先执行前一阶段的集成测试。
+
 ---
 
 ## 13. Agent 工作流与溯源协议（Anti-Hallucination Directives）
@@ -1193,3 +1195,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.7 | 2026-07-04 | 新增 §3.1.1 分支生命周期规范：PR 合并后分支必须保留，禁止删除。同步更新 §11.4 禁忌清单、§12.3 第 9 步、§15.1 权限矩阵；更新向量数据库选型为 ProximaKit 1.7 | AI 架构师 |
 | v5.8 | 2026-07-04 | Task 1.4 集成 SQLite：关系数据库选型从「GRDB 或原生」确定为「系统 SQLite3 + DatabaseManager actor 集中管理」。同步更新避坑手册 §2 (ACT-010) 和 §7 (STORE-010)；新增 ADR-001/002/003 于 docs/decisions/ | AI 架构师 |
 | v5.9 | 2026-07-05 | 重构 §12.6 阶段集成测试为正式任务（每阶段最后一个任务，走分支→TDD→PR 流程，不再由命令自动触发）。同步更新 `test-phase-echo` 命令、`README.md` 测试章节、`task-status.json` 各阶段追加集成测试任务（1.9/2.14/3.10/4.11/5.5） | AI 架构师 |
+| v5.10 | 2026-07-05 | 新增跨阶段阻断规则（§12.6）：执行阶段 N 任务前必须验证 N-1 集成测试任务为 `done`，防止跳过集成测试直接进入下一阶段。同步更新 `next-task-echo`、`do-task-echo`、`init-session-echo` 三个命令加入阻断检查。 | AI 架构师 |
