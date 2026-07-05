@@ -113,6 +113,9 @@ public actor ModelLoaderActor {
         case failed(ModelLoadError)
 
         /// 人类可读的状态描述（AC-7: UI 展示用）
+        ///
+        /// TODO (Phase 3): 迁移到 String Catalog，提供 zh-Hans / en-US 双语言条目
+        /// (AGENTS.md §6.2, §1.3: 语言策略 — 禁止硬编码字符串)
         public nonisolated var description: String {
             switch self {
             case .notLoaded: return "未加载"
@@ -185,10 +188,16 @@ public actor ModelLoaderActor {
     /// 模型加载错误类型（AC-2: 含 modelName + recoveryMethod）
     ///
     /// 所有错误均包含 `modelName`（AC-8: 审计日志必需）和固定 `recoveryMethod = "systemSettings"`（AC-2）
+    ///
+    /// ## 错误分级（AGENTS.md §4.4 L1~L4）
+    /// - `modelNotFound` / `loadFailed` → **L3 阻断**：
+    ///   模型不存在或损坏导致对应功能不可用，需引导用户前往系统设置修复或重装 App。
+    ///   降级方案：FTS5 关键词检索（MDL-005）。
+    /// - 无 L1/L2/L4 场景：模型加载不涉及网络重试、可恢复错误或数据冲突。
     public enum ModelLoadError: Error, LocalizedError, Sendable {
-        /// 模型资源未在 Bundle 中找到（AC-1 违规或文件丢失）
+        /// 模型资源未在 Bundle 中找到（AC-1 违规或文件丢失）→ L3 阻断
         case modelNotFound(modelName: String, resourceName: String)
-        /// Core ML / GGUF 加载过程失败（文件损坏、权限问题等，AC-2）
+        /// Core ML / GGUF 加载过程失败（文件损坏、权限问题等，AC-2）→ L3 阻断
         case loadFailed(modelName: String, resourceName: String, underlying: Error)
 
         // MARK: Error Properties
@@ -212,6 +221,9 @@ public actor ModelLoaderActor {
         }
 
         /// AC-2/AC-7: 人类可读的错误描述
+        ///
+        /// TODO (Phase 3): 迁移到 String Catalog，提供 zh-Hans / en-US 双语言条目
+        /// (AGENTS.md §6.2, §1.3)
         public nonisolated var errorDescription: String? {
             switch self {
             case .modelNotFound(let name, let resource):
@@ -367,6 +379,13 @@ public actor ModelLoaderActor {
     /// ## AC-3 合规
     /// - 此方法**仅在用户主动调用时执行**（通过 UI 按钮触发）
     /// - 无 Timer / DispatchQueue / Task.sleep 自动调度
+    ///
+    /// ## AC-4 评估（已跳过）
+    /// AC-4 要求“检测设备无网络时提示重试不需要网络”。评估结论：
+    /// - Echo 完全离线运行，所有模型随 App Bundle 分发（R-005）
+    /// - 加载仅通过 `Bundle.main.url(forResource:)` + `MLModel.load(contentsOf:)`，不涉及任何网络调用
+    /// - 网络状态检测在此上下文中为冗余逻辑
+    /// → **AC-4 已评估，决定跳过实现**（2026-07-05）
     public func retryLoadModel(_ modelType: ModelType) async -> ModelLoadState {
         // Reset state to notLoaded before retry
         modelStates[modelType] = .notLoaded
