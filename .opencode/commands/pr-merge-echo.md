@@ -7,7 +7,14 @@ agent: build
 
 请按 Echo 项目 AGENTS.md 的 GitHub 自动化操作规约（第 15 章）执行：
 
-> **核心原则**：合并操作必须由人类手动执行。OpenCode 桌面版**在任何情况下都不得自动合并 PR**。本命令负责检查合并条件、生成合并建议，并等待人类最终确认。
+> **核心原则**：合并操作必须由人类手动执行。Agent **在任何情况下都不得调用 `gh pr merge` 或任何合并命令**。本命令仅负责检查合并条件、生成合并建议，并等待人类手动合并。
+
+> **🚫 绝对禁止 Agent 执行的操作**：
+> - `gh pr merge` — 无论是否带 `--squash`/`--merge`/`--delete-branch`
+> - 任何 GitHub API 合并请求
+> - 任何修改远程分支的删除操作
+>
+> **合并是人类的专属权限。Agent 只能读取状态、输出报告。**
 
 ### 第一步：定位 PR
 1. 如果用户提供了 PR 编号（如 `pr-merge-echo 42`），直接使用该 PR。
@@ -45,15 +52,16 @@ agent: build
 ### 第三步：生成合并建议
 1. **所有检查通过**：
    - 输出合并前检查报告（表格形式）。
-   - 显示 PR 的合并策略建议（根据 `.opencode/config.toml` 中的 `merge_strategy`，默认 `squash`）。
+   - 显示 PR 的合并策略建议（默认 `squash`）。
 2. **建议的合并命令**：
-   - **GitHub Web**：提示用户点击 PR 页面中的“Merge pull request”按钮。
-   - **GitHub CLI**（可选）：提供 `gh pr merge [PR编号] --merge` 或 `--squash` 命令。
-   - **告知用户**：由于安全原因，OpenCode 不会自动执行合并，需要用户手动确认或执行上述操作。
+   - **GitHub Web**：提示用户点击 PR 页面中的 "Squash and merge" 按钮。
+   - **GitHub CLI**（供用户参考）：`gh pr merge [PR编号] --squash`
+   - ⚠️ **禁止在建议命令中包含 `--delete-branch`**（违反 AGENTS.md §3.1.1 分支保留规则）。
+   - **告知用户**：Agent 不会自动执行合并，请用户手动操作。
 
 ### 第四步：等待人类确认后更新状态
-1. 输出：“✅ 合并前检查全部通过。请在 GitHub 上手动合并该 PR。”
-2. 用户确认合并完成后，**必须按以下顺序操作**：
+1. **等待**：输出 "✅ 合并前检查全部通过。请在 GitHub 上手动合并该 PR。" **然后停止，不要执行任何命令。**
+2. **仅当用户明确告知"已合并"后**，才执行以下操作：
    - **首先** `git checkout dev-1.0`（切到 dev-1.0 分支）
    - **然后** `git pull origin dev-1.0`（拉取合并后的最新代码）
    - **接着在 dev-1.0 上**更新 `docs/05-planning/task-status.json`：
@@ -66,4 +74,4 @@ agent: build
    - 任务 ID 和标题。
    - 关联的用户故事。
    - 合并时间。
-   - 提示：“🎉 任务 [任务ID] 已完成！”
+   - 提示："🎉 任务 [任务ID] 已完成！"
