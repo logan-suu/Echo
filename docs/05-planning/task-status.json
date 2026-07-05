@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-04T10:30:00Z",
+  "last_updated": "2026-07-05T12:20:00Z",
   "current_phase": 1,
   "phases": [
     {
@@ -115,12 +115,14 @@
           "id": "1.8",
           "title": "搭建单元测试框架，编写第一个 Actor 测试用例",
           "story": null,
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-07-05T12:20:00Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["1.2"],
-          "test_file": "Tests/UnitTests/PrivacyActorTests.swift"
+          "test_file": "EchoTests/PrivacyActorTests.swift",
+          "notes": "创建 PrivacyActor.swift (Stub) + 11 个单元测试全部通过。Stub 实现 validate(operation:traceID:sourceTypes:) 基于 UserPolicy.authorizedSourceTypes 做授权检查，返回 PrivacyCheckpoint(.allowed/.denied)。包含 PrivacyOperation 枚举、PrivacyDecision 枚举、PrivacyCheckpoint 结构体、UserPolicy 结构体。完整授权逻辑与审计日志写入留待 Task 2.1 实现。测试文件位于 EchoTests/ 目录（Xcode 测试目标），Tests/UnitTests/ 目录预留为未来 SPM 测试目标。"
         }
       ]
     },
