@@ -133,8 +133,8 @@
           "title": "Phase 1 集成测试：跨 Actor 联调验证",
           "story": null,
           "status": "review",
-          "last_updated": "2026-07-05T11:25:00Z",
-          "pr": "https://github.com/LOGANSWP/Echo/pull/11",
+          "last_updated": "2026-07-05T11:50:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/12",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
