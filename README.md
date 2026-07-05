@@ -167,7 +167,7 @@ cd Echo
 | `retry-task-echo`       | 重试被阻断的任务      |
 | `read-spec-echo`        | 快速阅读任务规格      |
 | `test-unit-echo`        | 运行当前任务单元测试  |
-| `test-phase-echo`       | 运行阶段集成测试      |
+| `test-phase-echo`       | 执行阶段集成测试任务（分支→PR） |
 | `test-integration-echo` | 运行全量集成测试      |
 | `commit-pr-echo`        | 提交代码并创建 PR     |
 | `pr-review-echo`        | AI 预审 PR            |
@@ -203,11 +203,11 @@ Agent 在执行任何任务前，必须：
 ## 🧪 测试
 
 ```bash
-# 单元测试
-swift test --filter [任务ID]
+# 单元测试（通过自定义命令执行，自动走分支→PR流程）
+do-task-echo {任务ID}
 
-# 阶段集成测试
-swift test --filter IntegrationTests.Phase[阶段ID]
+# 阶段集成测试（每个 Phase 的最后一个正式任务，走分支→PR流程）
+test-phase-echo [{阶段ID}]
 
 # 全量集成测试
 swift test --filter IntegrationTests
