@@ -155,6 +155,7 @@
           "story": "US-PRV-001",
           "status": "review",
           "last_updated": "2026-07-05T11:20:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/10",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
