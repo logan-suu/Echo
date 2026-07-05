@@ -85,8 +85,9 @@
           "id": "1.6",
           "title": "实现 ModelLoaderActor 手动加载/重试机制",
           "story": "US-RES-004",
-          "status": "review",
-          "last_updated": "2026-07-05T06:30:00Z",
+          "status": "done",
+          "last_updated": "2026-07-05T06:45:00Z",
+          "merged_at": "2026-07-05T06:45:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md"
