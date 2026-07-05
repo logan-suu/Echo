@@ -140,6 +140,9 @@ orphaned_doc_comment:
   severity: warning
 
 # ── Custom rules ──────────────────────────────
+# KEEP IN SYNC: exclusion patterns below must match the directory scope
+# in .github/workflows/ci.yml static analysis grep (App/ Core/ UI/ only;
+# EchoTests/ and EchoUITests/ are excluded here).
 custom_rules:
   no_combine_import:
     name: "No Combine Import"
@@ -169,7 +172,7 @@ custom_rules:
 
   no_print_or_nslog:
     name: "No print() or NSLog()"
-    regex: '\b(print|NSLog)\(.+\)'
+    regex: '\b(print|NSLog)\s*\('
     message: "print() and NSLog() are prohibited. Use unified logging."
     severity: error
     excluded: "EchoTests/.*|EchoUITests/.*"

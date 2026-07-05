@@ -58,6 +58,9 @@ jobs:
           swiftlint lint --reporter github-actions-logging --quiet
 
       # ── Static Analysis: R-007 enforcement ──
+      # KEEP IN SYNC: directory scope (App/ Core/ UI/) must match
+      # the exclusion patterns in .swiftlint.yml custom_rules
+      # (EchoTests/.* | EchoUITests/.* are excluded there).
       - name: Static Analysis (R-007)
         run: |
           echo "::group::Checking for @unchecked Sendable"
