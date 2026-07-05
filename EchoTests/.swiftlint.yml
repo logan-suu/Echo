@@ -1,0 +1,15 @@
+# Nested SwiftLint config for test target — relax style rules
+# Test code prioritizes readability over strict formatting
+disabled_rules:
+  - required_deinit
+  - vertical_whitespace_opening_braces
+  - vertical_whitespace_closing_braces
+  - implicit_return
+  - convenience_type
+  - force_try
+  - force_unwrapping
+  - redundant_discardable_let
+  - shorthand_optional_binding
+  - multiline_arguments
+  - prefer_self_in_static_references
+  - static_over_final_class
