@@ -122,6 +122,7 @@
           ],
           "dependencies": ["1.2"],
           "test_file": "EchoTests/PrivacyActorTests.swift",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/9",
           "notes": "创建 PrivacyActor.swift (Stub) + 11 个单元测试全部通过。Stub 实现 validate(operation:traceID:sourceTypes:) 基于 UserPolicy.authorizedSourceTypes 做授权检查，返回 PrivacyCheckpoint(.allowed/.denied)。包含 PrivacyOperation 枚举、PrivacyDecision 枚举、PrivacyCheckpoint 结构体、UserPolicy 结构体。完整授权逻辑与审计日志写入留待 Task 2.1 实现。测试文件位于 EchoTests/ 目录（Xcode 测试目标），Tests/UnitTests/ 目录预留为未来 SPM 测试目标。"
         }
       ]
