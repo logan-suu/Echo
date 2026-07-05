@@ -120,6 +120,25 @@ public actor DatabaseManager {
                 lastError TEXT
             )
             """)
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS AuditLog (
+                eventType TEXT NOT NULL,
+                timestamp REAL NOT NULL,
+                traceID TEXT NOT NULL,
+                policyVersion INTEGER NOT NULL,
+                success INTEGER NOT NULL,
+                sourceType TEXT,
+                affectedCount INTEGER,
+                excludedWritten INTEGER,
+                sourceLanguage TEXT,
+                elapsedMs INTEGER
+            )
+            """)
+        // 30天自动清理索引
+        try execute(sql: """
+            CREATE INDEX IF NOT EXISTS idx_auditlog_timestamp
+            ON AuditLog(timestamp)
+            """)
     }
 
     // MARK: - Generic SQL Execution
