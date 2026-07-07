@@ -55,12 +55,17 @@ base_args = [
     "-D", "DEBUG",
 ]
 
-entries = []
-for sf in sorted(source_files):
-    entries.append({"directory": project_root, "file": sf, "arguments": base_args + [sf]})
+# Whole-module compilation: each entry includes ALL source files of its module
+# so SourceKit-LSP can resolve cross-file types (DBValue, DatabaseManager, etc.)
+main_args = base_args + source_files
+test_args = base_args + test_files + source_files  # tests depend on the main module
 
-for tf in sorted(test_files):
-    entries.append({"directory": project_root, "file": tf, "arguments": base_args + [tf]})
+entries = []
+for sf in source_files:
+    entries.append({"directory": project_root, "file": sf, "arguments": main_args})
+
+for tf in test_files:
+    entries.append({"directory": project_root, "file": tf, "arguments": test_args})
 
 with open("compile_commands.json", "w") as f:
     json.dump(entries, f, indent=2)
