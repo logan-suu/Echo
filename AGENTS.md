@@ -649,14 +649,17 @@ PR 合并前必须通过:
 |--------|-----|------|
 | **Language Server** | `sourcekit-lsp` (Xcode 自带) | Swift 官方 LSP，无需单独安装 |
 | **配置文件** | `.opencode/lsp.json` | 指定 `sourcekit-lsp` 优先级为 100 |
-| **编译数据库** | `compile_commands.json` | 从 `xcodebuild -showBuildSettings` 自动生成，SourceKit-LSP 依赖此文件进行跨文件类型解析 |
+| **编译数据库** | `buildServer.json` | 由 `xcode-build-server` 生成，SourceKit-LSP 通过此文件访问 Xcode DerivedData 索引 |
 
 **生成方式**：
 ```bash
+# 安装依赖（仅首次）
+brew install xcode-build-server
+# 生成 buildServer.json
 python3 Scripts/gen_compile_commands.py
 ```
 
-> 注意：`compile_commands.json` 包含 macOS 本机 SDK 路径，CI 或换机后需重新生成。
+> 注意：`buildServer.json` 包含本机 DerivedData 路径，已加入 `.gitignore`，换机后需重新生成。
 
 ---
 

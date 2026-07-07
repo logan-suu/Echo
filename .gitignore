@@ -38,3 +38,5 @@ Echo/Resources/Models/*.aimodel/
 *.ipa
 *.dSYM.zip
 *.dSYM
+buildServer.json
+compile_commands.json
