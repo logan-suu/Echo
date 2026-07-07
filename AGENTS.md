@@ -661,6 +661,8 @@ python3 Scripts/gen_compile_commands.py
 
 > 注意：`buildServer.json` 包含本机 DerivedData 路径，已加入 `.gitignore`，换机后需重新生成。
 
+**已知限制**：SourceKit-LSP 对纯 Xcode 项目（非 SwiftPM）的跨文件类型解析能力有限。`lsp_diagnostics` 会报告 `Cannot find type in scope` 等误报——这些并非真实编译错误，请以 `xcodebuild build` 结果为准。`lsp_diagnostics` 可正常检测单文件内的语法错误。
+
 ---
 
 ## 10. 模块目录结构与文件命名
