@@ -16,7 +16,7 @@ agent: build
 2. 使用 **GitHub API**（优先）或 `git diff` 获取变更文件列表。
 3. **审查范围**：
    - 仅审查 **新增或修改** 的文件（`git diff --name-only --diff-filter=AM`）。
-   - 忽略纯测试数据文件（如 `Tests/GoldenDataset/*.json`）和资源文件（除非涉及核心逻辑）。
+   - 忽略纯测试数据文件（GoldenDataset 的 `.json` 等）和资源文件（除非涉及核心逻辑）。
    - 输出变更摘要：“本次 PR 变更涉及 X 个文件：核心代码 Y 个，测试 Z 个，其他 W 个。”
 
 ### 第二步：架构合规检查（核心）

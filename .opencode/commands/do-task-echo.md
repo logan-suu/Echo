@@ -42,7 +42,7 @@ agent: build
 
 ### 第三步：执行开发
 1. 按 TDD 流程执行：
-   - 使用 `write_to_file` 在 `Tests/UnitTests/` 中创建测试文件，命名格式：`[任务ID]_[功能名]Tests.swift`。
+   - 使用 `write_to_file` 在 `EchoTests/Phase{N}/` 中创建测试文件（N 为当前阶段编号），命名格式：`[任务ID]_[功能名]Tests.swift`。
    - 测试方法命名含 AC 编号（如 `test_AC1_ExcludedAssetsWriteCondition`）。
    - 一次实现一个测试用例 → 运行测试 → 通过后继续下一个。
 2. 实现文件必须包含“出生证明”水印（§12.5）。

@@ -9,20 +9,17 @@ agent: build
 
 ### 第一步：前置检查与执行
 0. **前置条件检查**：
-   - 检查代码是否能编译：`swift build`
+   - 检查代码是否能编译：
+     ```bash
+     xcodebuild build -project Echo.xcodeproj -scheme Echo -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+     ```
    - 如果编译失败，输出错误，建议先修复编译问题。
-   - 检查最近一次单元测试是否通过（如有记录）。
-   - 如果单元测试未通过，建议先运行 `test-unit-echo` 修复。
-1. 运行所有集成测试：
+1. 运行所有测试（包括所有 Phase 的单元测试和集成测试）：
    ```bash
-   swift test --filter "IntegrationTests"
+   xcodebuild test -project Echo.xcodeproj -scheme Echo \
+     -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
    ```
-2. **备选方案**：如果项目使用 XCTest 标准命名，也可以运行：
-   ```bash
-   swift test
-   ```
-   然后通过输出筛选集成测试结果。
-3. 注意：全量测试可能耗时较长（尤其是 Golden Dataset），请耐心等待。
+2. 测试文件按阶段分布于 `EchoTests/Phase1/` ~ `EchoTests/Phase5/`。
 
 ### 第二步：性能与质量监控
 1. 除了测试通过率，重点检查：

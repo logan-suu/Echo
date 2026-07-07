@@ -732,12 +732,12 @@ struct Phase1IntegrationTests {
             let originalPolicy = await sut.getPolicy()
             var newPolicy = originalPolicy
             newPolicy.authorizedSourceTypes = ["photo"]
-            await sut.updatePolicy(newPolicy)
+            try await sut.updatePolicy(newPolicy)
             #expect(await sut.isSourceAuthorized("photo"))
             #expect(await !sut.isSourceAuthorized("note"))
             #expect(await !sut.isSourceAuthorized("voice"))
 
-            await sut.updatePolicy(originalPolicy)
+            try await sut.updatePolicy(originalPolicy)
         }
     }
 

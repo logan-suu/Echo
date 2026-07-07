@@ -100,10 +100,12 @@ Echo/
 ├── Resources/
 │   ├── Models/ (MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small)
 │   └── StringCatalog/
-├── Tests/
-│   ├── UnitTests/
-│   ├── IntegrationTests/
-│   └── GoldenDataset/
+├── EchoTests/                    # 🧪 单元测试与集成测试（按阶段分文件夹）
+│   ├── Phase1/                   # Phase 1 测试
+│   ├── Phase2/                   # Phase 2 测试
+│   ├── Phase3/                   # Phase 3 测试
+│   ├── Phase4/                   # Phase 4 测试
+│   └── Phase5/                   # Phase 5 测试
 ├── docs/                       # 📚 项目文档中心
 ├── .codex/commands/            # OpenCode 自定义命令
 ├── AGENTS.md                   # Agent 协作规约
