@@ -643,6 +643,21 @@ PR 合并前必须通过:
 - 禁止使用其他设备名称（如 `iPhone 16 Pro`），避免因设备不存在导致构建失败
 - CI 环境可通过环境变量覆盖（如 `IOS_DESTINATION`），本地开发统一使用上述约定之```
 
+### 9.5 LSP 诊断配置
+
+| 约定项 | 值 | 说明 |
+|--------|-----|------|
+| **Language Server** | `sourcekit-lsp` (Xcode 自带) | Swift 官方 LSP，无需单独安装 |
+| **配置文件** | `.opencode/lsp.json` | 指定 `sourcekit-lsp` 优先级为 100 |
+| **编译数据库** | `compile_commands.json` | 从 `xcodebuild -showBuildSettings` 自动生成，SourceKit-LSP 依赖此文件进行跨文件类型解析 |
+
+**生成方式**：
+```bash
+python3 Scripts/gen_compile_commands.py
+```
+
+> 注意：`compile_commands.json` 包含 macOS 本机 SDK 路径，CI 或换机后需重新生成。
+
 ---
 
 ## 10. 模块目录结构与文件命名
