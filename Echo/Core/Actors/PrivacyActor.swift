@@ -308,9 +308,30 @@ public actor PrivacyActor {
     }
 
     /// 确保策略已加载（懒加载）
+    ///
+    /// 区分两种场景：
+    /// - 首次启动（UserPolicyStore 无记录）：静默使用默认策略 → 正常
+    /// - 数据库损坏导致加载失败：标记为未加载，后续 validate() 使用默认策略
+    ///   并记录错误日志（不在此层触发 L3，由 Pipeline 层统一处理）
     private func ensurePolicyLoaded() async {
         if !policyLoaded {
-            try? await loadPolicy()
+            do {
+                try await loadPolicy()
+            } catch {
+                // 加载失败（数据库损坏等 L3 场景）：保留默认策略，标记已尝试
+                // Pipeline 层可检测 policyVersion==1 且 loadPolicy 失败来判断是否需要 L3 处理
+                policyLoaded = true
+                // 写入审计日志记录加载失败（best-effort）
+                try? await writeAuditLog(
+                    eventType: .modelLoadFailed,
+                    traceID: "policy-load-\(UUID().uuidString.prefix(8))",
+                    policyVersion: 1,
+                    success: false,
+                    sourceType: "UserPolicy",
+                    sourceLanguage: nil,
+                    elapsedMs: nil
+                )
+            }
         }
     }
 
@@ -355,9 +376,11 @@ public actor PrivacyActor {
         )
 
         // 写入审计日志（best-effort：审计写入失败不阻断 Pipeline）
+        // 注意：此处的 event 映射为最近似的事件类型，Pipeline 特有事件（如图片/视频摄入）
+        // 应由具体 Pipeline 在操作成功后通过 writeAuditLog() 单独写入。
         let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
         let event: AuditEvent = switch operation {
-        case .search:    .dataSourceChangeSynced  // 检索类操作
+        case .search:    .dataSourceChangeSynced  // 检索操作 — 暂无专门的 search 审计事件
         case .ingest:    .memoryIngested
         case .sync:      .dataSourceChangeSynced
         case .delete:    .memoryDeleted
@@ -369,7 +392,7 @@ public actor PrivacyActor {
             traceID: traceID,
             policyVersion: policy.policyVersion,
             success: decision == .allowed,
-            sourceType: sourceTypes.first,
+            sourceType: sourceTypes.isEmpty ? nil : sourceTypes.joined(separator: ","),
             elapsedMs: elapsedMs
         )
 
