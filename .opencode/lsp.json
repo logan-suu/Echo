@@ -1,14 +1,7 @@
 {
   "lsp": {
     "sourcekit-lsp": {
-      "priority": 100,
-      "initialization": {
-        "workspace": {
-          "build": {
-            "arguments": ["xcodebuild", "build", "-project", "Echo.xcodeproj", "-scheme", "Echo", "-destination", "platform=iOS Simulator,name=iPhone 17 Pro"]
-          }
-        }
-      }
+      "priority": 100
     }
   }
 }
