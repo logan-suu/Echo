@@ -120,6 +120,34 @@ public actor DatabaseManager {
                 lastError TEXT
             )
             """)
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS AuditLog (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                eventType TEXT NOT NULL,
+                timestamp REAL NOT NULL,
+                traceID TEXT NOT NULL,
+                policyVersion INTEGER NOT NULL DEFAULT 1,
+                success INTEGER NOT NULL DEFAULT 1,
+                sourceType TEXT,
+                affectedCount INTEGER,
+                excludedWritten INTEGER,
+                sourceLanguage TEXT,
+                elapsedMs INTEGER
+            )
+            """)
+        try execute(sql: """
+            CREATE INDEX IF NOT EXISTS idx_auditlog_timestamp ON AuditLog(timestamp)
+            """)
+        // UserPolicy persistence table
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS UserPolicyStore (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                preferredLanguage TEXT NOT NULL DEFAULT 'zh-Hans',
+                authorizedSourceTypes TEXT NOT NULL DEFAULT '["photo","note","voice"]',
+                policyVersion INTEGER NOT NULL DEFAULT 1,
+                updatedAt REAL NOT NULL
+            )
+            """)
     }
 
     // MARK: - Generic SQL Execution

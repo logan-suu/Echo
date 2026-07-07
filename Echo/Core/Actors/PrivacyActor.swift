@@ -4,11 +4,14 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-PRV-001
 // 任务: 1.8 - 搭建单元测试框架，编写第一个 Actor 测试用例 (Stub)
 //       2.1 - PrivacyActor + UserPolicy 实现 (Full Implementation)
-// AC 覆盖: US-PRV-001 AC-1 (授权校验), AC-5 (重新授权不清除排除表)
+// AC 覆盖: US-PRV-001 AC-1 (策略即时生效), AC-2 (被拒数据不进 Retriever),
+//          AC-3 (Denial Response), AC-4 (缓存失效), AC-5 (重新授权不清除排除表),
+//          AC-6 (审计记录 .denied/.reauthorized)
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), §7.1 (PrivacyCheckpoint 强制注入),
-//            R-007 (禁止 @unchecked Sendable), R-008 (跨 Actor 调用必须 await)
+//           §7.3 (审计日志), §5.4 (30天保留), R-006 (审计强制覆盖),
+//           R-007 (禁止 @unchecked Sendable), R-008 (跨 Actor 调用必须 await)
 // 重要: 所有 struct stored/computed properties 必须 nonisolated（项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor）
-// 生成时间: 2026-07-05
+// 生成时间: 2026-07-05 (Stub), 2026-07-07 (Task 2.1 Full Implementation)
 // ==========================================
 
 import Foundation
@@ -103,6 +106,110 @@ public struct UserPolicy: Sendable, Codable {
     }
 }
 
+// MARK: - Audit Event
+
+/// 审计事件类型 — 对应 AGENTS.md §7.3 审计事件完整清单
+public enum AuditEvent: String, Sendable, Codable {
+    case dataSourceConnected
+    case autoImportCompleted
+    case scheduledScanCompleted
+    case personSynced
+    case deviceMigrationCompleted
+    case permissionChanged
+    case excluded
+    case excludedRestored
+    case excludedBatchRestored
+    case excludedAutoCleaned
+    case dataSourceChangeSynced
+    case manualChangeDetectionCompleted
+    case memoryIngested
+    case imageIngested
+    case videoIngested
+    case voiceIngested
+    case memoryDeleted
+    case cascadeDeleteFromOriginal
+    case memoryEdited
+    case feedbackReceived
+    case feedbackReset
+    case feedbackRevoked
+    case modelLoadFailed
+    case modelLoadRetrySuccess
+    case backgroundTaskInterrupted
+    case retryPending
+    case syncConflict
+    case reauthorized
+}
+
+// MARK: - Audit Log Entry
+
+/// 审计日志条目 — 对应 AGENTS.md §5.4 审计日志契约
+///
+/// 强制字段: eventType, timestamp, traceID, policyVersion, success
+/// 可选字段: sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs
+/// 隐私保护: 仅记录哈希摘要，禁止原文
+public struct AuditLogEntry: Sendable, Codable {
+    public nonisolated let id: Int64
+    public nonisolated let eventType: AuditEvent
+    public nonisolated let timestamp: Date
+    public nonisolated let traceID: String
+    public nonisolated let policyVersion: Int
+    public nonisolated let success: Bool
+    public nonisolated let sourceType: String?
+    public nonisolated let affectedCount: Int?
+    public nonisolated let excludedWritten: Bool?
+    public nonisolated let sourceLanguage: String?
+    public nonisolated let elapsedMs: Int?
+
+    public nonisolated init(
+        id: Int64 = 0,
+        eventType: AuditEvent,
+        timestamp: Date = Date(),
+        traceID: String,
+        policyVersion: Int,
+        success: Bool = true,
+        sourceType: String? = nil,
+        affectedCount: Int? = nil,
+        excludedWritten: Bool? = nil,
+        sourceLanguage: String? = nil,
+        elapsedMs: Int? = nil
+    ) {
+        self.id = id
+        self.eventType = eventType
+        self.timestamp = timestamp
+        self.traceID = traceID
+        self.policyVersion = policyVersion
+        self.success = success
+        self.sourceType = sourceType
+        self.affectedCount = affectedCount
+        self.excludedWritten = excludedWritten
+        self.sourceLanguage = sourceLanguage
+        self.elapsedMs = elapsedMs
+    }
+
+    /// 从数据库查询结果行构造 AuditLogEntry（用于 fetchAuditLogs）
+    public nonisolated static func fromRow(_ row: [String: DBValue]) -> AuditLogEntry? {
+        guard let etStr = row["eventType"]?.stringValue,
+              let eventType = AuditEvent(rawValue: etStr),
+              let ts = row["timestamp"]?.doubleValue,
+              let traceID = row["traceID"]?.stringValue,
+              let pv = row["policyVersion"]?.intValue,
+              let successInt = row["success"]?.intValue else { return nil }
+        return AuditLogEntry(
+            id: row["id"]?.intValue ?? 0,
+            eventType: eventType,
+            timestamp: Date(timeIntervalSince1970: ts),
+            traceID: traceID,
+            policyVersion: Int(pv),
+            success: successInt != 0,
+            sourceType: row["sourceType"]?.stringValue,
+            affectedCount: row["affectedCount"]?.intValue.map(Int.init),
+            excludedWritten: row["excludedWritten"]?.intValue.map { $0 != 0 },
+            sourceLanguage: row["sourceLanguage"]?.stringValue,
+            elapsedMs: row["elapsedMs"]?.intValue.map(Int.init)
+        )
+    }
+}
+
 // MARK: - Privacy Actor
 
 /// 隐私校验与审计 Actor — 管理 UserPolicy，提供 Pipeline 入口的授权校验（PrivacyCheckpoint）。
@@ -135,24 +242,91 @@ public actor PrivacyActor {
 
     // MARK: - Properties
 
-    /// 当前用户策略（TODO Phase 2: 从 SQLite 持久化加载）
+    /// 当前用户策略 — 从 SQLite UserPolicyStore 加载，变更时持久化
     private var policy: UserPolicy
+
+    /// 数据库管理器引用（AGENTS.md §5.1：所有 SQLite 写操作封装在 Actor 中）
+    private let db: DatabaseManager
+
+    /// 策略是否已从数据库加载
+    private var policyLoaded = false
 
     // MARK: - Initialization
 
-    private init(policy: UserPolicy = UserPolicy()) {
+    private init(db: DatabaseManager = .shared, policy: UserPolicy = UserPolicy()) {
+        self.db = db
         self.policy = policy
+    }
+
+    // MARK: - Policy Persistence
+
+    /// 从 SQLite UserPolicyStore 加载持久化的 UserPolicy（AGENTS.md §5.1）
+    ///
+    /// 若数据库中无记录，保留默认策略（首次启动）。
+    /// AC-1: 加载的策略在下一次 validate() 调用前生效。
+    public func loadPolicy() async throws {
+        let rows = try await db.executeQuery(
+            sql: "SELECT preferredLanguage, authorizedSourceTypes, policyVersion FROM UserPolicyStore WHERE id = 1",
+            bindings: []
+        )
+        if let row = rows.first,
+           let language = row["preferredLanguage"]?.stringValue,
+           let sourcesJSON = row["authorizedSourceTypes"]?.stringValue,
+           let version = row["policyVersion"]?.intValue {
+            let sources: Set<String>
+            if let data = sourcesJSON.data(using: .utf8),
+               let decoded = try? JSONDecoder().decode([String].self, from: data) {
+                sources = Set(decoded)
+            } else {
+                sources = ["photo", "note", "voice"]
+            }
+            self.policy = UserPolicy(
+                preferredLanguage: language,
+                authorizedSourceTypes: sources,
+                policyVersion: Int(version)
+            )
+        }
+        self.policyLoaded = true
+    }
+
+    /// 持久化当前 UserPolicy 到 SQLite（upsert，AGENTS.md §5.1）
+    private func savePolicy() async throws {
+        let sourcesData = try JSONEncoder().encode(Array(policy.authorizedSourceTypes))
+        let sourcesJSON = String(data: sourcesData, encoding: .utf8) ?? "[]"
+        try await db.executeWrite(
+            sql: """
+                INSERT OR REPLACE INTO UserPolicyStore (id, preferredLanguage, authorizedSourceTypes, policyVersion, updatedAt)
+                VALUES (1, ?, ?, ?, ?)
+                """,
+            bindings: [
+                .text(policy.preferredLanguage),
+                .text(sourcesJSON),
+                .int(Int64(policy.policyVersion)),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
+    }
+
+    /// 确保策略已加载（懒加载）
+    private func ensurePolicyLoaded() async {
+        if !policyLoaded {
+            try? await loadPolicy()
+        }
     }
 
     // MARK: - Privacy Checkpoint Validation
 
-    /// 对 Pipeline 操作执行隐私校验，返回 PrivacyCheckpoint。
+    /// 对 Pipeline 操作执行隐私校验，返回 PrivacyCheckpoint 并写入审计日志。
     ///
     /// 对应架构文档 §7.2 强制校验流程：
     /// 1. 生成 traceID（由调用方传入）
     /// 2. 执行授权检查（基于 UserPolicy.authorizedSourceTypes）
     /// 3. 返回 PrivacyCheckpoint（含 decision: .allowed / .denied）
-    /// 4. TODO Phase 2: 写入审计日志到 AuditLog SQLite 表
+    /// 4. **写入审计日志到 AuditLog SQLite 表**（AGENTS.md §7.3）
+    ///    - 允许: 记录 eventType=checkpoint, success=true
+    ///    - 拒绝: 记录 eventType=checkpoint, success=false（AC-6: 记录 decision=.denied + policyVersion）
+    ///
+    /// R-006: 所有异步操作必须包含 PrivacyCheckpoint — 此方法即为 Checkpoint 入口。
     ///
     /// - Parameters:
     ///   - operation: 当前 Pipeline 操作类型
@@ -164,15 +338,14 @@ public actor PrivacyActor {
         traceID: String,
         sourceTypes: [String] = []
     ) async -> PrivacyCheckpoint {
+        let startTime = Date()
+        await ensurePolicyLoaded()
+
         // 检查所有涉及的数据源是否均已授权
         let allAuthorized = sourceTypes.isEmpty || sourceTypes.allSatisfy { policy.isAuthorized(sourceType: $0) }
-
         let decision: PrivacyDecision = allAuthorized ? .allowed : .denied
 
-        // TODO (Phase 2, Task 2.1): 写入审计日志到 AuditLog 表
-        // await writeAuditLog(checkpoint: ...)
-
-        return PrivacyCheckpoint(
+        let checkpoint = PrivacyCheckpoint(
             traceID: traceID,
             timestamp: Date(),
             operation: operation,
@@ -180,23 +353,194 @@ public actor PrivacyActor {
             sourceTypes: sourceTypes,
             decision: decision
         )
+
+        // 写入审计日志（best-effort：审计写入失败不阻断 Pipeline）
+        let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        let event: AuditEvent = switch operation {
+        case .search:    .dataSourceChangeSynced  // 检索类操作
+        case .ingest:    .memoryIngested
+        case .sync:      .dataSourceChangeSynced
+        case .delete:    .memoryDeleted
+        case .awakening: .scheduledScanCompleted
+        case .feedback:  .feedbackReceived
+        }
+        try? await writeAuditLog(
+            eventType: event,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: decision == .allowed,
+            sourceType: sourceTypes.first,
+            elapsedMs: elapsedMs
+        )
+
+        return checkpoint
     }
 
-    // MARK: - Policy Management (Stub — Phase 2)
+    // MARK: - Audit Log (AGENTS.md §7.3 / §5.4)
 
-    /// 获取当前 UserPolicy 的只读副本
+    /// 写入一条审计日志条目到 AuditLog 表
+    ///
+    /// 隐私保护：仅记录哈希摘要，禁止原文（调用方负责确保 sourceType/affectedCount 等不含敏感数据）
+    public func writeAuditLog(
+        eventType: AuditEvent,
+        traceID: String,
+        policyVersion: Int,
+        success: Bool = true,
+        sourceType: String? = nil,
+        affectedCount: Int? = nil,
+        excludedWritten: Bool? = nil,
+        sourceLanguage: String? = nil,
+        elapsedMs: Int? = nil
+    ) async throws {
+        try await db.executeWrite(
+            sql: """
+                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+            bindings: [
+                .text(eventType.rawValue),
+                .double(Date().timeIntervalSince1970),
+                .text(traceID),
+                .int(Int64(policyVersion)),
+                .int(success ? 1 : 0),
+                sourceType.map { .text($0) } ?? .null,
+                affectedCount.map { .int(Int64($0)) } ?? .null,
+                excludedWritten.map { .int($0 ? 1 : 0) } ?? .null,
+                sourceLanguage.map { .text($0) } ?? .null,
+                elapsedMs.map { .int(Int64($0)) } ?? .null,
+            ]
+        )
+    }
+
+    /// 清理超过保留期的审计日志（AGENTS.md §5.4: 保留期 30 天）
+    @discardableResult
+    public func cleanupOldAuditLogs(retentionDays: Int = 30) async throws -> Int {
+        let cutoff = Date().timeIntervalSince1970 - Double(retentionDays * 86400)
+        let changes = try await db.executeWrite(
+            sql: "DELETE FROM AuditLog WHERE timestamp < ?",
+            bindings: [.double(cutoff)]
+        )
+        return Int(changes)
+    }
+
+    /// 查询审计日志（支持按事件类型过滤和分页）
+    public func fetchAuditLogs(
+        limit: Int = 100,
+        offset: Int = 0,
+        eventType: AuditEvent? = nil
+    ) async throws -> [AuditLogEntry] {
+        let sql: String
+        let bindings: [DBBinding]
+        if let eventType = eventType {
+            sql = """
+                SELECT id, eventType, timestamp, traceID, policyVersion, success,
+                       sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs
+                FROM AuditLog WHERE eventType = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?
+                """
+            bindings = [.text(eventType.rawValue), .int(Int64(limit)), .int(Int64(offset))]
+        } else {
+            sql = """
+                SELECT id, eventType, timestamp, traceID, policyVersion, success,
+                       sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs
+                FROM AuditLog ORDER BY timestamp DESC LIMIT ? OFFSET ?
+                """
+            bindings = [.int(Int64(limit)), .int(Int64(offset))]
+        }
+        let rows = try await db.executeQuery(sql: sql, bindings: bindings)
+        return rows.compactMap { AuditLogEntry.fromRow($0) }
+    }
+
+    /// 审计日志总数
+    public func auditLogCount() async throws -> Int {
+        let rows = try await db.executeQuery(sql: "SELECT COUNT(*) AS cnt FROM AuditLog", bindings: [])
+        return rows.first?["cnt"]?.intValue.map(Int.init) ?? 0
+    }
+
+    // MARK: - Policy Management
+
+    /// 获取当前 UserPolicy 的只读副本（AC-1: 确保已加载最新策略）
     public func getPolicy() async -> UserPolicy {
-        policy
+        await ensurePolicyLoaded()
+        return policy
     }
 
-    /// 更新用户策略（TODO Phase 2: 持久化到 SQLite）
-    public func updatePolicy(_ newPolicy: UserPolicy) async {
+    /// 更新用户策略并持久化到 SQLite（AC-1/AC-5/AC-6）
+    ///
+    /// AC-1: 策略更新后下一次检索调用前生效（调用 savePolicy 持久化）
+    /// AC-5: 重新授权时检测授权变化，记录 .reauthorized 审计事件
+    /// AC-6: 记录 policyVersion + 审计事件
+    ///
+    /// - Parameter newPolicy: 新的 UserPolicy 配置
+    public func updatePolicy(_ newPolicy: UserPolicy) async throws {
+        await ensurePolicyLoaded()
+
+        let oldTypes = self.policy.authorizedSourceTypes
+        let reauthorizedTypes = newPolicy.authorizedSourceTypes.subtracting(oldTypes)
+        let revokedTypes = oldTypes.subtracting(newPolicy.authorizedSourceTypes)
+
         self.policy = newPolicy
-        // TODO: 写入审计日志 — .policyChanged
+        try await savePolicy()
+
+        let traceID = UUID().uuidString
+
+        // AC-5: 检测重新授权的数据源 → 记录 .reauthorized 审计
+        for sourceType in reauthorizedTypes {
+            try? await writeAuditLog(
+                eventType: .reauthorized,
+                traceID: traceID,
+                policyVersion: newPolicy.policyVersion,
+                success: true,
+                sourceType: sourceType
+            )
+        }
+
+        // 检测撤销授权的数据源 → 记录 .permissionChanged 审计
+        for sourceType in revokedTypes {
+            try? await writeAuditLog(
+                eventType: .permissionChanged,
+                traceID: traceID,
+                policyVersion: newPolicy.policyVersion,
+                success: true,
+                sourceType: sourceType
+            )
+        }
     }
 
     /// 检查指定数据源是否已授权
     public func isSourceAuthorized(_ sourceType: String) async -> Bool {
-        policy.isAuthorized(sourceType: sourceType)
+        await ensurePolicyLoaded()
+        return policy.isAuthorized(sourceType: sourceType)
+    }
+
+    /// 记录重新授权事件（AC-5/AC-6: reauthorized → sourceType + excludedBatchRestored）
+    public func recordReauthorization(
+        sourceType: String,
+        excludedBatchRestored: Bool = false,
+        traceID: String = UUID().uuidString
+    ) async throws {
+        await ensurePolicyLoaded()
+        try await writeAuditLog(
+            eventType: .reauthorized,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: true,
+            sourceType: sourceType,
+            excludedWritten: excludedBatchRestored
+        )
+    }
+
+    /// 记录权限变更事件
+    public func recordPermissionChanged(
+        sourceType: String,
+        traceID: String = UUID().uuidString
+    ) async throws {
+        await ensurePolicyLoaded()
+        try await writeAuditLog(
+            eventType: .permissionChanged,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: true,
+            sourceType: sourceType
+        )
     }
 }

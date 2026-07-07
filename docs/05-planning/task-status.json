@@ -155,7 +155,8 @@
           "id": "2.1",
           "title": "PrivacyActor + UserPolicy 实现",
           "story": "US-PRV-001",
-          "status": "backlog",
+          "status": "review",
+          "last_updated": "2026-07-07T15:35:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
