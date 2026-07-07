@@ -164,7 +164,7 @@
             "docs/03-implementation/开发避坑与关键注意点手册.md"
           ],
           "dependencies": ["1.4"],
-          "test_file": "Tests/UnitTests/PrivacyActorTests.swift"
+          "test_file": "EchoTests/Phase2/PrivacyActorTests.swift"
         },
         {
           "id": "2.2",
