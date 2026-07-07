@@ -627,8 +627,21 @@ PR 合并前必须通过:
   性能检查 (Nightly):
     - 检索 P95 < 200ms
     - 内存峰值 < 1.5GB
-    - 跨语言 Recall@10 ≥ 85%
+     - 跨语言 Recall@10 ≥ 85%
 ```
+
+### 9.4 测试环境约定
+
+| 约定项 | 值 | 说明 |
+|--------|-----|------|
+| **模拟器** | iPhone 17 Pro (iOS 26.5) | 所有 `xcodebuild test` 统一使用此设备 |
+| **destination** | `'platform=iOS Simulator,name=iPhone 17 Pro'` | 用于 `xcodebuild build/test` 的 `-destination` 参数 |
+| **测试文件位置** | `EchoTests/Phase{N}/[任务ID]_[功能名]Tests.swift` | 参见 §10.3 |
+
+**规范**：
+- Agent 执行 `xcodebuild test` 时，必须使用 `iPhone 17 Pro` 模拟器
+- 禁止使用其他设备名称（如 `iPhone 16 Pro`），避免因设备不存在导致构建失败
+- CI 环境可通过环境变量覆盖（如 `IOS_DESTINATION`），本地开发统一使用上述约定之```
 
 ---
 
