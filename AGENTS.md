@@ -682,10 +682,12 @@ Echo/
 │   ├── Models/ (SigLIP, MobileCLIP, GTE-Qwen2, Whisper)
 │   ├── MusicOffline/ (热门歌曲 JSON)
 │   └── StringCatalog/
-├── Tests/
-│   ├── UnitTests/
-│   ├── IntegrationTests/
-│   └── GoldenDataset/
+├── EchoTests/                    # 🧪 单元测试与集成测试（按阶段分文件夹）
+│   ├── Phase1/                   # Phase 1 测试
+│   ├── Phase2/                   # Phase 2 测试
+│   ├── Phase3/                   # Phase 3 测试
+│   ├── Phase4/                   # Phase 4 测试
+│   └── Phase5/                   # Phase 5 测试
 ├── docs/                        # 📚 项目文档中心（详见第0章）
 │   ├── INDEX.md                 # 文档摘要索引
 │   ├── 01-spec/
@@ -709,6 +711,24 @@ Echo/
 | Service   | `XxxService.swift`                     | `VectorStoreService.swift` |
 | Model     | `Xxx.swift`                            | `Memory.swift`             |
 | Utils     | `XxxUtils.swift` 或 `XxxHandler.swift` | `ErrorHandler.swift`       |
+| Test      | `[任务ID]_[功能名]Tests.swift`          | `2.1_PrivacyActorTests.swift` |
+
+### 10.3 测试文件存放规范
+
+**测试文件必须按阶段（Phase）分文件夹存放**，目录结构为 `EchoTests/Phase{阶段编号}/`。
+
+| 阶段 | 测试目录 |
+|------|----------|
+| Phase 1 | `EchoTests/Phase1/` |
+| Phase 2 | `EchoTests/Phase2/` |
+| Phase 3 | `EchoTests/Phase3/` |
+| Phase 4 | `EchoTests/Phase4/` |
+| Phase 5 | `EchoTests/Phase5/` |
+
+**规则**：
+- 每个阶段的单元测试与集成测试统一存放在该阶段的目录下
+- task-status.json 中 `test_file` 字段必须使用 `EchoTests/Phase{N}/` 前缀
+- 阶段集成测试文件命名：`Phase{N}IntegrationTests.swift`
 
 ---
 
@@ -890,7 +910,9 @@ stateDiagram-v2
 
 #### 第 2 步：编写测试用例
 
-使用 `write_to_file` 在 `Tests/UnitTests/` 中创建测试文件，命名格式：`[任务ID]_[功能名]Tests.swift`，测试方法命名含 AC 编号（如 `test_AC1_ExcludedAssetsWriteCondition`）。
+使用 `write_to_file` 在 `EchoTests/Phase{N}/` 中创建测试文件，命名格式：`[任务ID]_[功能名]Tests.swift`（如 `2.1_PrivacyActorTests.swift`），测试方法命名含 AC 编号（如 `test_AC1_ExcludedAssetsWriteCondition`）。
+
+**测试文件存放规范**：每个阶段（Phase）的任务对应的测试文件必须存放在 `EchoTests/Phase{阶段编号}/` 目录下。例如 Phase 2 的测试文件统一放在 `EchoTests/Phase2/`。阶段集成测试文件命名：`EchoTests/Phase{阶段ID}/Phase{阶段ID}IntegrationTests.swift`。
 
 #### 第 3 步：TDD 增量实现
 

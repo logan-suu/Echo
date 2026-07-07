@@ -58,7 +58,7 @@ agent: build
 
 ### 第三步：执行开发
 1. **编写测试用例**：
-   - 使用 `write_to_file` 在 `Tests/UnitTests/` 中创建测试文件
+   - 使用 `write_to_file` 在 `EchoTests/Phase{N}/` 中创建测试文件（N 为当前阶段编号）
    - 命名格式：`[任务ID]_[功能名]Tests.swift`
    - 测试方法命名含 AC 编号（如 `test_AC1_ExcludedAssetsWriteCondition`）
 2. **增量实现（TDD 循环）**：

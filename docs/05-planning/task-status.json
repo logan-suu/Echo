@@ -66,7 +66,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["1.1"],
-          "test_file": "Tests/UnitTests/SQLiteActorTests.swift"
+          "test_file": "EchoTests/Phase1/SQLiteActorTests.swift"
         },
         {
           "id": "1.5",
@@ -177,7 +177,7 @@
             "docs/03-implementation/开发避坑与关键注意点手册.md"
           ],
           "dependencies": ["1.4"],
-          "test_file": "Tests/UnitTests/ExcludedAssetsActorTests.swift"
+          "test_file": "EchoTests/Phase2/ExcludedAssetsActorTests.swift"
         },
         {
           "id": "2.3",
@@ -190,7 +190,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["2.1", "1.3"],
-          "test_file": "Tests/UnitTests/IngestPipelineImageTests.swift"
+          "test_file": "EchoTests/Phase2/IngestPipelineImageTests.swift"
         },
         {
           "id": "2.4",
@@ -202,7 +202,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.3", "1.6"],
-          "test_file": "Tests/UnitTests/IngestPipelineVideoTests.swift"
+          "test_file": "EchoTests/Phase2/IngestPipelineVideoTests.swift"
         },
         {
           "id": "2.5",
@@ -214,7 +214,7 @@
             "docs/03-implementation/双语言实现说明文档.md"
           ],
           "dependencies": ["2.3"],
-          "test_file": "Tests/UnitTests/IngestPipelineTextTests.swift"
+          "test_file": "EchoTests/Phase2/IngestPipelineTextTests.swift"
         },
         {
           "id": "2.6",
@@ -227,7 +227,7 @@
             "docs/03-implementation/双语言实现说明文档.md"
           ],
           "dependencies": ["2.3"],
-          "test_file": "Tests/UnitTests/SearchPipelineTests.swift"
+          "test_file": "EchoTests/Phase2/SearchPipelineTests.swift"
         },
         {
           "id": "2.7",
@@ -239,7 +239,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["1.4"],
-          "test_file": "Tests/UnitTests/FeedbackActorTests.swift"
+          "test_file": "EchoTests/Phase2/FeedbackActorTests.swift"
         },
         {
           "id": "2.8",
@@ -250,7 +250,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.6", "2.7"],
-          "test_file": "Tests/IntegrationTests/SearchWithFeedbackTests.swift"
+          "test_file": "EchoTests/Phase2/SearchWithFeedbackTests.swift"
         },
         {
           "id": "2.9",
@@ -262,7 +262,7 @@
             "docs/03-implementation/双语言实现说明文档.md"
           ],
           "dependencies": ["2.6"],
-          "test_file": "Tests/UnitTests/LowConfidenceFallbackTests.swift"
+          "test_file": "EchoTests/Phase2/LowConfidenceFallbackTests.swift"
         },
         {
           "id": "2.10",
@@ -274,7 +274,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.3", "2.2"],
-          "test_file": "Tests/UnitTests/SyncPipelineTests.swift"
+          "test_file": "EchoTests/Phase2/SyncPipelineTests.swift"
         },
         {
           "id": "2.11",
@@ -286,7 +286,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.6"],
-          "test_file": "Tests/UnitTests/AwakeningGeoTests.swift"
+          "test_file": "EchoTests/Phase2/AwakeningGeoTests.swift"
         },
         {
           "id": "2.12",
@@ -298,7 +298,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.6", "1.2"],
-          "test_file": "Tests/UnitTests/AwakeningEmotionTests.swift"
+          "test_file": "EchoTests/Phase2/AwakeningEmotionTests.swift"
         },
         {
           "id": "2.13",
@@ -309,7 +309,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["2.7"],
-          "test_file": "Tests/UnitTests/FeedbackPipelineTests.swift"
+          "test_file": "EchoTests/Phase2/FeedbackPipelineTests.swift"
         },
         {
           "id": "2.14",
@@ -341,7 +341,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["2.11"],
-          "test_file": "Tests/UnitTests/HomeViewModelTests.swift"
+          "test_file": "EchoTests/Phase3/HomeViewModelTests.swift"
         },
         {
           "id": "3.2",
@@ -352,7 +352,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["2.6"],
-          "test_file": "Tests/UnitTests/SearchViewModelTests.swift"
+          "test_file": "EchoTests/Phase3/SearchViewModelTests.swift"
         },
         {
           "id": "3.3",
@@ -364,7 +364,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["2.3", "3.1"],
-          "test_file": "Tests/UnitTests/MemoryDetailViewModelTests.swift"
+          "test_file": "EchoTests/Phase3/MemoryDetailViewModelTests.swift"
         },
         {
           "id": "3.4",
@@ -375,7 +375,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["2.2", "1.4"],
-          "test_file": "Tests/UnitTests/SettingsViewModelTests.swift"
+          "test_file": "EchoTests/Phase3/SettingsViewModelTests.swift"
         },
         {
           "id": "3.5",
@@ -387,7 +387,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["3.4", "2.10"],
-          "test_file": "Tests/UnitTests/BackgroundTaskPanelTests.swift"
+          "test_file": "EchoTests/Phase3/BackgroundTaskPanelTests.swift"
         },
         {
           "id": "3.6",
@@ -399,7 +399,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["2.1", "2.7"],
-          "test_file": "Tests/UnitTests/ErrorHandlerUITests.swift"
+          "test_file": "EchoTests/Phase3/ErrorHandlerUITests.swift"
         },
         {
           "id": "3.7",
@@ -410,7 +410,7 @@
             "docs/02-architecture/架构设计文档.md"
           ],
           "dependencies": ["3.5", "1.4"],
-          "test_file": "Tests/UnitTests/ProgressActorTests.swift"
+          "test_file": "EchoTests/Phase3/ProgressActorTests.swift"
         },
         {
           "id": "3.8",
@@ -421,7 +421,7 @@
             "docs/03-implementation/双语言实现说明文档.md"
           ],
           "dependencies": ["3.1", "3.2"],
-          "test_file": "Tests/UnitTests/TranslationServiceTests.swift"
+          "test_file": "EchoTests/Phase3/TranslationServiceTests.swift"
         },
         {
           "id": "3.9",
@@ -432,7 +432,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7", "3.8"],
-          "test_file": "Tests/IntegrationTests/EndToEndFlowTests.swift"
+          "test_file": "EchoTests/Phase3/EndToEndFlowTests.swift"
         },
         {
           "id": "3.10",
@@ -463,7 +463,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["2.6"],
-          "test_file": "Tests/GoldenDataset/CrossLingualTests.swift"
+          "test_file": "EchoTests/Phase4/CrossLingualTests.swift"
         },
         {
           "id": "4.2",
@@ -474,7 +474,7 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["3.9"],
-          "test_file": "Tests/IntegrationTests/AllPipelinesTests.swift"
+          "test_file": "EchoTests/Phase4/AllPipelinesTests.swift"
         },
         {
           "id": "4.3",
@@ -485,7 +485,7 @@
             "docs/02-architecture/技术选型文档.md"
           ],
           "dependencies": ["3.9"],
-          "test_file": "Tests/PerformanceTests/BenchmarkTests.swift"
+          "test_file": "EchoTests/Phase4/BenchmarkTests.swift"
         },
         {
           "id": "4.4",
@@ -496,7 +496,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["2.11"],
-          "test_file": "Tests/IntegrationTests/DegradationTests.swift"
+          "test_file": "EchoTests/Phase4/DegradationTests.swift"
         },
         {
           "id": "4.5",
@@ -507,7 +507,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["1.6"],
-          "test_file": "Tests/UnitTests/ModelLoaderRetryTests.swift"
+          "test_file": "EchoTests/Phase4/ModelLoaderRetryTests.swift"
         },
         {
           "id": "4.6",
@@ -518,7 +518,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["2.2"],
-          "test_file": "Tests/IntegrationTests/ExcludedAssetsBoundaryTests.swift"
+          "test_file": "EchoTests/Phase4/ExcludedAssetsBoundaryTests.swift"
         },
         {
           "id": "4.7",
@@ -529,7 +529,7 @@
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
           "dependencies": ["2.7"],
-          "test_file": "Tests/UnitTests/FeedbackRankingAccuracyTests.swift"
+          "test_file": "EchoTests/Phase4/FeedbackRankingAccuracyTests.swift"
         },
         {
           "id": "4.8",
