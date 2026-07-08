@@ -9,7 +9,7 @@
 //          AC-6 (审计记录 .denied/.reauthorized)
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), §7.1 (PrivacyCheckpoint 强制注入),
 //           §7.3 (审计日志), §5.4 (30天保留), R-006 (审计强制覆盖),
-//           R-007 (禁止 @unchecked Sendable), R-008 (跨 Actor 调用必须 await)
+//           R-007 (禁止 unchecked Sendable), R-008 (跨 Actor 调用必须 await)
 // 重要: 所有 struct stored/computed properties 必须 nonisolated（项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor）
 // 生成时间: 2026-07-05 (Stub), 2026-07-07 (Task 2.1 Full Implementation)
 // ==========================================
@@ -120,6 +120,8 @@ public enum AuditEvent: String, Sendable, Codable {
     case excludedRestored
     case excludedBatchRestored
     case excludedAutoCleaned
+    case excludedChangeDetected
+    case excludedRestoreFailedFileMissing
     case dataSourceChangeSynced
     case manualChangeDetectionCompleted
     case memoryIngested
