@@ -174,7 +174,7 @@
           "status": "review",
 "last_updated": "2026-07-08T17:00:00Z",
            "merged_at": null,
-           "pr": "pending",
+           "pr": "https://github.com/LOGANSWP/Echo/pull/14",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
