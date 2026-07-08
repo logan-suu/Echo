@@ -11,6 +11,11 @@
 //           AGENTS.md §7.1 (PrivacyCheckpoint 强制注入), AC-8 审计事件以规格书为准
 // 避坑: EXCL-001 (系统自动删除不写入), EXCL-004 (恢复前校验存在性), EXCL-005 (不自动轮询)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
+// 豁免说明: 本类为存储型 Service Actor (§5.1)，非 Pipeline Actor (§7.1)。
+//          PrivacyCheckpoint.validate() 由调用方（Pipeline/ViewModel）在入口处执行；
+//          本 Actor 通过 writeAuditLog() 记录操作审计，满足 §7.3 审计覆盖要求。
+// 测试策略: 核心 SQL + 审计逻辑由 ExcludedAssetsActorTests 覆盖（17 个测试）。
+//          restore()/checkForChanges() 的 PHAsset 边界场景在 Phase 4 ExcludedAssetsBoundaryTests 中覆盖。
 // 生成时间: 2026-07-04 (Stub), 2026-07-08 (Task 2.2 Full Implementation)
 // ==========================================
 
