@@ -189,6 +189,7 @@
           "story": "US-ING-004",
           "status": "review",
           "last_updated": "2026-07-09T13:30:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/15",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md",
