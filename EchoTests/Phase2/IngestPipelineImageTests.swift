@@ -60,9 +60,10 @@ struct IngestPipelineImageTests {
 
     init() async throws {
         try await db.open()
-        // Clean state
+        // Clean state from previous test runs
         try await db.execute(sql: "DELETE FROM AuditLog")
         try await db.execute(sql: "DELETE FROM UserPolicyStore")
+        try await db.execute(sql: "DELETE FROM ExcludedAssets")
         // Ensure photo data source is authorized
         try await privacyActor.updatePolicy(UserPolicy(
             preferredLanguage: "zh-Hans",
@@ -90,7 +91,7 @@ struct IngestPipelineImageTests {
         #expect(memory.privacyBlurApplied == false)
 
         // Verify the metadata stored also has privacyBlurApplied=false
-        let metadata = try await memory.encodeMetadata()
+        let metadata = try memory.encodeMetadata()
         let decoded = try MemoryEntry.decodeMetadata(from: metadata)
         #expect(decoded.privacyBlurApplied == false)
     }
@@ -115,7 +116,7 @@ struct IngestPipelineImageTests {
         #expect(memory.exifMetadata == exif)
 
         // Verify metadata encoding preserves hasExif=true
-        let metadata = try await memory.encodeMetadata()
+        let metadata = try memory.encodeMetadata()
         let decoded = try MemoryEntry.decodeMetadata(from: metadata)
         #expect(decoded.hasExif == true)
     }
@@ -135,7 +136,7 @@ struct IngestPipelineImageTests {
         // Nil EXIF is allowed — not all assets have EXIF
         #expect(memory.exifMetadata == nil)
 
-        let metadata = try await memory.encodeMetadata()
+        let metadata = try memory.encodeMetadata()
         let decoded = try MemoryEntry.decodeMetadata(from: metadata)
         #expect(decoded.hasExif == false)
     }
@@ -200,7 +201,7 @@ struct IngestPipelineImageTests {
         #expect(memory.sourceType == "photo")
 
         // Verify the vector store has the memory with the assetId in metadata
-        let metadata = try await memory.encodeMetadata()
+        let metadata = try memory.encodeMetadata()
         let decoded = try MemoryEntry.decodeMetadata(from: metadata)
         #expect(decoded.assetId == assetId)
         #expect(decoded.sourceType == "photo")
@@ -367,7 +368,7 @@ struct IngestPipelineImageTests {
         )
 
         // Encode metadata → write to VectorStore metadata field
-        let metadata = try await memory.encodeMetadata()
+        let metadata = try memory.encodeMetadata()
         // Decode metadata → verify all fields preserved
         let decoded = try MemoryEntry.decodeMetadata(from: metadata)
 

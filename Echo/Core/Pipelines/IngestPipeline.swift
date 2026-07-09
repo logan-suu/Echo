@@ -23,21 +23,27 @@ public enum IngestError: Error, LocalizedError, Sendable {
     case privacyDenied(sourceTypes: [String])
     /// 资产已被用户手动排除（US-SRC-008）
     case assetExcluded(assetId: String)
+    /// ExcludedAssets 查询失败（数据库读错误，fail-closed）
+    case excludedAssetsLookupFailed(underlying: Error)
     /// 嵌入生成失败 — 模型未加载或推理失败（L3 阻断）
     case embeddingFailed(underlying: Error)
+    /// 元数据编码失败
+    case metadataEncodingFailed(underlying: Error)
     /// 向量存储写入失败
     case vectorStoreWriteFailed(underlying: Error)
-    /// 审计日志写入失败（非阻断）
+    /// 审计日志写入失败（L1 瞬态，非阻断，调用方不应 throw 此错误）
     case auditLogFailed(underlying: Error)
 
     /// L1~L4 错误分级
     public nonisolated var errorLevel: Int {
         switch self {
-        case .privacyDenied:           return 2  // L2 可恢复（用户可重新授权）
-        case .assetExcluded:           return 4  // L4 数据冲突（用户操作冲突）
-        case .embeddingFailed:         return 3  // L3 阻断（模型加载失败）
-        case .vectorStoreWriteFailed:  return 2  // L2 可恢复（磁盘空间等）
-        case .auditLogFailed:          return 1  // L1 瞬态（非阻断）
+        case .privacyDenied:              return 2  // L2 可恢复（用户可重新授权）
+        case .assetExcluded:              return 4  // L4 数据冲突（用户操作冲突）
+        case .excludedAssetsLookupFailed: return 2  // L2 可恢复（SQLite 读错误，fail-closed）
+        case .embeddingFailed:            return 3  // L3 阻断（模型加载失败）
+        case .metadataEncodingFailed:     return 2  // L2 可恢复（编码/序列化异常）
+        case .vectorStoreWriteFailed:     return 2  // L2 可恢复（磁盘空间等）
+        case .auditLogFailed:             return 1  // L1 瞬态（非阻断）
         }
     }
 
@@ -47,12 +53,16 @@ public enum IngestError: Error, LocalizedError, Sendable {
             return "Privacy denied for source types: \(types.joined(separator: ","))"
         case .assetExcluded(let assetId):
             return "Asset excluded by user: \(assetId)"
+        case .excludedAssetsLookupFailed(let error):
+            return "ExcludedAssets lookup failed: \(error.localizedDescription)"
         case .embeddingFailed(let error):
             return "CLIP embedding failed: \(error.localizedDescription)"
+        case .metadataEncodingFailed(let error):
+            return "Metadata encoding failed: \(error.localizedDescription)"
         case .vectorStoreWriteFailed(let error):
             return "Vector store write failed: \(error.localizedDescription)"
         case .auditLogFailed(let error):
-            return "Audit log write failed: \(error.localizedDescription)"
+            return "Audit log write failed (non-blocking): \(error.localizedDescription)"
         }
     }
 }
@@ -138,8 +148,16 @@ public actor IngestPipeline {
         }
 
         // Step 2: ExcludedAssets check (US-SRC-008)
-        if (try? await excludedAssets.contains(assetId: assetId)) == true {
-            throw IngestError.assetExcluded(assetId: assetId)
+        // fail-closed: if the DB read fails, we block ingestion rather than
+        // silently allowing a potentially excluded asset through (AGENTS.md §4.4)
+        do {
+            if try await excludedAssets.contains(assetId: assetId) {
+                throw IngestError.assetExcluded(assetId: assetId)
+            }
+        } catch let error as IngestError {
+            throw error  // re-throw assetExcluded
+        } catch {
+            throw IngestError.excludedAssetsLookupFailed(underlying: error)
         }
 
         // Step 3: CLIP embedding (AC-3)
@@ -161,12 +179,12 @@ public actor IngestPipeline {
             traceID: traceID
         )
 
-        // Step 5: Write to VectorStore (with metadata, AC-4: assetId reference)
+        // Step 5: Encode metadata + Write to VectorStore (AC-4: assetId reference)
         let metadata: Data
         do {
-            metadata = try await memory.encodeMetadata()
+            metadata = try memory.encodeMetadata()
         } catch {
-            throw IngestError.vectorStoreWriteFailed(underlying: error)
+            throw IngestError.metadataEncodingFailed(underlying: error)
         }
 
         do {
@@ -176,24 +194,22 @@ public actor IngestPipeline {
         }
 
         // Step 6: Audit log (AC-5: .imageIngested, privacyBlurApplied=false)
+        // Best-effort only — audit failure is L1 transient and MUST NOT block
+        // a successfully completed ingestion (AGENTS.md §4.4 L1, §5.4).
+        // Aligned with project-wide pattern: PrivacyActor.validate() line 392,
+        // ExcludedAssetsActor lines 210/220/254/358 all use try? for audit writes.
         let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
-        do {
-            try await privacyActor.writeAuditLog(
-                eventType: .imageIngested,
-                traceID: traceID,
-                policyVersion: checkpoint.policyVersion,
-                success: true,
-                sourceType: "photo",
-                affectedCount: 1,
-                excludedWritten: false,
-                sourceLanguage: nil,
-                elapsedMs: elapsedMs
-            )
-        } catch {
-            // AC-5 requires audit record; audit failure is L1 (non-blocking for ingestion)
-            // but we log it for observability
-            throw IngestError.auditLogFailed(underlying: error)
-        }
+        try? await privacyActor.writeAuditLog(
+            eventType: .imageIngested,
+            traceID: traceID,
+            policyVersion: checkpoint.policyVersion,
+            success: true,
+            sourceType: "photo",
+            affectedCount: 1,
+            excludedWritten: false,
+            sourceLanguage: nil,
+            elapsedMs: elapsedMs
+        )
 
         return memory
     }

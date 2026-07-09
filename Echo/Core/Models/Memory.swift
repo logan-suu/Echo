@@ -69,24 +69,34 @@ public struct MemoryEntry: Sendable, Codable, Equatable {
     // MARK: - Metadata Encoding
 
     /// 将 MemoryEntry 序列化为 JSON Data，用于存入 VectorStoreActor.metadata。
-    /// 注意: 由于 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，MemoryMetadata 的 Codable 符合性
-    /// 为 MainActor 隔离。此方法在 IngestPipeline Actor 上下文中被调用，需通过 await 跨 Actor。
-    public func encodeMetadata() throws -> Data {
-        let metadata = MemoryMetadata(
-            assetId: assetId,
-            sourceType: sourceType,
-            timestamp: timestamp.timeIntervalSince1970,
-            hasExif: exifMetadata != nil,
-            privacyBlurApplied: privacyBlurApplied,
-            traceID: traceID,
-            memoryGroupId: memoryGroupId?.uuidString
-        )
-        return try JSONEncoder().encode(metadata)
+    /// 使用 JSONSerialization 手动序列化（避免 Codable 的 MainActor 隔离），纯数据转换，nonisolated。
+    public nonisolated func encodeMetadata() throws -> Data {
+        var dict: [String: Any] = [
+            "assetId": assetId,
+            "sourceType": sourceType,
+            "timestamp": timestamp.timeIntervalSince1970,
+            "hasExif": exifMetadata != nil,
+            "privacyBlurApplied": privacyBlurApplied,
+            "traceID": traceID
+        ]
+        if let mgId = memoryGroupId?.uuidString {
+            dict["memoryGroupId"] = mgId
+        }
+        return try JSONSerialization.data(withJSONObject: dict)
     }
 
     /// 从 VectorStoreActor 返回的 metadata Data 解码 MemoryMetadata。
-    public static func decodeMetadata(from data: Data) throws -> MemoryMetadata {
-        try JSONDecoder().decode(MemoryMetadata.self, from: data)
+    public nonisolated static func decodeMetadata(from data: Data) throws -> MemoryMetadata {
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        return MemoryMetadata(
+            assetId: (dict["assetId"] as? String) ?? "",
+            sourceType: (dict["sourceType"] as? String) ?? "photo",
+            timestamp: (dict["timestamp"] as? TimeInterval) ?? 0,
+            hasExif: (dict["hasExif"] as? Bool) ?? false,
+            privacyBlurApplied: (dict["privacyBlurApplied"] as? Bool) ?? false,
+            traceID: (dict["traceID"] as? String) ?? "",
+            memoryGroupId: dict["memoryGroupId"] as? String
+        )
     }
 }
 
