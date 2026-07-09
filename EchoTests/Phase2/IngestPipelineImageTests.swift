@@ -243,21 +243,27 @@ struct IngestPipelineImageTests {
     func test_AC5_multipleIngestions_eachHasAudit() async throws {
         await stubEmbedder.setNextError(nil)
 
-        // Ingest 3 images with unique IDs
+        let prefix = "multi-\(UUID().uuidString.prefix(4))"
+
+        // Ingest 3 images with unique traceIDs under a common prefix
         for i in 0..<3 {
-            let tid = "multiple-ingest-\(i)"
+            let tid = "\(prefix)-ingest-\(i)"
             _ = try await sut.ingestImage(assetId: "audit-asset-\(i)-\(UUID().uuidString.prefix(4))", traceID: tid)
         }
 
-        // Verify 3 audit entries
-        let auditLogs = try await privacyActor.fetchAuditLogs(
-            limit: 10,
+        // Fetch ALL .imageIngested entries (may include entries from prior tests),
+        // then filter to only those from this test by checking traceID prefix
+        let allLogs = try await privacyActor.fetchAuditLogs(
+            limit: 100,
             eventType: AuditEvent.imageIngested
         )
-        #expect(auditLogs.count == 3)
+        let myLogs = allLogs.filter { $0.traceID.hasPrefix(prefix) }
+
+        // Verify exactly 3 audit entries from this test
+        #expect(myLogs.count == 3, "Expected 3 entries, got \(myLogs.count)")
 
         // Verify each has a distinct traceID
-        let traceIDs = auditLogs.map(\.traceID)
+        let traceIDs = myLogs.map(\.traceID)
         #expect(Set(traceIDs).count == 3) // All unique
     }
 
