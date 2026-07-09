@@ -1,7 +1,7 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.11  
-**生效日期**：2026-06-30  
+**版本**：v5.12  
+**生效日期**：2026-07-09  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -334,6 +334,8 @@ Pipeline 契约:
   - 进度报告: 长任务必须向 ProgressActor 报告进度
   - 可取消: 长任务必须支持 Task.isCancelled 检查
 ```
+
+> **Pipeline 类型声明说明（v5.12 澄清）**：当 Pipeline 仅持有不可变的 actor 引用（`let embedder`, `let privacyActor` 等，无 `var` 可变状态），使用 `actor` 关键字声明是合法模式。`actor` 在此场景下仅提供串行执行上下文以安全地 `await` 其他 Actor，不违反「无状态」契约。相比 `struct` + 参数传递 actor 引用，`actor` Pipeline 可避免非 Sendable 引用的编译错误，是更务实的 Swift 6 并发模式选择。
 
 ### 4.2 Actor 隔离契约
 
@@ -1254,3 +1256,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.9 | 2026-07-05 | 重构 §12.6 阶段集成测试为正式任务（每阶段最后一个任务，走分支→TDD→PR 流程，不再由命令自动触发）。同步更新 `test-phase-echo` 命令、`README.md` 测试章节、`task-status.json` 各阶段追加集成测试任务（1.9/2.14/3.10/4.11/5.5） | AI 架构师 |
 | v5.10 | 2026-07-05 | 新增跨阶段阻断规则（§12.6）：执行阶段 N 任务前必须验证 N-1 集成测试任务为 `done`，防止跳过集成测试直接进入下一阶段。同步更新 `next-task-echo`、`do-task-echo`、`init-session-echo` 三个命令加入阻断检查。 | AI 架构师 |
 | v5.11 | 2026-07-05 | 明确阶段集成测试任务分支使用 `test/` 前缀（如 `test/phase1-integration-test-1.9`），非 `feature/`。更新 §3.1 分支命名规范：`test` 类型扩展为"测试补充/修复/阶段集成测试"，无关联用户故事时使用任务 ID 替代 US-XXX。 | AI 架构师 |
+| v5.12 | 2026-07-09 | Task 2.3 IngestPipeline 竣工：澄清 §4.1 Pipeline `actor` 声明为合法无状态模式；同步更新架构设计文档 §1.2、§4.2 含 `actor` 选项；数据流文档新增 §3.1.1 双写审计模式、§3.1.2 ExcludedAssets fail-closed；避坑手册追加 PIPE-010/AUD-009/EXCL-006 三条新陷阱。 | AI 架构师 |
