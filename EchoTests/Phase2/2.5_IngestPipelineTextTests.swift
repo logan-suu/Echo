@@ -210,13 +210,9 @@ struct IngestPipelineTextTests {
         #expect(memory.assetId == "voice_002")
     }
 
-    @Test("AC-4 (voice): transcript confidence < 0.7 marks .uncertainTranscript")
+    @Test("AC-4 (voice): low transcriptConfidence < 0.7 stored on MemoryEntry")
     func test_AC4_lowConfidenceTranscript() async throws {
-        // AC-4: confidence < 0.7 → .uncertainTranscript is returned
-        // For the stub, confidence is NOT directly available — we test that
-        // the method accepts the confidence parameter path
-        // (Real SFSpeechRecognizer would provide confidence values)
-        // The pipeline marks the memory appropriately
+        // AC-4: confidence < 0.7 → stored on MemoryEntry.transcriptConfidence
         let transcript = "低置信度转写结果。"
         await stubASR.setNextTranscript(transcript)
         await stubASR.setNextError(nil)
@@ -226,12 +222,14 @@ struct IngestPipelineTextTests {
         let memory = try await sut.ingestVoice(
             audioAssetId: "voice_lowconf",
             sourceLanguage: "zh-Hans",
+            transcriptConfidence: 0.55,
             traceID: UUID().uuidString
         )
 
-        // The MemoryEntry should exist even with uncertain transcript
         #expect(memory.originalText == transcript)
         #expect(memory.sourceType == "voice")
+        #expect(memory.transcriptConfidence == 0.55)
+        #expect((memory.transcriptConfidence ?? 1.0) < 0.7)
     }
 
     @Test("AC-5 (voice): .voiceIngested should not throw under normal conditions")

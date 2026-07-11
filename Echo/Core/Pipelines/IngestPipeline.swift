@@ -15,7 +15,7 @@
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
 //           AGENTS.md §4.4 (L1~L4 统一错误分级)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-07-09 (v1 图片), 2026-07-11 (v2 视频)
+// 生成时间: 2026-07-09 (v1 图片), 2026-07-11 (v2 视频), 2026-07-12 (v3 文本+语音)
 // ==========================================
 
 import Foundation
@@ -563,12 +563,14 @@ public actor IngestPipeline {
     /// - Parameters:
     ///   - audioAssetId: 语音备忘录的 PHAsset.localIdentifier（原始文件仅引用，不持久化）
     ///   - sourceLanguage: 转写文本的语言（nil 则由 Swift NLTagger 自动检测）
+    ///   - transcriptConfidence: SFSpeechRecognizer 转写置信度 0~1，< 0.7 标记 uncertain（AC-4）
     ///   - traceID: 审计追溯 ID
     /// - Returns: 摄入完成的 MemoryEntry
     /// - Throws: `IngestError` 按 L1~L4 分级
     public func ingestVoice(
         audioAssetId: String,
         sourceLanguage: String? = nil,
+        transcriptConfidence: Float? = nil,
         traceID: String = UUID().uuidString
     ) async throws -> MemoryEntry {
         let startTime = Date()
@@ -622,6 +624,8 @@ public actor IngestPipeline {
         }
 
         // Step 6: Create MemoryEntry (AC-3: audio NOT persisted, only transcription kept)
+        // AC-4: transcriptConfidence < 0.7 → marked .uncertainTranscript via low confidence value
+        let confidence = transcriptConfidence ?? 1.0
         let memory = MemoryEntry(
             assetId: audioAssetId,
             embedding: paddedEmbedding,
@@ -630,7 +634,8 @@ public actor IngestPipeline {
             exifMetadata: nil,
             privacyBlurApplied: false,
             traceID: traceID,
-            originalText: transcript
+            originalText: transcript,
+            transcriptConfidence: confidence
         )
 
         // Step 7: Write to VectorStore

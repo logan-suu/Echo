@@ -226,7 +226,7 @@
             "docs/03-implementation/双语言实现说明文档.md"
           ],
           "dependencies": ["2.3"],
-          "test_file": "EchoTests/Phase2/IngestPipelineTextTests.swift"
+          "test_file": "EchoTests/Phase2/2.5_IngestPipelineTextTests.swift"
         },
         {
           "id": "2.6",
