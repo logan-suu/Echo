@@ -218,8 +218,9 @@
           "id": "2.5",
           "title": "IngestPipeline：备忘录 + 语音转写（US-ING-001~003）",
           "story": "US-ING-001, US-ING-002, US-ING-003",
-          "status": "review",
+          "status": "done",
           "last_updated": "2026-07-12T00:00:00Z",
+          "merged_at": "2026-07-12T00:00:00Z",
           "pr": "https://github.com/LOGANSWP/Echo/pull/17",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
