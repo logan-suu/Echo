@@ -41,6 +41,10 @@ public struct MemoryEntry: Sendable, Codable, Equatable {
     public nonisolated let traceID: String
     /// 关联的记忆组 ID（同一次摄入中的多条向量共享，US-ING-005 视频摄入）
     public nonisolated var memoryGroupId: UUID?
+    /// 原始文本内容（备忘录/语音转写文本摄入时使用，US-ING-001 AC-2/AC-5：逐字节一致保留；审计仅含 hash）
+    public nonisolated let originalText: String?
+    /// 转写置信度（语音摄入专用，US-ING-003 AC-4：< 0.7 标记 .uncertainTranscript）
+    public nonisolated let transcriptConfidence: Float?
 
     // MARK: - Init
 
@@ -53,7 +57,9 @@ public struct MemoryEntry: Sendable, Codable, Equatable {
         exifMetadata: Data? = nil,
         privacyBlurApplied: Bool = false,
         traceID: String,
-        memoryGroupId: UUID? = nil
+        memoryGroupId: UUID? = nil,
+        originalText: String? = nil,
+        transcriptConfidence: Float? = nil
     ) {
         self.id = id
         self.assetId = assetId
@@ -64,6 +70,8 @@ public struct MemoryEntry: Sendable, Codable, Equatable {
         self.privacyBlurApplied = privacyBlurApplied
         self.traceID = traceID
         self.memoryGroupId = memoryGroupId
+        self.originalText = originalText
+        self.transcriptConfidence = transcriptConfidence
     }
 
     // MARK: - Metadata Encoding
@@ -81,6 +89,12 @@ public struct MemoryEntry: Sendable, Codable, Equatable {
         ]
         if let mgId = memoryGroupId?.uuidString {
             dict["memoryGroupId"] = mgId
+        }
+        if let ot = originalText {
+            dict["originalText"] = ot
+        }
+        if let tc = transcriptConfidence {
+            dict["transcriptConfidence"] = tc
         }
         return try JSONSerialization.data(withJSONObject: dict)
     }
