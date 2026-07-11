@@ -21,12 +21,12 @@ struct VectorStoreActorTests {
     // MARK: - Fixtures
 
     /// Creates a fresh in-memory VectorStoreActor for each test
-    func makeSUT(dimension: Int = 768) -> VectorStoreActor {
+    func makeSUT(dimension: Int = 512) -> VectorStoreActor {
         VectorStoreActor(dimension: dimension)
     }
 
     /// Creates a random normalized vector for cosine similarity testing
-    func randomVector(dimension: Int = 768) -> [Float] {
+    func randomVector(dimension: Int = 512) -> [Float] {
         var rng = SystemRandomNumberGenerator()
         return (0..<dimension).map { _ in Float.random(in: -1...1, using: &rng) }
     }
@@ -39,10 +39,10 @@ struct VectorStoreActorTests {
         #expect(sut.dimension == 128)
     }
 
-    @Test("init creates actor with default 768 dimensions")
+    @Test("init creates actor with default 512 dimensions")
     func test_init_defaultDimension() {
         let sut = makeSUT()
-        #expect(sut.dimension == 768)
+        #expect(sut.dimension == 512)
     }
 
     @Test("init produces empty index")

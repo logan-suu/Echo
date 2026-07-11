@@ -164,7 +164,7 @@ public actor IngestPipeline {
     /// **流程**（对应架构文档 §3.1 图片摄入时序）：
     /// 1. PrivacyCheckpoint: 校验 photo 数据源授权（R-006）
     /// 2. ExcludedAssets: 检查是否被用户手动排除（US-SRC-008）
-    /// 3. CLIP 嵌入: 通过 embedder 生成 768 维向量（AC-3）
+    /// 3. 视觉嵌入: 通过 embedder 生成 512d 向量（MobileCLIP-B LT；AC-3）
     /// 4. VectorStore: 写入向量 + 元数据
     /// 5. Audit: 记录 .imageIngested，privacyBlurApplied=false（AC-5）
     ///

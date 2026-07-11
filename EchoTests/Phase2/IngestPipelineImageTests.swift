@@ -4,7 +4,7 @@
 //            docs/02-architecture/数据流全链路技术说明文档.md §3.1 (图片摄入)
 // 任务: 2.3 - IngestPipeline：图片摄入
 // AC 覆盖: US-ING-004 AC-1 (privacyBlurApplied=false), AC-2 (EXIF 元数据保留),
-//          AC-3 (CLIP 向量 768 维), AC-4 (PHAsset 引用, 不复制存储),
+//          AC-3 (CLIP 向量 512 维), AC-4 (PHAsset 引用, 不复制存储),
 //          AC-5 (审计 .imageIngested, privacyBlurApplied=false)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约), R-006 (PrivacyCheckpoint)
 // 重要: @MainActor 标注因 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，Actor 初始化器需此隔离
@@ -41,7 +41,7 @@ struct IngestPipelineImageTests {
     let db = DatabaseManager.shared
     let privacyActor = PrivacyActor.shared
     let excludedAssets = ExcludedAssetsActor.shared
-    let vectorStore = VectorStoreActor(dimension: 768)
+    let vectorStore = VectorStoreActor(dimension: 512)
 
     /// Stub embedder — returns controllable vectors for deterministic testing
     let stubEmbedder = StubEmbedder()
@@ -143,11 +143,11 @@ struct IngestPipelineImageTests {
 
     // MARK: - AC-3: CLIP 向量生成
 
-    @Test("AC-3: CLIP embedding is 768-dimensional vector")
-    func test_AC3_clipVector_768dim() async throws {
+    @Test("AC-3: CLIP embedding is 512-dimensional vector")
+    func test_AC3_clipVector_512dim() async throws {
         let assetId = "AC3a-\(UUID().uuidString.prefix(8))"
         // Set a known non-zero embedding
-        let knownVector = Array(0..<768).map { Float($0) * 0.001 }
+        let knownVector = Array(0..<512).map { Float($0) * 0.001 }
         await stubEmbedder.setNextEmbedding(knownVector)
         await stubEmbedder.setNextError(nil)
 
@@ -157,8 +157,8 @@ struct IngestPipelineImageTests {
             traceID: traceID
         )
 
-        // AC-3: CLIP vector matches the embedder output (768-dim MobileCLIP-B LT embedding)
-        #expect(memory.embedding.count == 768)
+        // AC-3: CLIP vector matches the embedder output (512-dim MobileCLIP-B LT embedding)
+        #expect(memory.embedding.count == 512)
         #expect(memory.embedding == knownVector)
     }
 
@@ -385,7 +385,7 @@ struct IngestPipelineImageTests {
     func test_vectorStore_persistence() async throws {
         // Use a unique asset ID and known vector
         let uniqueAssetId = "persist-\(UUID().uuidString.prefix(8))"
-        let knownVector = Array(repeating: Float(0.5), count: 768)
+        let knownVector = Array(repeating: Float(0.5), count: 512)
         await stubEmbedder.setNextEmbedding(knownVector)
         await stubEmbedder.setNextError(nil)
 

@@ -556,8 +556,8 @@ struct Phase1IntegrationTests {
 
         @Test("VectorStoreActor creates with default dimension")
         func test_defaultDimension() {
-            let store = VectorStoreActor(dimension: 768)
-            #expect(store.dimension == 768)
+            let store = VectorStoreActor(dimension: 512)
+            #expect(store.dimension == 512)
         }
 
         @Test("Ingest and search round-trip")

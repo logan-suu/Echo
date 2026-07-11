@@ -29,7 +29,7 @@ struct IngestPipelineVideoTests {
     let db = DatabaseManager.shared
     let privacyActor = PrivacyActor.shared
     let excludedAssets = ExcludedAssetsActor.shared
-    let vectorStore = VectorStoreActor(dimension: 768)
+    let vectorStore = VectorStoreActor(dimension: 512)
 
     /// Stub embedder — returns controllable vectors for deterministic testing
     let stubEmbedder = StubEmbedder()
@@ -74,7 +74,7 @@ struct IngestPipelineVideoTests {
         let audioTrackId = "audio-AC1"
 
         // Set known non-zero embedding for each frame
-        let knownVector: [Float] = Array(0..<768).map { Float($0) * 0.001 }
+        let knownVector: [Float] = Array(0..<512).map { Float($0) * 0.001 }
         await stubEmbedder.setNextEmbedding(knownVector)
         await stubEmbedder.setNextError(nil)
 
@@ -97,9 +97,9 @@ struct IngestPipelineVideoTests {
         let frameMemories = memories.filter { $0.sourceType == "video_frame" }
         #expect(frameMemories.count == frameCount)
 
-        // All frame memories have 768-dim embeddings
+        // All frame memories have 512-dim embeddings
         for fm in frameMemories {
-            #expect(fm.embedding.count == 768)
+            #expect(fm.embedding.count == 512)
             #expect(fm.assetId.contains("frame-"))
         }
 
@@ -118,7 +118,7 @@ struct IngestPipelineVideoTests {
         let audioTrackId = "audio-AC2"
         let transcriptText = "这段视频记录了上海外滩的日落景象"
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.5), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.5), count: 512))
         await stubEmbedder.setNextError(nil)
 
         await stubASR.setNextTranscript(transcriptText)
@@ -137,7 +137,7 @@ struct IngestPipelineVideoTests {
         #expect(audioMemories.count == 1)
 
         let audioMemory = audioMemories[0]
-        #expect(audioMemory.embedding.count == 768)
+        #expect(audioMemory.embedding.count == 512)
         // audio transcript's assetId should reference the video (AC-4)
         #expect(audioMemory.assetId == videoAssetId)
     }
@@ -147,7 +147,7 @@ struct IngestPipelineVideoTests {
         let videoAssetId = "VID-AC2-noaudio"
         let frameAssetIds = ["frame1-AC2", "frame2-AC2"]
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.5), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.5), count: 512))
         await stubEmbedder.setNextError(nil)
 
         let traceID = UUID().uuidString
@@ -172,7 +172,7 @@ struct IngestPipelineVideoTests {
         let frameAssetIds = ["frame1-AC3", "frame2-AC3", "frame3-AC3"]
         let audioTrackId = "audio-AC3"
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.3), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.3), count: 512))
         await stubEmbedder.setNextError(nil)
         await stubASR.setNextTranscript("音频内容")
         await stubASR.setNextError(nil)
@@ -210,7 +210,7 @@ struct IngestPipelineVideoTests {
         let frameAssetIds = ["frame-AC4"]
         let audioTrackId = "audio-AC4"
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.1), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.1), count: 512))
         await stubEmbedder.setNextError(nil)
         await stubASR.setNextTranscript("test audio")
         await stubASR.setNextError(nil)
@@ -241,7 +241,7 @@ struct IngestPipelineVideoTests {
         let audioTrackId = "audio-AC5"
         let transcriptText = "一段五秒的视频，记录了两个人在公园散步聊天"
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.2), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.2), count: 512))
         await stubEmbedder.setNextError(nil)
         await stubASR.setNextTranscript(transcriptText)
         await stubASR.setNextError(nil)
@@ -270,7 +270,7 @@ struct IngestPipelineVideoTests {
         let videoAssetId = "VID-AC5-noaudio"
         let frameAssetIds = ["f1", "f2"]
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.2), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.2), count: 512))
         await stubEmbedder.setNextError(nil)
 
         let traceID = UUID().uuidString
@@ -378,7 +378,7 @@ struct IngestPipelineVideoTests {
         let frameAssetIds = ["f1"]
         let audioTrackId = "audio-ASR-ERR"
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.1), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.1), count: 512))
         await stubEmbedder.setNextError(nil)
         await stubASR.setNextError(ASREngineError.transcriptionFailed(reason: "model not loaded"))
 
@@ -420,7 +420,7 @@ struct IngestPipelineVideoTests {
         let frameAssetIds = (0..<20).map { "f-\($0)" }
         let audioTrackId = "audio-MAX"
 
-        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.1), count: 768))
+        await stubEmbedder.setNextEmbedding(Array(repeating: Float(0.1), count: 512))
         await stubEmbedder.setNextError(nil)
         await stubASR.setNextTranscript("max frames test")
         await stubASR.setNextError(nil)
@@ -463,7 +463,7 @@ struct IngestPipelineVideoTests {
         let videoAssetId = "VID-SEARCH"
         let frameAssetIds = (0..<3).map { "sf-\($0)" }
         let audioTrackId = "audio-SEARCH"
-        let queryVector = Array(repeating: Float(0.01), count: 768)
+        let queryVector = Array(repeating: Float(0.01), count: 512)
 
         // Use exact same vector for all so they're all retrievable
         await stubEmbedder.setNextEmbedding(queryVector)

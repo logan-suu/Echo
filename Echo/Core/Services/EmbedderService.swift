@@ -19,21 +19,21 @@ import Foundation
 
 /// 图片嵌入协议 — 抽象 CLIP 图像编码，支持依赖注入与测试 Mock。
 ///
-/// AC-3 (US-ING-004): 图片通过 MobileCLIP-B LT 生成 768 维 CLIP 向量，与文本向量空间对齐。
+/// AC-3 (US-ING-004): 图片通过 MobileCLIP-B LT 生成 512d 视觉向量（实际模型维度；代码当前统一使用 768d，待策略调整）。
 ///
 /// 协议设计为 Sendable（非 Actor），以便测试 Mock 无需 Actor 隔离。
 public protocol EmbedderProtocol: Sendable {
     /// 对 PHAsset 引用生成 CLIP 嵌入向量。
     ///
     /// - Parameter assetId: PHAsset.localIdentifier
-    /// - Returns: 768 维浮点向量
+    /// - Returns: 浮点向量（MobileCLIP-B LT 512d；Stub 默认 768d — 待对齐）
     /// - Throws: `EmbedderError` 若图像加载或推理失败
     func embedImage(assetId: String) async throws -> [Float]
 
     /// 对文本生成 CLIP 嵌入向量（用于音频转写文本、备忘录文字等）。
     ///
     /// - Parameter text: 待向量化的文本
-    /// - Returns: 768 维浮点向量，与图像向量位于同一 CLIP 共享语义空间
+    /// - Returns: 浮点向量（multilingual-e5-small 384d；Stub 默认 512d — 待对齐）
     /// - Throws: `EmbedderError` 若推理失败
     func embedText(_ text: String) async throws -> [Float]
 }
@@ -83,8 +83,8 @@ public actor StubEmbedder: EmbedderProtocol {
     private var shouldThrowNext: EmbedderError?
 
     /// 创建 Stub 嵌入器。
-    /// - Parameter defaultEmbedding: 未显式设置 next 时使用的默认向量（默认 768 维全 1 向量）
-    public init(defaultEmbedding: [Float] = Array(repeating: 1.0, count: 768)) {
+    /// - Parameter defaultEmbedding: 未显式设置 next 时使用的默认向量（默认 512d 向量，匹配 MobileCLIP-B LT 视觉嵌入维度）
+    public init(defaultEmbedding: [Float] = Array(repeating: 1.0, count: 512)) {
         self.nextEmbedding = defaultEmbedding
     }
 
@@ -100,7 +100,7 @@ public actor StubEmbedder: EmbedderProtocol {
 
     /// 返回预设的固定向量，或抛出预设错误。
     /// - Parameter assetId: PHAsset 标识符（Stub 忽略此参数）
-    /// - Returns: 预设的 768 维浮点向量
+    /// - Returns: 预设的 512d 浮点向量
     /// - Throws: 如已调用 `setNextError()` 则抛出对应错误
     public func embedImage(assetId: String) async throws -> [Float] {
         if let error = shouldThrowNext {
@@ -112,7 +112,7 @@ public actor StubEmbedder: EmbedderProtocol {
 
     /// 返回预设的固定向量，或抛出预设错误（与 embedImage 共享相同的 stub 向量和错误状态）。
     /// - Parameter text: 待向量化的文本（Stub 忽略此参数）
-    /// - Returns: 预设的 768 维浮点向量
+    /// - Returns: 预设的 512d 浮点向量；生产环境中 multilingual-e5-small 应返回 384d 并经零填充对齐
     /// - Throws: 如已调用 `setNextError()` 则抛出对应错误
     public func embedText(_ text: String) async throws -> [Float] {
         if let error = shouldThrowNext {

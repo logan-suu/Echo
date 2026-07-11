@@ -4,7 +4,7 @@
 //            docs/02-architecture/架构设计文档.md §2.1 (IngestPipeline)
 // 任务: 2.3 - IngestPipeline：图片摄入
 // AC 覆盖: AC-1 (privacyBlurApplied=false), AC-2 (EXIF 元数据完整保留),
-//          AC-3 (CLIP 向量 768 维), AC-4 (PHAsset 引用),
+//          AC-3 (MobileCLIP-B LT 视觉向量 512d), AC-4 (PHAsset 引用),
 //          AC-5 (审计 .imageIngested)
 // 架构约束: AGENTS.md §4.1 (Pipeline 纯函数性), R-007 (禁止 unchecked Sendable)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
@@ -19,7 +19,7 @@ import Foundation
 ///
 /// AC-1: `privacyBlurApplied` 固定为 false，禁止任何模糊处理。
 /// AC-2: `exifMetadata` 以 JSON Data 形式保留完整 EXIF，GPS 按 UserPolicy 决定。
-/// AC-3: `embedding` 为 MobileCLIP-B LT 生成的 768 维 CLIP 向量。
+/// AC-3: `embedding` 为 MobileCLIP-B LT 生成的 512d 视觉向量。
 /// AC-4: `assetId` 为 PHAsset.localIdentifier，不复制原始文件存储。
 /// AC-5: 审计时使用 `traceID` + `.imageIngested` 事件。
 public struct MemoryEntry: Sendable, Codable, Equatable {
@@ -27,7 +27,7 @@ public struct MemoryEntry: Sendable, Codable, Equatable {
     public nonisolated let id: UUID
     /// PHAsset.localIdentifier — 原始图片引用，AC-4：不复制存储
     public nonisolated let assetId: String
-    /// CLIP 向量（MobileCLIP-B LT 输出，768 维），AC-3：与文本向量空间对齐
+    /// 视觉向量（MobileCLIP-B LT 输出，512d），AC-3：与文本向量空间对齐
     public nonisolated let embedding: [Float]
     /// 数据源类型（图片记忆固定为 "photo"）
     public nonisolated let sourceType: String

@@ -41,8 +41,8 @@ public actor VectorStoreActor {
 
     /// 创建一个新的内存向量存储。
     ///
-    /// - Parameter dimension: 向量维度（默认 768，匹配 GTE-Qwen2 嵌入维度）
-    public init(dimension: Int = 768) {
+    /// - Parameter dimension: 向量维度（默认 512，匹配 MobileCLIP-B LT 512d 视觉向量；文本 384d 需零填充至 512d 后写入）
+    public init(dimension: Int = 512) {
         // 使用余弦相似度作为距离度量，对齐架构文档中的检索公式
         self.index = HNSWIndex(dimension: dimension, metric: CosineDistance())
     }

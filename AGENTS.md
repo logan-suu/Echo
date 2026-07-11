@@ -391,7 +391,7 @@ TaskQueue 契约:
 
 | 存储类型                   | 用途                    | 封装 Actor            |
 | -------------------------- | ----------------------- | --------------------- |
-| ProximaKit HNSW (via VectorStoreActor) | 768 维向量存储与检索    | `VectorStoreActor`    |
+| ProximaKit HNSW (via VectorStoreActor) | 多维度向量存储（文本 384d / 图像 512d） | `VectorStoreActor`    |
 | SQLite - ExcludedAssets    | 用户排除的资产 ID       | `ExcludedAssetsActor` |
 | SQLite - FeedbackStore     | 点赞/点踩/Bad Case 反馈 | `FeedbackActor`       |
 | SQLite - TaskProgress      | 断点续传进度            | `ProgressActor`       |
@@ -714,7 +714,7 @@ Echo/
 │       ├── HomeView.swift
 │       └── SettingsView.swift
 ├── Resources/
-│   ├── Models/ (SigLIP, MobileCLIP, GTE-Qwen2, Whisper)
+│   ├── Models/ (MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small)
 │   ├── MusicOffline/ (热门歌曲 JSON)
 │   └── StringCatalog/
 ├── EchoTests/                    # 🧪 单元测试与集成测试（按阶段分文件夹）
