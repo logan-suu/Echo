@@ -31,7 +31,8 @@ agent: build
      跨阶段阻断规则：必须先完成前一阶段的集成测试，才能执行当前阶段任务。
      请先执行 `do-task-echo [任务ID]` 完成该集成测试。
      ```
-   - 如果是 `done`，继续下一步。
+    - 如果是 `done`，继续下一步。
+6. **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。此操作为**幂等操作**，确保在开始执行前所有依赖已满足的任务都处于 `ready` 状态。
 7. 将任务状态更新为 `in_progress`。
 
 ### 第二步：查阅文档并引用原文

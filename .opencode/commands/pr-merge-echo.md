@@ -64,10 +64,11 @@ agent: build
 2. **仅当用户明确告知"已合并"后**，才执行以下操作：
    - **首先** `git checkout dev-1.0`（切到 dev-1.0 分支）
    - **然后** `git pull origin dev-1.0`（拉取合并后的最新代码）
-   - **接着在 dev-1.0 上**更新 `docs/05-planning/task-status.json`：
-     - 将任务的 `status` 更新为 `done`。
-     - 记录 `merged_at` 时间戳。
-     - 更新 `last_updated` 时间戳。
+    - **接着在 dev-1.0 上**更新 `docs/05-planning/task-status.json`：
+      - 将任务的 `status` 更新为 `done`。
+      - 记录 `merged_at` 时间戳。
+      - 更新 `last_updated` 时间戳。
+      - **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。
    - **最后** `git add` → `git commit` → `git push origin dev-1.0`
    - ⚠️ **禁止在 feature 分支上更新 task-status.json**，必须切到 dev-1.0 操作。
 3. 输出任务完成摘要：

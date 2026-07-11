@@ -23,7 +23,8 @@ agent: build
      ⛔ 阶段 [N-1] 的集成测试任务 [任务ID] 尚未完成（当前状态：[status]）。
      请先执行 `do-task-echo [任务ID]` 完成该阶段的集成测试，再继续阶段 N 的任务。
      ```
-   - 如果前一阶段所有任务（包括集成测试）均为 `done`，继续下一步。
+    - 如果前一阶段所有任务（包括集成测试）均为 `done`，继续下一步。
+2. **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。此操作为**幂等操作**，必须在搜索 ready 任务之前执行。
 3. 找到当前阶段中第一个 `status: ready` 的任务
 3. 如果找不到 ready 任务：
    - 输出：“✅ 当前没有待执行的任务。”

@@ -1,7 +1,7 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.12  
-**生效日期**：2026-07-09  
+**版本**：v5.13  
+**生效日期**：2026-07-11  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -911,7 +911,7 @@ stateDiagram-v2
 | 状态          | 含义                  | 谁可以变更        |
 | ------------- | --------------------- | ----------------- |
 | `backlog`     | 任务已定义，尚未就绪  | 人类              |
-| `ready`       | 依赖已满足，等待执行  | Agent 自动        |
+| `ready`       | 依赖已满足，等待执行  | Agent 自动（级联） |
 | `in_progress` | Agent 正在执行        | Agent 自动        |
 | `blocked`     | 等待人类决策          | Agent 自动 + 人类 |
 | `review`      | PR 已提交，等待审查   | Agent 自动        |
@@ -919,15 +919,24 @@ stateDiagram-v2
 | `merged`      | PR 已合并             | 人类              |
 | `done`        | 任务完成              | 人类              |
 
+**`backlog → ready` 级联触发时机**：以下场景 Agent 必须主动扫描所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`：
+
+1. **Agent 启动时**（`init-session-echo`、`next-task-echo`、`do-task-echo` 的搜索 ready 步骤之前）
+2. **任务合并后**（`pr-merge-echo` 将任务标记为 `done` 之后）
+3. **任何手动查询任务状态时**（`status-echo`）
+
+> 此步骤为**幂等操作**，重复执行无副作用。目的是弥补「完成一个任务时忘记级联更新下游任务」的流程 gap。
+
 ### 12.2 Agent 启动时的强制检查
 
 每次 Agent 会话启动时，必须执行：
 
 1. **读取 `docs/INDEX.md`**：建立全局文档认知，了解文档全貌和模块分布
 2. **读取 `task-status.json`**：确认当前阶段（`current_phase`）和状态
-3. **确认当前任务**：找到该阶段中第一个 `status: ready` 的任务
-4. **检查依赖**：确认该任务的所有 `dependencies` 均已标记为 `done`
-5. **输出任务信息**：
+3. **级联更新 backlog → ready**：遍历所有阶段，将 `dependencies` 全部满足的 `backlog` 任务翻转为 `ready`
+4. **确认当前任务**：找到该阶段中第一个 `status: ready` 的任务
+5. **检查依赖**：确认该任务的所有 `dependencies` 均已标记为 `done`
+6. **输出任务信息**：
    ```
    当前阶段：Phase X - [阶段名称]
    当前任务：[任务ID] - [任务标题]
@@ -1006,6 +1015,7 @@ PR 合并后，人类（或人类触发的 GitHub Actions）更新 `task-status.
 - 将任务 `status` 从 `review` 改为 `done`
 - 记录 `merged_at` 时间戳
 - 更新 `last_updated` 时间戳
+- **级联更新**：扫描所有 `backlog` 任务，若其 `dependencies` 全部满足，翻转为 `ready`
 
 > ⚠️ **分支保留**：合并后**禁止删除分支**（本地和远程）。分支是任务 → 代码的永久索引。详见 §3.1.1。
 
@@ -1257,3 +1267,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.10 | 2026-07-05 | 新增跨阶段阻断规则（§12.6）：执行阶段 N 任务前必须验证 N-1 集成测试任务为 `done`，防止跳过集成测试直接进入下一阶段。同步更新 `next-task-echo`、`do-task-echo`、`init-session-echo` 三个命令加入阻断检查。 | AI 架构师 |
 | v5.11 | 2026-07-05 | 明确阶段集成测试任务分支使用 `test/` 前缀（如 `test/phase1-integration-test-1.9`），非 `feature/`。更新 §3.1 分支命名规范：`test` 类型扩展为"测试补充/修复/阶段集成测试"，无关联用户故事时使用任务 ID 替代 US-XXX。 | AI 架构师 |
 | v5.12 | 2026-07-09 | Task 2.3 IngestPipeline 竣工：澄清 §4.1 Pipeline `actor` 声明为合法无状态模式；同步更新架构设计文档 §1.2、§4.2 含 `actor` 选项；数据流文档新增 §3.1.1 双写审计模式、§3.1.2 ExcludedAssets fail-closed；避坑手册追加 PIPE-010/AUD-009/EXCL-006 三条新陷阱。 | AI 架构师 |
+| v5.13 | 2026-07-11 | 修复 backlog→ready 级联缺失：§12.1 状态表中补充「级联触发时机」说明（启动时/合并后/查询时三场景）；§12.2 Agent 启动强制检查新增级联步骤；§12.3 第 9 步加入合并后级联。同步更新 `init-session-echo`、`next-task-echo`、`do-task-echo`、`pr-merge-echo` 四个自定义命令加入级联逻辑。 | AI 架构师 |
