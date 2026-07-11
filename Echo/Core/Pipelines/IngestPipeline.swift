@@ -2,10 +2,12 @@
 // 文件: IngestPipeline.swift
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-ING-004 (图片记忆摄入),
 //            US-ING-005 (视频记忆摄入画面+音频双通道)
+//            US-ING-001/002 (备忘录文本记忆摄入), US-ING-003 (语音备忘录转写摄入)
 //            docs/02-architecture/数据流全链路技术说明文档.md §3.1 (图片摄入时序), §3.2 (视频摄入)
 //            docs/02-architecture/架构设计文档.md §2.1 (Cognitive Pipeline), §3.1 (IngestPipeline)
 // 任务: 2.3 - IngestPipeline：图片摄入（US-ING-004）
 //        2.4 - IngestPipeline：视频摄入（US-ING-005）
+//        2.5 - IngestPipeline：备忘录 + 语音转写（US-ING-001~003）
 // AC 覆盖: US-ING-004 AC-1~AC-5 (图片摄入),
 //          US-ING-005 AC-1 (帧采样 ≤2fps/≤20, CLIP 向量化), AC-2 (SenseVoice 转写+文本向量化),
 //          AC-3 (memoryGroupId 关联), AC-4 (PHAsset 引用), AC-5 (审计 .videoIngested)
@@ -42,6 +44,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
     case tooManyFrames(max: Int)
     /// 音频转写失败（US-ING-005 AC-2）
     case audioTranscriptionFailed(underlying: Error)
+    /// 文本输入为空（US-ING-001 AC-2：原始文本必须有效）
+    case emptyText
 
     /// L1~L4 错误分级
     public nonisolated var errorLevel: Int {
@@ -55,7 +59,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case .auditLogFailed:             return 1  // L1 瞬态（非阻断）
         case .emptyFrames:                return 2  // L2 可恢复（调用方传入非法参数）
         case .tooManyFrames:              return 2  // L2 可恢复（调用方传入超限帧数）
-        case .audioTranscriptionFailed:   return 2  // L2 可恢复（ASR 模型未加载等）
+        case .audioTranscriptionFailed:               return 2  // L2 可恢复（ASR 模型未加载等）
+        case .emptyText:                              return 2  // L2 可恢复（调用方传入非法参数）
         }
     }
 
@@ -81,6 +86,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
             return "Video ingestion frame count exceeds limit (\(max))"
         case .audioTranscriptionFailed(let error):
             return "Audio transcription failed: \(error.localizedDescription)"
+        case .emptyText:
+            return "Text input is empty or whitespace-only"
         }
     }
 
@@ -97,6 +104,7 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case (.emptyFrames, .emptyFrames): return true
         case (.tooManyFrames(let a), .tooManyFrames(let b)): return a == b
         case (.audioTranscriptionFailed, .audioTranscriptionFailed): return true
+        case (.emptyText, .emptyText): return true
         default: return false
         }
     }
@@ -130,6 +138,13 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
 ///     → for each frame: Embedder.embedImage() → MemoryEntry → VectorStore.ingest()
 ///     → ASREngine.transcribe() → Embedder.embedText() → MemoryEntry → VectorStore.ingest()
 ///     → PrivacyActor.writeAuditLog(.videoIngested)
+///
+/// Text:  call → PrivacyActor.validate() → Embedder.embedText() → zero-pad(384→512)
+///     → VectorStore.ingest() → PrivacyActor.writeAuditLog(.memoryIngested)
+///
+/// Voice: call → PrivacyActor.validate() → ASREngine.transcribe()
+///     → Embedder.embedText() → zero-pad(384→512)
+///     → VectorStore.ingest() → PrivacyActor.writeAuditLog(.voiceIngested)
 /// ```
 public actor IngestPipeline {
 
@@ -428,5 +443,224 @@ public actor IngestPipeline {
         )
 
         return memories
+    }
+
+    // MARK: - Text Ingestion (US-ING-001, US-ING-002)
+
+    /// 摄入文本记忆（US-ING-001/002 — 备忘录文本）。
+    ///
+    /// **流程**：
+    /// 1. Guard: 文本非空（AC-2：originalText 逐字节一致）
+    /// 2. PrivacyCheckpoint: 校验 note 数据源授权（R-006）
+    /// 3. Embedding: embedder.embedText(text) → 384d 向量
+    /// 4. Zero-pad: 384d → 512d（策略 A，Phase 2 Qwen3 升级后移除）
+    /// 5. VectorStore: 写入 512d 向量 + 元数据（含 originalText）
+    /// 6. Audit: 记录 .memoryIngested，sourceLanguage + traceID（AC-5：无原文）
+    ///
+    /// - Parameters:
+    ///   - text: 原始文本（AC-2：逐字节一致）
+    ///   - sourceLanguage: "zh-Hans" 或 "en-US"（AC-1）
+    ///   - sourceId: 数据源标识符（AC-4：原始备忘录引用）
+    ///   - traceID: 审计追溯 ID
+    /// - Returns: 摄入完成的 MemoryEntry
+    /// - Throws: `IngestError` 按 L1~L4 分级
+    public func ingestText(
+        text: String,
+        sourceLanguage: String,
+        sourceId: String,
+        traceID: String = UUID().uuidString
+    ) async throws -> MemoryEntry {
+        let startTime = Date()
+
+        // AC-2: Guard against empty text (whitespace-only is also empty)
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw IngestError.emptyText
+        }
+
+        // Step 1: PrivacyCheckpoint (R-006)
+        let checkpoint = await privacyActor.validate(
+            operation: .ingest,
+            traceID: traceID,
+            sourceTypes: ["note"]
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+
+        // Step 2: Text embedding (AC-3: multilingual-e5-small → 384d)
+        let rawEmbedding: [Float]
+        do {
+            rawEmbedding = try await embedder.embedText(text)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+
+        // Step 3: Zero-pad 384d → 512d for unified VectorStore (Strategy A)
+        let paddedEmbedding: [Float]
+        if rawEmbedding.count < 512 {
+            paddedEmbedding = rawEmbedding + Array(repeating: 0.0, count: 512 - rawEmbedding.count)
+        } else {
+            paddedEmbedding = rawEmbedding
+        }
+
+        // Step 4: Create MemoryEntry (AC-2: originalText preserved, AC-4: sourceId as asset reference)
+        let memory = MemoryEntry(
+            assetId: sourceId,
+            embedding: paddedEmbedding,
+            sourceType: "text",
+            timestamp: Date(),
+            exifMetadata: nil,
+            privacyBlurApplied: false,
+            traceID: traceID,
+            originalText: text
+        )
+
+        // Step 5: Write to VectorStore
+        let metadata: Data
+        do {
+            metadata = try memory.encodeMetadata()
+        } catch {
+            throw IngestError.metadataEncodingFailed(underlying: error)
+        }
+
+        do {
+            try await vectorStore.ingest(vector: paddedEmbedding, id: memory.id, metadata: metadata)
+        } catch {
+            throw IngestError.vectorStoreWriteFailed(underlying: error)
+        }
+
+        // Step 6: Audit log (AC-5: .memoryIngested, sourceLanguage, traceID, NO original text)
+        let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        try? await privacyActor.writeAuditLog(
+            eventType: .memoryIngested,
+            traceID: traceID,
+            policyVersion: checkpoint.policyVersion,
+            success: true,
+            sourceType: "text",
+            affectedCount: 1,
+            excludedWritten: false,
+            sourceLanguage: sourceLanguage,
+            elapsedMs: elapsedMs
+        )
+
+        return memory
+    }
+
+    // MARK: - Voice Ingestion (US-ING-003)
+
+    /// 摄入语音转写记忆（US-ING-003 — 语音备忘录转写）。
+    ///
+    /// **流程**：
+    /// 1. PrivacyCheckpoint: 校验 voice 数据源授权（R-006）
+    /// 2. Transcribe: ASREngine.transcribe() → 文本（AC-1）
+    /// 3. Embedding: embedder.embedText(transcript) → 384d
+    /// 4. Zero-pad: 384d → 512d
+    /// 5. VectorStore: 写入向量 + 元数据（含转写文本）
+    /// 6. Audit: 记录 .voiceIngested（AC-5）
+    /// 7. AC-3: 原始音频不持久化，仅保留转写文本
+    ///
+    /// - Parameters:
+    ///   - audioAssetId: 语音备忘录的 PHAsset.localIdentifier（原始文件仅引用，不持久化）
+    ///   - sourceLanguage: 转写文本的语言（nil 则由 Swift NLTagger 自动检测）
+    ///   - traceID: 审计追溯 ID
+    /// - Returns: 摄入完成的 MemoryEntry
+    /// - Throws: `IngestError` 按 L1~L4 分级
+    public func ingestVoice(
+        audioAssetId: String,
+        sourceLanguage: String? = nil,
+        traceID: String = UUID().uuidString
+    ) async throws -> MemoryEntry {
+        let startTime = Date()
+
+        // Step 1: PrivacyCheckpoint (R-006)
+        let checkpoint = await privacyActor.validate(
+            operation: .ingest,
+            traceID: traceID,
+            sourceTypes: ["voice"]
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+
+        // Step 2: Transcribe audio (AC-1: SenseVoice offline transcription)
+        guard let asr = asrEngine else {
+            throw IngestError.audioTranscriptionFailed(
+                underlying: ASREngineError.modelNotLoaded
+            )
+        }
+
+        let transcript: String
+        do {
+            transcript = try await asr.transcribe(audioTrackAssetId: audioAssetId)
+        } catch {
+            throw IngestError.audioTranscriptionFailed(underlying: error)
+        }
+
+        // Step 3: Detect language (use NLTagger → only zh-Hans/en-US per AGENTS.md §6.2)
+        let detectedLanguage = sourceLanguage ?? "zh-Hans"
+        // TODO: Integrate NLTagger language detection:
+        //   import NaturalLanguage
+        //   NLTagger(tagSchemes: [.language]).string = transcript
+        //   let lang = tagger.tag(at: transcript.startIndex, unit: .document, scheme: .language)?.rawValue
+        //   Map to zh-Hans/en-US (fallback zh-Hans)
+
+        // Step 4: Text embedding (AC-3: multilingual-e5-small → 384d)
+        let rawEmbedding: [Float]
+        do {
+            rawEmbedding = try await embedder.embedText(transcript)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+
+        // Step 5: Zero-pad 384d → 512d
+        let paddedEmbedding: [Float]
+        if rawEmbedding.count < 512 {
+            paddedEmbedding = rawEmbedding + Array(repeating: 0.0, count: 512 - rawEmbedding.count)
+        } else {
+            paddedEmbedding = rawEmbedding
+        }
+
+        // Step 6: Create MemoryEntry (AC-3: audio NOT persisted, only transcription kept)
+        let memory = MemoryEntry(
+            assetId: audioAssetId,
+            embedding: paddedEmbedding,
+            sourceType: "voice",
+            timestamp: Date(),
+            exifMetadata: nil,
+            privacyBlurApplied: false,
+            traceID: traceID,
+            originalText: transcript
+        )
+
+        // Step 7: Write to VectorStore
+        let metadata: Data
+        do {
+            metadata = try memory.encodeMetadata()
+        } catch {
+            throw IngestError.metadataEncodingFailed(underlying: error)
+        }
+
+        do {
+            try await vectorStore.ingest(vector: paddedEmbedding, id: memory.id, metadata: metadata)
+        } catch {
+            throw IngestError.vectorStoreWriteFailed(underlying: error)
+        }
+
+        // Step 8: Audit log (AC-5: .voiceIngested, transcriptModelVersion)
+        let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        try? await privacyActor.writeAuditLog(
+            eventType: .voiceIngested,
+            traceID: traceID,
+            policyVersion: checkpoint.policyVersion,
+            success: true,
+            sourceType: "voice",
+            affectedCount: 1,
+            excludedWritten: false,
+            sourceLanguage: detectedLanguage,
+            elapsedMs: elapsedMs
+        )
+
+        return memory
     }
 }
