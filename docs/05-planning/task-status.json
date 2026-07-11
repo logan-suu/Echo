@@ -220,6 +220,7 @@
           "story": "US-ING-001, US-ING-002, US-ING-003",
           "status": "review",
           "last_updated": "2026-07-12T00:00:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/17",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/双语言实现说明文档.md"
