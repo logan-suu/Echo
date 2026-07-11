@@ -161,6 +161,12 @@ public struct AuditLogEntry: Sendable, Codable {
     public nonisolated let excludedWritten: Bool?
     public nonisolated let sourceLanguage: String?
     public nonisolated let elapsedMs: Int?
+    /// 视频摄入关键帧数（US-ING-005 AC-5）
+    public nonisolated let frameCount: Int?
+    /// 视频音频转写字符长度（US-ING-005 AC-5）
+    public nonisolated let audioTranscriptLength: Int?
+    /// 视频是否含音频轨道（US-ING-005 AC-5）
+    public nonisolated let hasAudio: Bool?
 
     public nonisolated init(
         id: Int64 = 0,
@@ -173,7 +179,10 @@ public struct AuditLogEntry: Sendable, Codable {
         affectedCount: Int? = nil,
         excludedWritten: Bool? = nil,
         sourceLanguage: String? = nil,
-        elapsedMs: Int? = nil
+        elapsedMs: Int? = nil,
+        frameCount: Int? = nil,
+        audioTranscriptLength: Int? = nil,
+        hasAudio: Bool? = nil
     ) {
         self.id = id
         self.eventType = eventType
@@ -186,6 +195,9 @@ public struct AuditLogEntry: Sendable, Codable {
         self.excludedWritten = excludedWritten
         self.sourceLanguage = sourceLanguage
         self.elapsedMs = elapsedMs
+        self.frameCount = frameCount
+        self.audioTranscriptLength = audioTranscriptLength
+        self.hasAudio = hasAudio
     }
 
     /// 从数据库查询结果行构造 AuditLogEntry（用于 fetchAuditLogs）
@@ -207,7 +219,10 @@ public struct AuditLogEntry: Sendable, Codable {
             affectedCount: row["affectedCount"]?.intValue.map(Int.init),
             excludedWritten: row["excludedWritten"]?.intValue.map { $0 != 0 },
             sourceLanguage: row["sourceLanguage"]?.stringValue,
-            elapsedMs: row["elapsedMs"]?.intValue.map(Int.init)
+            elapsedMs: row["elapsedMs"]?.intValue.map(Int.init),
+            frameCount: row["frameCount"]?.intValue.map(Int.init),
+            audioTranscriptLength: row["audioTranscriptLength"]?.intValue.map(Int.init),
+            hasAudio: row["hasAudio"]?.intValue.map { $0 != 0 }
         )
     }
 }
@@ -415,12 +430,15 @@ public actor PrivacyActor {
         affectedCount: Int? = nil,
         excludedWritten: Bool? = nil,
         sourceLanguage: String? = nil,
-        elapsedMs: Int? = nil
+        elapsedMs: Int? = nil,
+        frameCount: Int? = nil,
+        audioTranscriptLength: Int? = nil,
+        hasAudio: Bool? = nil
     ) async throws {
         try await db.executeWrite(
             sql: """
-                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             bindings: [
                 .text(eventType.rawValue),
@@ -433,6 +451,9 @@ public actor PrivacyActor {
                 excludedWritten.map { .int($0 ? 1 : 0) } ?? .null,
                 sourceLanguage.map { .text($0) } ?? .null,
                 elapsedMs.map { .int(Int64($0)) } ?? .null,
+                frameCount.map { .int(Int64($0)) } ?? .null,
+                audioTranscriptLength.map { .int(Int64($0)) } ?? .null,
+                hasAudio.map { .int($0 ? 1 : 0) } ?? .null,
             ]
         )
     }
@@ -459,14 +480,16 @@ public actor PrivacyActor {
         if let eventType = eventType {
             sql = """
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
-                       sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs
+                       sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
+                       frameCount, audioTranscriptLength, hasAudio
                 FROM AuditLog WHERE eventType = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.text(eventType.rawValue), .int(Int64(limit)), .int(Int64(offset))]
         } else {
             sql = """
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
-                       sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs
+                       sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
+                       frameCount, audioTranscriptLength, hasAudio
                 FROM AuditLog ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.int(Int64(limit)), .int(Int64(offset))]

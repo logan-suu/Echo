@@ -203,7 +203,9 @@
           "id": "2.4",
           "title": "IngestPipeline：视频摄入（US-ING-005）",
           "story": "US-ING-005",
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-07-11T14:40:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/16",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"

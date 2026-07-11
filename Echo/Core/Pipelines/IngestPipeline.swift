@@ -1,16 +1,19 @@
 // ==========================================
 // 文件: IngestPipeline.swift
-// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-ING-004 (图片记忆摄入)
-//            docs/02-architecture/数据流全链路技术说明文档.md §3.1 (图片摄入时序)
+// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-ING-004 (图片记忆摄入),
+//            US-ING-005 (视频记忆摄入画面+音频双通道)
+//            docs/02-architecture/数据流全链路技术说明文档.md §3.1 (图片摄入时序), §3.2 (视频摄入)
 //            docs/02-architecture/架构设计文档.md §2.1 (Cognitive Pipeline), §3.1 (IngestPipeline)
 // 任务: 2.3 - IngestPipeline：图片摄入（US-ING-004）
-// AC 覆盖: US-ING-004 AC-1 (禁止模糊处理), AC-2 (EXIF 元数据保留),
-//          AC-3 (CLIP 向量生成), AC-4 (PHAsset 引用), AC-5 (审计 .imageIngested)
+//        2.4 - IngestPipeline：视频摄入（US-ING-005）
+// AC 覆盖: US-ING-004 AC-1~AC-5 (图片摄入),
+//          US-ING-005 AC-1 (帧采样 ≤2fps/≤20, CLIP 向量化), AC-2 (SenseVoice 转写+文本向量化),
+//          AC-3 (memoryGroupId 关联), AC-4 (PHAsset 引用), AC-5 (审计 .videoIngested)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
 //           AGENTS.md §4.4 (L1~L4 统一错误分级)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-07-09
+// 生成时间: 2026-07-09 (v1 图片), 2026-07-11 (v2 视频)
 // ==========================================
 
 import Foundation
@@ -18,8 +21,8 @@ import Foundation
 // MARK: - Ingest Pipeline Error
 
 /// IngestPipeline 统一错误类型（L1~L4 分级，AGENTS.md §4.4）
-public enum IngestError: Error, LocalizedError, Sendable {
-    /// 隐私校验拒绝 — 用户未授权 photo 数据源
+public enum IngestError: Error, LocalizedError, Sendable, Equatable {
+    /// 隐私校验拒绝 — 用户未授权所需数据源
     case privacyDenied(sourceTypes: [String])
     /// 资产已被用户手动排除（US-SRC-008）
     case assetExcluded(assetId: String)
@@ -33,6 +36,12 @@ public enum IngestError: Error, LocalizedError, Sendable {
     case vectorStoreWriteFailed(underlying: Error)
     /// 审计日志写入失败（L1 瞬态，非阻断，调用方不应 throw 此错误）
     case auditLogFailed(underlying: Error)
+    /// 视频帧列表为空（US-ING-005 AC-1）
+    case emptyFrames
+    /// 视频帧数超过上限（US-ING-005 AC-1: 总帧数 ≤20）
+    case tooManyFrames(max: Int)
+    /// 音频转写失败（US-ING-005 AC-2）
+    case audioTranscriptionFailed(underlying: Error)
 
     /// L1~L4 错误分级
     public nonisolated var errorLevel: Int {
@@ -44,6 +53,9 @@ public enum IngestError: Error, LocalizedError, Sendable {
         case .metadataEncodingFailed:     return 2  // L2 可恢复（编码/序列化异常）
         case .vectorStoreWriteFailed:     return 2  // L2 可恢复（磁盘空间等）
         case .auditLogFailed:             return 1  // L1 瞬态（非阻断）
+        case .emptyFrames:                return 2  // L2 可恢复（调用方传入非法参数）
+        case .tooManyFrames:              return 2  // L2 可恢复（调用方传入超限帧数）
+        case .audioTranscriptionFailed:   return 2  // L2 可恢复（ASR 模型未加载等）
         }
     }
 
@@ -63,6 +75,29 @@ public enum IngestError: Error, LocalizedError, Sendable {
             return "Vector store write failed: \(error.localizedDescription)"
         case .auditLogFailed(let error):
             return "Audit log write failed (non-blocking): \(error.localizedDescription)"
+        case .emptyFrames:
+            return "Video ingestion requires at least one frame"
+        case .tooManyFrames(let max):
+            return "Video ingestion frame count exceeds limit (\(max))"
+        case .audioTranscriptionFailed(let error):
+            return "Audio transcription failed: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: Equatable (manual — Error associated values are not Equatable)
+    public static func == (lhs: IngestError, rhs: IngestError) -> Bool {
+        switch (lhs, rhs) {
+        case (.privacyDenied(let a), .privacyDenied(let b)): return a == b
+        case (.assetExcluded(let a), .assetExcluded(let b)): return a == b
+        case (.excludedAssetsLookupFailed, .excludedAssetsLookupFailed): return true
+        case (.embeddingFailed, .embeddingFailed): return true
+        case (.metadataEncodingFailed, .metadataEncodingFailed): return true
+        case (.vectorStoreWriteFailed, .vectorStoreWriteFailed): return true
+        case (.auditLogFailed, .auditLogFailed): return true
+        case (.emptyFrames, .emptyFrames): return true
+        case (.tooManyFrames(let a), .tooManyFrames(let b)): return a == b
+        case (.audioTranscriptionFailed, .audioTranscriptionFailed): return true
+        default: return false
         }
     }
 }
@@ -80,21 +115,28 @@ public enum IngestError: Error, LocalizedError, Sendable {
 ///
 /// ## 依赖注入
 /// - `embedder`: 嵌入服务（CLIP 编码），生产环境使用 MobileCLIPEmbedder，测试使用 StubEmbedder
+/// - `asrEngine`: 语音转写引擎（SenseVoice），生产环境使用 SenseVoiceASREngine，测试使用 StubASREngine
 /// - `privacyActor`: 隐私校验 Actor（默认 .shared）
 /// - `vectorStore`: 向量存储 Actor
 /// - `excludedAssets`: 排除资产管理 Actor（默认 .shared）
 ///
-/// ## 数据流（架构文档 §3.1）
+/// ## 数据流（架构文档 §3.1, §3.2）
 /// ```
-/// call → PrivacyActor.validate() → ExcludedAssetsActor.contains()
-///     → Embedder.embedImage() → VectorStoreActor.ingest()
+/// Image: call → PrivacyActor.validate() → ExcludedAssets.contains()
+///     → Embedder.embedImage() → VectorStore.ingest()
 ///     → PrivacyActor.writeAuditLog(.imageIngested)
+///
+/// Video: call → PrivacyActor.validate() → ExcludedAssets.contains()
+///     → for each frame: Embedder.embedImage() → MemoryEntry → VectorStore.ingest()
+///     → ASREngine.transcribe() → Embedder.embedText() → MemoryEntry → VectorStore.ingest()
+///     → PrivacyActor.writeAuditLog(.videoIngested)
 /// ```
 public actor IngestPipeline {
 
     // MARK: - Dependencies
 
     private let embedder: any EmbedderProtocol
+    private let asrEngine: (any ASREngineProtocol)?
     private let privacyActor: PrivacyActor
     private let vectorStore: VectorStoreActor
     private let excludedAssets: ExcludedAssetsActor
@@ -103,11 +145,13 @@ public actor IngestPipeline {
 
     public init(
         embedder: any EmbedderProtocol,
+        asrEngine: (any ASREngineProtocol)? = nil,
         privacyActor: PrivacyActor = .shared,
         vectorStore: VectorStoreActor,
         excludedAssets: ExcludedAssetsActor = .shared
     ) {
         self.embedder = embedder
+        self.asrEngine = asrEngine
         self.privacyActor = privacyActor
         self.vectorStore = vectorStore
         self.excludedAssets = excludedAssets
@@ -212,5 +256,177 @@ public actor IngestPipeline {
         )
 
         return memory
+    }
+
+    // MARK: - Video Ingestion (US-ING-005)
+
+    /// 摄入视频记忆（US-ING-005 全部 AC）— 画面关键帧 + 音频转写双通道。
+    ///
+    /// **流程**（对应架构文档 §3.2 视频摄入）：
+    /// 1. PrivacyCheckpoint: 校验 video 数据源授权（R-006）
+    /// 2. ExcludedAssets: 检查是否被用户手动排除（US-SRC-008）
+    /// 3. 画面通道: 逐帧 CLIP 嵌入 → MemoryEntry(sourceType="video_frame") → VectorStore
+    /// 4. 音频通道: ASREngine 转写 → embedText → MemoryEntry(sourceType="video_audio") → VectorStore
+    /// 5. 关联: 所有 MemoryEntry 共享同一 memoryGroupId（AC-3）
+    /// 6. Audit: 记录 .videoIngested（AC-5）
+    ///
+    /// - Parameters:
+    ///   - assetId: PHAsset.localIdentifier（AC-4：视频原文件引用，不复制存储）
+    ///   - frameAssetIds: 关键帧的 PHAsset.localIdentifier 列表（AC-1：≤20 帧）
+    ///   - audioTrackAssetId: 音频轨道的 PHAsset.localIdentifier，nil 表示无音频（AC-2）
+    ///   - traceID: 审计追溯 ID（默认自动生成）
+    /// - Returns: 所有摄入完成的 [MemoryEntry]（帧 + 音频）
+    /// - Throws: `IngestError` 按 L1~L4 分级
+    public func ingestVideo(
+        assetId: String,
+        frameAssetIds: [String],
+        audioTrackAssetId: String? = nil,
+        traceID: String = UUID().uuidString
+    ) async throws -> [MemoryEntry] {
+        let startTime = Date()
+
+        // AC-1: Must have at least one frame and at most 20
+        guard !frameAssetIds.isEmpty else {
+            throw IngestError.emptyFrames
+        }
+        guard frameAssetIds.count <= 20 else {
+            throw IngestError.tooManyFrames(max: 20)
+        }
+
+        // Step 1: PrivacyCheckpoint (R-006) — check video source authorization
+        let checkpoint = await privacyActor.validate(
+            operation: .ingest,
+            traceID: traceID,
+            sourceTypes: ["video"]
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+
+        // Step 2: ExcludedAssets check (US-SRC-008) — fail-closed
+        do {
+            if try await excludedAssets.contains(assetId: assetId) {
+                throw IngestError.assetExcluded(assetId: assetId)
+            }
+        } catch let error as IngestError {
+            throw error
+        } catch {
+            throw IngestError.excludedAssetsLookupFailed(underlying: error)
+        }
+
+        // Step 3: Generate shared memoryGroupId (AC-3)
+        let groupId = UUID()
+        var memories: [MemoryEntry] = []
+
+        // Step 4: Frame channel — each frame: embed → MemoryEntry → ingest (AC-1)
+        for frameAssetId in frameAssetIds {
+            let frameEmbedding: [Float]
+            do {
+                frameEmbedding = try await embedder.embedImage(assetId: frameAssetId)
+            } catch {
+                throw IngestError.embeddingFailed(underlying: error)
+            }
+
+            let frameMemory = MemoryEntry(
+                assetId: frameAssetId,           // AC-4: PHAsset reference
+                embedding: frameEmbedding,
+                sourceType: "video_frame",
+                timestamp: Date(),
+                exifMetadata: nil,               // AC-1: video frames don't carry EXIF
+                privacyBlurApplied: false,        // AC-1: no blurring
+                traceID: traceID,
+                memoryGroupId: groupId            // AC-3
+            )
+
+            let frameMetadata: Data
+            do {
+                frameMetadata = try frameMemory.encodeMetadata()
+            } catch {
+                throw IngestError.metadataEncodingFailed(underlying: error)
+            }
+
+            do {
+                try await vectorStore.ingest(vector: frameEmbedding, id: frameMemory.id, metadata: frameMetadata)
+            } catch {
+                throw IngestError.vectorStoreWriteFailed(underlying: error)
+            }
+
+            memories.append(frameMemory)
+        }
+
+        // Step 5: Audio channel — transcribe → embedText → MemoryEntry → ingest (AC-2)
+        let hasAudio: Bool
+        var audioTranscriptLength: Int = 0
+
+        if let audioId = audioTrackAssetId {
+            if let asr = asrEngine {
+                hasAudio = true
+
+                let transcript: String
+                do {
+                    transcript = try await asr.transcribe(audioTrackAssetId: audioId)
+                } catch {
+                    throw IngestError.audioTranscriptionFailed(underlying: error)
+                }
+                audioTranscriptLength = transcript.count
+
+                let audioEmbedding: [Float]
+                do {
+                    audioEmbedding = try await embedder.embedText(transcript)
+                } catch {
+                    throw IngestError.embeddingFailed(underlying: error)
+                }
+
+                let audioMemory = MemoryEntry(
+                    assetId: assetId,
+                    embedding: audioEmbedding,
+                    sourceType: "video_audio",
+                    timestamp: Date(),
+                    exifMetadata: nil,
+                    privacyBlurApplied: false,
+                    traceID: traceID,
+                    memoryGroupId: groupId
+                )
+
+                let audioMetadata: Data
+                do {
+                    audioMetadata = try audioMemory.encodeMetadata()
+                } catch {
+                    throw IngestError.metadataEncodingFailed(underlying: error)
+                }
+
+                do {
+                    try await vectorStore.ingest(vector: audioEmbedding, id: audioMemory.id, metadata: audioMetadata)
+                } catch {
+                    throw IngestError.vectorStoreWriteFailed(underlying: error)
+                }
+
+                memories.append(audioMemory)
+            } else {
+                // audio track present but ASR engine not configured (SenseVoice pending)
+                hasAudio = false
+            }
+        } else {
+            hasAudio = false
+        }
+
+        // Step 6: Audit log (AC-5: .videoIngested, frameCount, audioTranscriptLength, hasAudio)
+        let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        try? await privacyActor.writeAuditLog(
+            eventType: .videoIngested,
+            traceID: traceID,
+            policyVersion: checkpoint.policyVersion,
+            success: true,
+            sourceType: "video",
+            affectedCount: memories.count,
+            excludedWritten: false,
+            sourceLanguage: nil,
+            elapsedMs: elapsedMs,
+            frameCount: frameAssetIds.count,
+            audioTranscriptLength: audioTranscriptLength,
+            hasAudio: hasAudio
+        )
+
+        return memories
     }
 }

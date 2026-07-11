@@ -138,6 +138,11 @@ public actor DatabaseManager {
         try execute(sql: """
             CREATE INDEX IF NOT EXISTS idx_auditlog_timestamp ON AuditLog(timestamp)
             """)
+        // v2 schema migration: add video-specific audit fields (US-ING-005 AC-5, Task 2.4)
+        // Idempotent: silently skip if columns already exist (SQLite rejects duplicate ADD COLUMN)
+        try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN frameCount INTEGER")
+        try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN audioTranscriptLength INTEGER")
+        try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN hasAudio INTEGER")
         // UserPolicy persistence table
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS UserPolicyStore (

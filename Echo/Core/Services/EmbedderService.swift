@@ -29,6 +29,13 @@ public protocol EmbedderProtocol: Sendable {
     /// - Returns: 768 维浮点向量
     /// - Throws: `EmbedderError` 若图像加载或推理失败
     func embedImage(assetId: String) async throws -> [Float]
+
+    /// 对文本生成 CLIP 嵌入向量（用于音频转写文本、备忘录文字等）。
+    ///
+    /// - Parameter text: 待向量化的文本
+    /// - Returns: 768 维浮点向量，与图像向量位于同一 CLIP 共享语义空间
+    /// - Throws: `EmbedderError` 若推理失败
+    func embedText(_ text: String) async throws -> [Float]
 }
 
 // MARK: - Embedder Error
@@ -96,6 +103,18 @@ public actor StubEmbedder: EmbedderProtocol {
     /// - Returns: 预设的 768 维浮点向量
     /// - Throws: 如已调用 `setNextError()` 则抛出对应错误
     public func embedImage(assetId: String) async throws -> [Float] {
+        if let error = shouldThrowNext {
+            shouldThrowNext = nil
+            throw error
+        }
+        return nextEmbedding
+    }
+
+    /// 返回预设的固定向量，或抛出预设错误（与 embedImage 共享相同的 stub 向量和错误状态）。
+    /// - Parameter text: 待向量化的文本（Stub 忽略此参数）
+    /// - Returns: 预设的 768 维浮点向量
+    /// - Throws: 如已调用 `setNextError()` 则抛出对应错误
+    public func embedText(_ text: String) async throws -> [Float] {
         if let error = shouldThrowNext {
             shouldThrowNext = nil
             throw error
