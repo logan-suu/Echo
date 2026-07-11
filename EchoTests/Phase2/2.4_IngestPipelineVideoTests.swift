@@ -187,7 +187,7 @@ struct IngestPipelineVideoTests {
 
         // AC-3: All memories share a non-nil memoryGroupId
         #expect(memories.count == 4)  // 3 frames + 1 audio
-        let groupId = memories.first!.memoryGroupId
+        let groupId = try #require(memories.first).memoryGroupId
         #expect(groupId != nil)
 
         for memory in memories {
@@ -224,11 +224,11 @@ struct IngestPipelineVideoTests {
         )
 
         // AC-4: Frame memories have their own frame assetId
-        let frameMemory = memories.first { $0.sourceType == "video_frame" }!
+        let frameMemory = try #require(memories.first { $0.sourceType == "video_frame" })
         #expect(frameMemory.assetId == "frame-AC4")
 
         // AC-4: Audio memory references the video assetId (not copying audio separately)
-        let audioMemory = memories.first { $0.sourceType == "video_audio" }!
+        let audioMemory = try #require(memories.first { $0.sourceType == "video_audio" })
         #expect(audioMemory.assetId == videoAssetId)
     }
 
@@ -255,7 +255,7 @@ struct IngestPipelineVideoTests {
         )
 
         // AC-5: Verify audit log contains .videoIngested with frameCount/audioTranscriptLength/hasAudio
-        let logs = try await db.executeQuery(sql: "SELECT * FROM AuditLog WHERE eventType='videoIngested' AND traceID='\(traceID)'", bindings: [])
+        let logs = try await db.executeQuery(sql: "SELECT * FROM AuditLog WHERE eventType='videoIngested' AND traceID=?", bindings: [.text(traceID)])
         #expect(logs.count >= 1, "Expected at least one .videoIngested audit log")
 
         if let row = logs.first {
@@ -282,7 +282,7 @@ struct IngestPipelineVideoTests {
         )
 
         // AC-5: Audit log should still exist, with hasAudio=false, frameCount=2
-        let logs = try await db.executeQuery(sql: "SELECT * FROM AuditLog WHERE eventType='videoIngested' AND traceID='\(traceID)'", bindings: [])
+        let logs = try await db.executeQuery(sql: "SELECT * FROM AuditLog WHERE eventType='videoIngested' AND traceID=?", bindings: [.text(traceID)])
         #expect(logs.count >= 1, "Expected .videoIngested audit log even without audio")
 
         if let row = logs.first {
@@ -472,6 +472,7 @@ struct IngestPipelineVideoTests {
         await stubASR.setNextError(nil)
 
         let traceID = UUID().uuidString
+        let beforeCount = await vectorStore.liveCount
         let memories = try await sut.ingestVideo(
             assetId: videoAssetId,
             frameAssetIds: frameAssetIds,
@@ -479,12 +480,12 @@ struct IngestPipelineVideoTests {
             traceID: traceID
         )
 
-        // Verify all memories are in the vector store
-        let initialCount = await vectorStore.liveCount
-        #expect(Int(initialCount) >= 4)
+        // Verify exactly 4 new memories ingested (3 frames + 1 audio)
+        let afterCount = await vectorStore.liveCount
+        #expect(Int(afterCount) - Int(beforeCount) == 4, "Expected 4 new memories ingested")
 
         // Search should find all ingested vectors
         let results = await vectorStore.search(query: queryVector, k: 10)
-        #expect(results.count >= 4)
+        #expect(results.count >= 4, "Expected at least 4 search results")
     }
 }

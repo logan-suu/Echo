@@ -358,49 +358,54 @@ public actor IngestPipeline {
         let hasAudio: Bool
         var audioTranscriptLength: Int = 0
 
-        if let audioId = audioTrackAssetId, let asr = asrEngine {
-            hasAudio = true
+        if let audioId = audioTrackAssetId {
+            if let asr = asrEngine {
+                hasAudio = true
 
-            let transcript: String
-            do {
-                transcript = try await asr.transcribe(audioTrackAssetId: audioId)
-            } catch {
-                throw IngestError.audioTranscriptionFailed(underlying: error)
+                let transcript: String
+                do {
+                    transcript = try await asr.transcribe(audioTrackAssetId: audioId)
+                } catch {
+                    throw IngestError.audioTranscriptionFailed(underlying: error)
+                }
+                audioTranscriptLength = transcript.count
+
+                let audioEmbedding: [Float]
+                do {
+                    audioEmbedding = try await embedder.embedText(transcript)
+                } catch {
+                    throw IngestError.embeddingFailed(underlying: error)
+                }
+
+                let audioMemory = MemoryEntry(
+                    assetId: assetId,
+                    embedding: audioEmbedding,
+                    sourceType: "video_audio",
+                    timestamp: Date(),
+                    exifMetadata: nil,
+                    privacyBlurApplied: false,
+                    traceID: traceID,
+                    memoryGroupId: groupId
+                )
+
+                let audioMetadata: Data
+                do {
+                    audioMetadata = try audioMemory.encodeMetadata()
+                } catch {
+                    throw IngestError.metadataEncodingFailed(underlying: error)
+                }
+
+                do {
+                    try await vectorStore.ingest(vector: audioEmbedding, id: audioMemory.id, metadata: audioMetadata)
+                } catch {
+                    throw IngestError.vectorStoreWriteFailed(underlying: error)
+                }
+
+                memories.append(audioMemory)
+            } else {
+                // audio track present but ASR engine not configured (SenseVoice pending)
+                hasAudio = false
             }
-            audioTranscriptLength = transcript.count
-
-            let audioEmbedding: [Float]
-            do {
-                audioEmbedding = try await embedder.embedText(transcript)
-            } catch {
-                throw IngestError.embeddingFailed(underlying: error)
-            }
-
-            let audioMemory = MemoryEntry(
-                assetId: assetId,                // AC-4: reference the video, not a separate audio file
-                embedding: audioEmbedding,
-                sourceType: "video_audio",
-                timestamp: Date(),
-                exifMetadata: nil,
-                privacyBlurApplied: false,
-                traceID: traceID,
-                memoryGroupId: groupId            // AC-3
-            )
-
-            let audioMetadata: Data
-            do {
-                audioMetadata = try audioMemory.encodeMetadata()
-            } catch {
-                throw IngestError.metadataEncodingFailed(underlying: error)
-            }
-
-            do {
-                try await vectorStore.ingest(vector: audioEmbedding, id: audioMemory.id, metadata: audioMetadata)
-            } catch {
-                throw IngestError.vectorStoreWriteFailed(underlying: error)
-            }
-
-            memories.append(audioMemory)
         } else {
             hasAudio = false
         }
