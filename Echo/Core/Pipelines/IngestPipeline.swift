@@ -38,6 +38,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
     case auditLogFailed(underlying: Error)
     /// 视频帧列表为空（US-ING-005 AC-1）
     case emptyFrames
+    /// 视频帧数超过上限（US-ING-005 AC-1: 总帧数 ≤20）
+    case tooManyFrames(max: Int)
     /// 音频转写失败（US-ING-005 AC-2）
     case audioTranscriptionFailed(underlying: Error)
 
@@ -52,6 +54,7 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case .vectorStoreWriteFailed:     return 2  // L2 可恢复（磁盘空间等）
         case .auditLogFailed:             return 1  // L1 瞬态（非阻断）
         case .emptyFrames:                return 2  // L2 可恢复（调用方传入非法参数）
+        case .tooManyFrames:              return 2  // L2 可恢复（调用方传入超限帧数）
         case .audioTranscriptionFailed:   return 2  // L2 可恢复（ASR 模型未加载等）
         }
     }
@@ -74,6 +77,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
             return "Audit log write failed (non-blocking): \(error.localizedDescription)"
         case .emptyFrames:
             return "Video ingestion requires at least one frame"
+        case .tooManyFrames(let max):
+            return "Video ingestion frame count exceeds limit (\(max))"
         case .audioTranscriptionFailed(let error):
             return "Audio transcription failed: \(error.localizedDescription)"
         }
@@ -90,6 +95,7 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case (.vectorStoreWriteFailed, .vectorStoreWriteFailed): return true
         case (.auditLogFailed, .auditLogFailed): return true
         case (.emptyFrames, .emptyFrames): return true
+        case (.tooManyFrames(let a), .tooManyFrames(let b)): return a == b
         case (.audioTranscriptionFailed, .audioTranscriptionFailed): return true
         default: return false
         }
@@ -279,9 +285,12 @@ public actor IngestPipeline {
     ) async throws -> [MemoryEntry] {
         let startTime = Date()
 
-        // AC-1: Must have at least one frame
+        // AC-1: Must have at least one frame and at most 20
         guard !frameAssetIds.isEmpty else {
             throw IngestError.emptyFrames
+        }
+        guard frameAssetIds.count <= 20 else {
+            throw IngestError.tooManyFrames(max: 20)
         }
 
         // Step 1: PrivacyCheckpoint (R-006) — check video source authorization
@@ -407,7 +416,10 @@ public actor IngestPipeline {
             affectedCount: memories.count,
             excludedWritten: false,
             sourceLanguage: nil,
-            elapsedMs: elapsedMs
+            elapsedMs: elapsedMs,
+            frameCount: frameAssetIds.count,
+            audioTranscriptLength: audioTranscriptLength,
+            hasAudio: hasAudio
         )
 
         return memories

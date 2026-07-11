@@ -254,9 +254,15 @@ struct IngestPipelineVideoTests {
             traceID: traceID
         )
 
-        // AC-5: Verify audit log contains .videoIngested
+        // AC-5: Verify audit log contains .videoIngested with frameCount/audioTranscriptLength/hasAudio
         let logs = try await db.executeQuery(sql: "SELECT * FROM AuditLog WHERE eventType='videoIngested' AND traceID='\(traceID)'", bindings: [])
         #expect(logs.count >= 1, "Expected at least one .videoIngested audit log")
+
+        if let row = logs.first {
+            #expect(row["frameCount"]?.intValue.map(Int.init) == 5, "Expected frameCount=5")
+            #expect(row["audioTranscriptLength"]?.intValue.map(Int.init) == transcriptText.count, "Expected audioTranscriptLength=\(transcriptText.count)")
+            #expect(row["hasAudio"]?.intValue == 1, "Expected hasAudio=1 (true)")
+        }
     }
 
     @Test("AC-5: audit .videoIngested with hasAudio=false when no audio track")
@@ -275,9 +281,14 @@ struct IngestPipelineVideoTests {
             traceID: traceID
         )
 
-        // AC-5: Audit log should still exist, with hasAudio=false
+        // AC-5: Audit log should still exist, with hasAudio=false, frameCount=2
         let logs = try await db.executeQuery(sql: "SELECT * FROM AuditLog WHERE eventType='videoIngested' AND traceID='\(traceID)'", bindings: [])
         #expect(logs.count >= 1, "Expected .videoIngested audit log even without audio")
+
+        if let row = logs.first {
+            #expect(row["frameCount"]?.intValue.map(Int.init) == 2, "Expected frameCount=2")
+            #expect(row["hasAudio"]?.intValue == 0, "Expected hasAudio=0 (false)")
+        }
     }
 
     // MARK: - PrivacyCheckpoint (R-006)
@@ -426,6 +437,23 @@ struct IngestPipelineVideoTests {
         #expect(memories.count == 21)
         let frameMemories = memories.filter { $0.sourceType == "video_frame" }
         #expect(frameMemories.count == 20)
+    }
+
+    @Test("Edge: more than 20 frames are rejected (AC-1 max)")
+    func test_edge_tooManyFrames() async throws {
+        let videoAssetId = "VID-OVER20"
+        let frameAssetIds = (0..<21).map { "f-\($0)" }
+        let audioTrackId = "audio-OVER20"
+
+        let traceID = UUID().uuidString
+        await #expect(throws: IngestError.tooManyFrames(max: 20)) {
+            let _ = try await sut.ingestVideo(
+                assetId: videoAssetId,
+                frameAssetIds: frameAssetIds,
+                audioTrackAssetId: audioTrackId,
+                traceID: traceID
+            )
+        }
     }
 
     // MARK: - Batch Verify: All Memories in VectorStore
