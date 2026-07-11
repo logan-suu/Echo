@@ -203,7 +203,7 @@
           "id": "2.4",
           "title": "IngestPipeline：视频摄入（US-ING-005）",
           "story": "US-ING-005",
-          "status": "backlog",
+          "status": "ready",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
@@ -215,7 +215,7 @@
           "id": "2.5",
           "title": "IngestPipeline：备忘录 + 语音转写（US-ING-001~003）",
           "story": "US-ING-001, US-ING-002, US-ING-003",
-          "status": "backlog",
+          "status": "ready",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/双语言实现说明文档.md"
@@ -227,7 +227,7 @@
           "id": "2.6",
           "title": "SearchPipeline：向量检索 + FTS5 过滤",
           "story": "US-RET-001~004",
-          "status": "backlog",
+          "status": "ready",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md",
@@ -240,7 +240,7 @@
           "id": "2.7",
           "title": "FeedbackActor + 重排公式（阈值0.80，截断±0.5）",
           "story": "US-FBK-002",
-          "status": "backlog",
+          "status": "ready",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
@@ -275,7 +275,7 @@
           "id": "2.10",
           "title": "SyncPipeline：相册变更监听 + 增量替换",
           "story": "US-SRC-012",
-          "status": "backlog",
+          "status": "ready",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
