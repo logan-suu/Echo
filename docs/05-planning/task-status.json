@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-12T10:45:00Z",
+  "last_updated": "2026-07-12T17:50:00Z",
   "current_phase": 2,
   "phases": [
     {
@@ -313,8 +313,9 @@
           "id": "2.11",
           "title": "AwakeningPipeline：地理围栏（US-AWK-001）",
           "story": "US-AWK-001",
-          "status": "review",
-          "last_updated": "2026-07-12T17:15:00Z",
+          "status": "done",
+          "last_updated": "2026-07-12T17:50:00Z",
+          "merged_at": "2026-07-12T17:50:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
@@ -373,7 +374,8 @@
           "id": "3.1",
           "title": "主视图 HomeView + HomeViewModel",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T17:50:00Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/01-spec/用户故事与验收标准规格书.md"
@@ -532,7 +534,8 @@
           "id": "4.4",
           "title": "低电量/过热降级模拟测试",
           "story": "US-RES-002, US-RES-003",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T17:50:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
