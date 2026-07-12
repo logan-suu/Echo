@@ -331,20 +331,20 @@ struct AwakeningGeoTests {
 
         // Then: verify audit log was written
         let logs = try await privacyActor.fetchAuditLogs(limit: 5, eventType: .contextualAwakening)
-        #expect(!logs.isEmpty)
+        let log = try #require(logs.first, "Expected at least one contextualAwakening audit log entry")
 
-        if let log = logs.first {
-            #expect(log.eventType == .contextualAwakening)
-            #expect(log.traceID == traceID)
-            #expect(log.success == true)
+        #expect(log.eventType == .contextualAwakening)
+        #expect(log.traceID == traceID)
+        #expect(log.success == true)
 
-            // Verify metadata JSON contains triggerType and resetByExit
-            if let metadata = await sut.parseAwakeningMetadata(from: log.sourceLanguage ?? "") {
-                #expect(metadata.triggerType == "geofenceOnly")
-                #expect(metadata.resetByExit == true)
-                #expect(metadata.memoryIds.contains(memoryId))
-            }
-        }
+        // Verify metadata JSON contains triggerType and resetByExit
+        let metadata = try #require(
+            await sut.parseAwakeningMetadata(from: log.sourceLanguage ?? ""),
+            "Expected parseable AwakeningAuditMetadata from sourceLanguage field"
+        )
+        #expect(metadata.triggerType == "geofenceOnly")
+        #expect(metadata.resetByExit == true)
+        #expect(metadata.memoryIds.contains(memoryId))
     }
 
     // MARK: - GeofenceStateStore Tests

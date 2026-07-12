@@ -95,6 +95,28 @@ public actor GeofenceStateStore {
         defaults.removeObject(forKey: key)
     }
 
+    /// 原子操作：检查围栏是否已被推送（未离开），若否，则标记为已推送。
+    ///
+    /// - Returns: `true` 表示成功 claimed（可继续处理），`false` 表示已被 claimed（跳过）。
+    /// - 同时返回 `resetByExit` 标志：`true` = 上次离开后重新进入。
+    public func claimForProcessing(regionId: String) -> (claimed: Bool, resetByExit: Bool) {
+        if let existing = getState(for: regionId) {
+            if existing.hasBeenPushed && !existing.hasExited {
+                // Already pushed, never exited → skip
+                return (false, false)
+            }
+            // Has exited → reset, allow re-enter
+            let resetByExit = existing.hasExited
+            let state = GeofenceState(hasBeenPushed: true, hasExited: false)
+            save(state, for: regionId)
+            return (true, resetByExit)
+        }
+        // First time → claim it
+        let state = GeofenceState(hasBeenPushed: true, hasExited: false)
+        save(state, for: regionId)
+        return (true, false)
+    }
+
     /// 清除所有围栏状态
     public func clearAll() {
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(keyPrefix) {
@@ -305,22 +327,7 @@ public actor AwakeningPipeline {
         regionId: String,
         traceID: String = UUID().uuidString
     ) async -> AwakeningEnterResult {
-        // Step 1: Check push state (AC-2)
-        // If already pushed and never exited → skip (永不重复推送)
-        if let state = await stateStore.getState(for: regionId),
-           state.hasBeenPushed && !state.hasExited {
-            return .alreadyPushed
-        }
-
-        // Determine if this is a reset-by-exit re-enter
-        let resetByExit: Bool
-        if let state = await stateStore.getState(for: regionId) {
-            resetByExit = state.hasExited
-        } else {
-            resetByExit = false
-        }
-
-        // Step 2: PrivacyCheckpoint (R-006)
+        // Step 1: PrivacyCheckpoint (R-006) — must run FIRST, before any state read
         let checkpoint = await privacyActor.validate(
             operation: .awakening,
             traceID: traceID,
@@ -329,6 +336,15 @@ public actor AwakeningPipeline {
         guard checkpoint.isAllowed else {
             return .permissionDenied
         }
+
+        // Step 2: Atomically claim the geofence (AC-2)
+        // claimForProcessing checks + marks pushed in one actor-isolated operation,
+        // preventing race conditions on concurrent enters for the same region.
+        let claim = await stateStore.claimForProcessing(regionId: regionId)
+        guard claim.claimed else {
+            return .alreadyPushed
+        }
+        let resetByExit = claim.resetByExit
 
         // Step 3: Search for location-associated memories (AC-3)
         // Use regionId as query text for semantic search
@@ -341,16 +357,21 @@ public actor AwakeningPipeline {
                 traceID: traceID
             )
         } catch {
-            // Search failed — L1 transient, skip this awakening
+            // Search failed — L1 transient, audit and skip
+            await writeAwakeningAudit(
+                traceID: traceID,
+                regionId: regionId,
+                memoryIds: [],
+                resetByExit: resetByExit,
+                success: false,
+                policyVersion: checkpoint.policyVersion
+            )
             return .noMemories
         }
 
         // Step 4: Filter by threshold ≥ 0.7 (AC-3)
         let matching = filterByThreshold(searchResults, threshold: matchThreshold)
         guard !matching.isEmpty else {
-            // Mark as pushed to prevent immediate re-trigger
-            await stateStore.markPushed(regionId: regionId)
-
             // Audit: no matching memories (AC-6)
             await writeAwakeningAudit(
                 traceID: traceID,
@@ -367,10 +388,7 @@ public actor AwakeningPipeline {
         // Step 5: Generate card (AC-4)
         let card = generateCard(for: matching, regionId: regionId)
 
-        // Step 6: Mark as pushed (AC-2)
-        await stateStore.markPushed(regionId: regionId)
-
-        // Step 7: Audit (AC-6)
+        // Step 6: Audit (AC-6)
         let memoryIds = matching.map(\.id)
         await writeAwakeningAudit(
             traceID: traceID,
@@ -386,10 +404,21 @@ public actor AwakeningPipeline {
 
     /// 处理地理围栏离开事件（AC-2: 标记已离开，允许下次进入时重新推送）。
     ///
-    /// - Parameter regionId: 地理围栏标识符
+    /// - Parameters:
+    ///   - regionId: 地理围栏标识符
+    ///   - traceID: 审计追溯 ID
     /// - Returns: `true` 表示成功标记
     @discardableResult
-    public func handleGeofenceExit(regionId: String) async -> Bool {
+    public func handleGeofenceExit(
+        regionId: String,
+        traceID: String = UUID().uuidString
+    ) async -> Bool {
+        // PrivacyCheckpoint (R-006) — all Pipeline entry points must validate
+        _ = await privacyActor.validate(
+            operation: .awakening,
+            traceID: traceID,
+            sourceTypes: ["geofence"]
+        )
         await stateStore.markExited(regionId: regionId)
         return true
     }
