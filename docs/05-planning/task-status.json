@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-05T10:52:00Z",
+  "last_updated": "2026-07-12T04:15:00Z",
   "current_phase": 2,
   "phases": [
     {
@@ -233,8 +233,9 @@
           "id": "2.6",
           "title": "SearchPipeline：向量检索 + FTS5 过滤",
           "story": "US-RET-001~004",
-          "status": "review",
-          "last_updated": "2026-07-12T04:00:00Z",
+          "status": "done",
+          "last_updated": "2026-07-12T04:15:00Z",
+          "merged_at": "2026-07-12T04:15:00Z",
           "pr": "https://github.com/LOGANSWP/Echo/pull/18",
           "notes": "18 单元测试通过。RET-004 AC-1/2/3 (FTS5预过滤/人物/地理) deferred to Phase 3 — 当前为 ANN post-filter 过渡方案。RET-001 AC-2/5 (Cross-Encoder/Recall@10) 留待 Phase 3 Golden Dataset。",
           "documents_required": [
@@ -272,7 +273,8 @@
           "id": "2.9",
           "title": "跨语言低置信度降级（US-RET-006）",
           "story": "US-RET-006",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T04:15:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/双语言实现说明文档.md"
@@ -296,7 +298,8 @@
           "id": "2.11",
           "title": "AwakeningPipeline：地理围栏（US-AWK-001）",
           "story": "US-AWK-001",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T04:15:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
@@ -308,7 +311,8 @@
           "id": "2.12",
           "title": "AwakeningPipeline：情绪唤醒（US-AWK-003）",
           "story": "US-AWK-003",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T04:15:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
@@ -363,7 +367,8 @@
           "id": "3.2",
           "title": "检索视图 SearchView + SearchViewModel",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T04:15:00Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
