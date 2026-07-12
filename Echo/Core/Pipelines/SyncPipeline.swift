@@ -4,15 +4,15 @@
 //            docs/02-architecture/架构设计文档.md §3.2 (SyncPipeline 时序图)
 //            docs/02-architecture/数据流全链路技术说明文档.md §4 (变更同步数据流)
 // 任务: 2.10 - SyncPipeline：相册变更监听 + 增量替换
-// AC 覆盖: US-SRC-012 AC-1 (变更监听: PHPhotoLibraryChangeObserver, 备忘录, 日历),
-//          AC-2 (哈希跳过条件: 100KB阈值, 内存约束),
-//          AC-3 (设置页后台同步开关),
-//          AC-4 (增量替换: 删除旧+摄入新, 不写ExcludedAssets),
-//          AC-5 (校验ExcludedAssets跳过已排除),
-//          AC-6 (L4冲突: 同步中阻止用户编辑),
+// AC 覆盖: US-SRC-012 AC-1 (变更检测: detectNoteChanges, detectCalendarChanges),
+//          AC-2 (哈希跳过: >100KB + availableMem<300MB + totalMem≤2GB — W1 fixed),
+//          AC-3 (自动同步开关: isAutoSyncEnabled — Phase 3 UI),
+//          AC-4 (增量替换: sync() delete+reingest, 不写ExcludedAssets),
+//          AC-5 (ExcludedAssets校验: fail-closed),
+//          AC-6 (L4冲突: lockMemoryForSync/isMemoryLockedForSync),
 //          AC-7 (进度报告: ProgressActor),
-//          AC-8 (开关关闭仅前台手动触发),
-//          AC-9 (审计.dataSourceChangeSynced含changeType/sourceType/affectedCount/replacedFlag/excludedNotWritten/hashSkipped)
+//          AC-8 (手动触发: — Phase 3 US-SRC-013),
+//          AC-9 (审计: sourceType富化 replaced/skipped/hashSkipped — W2 fixed)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约), R-006 (PrivacyCheckpoint),
 //           AGENTS.md §4.4 (L1~L4 错误分级), §5.2 (ExcludedAssets 写入规则),
 //           AGENTS.md §8.3 (后台任务面板进度订阅)
