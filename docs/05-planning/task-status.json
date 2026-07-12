@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-12T10:30:00Z",
+  "last_updated": "2026-07-12T10:45:00Z",
   "current_phase": 2,
   "phases": [
     {
@@ -266,8 +266,9 @@
           "id": "2.8",
           "title": "集成反馈到 SearchPipeline",
           "story": "US-FBK-002",
-          "status": "review",
-          "last_updated": "2026-07-12T10:15:00Z",
+          "status": "done",
+          "last_updated": "2026-07-12T10:45:00Z",
+          "merged_at": "2026-07-12T10:45:00Z",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
@@ -615,7 +616,8 @@
           "id": "5.1",
           "title": "AGenUI 原型：动态生成回忆卡片",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T10:45:00Z",
           "documents_required": [
             "docs/04-ai-native/产品创新工具全景指南.md"
           ],
@@ -626,7 +628,8 @@
           "id": "5.2",
           "title": "Eagle AI 集成：以图搜图功能",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T10:45:00Z",
           "documents_required": [
             "docs/04-ai-native/产品创新工具全景指南.md"
           ],
@@ -637,7 +640,8 @@
           "id": "5.3",
           "title": "CHORD 预研：端侧重排模型个性化",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T10:45:00Z",
           "documents_required": [
             "docs/04-ai-native/产品创新工具全景指南.md"
           ],
@@ -648,7 +652,8 @@
           "id": "5.4",
           "title": "MCP + Notion 工作流验证（已不适用，标记为可跳过）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T10:45:00Z",
           "documents_required": [],
           "dependencies": [],
           "test_file": null
