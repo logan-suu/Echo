@@ -5,10 +5,14 @@
 //            docs/02-architecture/架构设计文档.md §2.1 (SearchPipeline)
 //            docs/03-implementation/双语言实现说明文档.md §4 (跨语言检索管线)
 // 任务: 2.6 - SearchPipeline：向量检索 + FTS5 过滤
-// AC 覆盖: US-RET-001 AC-1~5 (英文→中文跨语言匹配),
-//          US-RET-002 (中文→英文跨语言匹配, 同 RET-001),
-//          US-RET-003 AC-1~4 (混合语言查询),
-//          US-RET-004 AC-1~5 (多维元数据过滤)
+// AC 覆盖: US-RET-001 AC-1 ✅ (余弦相似度), AC-3 ✅ (crossLanguageMatch标记), AC-4 ✅ (审计),
+//          AC-2 🔮 (Cross-Encoder, Phase 3), AC-5 🔮 (Recall@10, Golden Dataset Phase 3)
+//          US-RET-002 ✅ (中文→英文, 同 RET-001)
+//          US-RET-003 AC-1 ✅ (mixed语言检测), AC-3 ✅ (双语结果), AC-4 ✅ (审计),
+//          AC-2 🔮 (CLIP空间验证, Phase 3)
+//          US-RET-004 AC-1 🔴 (FTS5预过滤, deferred: 当前为ANN post-filter过渡; 需SQLite FTS5+IngestPipeline同步),
+//          AC-2 🔴 (人物过滤, deferred: 需元数据扩展), AC-3 🔴 (geohash过滤, deferred: 需坐标存储),
+//          AC-4 🔮 (P95延迟基准, Phase 3 Benchmark), AC-5 ✅ (审计filterApplied)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
 //           AGENTS.md §4.4 (L1~L4 统一错误分级),
