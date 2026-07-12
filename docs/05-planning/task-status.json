@@ -331,6 +331,8 @@
           "story": "US-AWK-003",
           "status": "review",
           "last_updated": "2026-07-12T18:30:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/24",
+          "notes": "22 单元测试全部通过。AC-1~5 全覆盖。HealthKitProvider + SentimentProvider 协议/stub 模式（Phase 3 集成真实 HealthKit/Core ML 情感模型）。防抖机制：actor 隔离 Task + 30s 延迟合并。情绪卡片文案为英文占位（Phase 3 本地化）。",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
