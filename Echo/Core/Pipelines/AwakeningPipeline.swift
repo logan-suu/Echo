@@ -11,6 +11,7 @@
 //          AC-5 ✅ (定位权限关闭静默禁用), AC-6 ✅ (审计记录.contextualAwakening)
 //          US-AWK-003 AC-1 ✅ (HealthKit心率变异推断情绪), AC-2 ✅ (文本情感分析+24h缓存+防抖30s),
 //          AC-3 ✅ (mood→tag映射), AC-4 ✅ (温和回忆卡片), AC-5 ✅ (审计.emotionalAwakening)
+// PR Review fix: SwiftLint implicit_optional_initialization, Search L1 3 retries + backoff, i18n Phase 3 comment
 // PR Review fix: writeAwakeningAudit 移除冗余 validate(), 接收已有 checkpoint.policyVersion
 // CodeRabbit fix: PrivacyCheckpoint 移至 state read 之前, 新增 claimForProcessing() 原子操作, search 失败增加审计
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
