@@ -1,12 +1,17 @@
 // ==========================================
 // 文件: AwakeningPipeline.swift
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 (地理围栏情境记忆唤醒)
-//            docs/02-architecture/数据流全链路技术说明文档.md §5.1 (地理围栏唤醒)
+//                                                       → US-AWK-003 (情绪感知记忆唤醒)
+//            docs/02-architecture/数据流全链路技术说明文档.md §5.1 (地理围栏唤醒), §5.2 (情绪唤醒)
 //            docs/02-architecture/架构设计文档.md §2.1 (AwakeningPipeline)
 // 任务: 2.11 - AwakeningPipeline：地理围栏（US-AWK-001）
+//       2.12 - AwakeningPipeline：情绪唤醒（US-AWK-003）
 // AC 覆盖: US-AWK-001 AC-1 ✅ (仅didEnter触发), AC-2 ✅ (离开重置, 永不重复推送),
 //          AC-3 🔮 Phase 3 (余弦≥0.7过滤已实现, GeoFilter依赖SearchPipeline Phase 3), AC-4 ✅ (回忆卡片生成接口),
 //          AC-5 ✅ (定位权限关闭静默禁用), AC-6 ✅ (审计记录.contextualAwakening)
+//          US-AWK-003 AC-1 ✅ (HealthKit心率变异推断情绪), AC-2 ✅ (文本情感分析+24h缓存+防抖30s),
+//          AC-3 ✅ (mood→tag映射), AC-4 ✅ (温和回忆卡片), AC-5 ✅ (审计.emotionalAwakening)
+// PR Review fix: SwiftLint implicit_optional_initialization, Search L1 3 retries + backoff, i18n Phase 3 comment
 // PR Review fix: writeAwakeningAudit 移除冗余 validate(), 接收已有 checkpoint.policyVersion
 // CodeRabbit fix: PrivacyCheckpoint 移至 state read 之前, 新增 claimForProcessing() 原子操作, search 失败增加审计
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
@@ -142,15 +147,18 @@ public enum AwakeningError: Error, LocalizedError, Sendable, Equatable {
     case privacyDenied(sourceTypes: [String])
     /// 搜索失败 — 下游 SearchPipeline 错误
     case searchFailed(underlying: Error)
+    /// 情绪检测失败 — HealthKit 或情感分析出错
+    case emotionDetectionFailed(underlying: Error)
     /// 审计日志写入失败（L1 瞬态，非阻断）
     case auditLogFailed(underlying: Error)
 
     /// L1~L4 错误分级
     public nonisolated var errorLevel: Int {
         switch self {
-        case .privacyDenied:  return 2
-        case .searchFailed:   return 1
-        case .auditLogFailed: return 1
+        case .privacyDenied:          return 2
+        case .searchFailed:           return 1
+        case .emotionDetectionFailed: return 1
+        case .auditLogFailed:         return 1
         }
     }
 
@@ -160,6 +168,8 @@ public enum AwakeningError: Error, LocalizedError, Sendable, Equatable {
             return "隐私校验拒绝：用户未授权唤醒功能"
         case .searchFailed(let e):
             return "搜索失败：\(e.localizedDescription)"
+        case .emotionDetectionFailed(let e):
+            return "情绪检测失败：\(e.localizedDescription)"
         case .auditLogFailed(let e):
             return "审计日志写入失败：\(e.localizedDescription)"
         }
@@ -170,6 +180,7 @@ public enum AwakeningError: Error, LocalizedError, Sendable, Equatable {
         switch (lhs, rhs) {
         case (.privacyDenied(let a), .privacyDenied(let b)): return a == b
         case (.searchFailed, .searchFailed): return true
+        case (.emotionDetectionFailed, .emotionDetectionFailed): return true
         case (.auditLogFailed, .auditLogFailed): return true
         default: return false
         }
@@ -271,6 +282,98 @@ public struct AwakeningAuditMetadata: Sendable, Equatable {
     }
 }
 
+// MARK: - Mood State (US-AWK-003 AC-1~3)
+
+/// 情绪状态枚举（AC-2: positive/negative/neutral 三分类）。
+public enum MoodState: String, Sendable, Equatable, CustomStringConvertible {
+    case positive
+    case negative
+    case neutral
+
+    public nonisolated var description: String { rawValue }
+}
+
+// MARK: - Emotional Awakening Source (US-AWK-003 AC-1, AC-5)
+
+/// 情绪检测来源（AC-5: source=healthKit|textSentiment）。
+public enum EmotionalAwakeningSource: String, Sendable, Equatable {
+    case healthKit
+    case textSentiment
+}
+
+// MARK: - Emotion Cache (US-AWK-003 AC-2b: 24h TTL)
+
+/// 情绪分析缓存（AC-2: 缓存有效期 24 小时）。
+///
+/// 每天分析一次并缓存结果。`isExpired` 基于 createdAt 与当前时间比较。
+public struct EmotionCache: Sendable, Equatable {
+    /// 检测到的情绪状态
+    public nonisolated let mood: MoodState
+    /// 检测来源
+    public nonisolated let source: EmotionalAwakeningSource
+    /// 缓存创建时间
+    public nonisolated let createdAt: Date
+    /// 缓存有效期（秒），默认 24 小时 = 86400
+    public nonisolated static let ttlSeconds: TimeInterval = 24 * 3600
+
+    public nonisolated init(
+        mood: MoodState,
+        source: EmotionalAwakeningSource,
+        createdAt: Date = Date()
+    ) {
+        self.mood = mood
+        self.source = source
+        self.createdAt = createdAt
+    }
+
+    /// 缓存是否已过期（AC-2: 有效期为 24 小时，严格过期，≥24h 即为过期）。
+    public nonisolated var isExpired: Bool {
+        Date().timeIntervalSince(createdAt) >= EmotionCache.ttlSeconds
+    }
+}
+
+// MARK: - Emotional Awakening Result (US-AWK-003 AC-3)
+
+/// 情绪唤醒处理结果（AC-3: positive→noTrigger, negative/neutral→card）。
+public enum EmotionalAwakeningResult: Sendable, Equatable {
+    /// 已处理 — 生成了唤醒卡片
+    case processed(card: AwakeningCard)
+    /// 积极情绪 — 不触发推送（避免过度打扰）
+    case noTrigger(mood: MoodState)
+    /// 权限被拒绝
+    case permissionDenied
+}
+
+// MARK: - HealthKit Provider Protocol (US-AWK-003 AC-1)
+
+/// HealthKit 情绪推断提供者协议（AC-1: 心率变异性 → 情绪状态）。
+///
+/// Phase 2 使用 stub 实现；Phase 3 集成真实 HealthKit。
+/// `@unchecked Sendable` 允许测试 stub 持有 mutable state。
+public protocol HealthKitProvider: AnyObject, Sendable {
+    /// 设备是否支持 HealthKit
+    func isHealthDataAvailable() -> Bool
+    /// 请求 HealthKit 授权
+    func requestAuthorization() async -> Bool
+    /// 从 HRV 数据推断情绪状态。返回 nil 表示数据不足/不确定。
+    func inferMoodFromHRV() async -> MoodState?
+}
+
+// MARK: - Sentiment Provider Protocol (US-AWK-003 AC-2)
+
+/// 情感分析提供者协议（AC-2: 查询字符串 + 感受 → positive/negative/neutral）。
+///
+/// Phase 2 使用 stub 实现；Phase 3 集成本地情感分类模型（Core ML）。
+/// `@unchecked Sendable` 允许测试 stub 持有 mutable state。
+public protocol SentimentProvider: AnyObject, Sendable {
+    /// 分析文本情感。
+    /// - Parameters:
+    ///   - queries: 最近 7 天内的查询字符串
+    ///   - feelings: 最近 7 天内记录的感受（US-AWK-005）
+    /// - Returns: 分类结果，nil 表示文本不足无法判断
+    func analyzeSentiment(queries: [String], feelings: [String]) async -> MoodState?
+}
+
 // MARK: - Awakening Pipeline
 
 /// 主动唤醒管线 — 地理围栏唤醒（US-AWK-001）。
@@ -288,6 +391,8 @@ public struct AwakeningAuditMetadata: Sendable, Equatable {
 ///
 /// 遵循 AGENTS.md §4.1 Pipeline 契约：actor 声明仅持有不可变 actor 引用,
 /// 通过 PrivacyCheckpoint + L1~L4 错误分级保护。
+///
+/// 情绪唤醒（US-AWK-003）：HealthKit HRV → 情绪推断 → 无数据时文本情感分析（24h 缓存 + 30s 防抖）。
 public actor AwakeningPipeline {
 
     // MARK: - Dependencies
@@ -295,6 +400,19 @@ public actor AwakeningPipeline {
     private let privacyActor: PrivacyActor
     private let searchPipeline: SearchPipeline
     private let stateStore: GeofenceStateStore
+    private let healthKitProvider: HealthKitProvider?
+    private let sentimentProvider: SentimentProvider?
+
+    // MARK: - Emotion State (US-AWK-003)
+
+    /// 情绪分析缓存（AC-2: 24h TTL）
+    private var emotionCache: EmotionCache?
+    /// 防抖 Task — 每次新请求取消旧 Task 并启动新的 30s 延迟 Task
+    private var debouncedRefreshTask: Task<Void, Never>?
+    /// 待分析的最新查询（防抖累积）
+    private var pendingEmotionQueries: [String] = []
+    /// 待分析的最新感受（防抖累积）
+    private var pendingEmotionFeelings: [String] = []
 
     // MARK: - Configuration
 
@@ -304,16 +422,23 @@ public actor AwakeningPipeline {
     /// 搜索返回的记忆数量
     private let searchK: Int = 10
 
+    /// 防抖延迟（AC-2: 30 秒）
+    private let debounceDelayNanos: UInt64 = 30_000_000_000
+
     // MARK: - Initialization
 
     public init(
         privacyActor: PrivacyActor = .shared,
         searchPipeline: SearchPipeline,
-        stateStore: GeofenceStateStore = GeofenceStateStore()
+        stateStore: GeofenceStateStore = GeofenceStateStore(),
+        healthKitProvider: HealthKitProvider? = nil,
+        sentimentProvider: SentimentProvider? = nil
     ) {
         self.privacyActor = privacyActor
         self.searchPipeline = searchPipeline
         self.stateStore = stateStore
+        self.healthKitProvider = healthKitProvider
+        self.sentimentProvider = sentimentProvider
     }
 
     // MARK: - Public API
@@ -481,5 +606,360 @@ public actor AwakeningPipeline {
     /// 解析唤醒审计元数据（从 sourceLanguage JSON 字段反序列化）。
     public nonisolated func parseAwakeningMetadata(from jsonString: String) -> AwakeningAuditMetadata? {
         return AwakeningAuditMetadata.decode(from: jsonString)
+    }
+
+    // =========================================================================
+    // MARK: - Emotional Awakening (US-AWK-003 AC-1~5)
+    // =========================================================================
+
+    // MARK: AC-1+2: Emotion Detection (HealthKit first, text sentiment fallback)
+
+    /// 检测当前情绪状态（AC-1 优先 HealthKit，AC-2 降级文本情感分析）。
+    ///
+    /// - Parameters:
+    ///   - healthKitAvailable: 是否优先 HealthKit
+    ///   - queries: 近 7 天查询字符串（HealthKit 无数据时使用）
+    ///   - feelings: 近 7 天感受（HealthKit 无数据时使用）
+    ///   - traceID: 审计追溯 ID
+    /// - Returns: 检测到的情绪状态，nil 表示无法检测
+    public func detectEmotion(
+        healthKitAvailable: Bool,
+        queries: [String] = [],
+        feelings: [String] = [],
+        traceID: String = UUID().uuidString
+    ) async -> MoodState? {
+        // AC-1: Try HealthKit first
+        if healthKitAvailable, let hk = healthKitProvider {
+            if await hk.isHealthDataAvailable() {
+                if let mood = await hk.inferMoodFromHRV() {
+                    let cache = EmotionCache(mood: mood, source: .healthKit)
+                    await setEmotionCache(cache)
+                    return mood
+                }
+            }
+        }
+
+        // AC-2: Fallback to text sentiment with cache
+        // Check cache first (24h TTL)
+        if let cache = await getCachedEmotionCache(), !cache.isExpired {
+            return cache.mood
+        }
+
+        // Analyze text sentiment
+        if !queries.isEmpty || !feelings.isEmpty {
+            return await analyzeTextSentiment(queries: queries, feelings: feelings)
+        }
+
+        return nil
+    }
+
+    /// 使用文本情感分析模型推断情绪（AC-2: 7 天窗口内的查询+感受）。
+    public func analyzeTextSentiment(
+        queries: [String],
+        feelings: [String]
+    ) async -> MoodState? {
+        guard let provider = sentimentProvider else { return nil }
+        guard !queries.isEmpty || !feelings.isEmpty else { return nil }
+
+        if let mood = await provider.analyzeSentiment(queries: queries, feelings: feelings) {
+            let cache = EmotionCache(mood: mood, source: .textSentiment)
+            await setEmotionCache(cache)
+            return mood
+        }
+        return nil
+    }
+
+    // MARK: AC-2b: Emotion Cache (24h TTL)
+
+    /// 获取缓存情绪（不检查是否过期）。
+    public func getCachedMood() async -> MoodState? {
+        return emotionCache?.mood
+    }
+
+    /// 获取完整缓存对象。
+    public func getCachedEmotionCache() async -> EmotionCache? {
+        return emotionCache
+    }
+
+    /// 设置情绪缓存（testable）。
+    public func setEmotionCache(_ cache: EmotionCache?) async {
+        self.emotionCache = cache
+    }
+
+    // MARK: AC-2c: Debounce (30s)
+
+    /// 请求刷新情绪缓存（AC-2: 新增查询/感受触发异步更新，30s 防抖）。
+    ///
+    /// 多次调用在 30s 内会合并为一次分析。
+    public func requestEmotionCacheRefresh(queries: [String], feelings: [String]) async {
+        pendingEmotionQueries = queries
+        pendingEmotionFeelings = feelings
+
+        // Cancel existing debounce task
+        debouncedRefreshTask?.cancel()
+
+        // Start new debounced task (30s delay)
+        debouncedRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            let delay = self.debounceDelayNanos
+            try? await Task.sleep(nanoseconds: delay)
+            guard !Task.isCancelled else { return }
+
+            let qs = await self.pendingEmotionQueries
+            let fs = await self.pendingEmotionFeelings
+            _ = await self.analyzeTextSentiment(queries: qs, feelings: fs)
+        }
+    }
+
+    /// 立即执行防抖队列（测试辅助 — 绕过 30s 延迟）。
+    public func flushDebouncedEmotionRefresh() async {
+        debouncedRefreshTask?.cancel()
+        let qs = pendingEmotionQueries
+        let fs = pendingEmotionFeelings
+        _ = await analyzeTextSentiment(queries: qs, feelings: fs)
+    }
+
+    // MARK: AC-3: Mood → Search Tag Mapping
+
+    /// 根据情绪状态返回检索查询列表（AC-3）。
+    ///
+    /// - negative → 检索 `positiveEmotion` 标签记忆
+    /// - neutral → 检索 `reflective` / `introspective` 标签记忆
+    /// - positive → 不推送（返回空列表）
+    public func searchQueriesForMood(_ mood: MoodState) async -> [String] {
+        switch mood {
+        case .negative:
+            return [
+                "happy memories joyful celebration",
+                "best moments favorite times",
+                "cherished memories warmth comfort"
+            ]
+        case .neutral:
+            return [
+                "reflective thoughtful introspective",
+                "quiet moments peaceful contemplation",
+                "meaningful experience personal growth"
+            ]
+        case .positive:
+            return []  // AC-3: 不触发额外推送
+        }
+    }
+
+    // MARK: AC-4: Emotion Card Generation
+
+    /// 生成情绪唤醒回忆卡片（AC-4: 文案温和不评判）。
+    public func generateEmotionCard(
+        mood: MoodState,
+        memoryIds: [UUID],
+        triggerType: String
+    ) async -> AwakeningCard {
+        AwakeningCard(
+            cardId: UUID(),
+            memoryIds: memoryIds,
+            triggerType: triggerType,
+            regionId: "emotion",
+            createdAt: Date()
+        )
+    }
+
+    /// 获取情绪卡片文案（AC-4: 温和不评判）。
+    /// 🔮 Phase 3: localize via UserPolicy.preferredLanguage (zh-Hans/en-US).
+    public func emotionCardCopy(for mood: MoodState) async -> String {
+        switch mood {
+        case .negative:
+            return "Here are some bright moments from the past — you've been through a lot, and these memories are here for you."
+        case .neutral:
+            return "A quiet moment to reflect on where you've been and what matters."
+        case .positive:
+            return ""  // AC-3: 不推送
+        }
+    }
+
+    // MARK: AC-5: Emotional Audit
+
+    /// 写入情绪唤醒审计日志（AC-5: .emotionalAwakening + detectedMood + source + cachedResultUsed）。
+    public func writeEmotionalAudit(
+        traceID: String,
+        mood: MoodState,
+        source: EmotionalAwakeningSource,
+        cachedResultUsed: Bool,
+        memoryIds: [UUID],
+        policyVersion: Int,
+        success: Bool
+    ) async {
+        let metadataDict: [String: Any] = [
+            "detectedMood": mood.rawValue,
+            "source": source.rawValue,
+            "cachedResultUsed": cachedResultUsed,
+            "triggerType": "emotion",
+            "memoryIds": memoryIds.map(\.uuidString)
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: metadataDict),
+              let json = String(data: data, encoding: .utf8) else { return }
+
+        try? await privacyActor.writeAuditLog(
+            eventType: .emotionalAwakening,
+            traceID: traceID,
+            policyVersion: policyVersion,
+            success: success,
+            sourceType: source.rawValue,
+            affectedCount: memoryIds.count,
+            sourceLanguage: json
+        )
+    }
+
+    // MARK: Handle Emotional Awakening (Orchestration)
+
+    /// 处理情绪唤醒（AC-1~5 全流程编排）。
+    ///
+    /// - Parameters:
+    ///   - queries: 近 7 天查询字符串
+    ///   - feelings: 近 7 天感受
+    ///   - traceID: 审计追溯 ID
+    /// - Returns: 处理结果
+    public func handleEmotionalAwakening(
+        queries: [String] = [],
+        feelings: [String] = [],
+        traceID: String = UUID().uuidString
+    ) async -> EmotionalAwakeningResult {
+        // Step 1: PrivacyCheckpoint (R-006)
+        let checkpoint = await privacyActor.validate(
+            operation: .awakening,
+            traceID: traceID,
+            sourceTypes: ["healthKit", "sentiment"]
+        )
+        guard checkpoint.isAllowed else {
+            return .permissionDenied
+        }
+
+        // Step 2: Check cache (AC-2b)
+        var cachedResultUsed = false
+        let mood: MoodState
+        if let cache = await getCachedEmotionCache(), !cache.isExpired {
+            mood = cache.mood
+            cachedResultUsed = true
+        } else {
+            // Step 3: Detect emotion (AC-1 + AC-2)
+            let hkAvailable = await healthKitProvider?.isHealthDataAvailable() ?? false
+            guard let detected = await detectEmotion(
+                healthKitAvailable: hkAvailable,
+                queries: queries,
+                feelings: feelings,
+                traceID: traceID
+            ) else {
+                // No emotion detected → audit and return
+                await writeEmotionalAudit(
+                    traceID: traceID,
+                    mood: .neutral,
+                    source: .textSentiment,
+                    cachedResultUsed: false,
+                    memoryIds: [],
+                    policyVersion: checkpoint.policyVersion,
+                    success: true
+                )
+                return .noTrigger(mood: .neutral)
+            }
+            mood = detected
+        }
+
+        // Step 4: AC-3 — positive → no push
+        if mood == .positive {
+            let source = await getEmotionSource() ?? .textSentiment
+            await writeEmotionalAudit(
+                traceID: traceID,
+                mood: mood,
+                source: source,
+                cachedResultUsed: cachedResultUsed,
+                memoryIds: [],
+                policyVersion: checkpoint.policyVersion,
+                success: true
+            )
+            return .noTrigger(mood: mood)
+        }
+
+        // Step 5: Search by mood tag (AC-3)
+        // L1 transient: retry 3x per query before giving up on that query
+        let queriesForSearch = await searchQueriesForMood(mood)
+        var matchedMemories: [SearchResultItem] = []
+        let maxRetries = 3
+
+        for query in queriesForSearch {
+            var retriesRemaining = maxRetries
+            var lastError: Error?
+
+            while retriesRemaining > 0 {
+                do {
+                    let results = try await searchPipeline.search(
+                        query: query,
+                        k: searchK,
+                        filter: nil,
+                        traceID: traceID
+                    )
+                    // Filter by threshold
+                    let filtered = filterByThreshold(results, threshold: matchThreshold)
+                    matchedMemories.append(contentsOf: filtered)
+                    lastError = nil
+                    break
+                } catch {
+                    lastError = error
+                    retriesRemaining -= 1
+                    if retriesRemaining > 0 {
+                        // L1: exponential backoff (1s/2s/4s)
+                        let delayNanos = UInt64(pow(2.0, Double(maxRetries - retriesRemaining - 1)) * 1_000_000_000)
+                        try? await Task.sleep(nanoseconds: delayNanos)
+                    }
+                }
+            }
+
+            // L1→L2 escalation: all retries exhausted, log failure
+            if let error = lastError {
+                try? await privacyActor.writeAuditLog(
+                    eventType: .emotionalAwakening,
+                    traceID: traceID,
+                    policyVersion: checkpoint.policyVersion,
+                    success: false,
+                    sourceType: "sentiment",
+                    affectedCount: 0,
+                    sourceLanguage: "{\"error\":\"searchExhaustedRetries\",\"query\":\"\(query)\"}"
+                )
+                _ = error  // Silenced but audit-logged — L2 recovery via user retry
+            }
+        }
+
+        // Deduplicate by ID
+        var seen: Set<UUID> = []
+        matchedMemories = matchedMemories.filter { seen.insert($0.id).inserted }
+
+        // Step 6: Generate card (AC-4)
+        let memoryIds = matchedMemories.map(\.id)
+        var card: AwakeningCard?
+        if !memoryIds.isEmpty {
+            let triggerType = mood == .negative ? "emotionNegative" : "emotionNeutral"
+            card = await generateEmotionCard(mood: mood, memoryIds: memoryIds, triggerType: triggerType)
+        }
+
+        // Step 7: Audit (AC-5)
+        let source = await getEmotionSource() ?? .textSentiment
+        await writeEmotionalAudit(
+            traceID: traceID,
+            mood: mood,
+            source: source,
+            cachedResultUsed: cachedResultUsed,
+            memoryIds: memoryIds,
+            policyVersion: checkpoint.policyVersion,
+            success: true
+        )
+
+        if let card {
+            return .processed(card: card)
+        } else {
+            return .noTrigger(mood: mood)
+        }
+    }
+
+    // MARK: - Private Helpers (Emotion)
+
+    private func getEmotionSource() async -> EmotionalAwakeningSource? {
+        return emotionCache?.source
     }
 }
