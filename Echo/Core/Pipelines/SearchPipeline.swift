@@ -380,18 +380,23 @@ public actor SearchPipeline {
         }
 
         // Step 8: Compute feedback adjustments (US-FBK-002 AC-1~3)
-        // Only memory IDs that exist in FeedbackStore with cosineSim ≥ 0.80 will have adjustments
+        // FeedbackActor.computeAdjustment() already clamps to [-0.5, 0.5].
+        // Only memory IDs that exist in FeedbackStore with cosineSim ≥ 0.80 will have adjustments.
         if !items.isEmpty {
             let memoryIds = items.map(\.id)
-            let adjustments = try? await feedbackActor.computeBatchAdjustments(
-                for: memoryIds,
-                queryText: trimmed
-            )
-            for i in items.indices {
-                let adj = adjustments?[items[i].id]
-                let clampedAdj = Float(
-                    max(-0.5, min(0.5, adj?.adjustment ?? 0.0))
+            let adjustments: [UUID: FeedbackAdjustment]?
+            do {
+                adjustments = try await feedbackActor.computeBatchAdjustments(
+                    for: memoryIds,
+                    queryText: trimmed
                 )
+            } catch {
+                // Feedback computation failed (L1 transient: db lock, etc.).
+                // Graceful degradation: continue without feedback reranking.
+                adjustments = nil
+            }
+            for i in items.indices {
+                let adj = adjustments?[items[i].id]?.adjustment ?? 0.0
                 items[i] = SearchResultItem(
                     id: items[i].id,
                     assetId: items[i].assetId,
@@ -402,7 +407,7 @@ public actor SearchPipeline {
                     crossLanguageMatch: items[i].crossLanguageMatch,
                     cosineSimilarity: items[i].cosineSimilarity,
                     alignmentScore: items[i].alignmentScore,
-                    feedbackAdjustment: clampedAdj
+                    feedbackAdjustment: Float(adj)
                 )
             }
         }
