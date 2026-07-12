@@ -345,8 +345,10 @@
           "id": "2.13",
           "title": "FeedbackPipeline：点赞/点踩/Bad Case 记录",
           "story": "US-FBK-001, US-FBK-003",
-          "status": "ready",
-          "last_updated": "2026-07-12T08:00:00Z",
+          "status": "review",
+          "last_updated": "2026-07-12T19:05:00Z",
+          "notes": "23 单元测试全部通过。US-FBK-001 AC-2/4/5 ✅, US-FBK-003 AC-2/5/6 ✅。AuditEvent 新增 .badCaseMarked/.badCaseRevoked。FeedbackActor 新增 isBadCase() 原子查询。PR review 修复 (40c6b30): W1 fetchBadCases/fetchFeedback 加 PrivacyCheckpoint, W4 revokeFeedback 改用 isBadCase() 原子查询。W2/W3 已知设计权衡/预存行为。AC-1/AC-3/AC-4 (UI) → 🔮 Phase 3。Pipeline 遵循 actor 声明模式 (AGENTS.md v5.12)。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/25",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],

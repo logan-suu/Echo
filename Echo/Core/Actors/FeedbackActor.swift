@@ -170,6 +170,17 @@ public actor FeedbackActor {
         }
     }
 
+    /// 查询指定反馈是否为 Bad Case（原子查询，用于 revoke 时确定审计事件类型）
+    /// - Parameter feedbackId: 反馈 ID
+    /// - Returns: 是否为 Bad Case（未找到记录返回 false）
+    public func isBadCase(feedbackId: UUID) async throws -> Bool {
+        let rows = try await db.executeQuery(
+            sql: "SELECT isBadCase FROM FeedbackStore WHERE feedbackId = ?",
+            bindings: [.text(feedbackId.uuidString)]
+        )
+        return (rows.first?["isBadCase"]?.intValue ?? 0) == 1
+    }
+
     /// 反馈总数
     public func count() async throws -> Int {
         let rows = try await db.executeQuery(sql: "SELECT COUNT(*) AS cnt FROM FeedbackStore", bindings: [])

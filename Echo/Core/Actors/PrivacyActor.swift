@@ -134,6 +134,8 @@ public enum AuditEvent: String, Sendable, Codable {
     case feedbackReceived
     case feedbackReset
     case feedbackRevoked
+    case badCaseMarked
+    case badCaseRevoked
     case modelLoadFailed
     case modelLoadRetrySuccess
     case backgroundTaskInterrupted
