@@ -12,6 +12,7 @@
 //           US-FBK-003 AC-1 🔮 ("标记问题" UI, Phase 3 SearchView)
 //           US-FBK-003 AC-3 🔮 ("我的反馈记录"页面, Phase 3 SettingsView)
 //           US-FBK-003 AC-4 🔮 ("撤销"按钮, Phase 3 SettingsView)
+// 生成时间: 2026-07-12 | PR review 修复 (40c6b30): W1 fetchBadCases/fetchFeedback +PrivacyCheckpoint, W4 isBadCase() 原子查询
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — actor 持有不可变引用),
 //           AGENTS.md §4.2 (Actor 隔离契约), R-006 (PrivacyCheckpoint 强制注入),
 //           AGENTS.md §5.3 (反馈仅本地存储), AGENTS.md §7.3 (审计事件完整清单)
