@@ -1,10 +1,12 @@
 // ==========================================
 // 文件: SearchPipeline.swift
-// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-RET-001~004 (跨语言检索 + 元数据过滤)
-//            docs/02-architecture/数据流全链路技术说明文档.md §2 (用户发起检索数据流)
+// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-RET-001~004 (跨语言检索 + 元数据过滤),
+//            US-FBK-002 (本地反馈驱动重排)
+//            docs/02-architecture/数据流全链路技术说明文档.md §2 (用户发起检索数据流),
 //            docs/02-architecture/架构设计文档.md §2.1 (SearchPipeline)
 //            docs/03-implementation/双语言实现说明文档.md §4 (跨语言检索管线)
 // 任务: 2.6 - SearchPipeline：向量检索 + FTS5 过滤
+//        2.8 - 集成反馈到 SearchPipeline
 // AC 覆盖: US-RET-001 AC-1 ✅ (余弦相似度), AC-3 ✅ (crossLanguageMatch标记), AC-4 ✅ (审计),
 //          AC-2 🔮 (Cross-Encoder, Phase 3), AC-5 🔮 (Recall@10, Golden Dataset Phase 3)
 //          US-RET-002 ✅ (中文→英文, 同 RET-001)
@@ -13,7 +15,9 @@
 //          US-RET-004 AC-1 🔴 (FTS5预过滤, deferred: 当前为ANN post-filter过渡; 需SQLite FTS5+IngestPipeline同步),
 //          AC-2 🔴 (人物过滤, deferred: 需元数据扩展), AC-3 🔴 (geohash过滤, deferred: 需坐标存储),
 //          AC-4 🔮 (P95延迟基准, Phase 3 Benchmark), AC-5 ✅ (审计filterApplied)
+//          US-FBK-002 AC-1 ✅ (阈值≥0.80), AC-2 ✅ (时间衰减), AC-3 ✅ (重排公式)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
+//           AGENTS.md §5.3 (反馈存储契约),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
 //           AGENTS.md §4.4 (L1~L4 统一错误分级),
 //           PIPE-002 (翻译仅限展示层, Retriever 返回源语言原文)
@@ -218,6 +222,8 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
 ///     → post-filter metadata (time/tags/geo/person)
 ///     → detect languages (query, source)
 ///     → mark crossLanguageMatch
+///     → FeedbackActor.computeBatchAdjustments() [US-FBK-002]
+///     → re-sort by finalScore = cosineSimilarity + adjustment
 ///     → PrivacyActor.writeAuditLog(.retrieval)
 ///     → return top-K SearchResultItem[]
 /// ```
@@ -232,6 +238,7 @@ public actor SearchPipeline {
     private let embedder: any EmbedderProtocol
     private let privacyActor: PrivacyActor
     private let vectorStore: VectorStoreActor
+    private let feedbackActor: FeedbackActor
 
     // MARK: - Configuration
 
@@ -249,18 +256,20 @@ public actor SearchPipeline {
     public init(
         embedder: any EmbedderProtocol,
         privacyActor: PrivacyActor = .shared,
-        vectorStore: VectorStoreActor
+        vectorStore: VectorStoreActor,
+        feedbackActor: FeedbackActor = .shared
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
         self.vectorStore = vectorStore
+        self.feedbackActor = feedbackActor
     }
 
     // MARK: - Search
 
     /// 执行语义检索（US-RET-001~004）。
     ///
-    /// **流程**（对应架构文档 §2.1 检索时序）：
+    /// **流程**（对应架构文档 §2.1 检索时序 + US-FBK-002 反馈重排）：
     /// 1. Guard: 查询非空
     /// 2. PrivacyCheckpoint: 校验搜索授权（R-006）
     /// 3. Embedding: embedder.embedText(query) → 向量
@@ -268,7 +277,9 @@ public actor SearchPipeline {
     /// 5. Post-filter: 应用 SearchFilter 条件（时间/标签/地点/人物）
     /// 6. 语言检测: 查询语言 + 各结果源语言 → 标记 crossLanguageMatch
     /// 7. `top-K` 截断
-    /// 8. Audit: 记录 .retrieval（AC-4, AC-5）
+    /// 8. Feedback: FeedbackActor.computeBatchAdjustments() → 应用重排
+    /// 9. Sort by finalScore = cosineSimilarity + adjustment
+    /// 10. Audit: 记录 .retrieval（AC-4, AC-5）
     ///
     /// - Parameters:
     ///   - query: 用户查询文本（中/英/混合语言）
@@ -368,14 +379,46 @@ public actor SearchPipeline {
             )
         }
 
-        // Step 8: Sort by cosine similarity descending, then take top-K
-        items.sort { $0.cosineSimilarity > $1.cosineSimilarity }
+        // Step 8: Compute feedback adjustments (US-FBK-002 AC-1~3)
+        // Only memory IDs that exist in FeedbackStore with cosineSim ≥ 0.80 will have adjustments
+        if !items.isEmpty {
+            let memoryIds = items.map(\.id)
+            let adjustments = try? await feedbackActor.computeBatchAdjustments(
+                for: memoryIds,
+                queryText: trimmed
+            )
+            for i in items.indices {
+                let adj = adjustments?[items[i].id]
+                let clampedAdj = Float(
+                    max(-0.5, min(0.5, adj?.adjustment ?? 0.0))
+                )
+                items[i] = SearchResultItem(
+                    id: items[i].id,
+                    assetId: items[i].assetId,
+                    sourceType: items[i].sourceType,
+                    timestamp: items[i].timestamp,
+                    originalText: items[i].originalText,
+                    sourceLanguage: items[i].sourceLanguage,
+                    crossLanguageMatch: items[i].crossLanguageMatch,
+                    cosineSimilarity: items[i].cosineSimilarity,
+                    alignmentScore: items[i].alignmentScore,
+                    feedbackAdjustment: clampedAdj
+                )
+            }
+        }
+
+        // Step 9: Sort by finalScore (cosineSimilarity + feedbackAdjustment) descending, then take top-K
+        items.sort { (lhs, rhs) in
+            let lhsScore = Double(lhs.cosineSimilarity) + Double(lhs.feedbackAdjustment ?? 0)
+            let rhsScore = Double(rhs.cosineSimilarity) + Double(rhs.feedbackAdjustment ?? 0)
+            return lhsScore > rhsScore
+        }
         let topK = Array(items.prefix(k))
 
-        // Step 9: Collect result languages for audit (US-RET-001 AC-4)
+        // Step 10: Collect result languages for audit (US-RET-001 AC-4)
         let resultLanguages = Array(Set(topK.compactMap(\.sourceLanguage)))
 
-        // Step 10: Audit log (US-RET-001 AC-4, US-RET-004 AC-5)
+        // Step 11: Audit log (US-RET-001 AC-4, US-RET-004 AC-5)
         // Best-effort only — audit failure is L1 transient and MUST NOT block
         // Encode queryLanguage + resultLanguages as JSON for audit traceability
         let auditLanguageInfo = encodeAuditLanguage(query: queryLanguage, results: resultLanguages)

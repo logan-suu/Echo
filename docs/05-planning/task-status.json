@@ -266,13 +266,14 @@
           "id": "2.8",
           "title": "集成反馈到 SearchPipeline",
           "story": "US-FBK-002",
-          "status": "ready",
-          "last_updated": "2026-07-12T08:00:00Z",
+          "status": "review",
+          "last_updated": "2026-07-12T10:15:00Z",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.6", "2.7"],
-          "test_file": "EchoTests/Phase2/SearchWithFeedbackTests.swift"
+          "test_file": "EchoTests/Phase2/SearchWithFeedbackTests.swift",
+          "notes": "12 单元测试全部通过。AC-1~3 全覆盖。SearchPipeline 新增 FeedbackActor 依赖注入（默认 .shared），在检索流程中插入 computeBatchAdjustments() 调用，按 finalScore = cosineSimilarity + adjustment 重排结果。feedbackAdjustment 字段从保留字段变为实际填充。"
         },
         {
           "id": "2.9",
