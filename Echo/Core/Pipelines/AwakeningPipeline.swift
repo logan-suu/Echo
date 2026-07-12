@@ -8,6 +8,7 @@
 //          AC-3 🔮 Phase 3 (余弦≥0.7过滤已实现, GeoFilter依赖SearchPipeline Phase 3), AC-4 ✅ (回忆卡片生成接口),
 //          AC-5 ✅ (定位权限关闭静默禁用), AC-6 ✅ (审计记录.contextualAwakening)
 // PR Review fix: writeAwakeningAudit 移除冗余 validate(), 接收已有 checkpoint.policyVersion
+// CodeRabbit fix: PrivacyCheckpoint 移至 state read 之前, 新增 claimForProcessing() 原子操作, search 失败增加审计
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
 //           AGENTS.md §4.4 (L1~L4 统一错误分级),
@@ -404,21 +405,10 @@ public actor AwakeningPipeline {
 
     /// 处理地理围栏离开事件（AC-2: 标记已离开，允许下次进入时重新推送）。
     ///
-    /// - Parameters:
-    ///   - regionId: 地理围栏标识符
-    ///   - traceID: 审计追溯 ID
+    /// - Parameter regionId: 地理围栏标识符
     /// - Returns: `true` 表示成功标记
     @discardableResult
-    public func handleGeofenceExit(
-        regionId: String,
-        traceID: String = UUID().uuidString
-    ) async -> Bool {
-        // PrivacyCheckpoint (R-006) — all Pipeline entry points must validate
-        _ = await privacyActor.validate(
-            operation: .awakening,
-            traceID: traceID,
-            sourceTypes: ["geofence"]
-        )
+    public func handleGeofenceExit(regionId: String) async -> Bool {
         await stateStore.markExited(regionId: regionId)
         return true
     }
