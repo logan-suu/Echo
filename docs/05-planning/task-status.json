@@ -313,8 +313,8 @@
           "id": "2.11",
           "title": "AwakeningPipeline：地理围栏（US-AWK-001）",
           "story": "US-AWK-001",
-          "status": "ready",
-          "last_updated": "2026-07-12T04:15:00Z",
+          "status": "review",
+          "last_updated": "2026-07-12T17:15:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
