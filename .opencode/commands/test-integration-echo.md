@@ -15,10 +15,11 @@ agent: build
      ```
    - 如果编译失败，输出错误，建议先修复编译问题。
 1. 运行所有测试（包括所有 Phase 的单元测试和集成测试）：
-   ```bash
-   xcodebuild test -project Echo.xcodeproj -scheme Echo \
-     -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
-   ```
+    ```bash
+    xcodebuild test -project Echo.xcodeproj -scheme Echo \
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+      -parallel-testing-enabled NO
+    ```
 2. 测试文件按阶段分布于 `EchoTests/Phase1/` ~ `EchoTests/Phase5/`。
 
 ### 第二步：性能与质量监控

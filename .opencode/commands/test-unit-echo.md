@@ -25,11 +25,12 @@ agent: build
    - 从文件名提取测试套件名（类名，如 `PrivacyActorTests`）。
    - 注意：Echo 项目的测试文件按阶段存放在 `EchoTests/Phase{N}/` 目录下。
 2. 执行测试：
-   ```bash
-   xcodebuild test -project Echo.xcodeproj -scheme Echo \
-     -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-     -only-testing:EchoTests/[测试套件名]
-   ```
+    ```bash
+    xcodebuild test -project Echo.xcodeproj -scheme Echo \
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+      -parallel-testing-enabled NO \
+      -only-testing:EchoTests/[测试套件名]
+    ```
 3. **扩展选项**：
    - 如果用户传递了 `--all` 参数，运行当前模块的所有测试。
    - 如果用户传递了 `--full` 参数，运行所有单元测试（全量）。

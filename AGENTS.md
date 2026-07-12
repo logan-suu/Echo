@@ -638,10 +638,12 @@ PR 合并前必须通过:
 |--------|-----|------|
 | **模拟器** | iPhone 17 Pro (iOS 26.5) | 所有 `xcodebuild test` 统一使用此设备 |
 | **destination** | `'platform=iOS Simulator,name=iPhone 17 Pro'` | 用于 `xcodebuild build/test` 的 `-destination` 参数 |
+| **串行执行** | `-parallel-testing-enabled NO` | 所有 `xcodebuild test` **必须**加此参数，原因见下方 |
 | **测试文件位置** | `EchoTests/Phase{N}/[任务ID]_[功能名]Tests.swift` | 参见 §10.3 |
 
 **规范**：
 - Agent 执行 `xcodebuild test` 时，必须使用 `iPhone 17 Pro` 模拟器
+- **所有 `xcodebuild test` 必须添加 `-parallel-testing-enabled NO`，强制串行执行**。原因：Echo 使用共享 `DatabaseManager.shared`（单例 SQLite）和共享 Actor（`PrivacyActor.shared`、`FeedbackActor.shared` 等），并行测试会导致数据库状态污染与数据竞争——表现为随机 `sqlite3_step` 失败、Actor 状态不一致等 flaky 失败。串行执行确保每个测试套件获得干净初始状态。
 - 禁止使用其他设备名称（如 `iPhone 16 Pro`），避免因设备不存在导致构建失败
 - CI 环境可通过环境变量覆盖（如 `IOS_DESTINATION`），本地开发统一使用上述约定之```
 
@@ -1106,7 +1108,7 @@ Agent 在创建或修改核心架构文件时，**必须在文件头部注入溯
 **约束**：
 - Agent **不得**在任务未完成时自动运行阶段集成测试
 - 集成测试任务**必须**开分支、写测试、创建 PR，与其他任务无差别
-- 集成测试 PR 提交前，**必须**验证该阶段所有单元测试 + 集成测试全部通过（0 失败），缺一不可
+- 集成测试 PR 提交前，**必须**验证**当前阶段及所有之前阶段的全部单元测试 + 集成测试**全部通过（0 失败），缺一不可。这是累积回归检查——确保新阶段的代码变更不会破坏已交付阶段的功能。
 - 测试通过后，`task-status.json` 中该阶段 `status` 更新为 `done`，`current_phase` 推进到下一阶段
 
 **跨阶段阻断规则**：`current_phase` 为 N 时，阶段 N-1 的集成测试任务（如 1.9、2.14）必须为 `done` 状态，`current_phase` 方可指向 N。Agent 在 `do-task-echo`、`next-task-echo`、`init-session-echo` 中执行任何阶段 N 的任务前，**必须**检查阶段 N-1 的集成测试任务是否为 `done`——如未完成，阻断并提示先执行前一阶段的集成测试。
@@ -1299,3 +1301,5 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.13 | 2026-07-11 | 修复 backlog→ready 级联缺失：§12.1 状态表中补充「级联触发时机」说明（启动时/合并后/查询时三场景）；§12.2 Agent 启动强制检查新增级联步骤；§12.3 第 9 步加入合并后级联。同步更新 `init-session-echo`、`next-task-echo`、`do-task-echo`、`pr-merge-echo` 四个自定义命令加入级联逻辑。 | AI 架构师 |
 | v5.14 | 2026-07-12 | 新增 §15.5「PR Review 修复后自动刷新描述」规则：修复缺陷 push 后必须通过 `gh pr edit` 刷新 PR 的 AC 覆盖对照表，同步更新 `task-status.json` notes 及文件头部 AC 注释。同步更新 `pr-review-echo`（新增第六步）和 `commit-pr-echo`（第五步新增自动检测已有 PR 并刷新描述）两个自定义命令。 | AI 架构师 |
 | v5.15 | 2026-07-12 | 新增 §15.5「外部 AI 审查工具评论审核」规则：CodeRabbit 等外部工具评论不代表真理，Agent 必须逐条审核，仅对 🟢 有效缺陷进行修复，🟡 过度/🔴 误报驳回并记录理由。同步更新 `pr-review-echo` 命令新增「第四步：CodeRabbit 评论审核」并重新编号后续步骤。 | AI 架构师 |
+| v5.16 | 2026-07-13 | Task 2.14 集成测试实战发现并行测试导致 SQLite 状态污染。§9.4 新增「串行执行」行，要求所有 `xcodebuild test` 必须加 `-parallel-testing-enabled NO`。同步更新 `test-unit-echo`、`test-phase-echo`、`test-integration-echo` 三个命令及 README.md 测试章节。 | AI 架构师 |
+| v5.17 | 2026-07-13 | 强化 §12.6 阶段集成测试累积回归要求：集成测试 PR 提交前必须验证「当前阶段及所有之前阶段」的全部单元测试 + 集成测试（而非仅当前阶段）。同步更新 `test-phase-echo` 质量门禁描述。 | AI 架构师 |
