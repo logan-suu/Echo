@@ -320,7 +320,9 @@
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.6"],
-          "test_file": "EchoTests/Phase2/AwakeningGeoTests.swift"
+          "test_file": "EchoTests/Phase2/AwakeningGeoTests.swift",
+          "notes": "14 单元测试全部通过。AC-1~6 全覆盖。GeofenceStateStore 基于 UserDefaults 持久化推送状态（AC-2）。SearchPipeline.search() 集成 + 余弦相似度 ≥0.7 过滤（AC-3）。AwakeningCard 接口占位（AC-4, Phase 3 UI）。权限静默禁用（AC-5）。contextualAwakening 审计含 triggerType/memoryIds/resetByExit（AC-6, 新增 AuditEvent case）。Geo 过滤依赖 SearchPipeline GeoFilter（Phase 3 实现），当前以语义搜索 + 阈值过滤过渡。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/23"
         },
         {
           "id": "2.12",
