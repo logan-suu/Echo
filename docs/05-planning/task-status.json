@@ -290,7 +290,7 @@
             "dependencies": ["2.6"],
             "test_file": "EchoTests/Phase2/LowConfidenceFallbackTests.swift",
             "pr": "https://github.com/LOGANSWP/Echo/pull/21",
-            "notes": "9 单元测试全部通过。AC-1 ✅ (alignmentScore<0.6→lowConfidence+fallbackReason), AC-3 ✅ (结果不被过滤), AC-5 ✅ (审计记录 alignmentScore/fallbackReason/lowConfidenceCount)。AC-2/AC-4 为展示层 UI 实现（Phase 3 SearchView/SearchViewModel）。alignmentScore 实际值由 Phase 3 Cross-Encoder 填充，当前始终为 nil → lowConfidence=false。标记逻辑已完备，Phase 3 接入后自动生效。"
+            "notes": "9 单元测试全部通过。AC-1 ✅ (alignmentScore<0.6→lowConfidence+fallbackReason), AC-3 ✅ (结果不被过滤), AC-5 ✅ (审计记录 alignmentScore/fallbackReason/lowConfidenceCount/fallbackReasons)。AC-2/AC-4 为展示层 UI 实现（Phase 3 SearchView/SearchViewModel）。alignmentScore 实际值由 Phase 3 Cross-Encoder 填充，当前始终为 nil → lowConfidence=false。标记逻辑已完备，Phase 3 接入后自动生效。PR review fix (58bf0bc): 审计 JSON 新增 fallbackReasons 字段。"
         },
         {
           "id": "2.10",
