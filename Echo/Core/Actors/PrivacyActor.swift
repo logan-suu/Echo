@@ -398,7 +398,7 @@ public actor PrivacyActor {
         // 应由具体 Pipeline 在操作成功后通过 writeAuditLog() 单独写入。
         let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
         let event: AuditEvent = switch operation {
-        case .search:    .dataSourceChangeSynced  // 检索操作 — 暂无专门的 search 审计事件
+        case .search:    .retrieval
         case .ingest:    .memoryIngested
         case .sync:      .dataSourceChangeSynced
         case .delete:    .memoryDeleted

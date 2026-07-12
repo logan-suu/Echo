@@ -336,7 +336,10 @@ public actor SearchPipeline {
             ))
         }
 
-        // Step 6: Apply metadata filter (US-RET-004 AC-1)
+        // Step 6: Apply metadata post-filter (US-RET-004 AC-1)
+        // NOTE: Current implementation is ANN post-filtering.
+        // True FTS5 pre-filtering (ANN search within pre-filtered candidate set)
+        // requires a SQLite FTS5 metadata table — deferred to Phase 3 optimization.
         if let f = filter, !f.isEmpty {
             items = applyFilter(items, filter: f)
         }
@@ -365,11 +368,13 @@ public actor SearchPipeline {
         items.sort { $0.cosineSimilarity > $1.cosineSimilarity }
         let topK = Array(items.prefix(k))
 
-        // Step 9: Collect result languages for audit (AC-4)
-        _ = Array(Set(topK.compactMap(\.sourceLanguage)))
+        // Step 9: Collect result languages for audit (US-RET-001 AC-4)
+        let resultLanguages = Array(Set(topK.compactMap(\.sourceLanguage)))
 
         // Step 10: Audit log (US-RET-001 AC-4, US-RET-004 AC-5)
         // Best-effort only — audit failure is L1 transient and MUST NOT block
+        // Encode queryLanguage + resultLanguages as JSON for audit traceability
+        let auditLanguageInfo = encodeAuditLanguage(query: queryLanguage, results: resultLanguages)
         let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
         let filterApplied = filter?.isEmpty == false
         try? await privacyActor.writeAuditLog(
@@ -380,7 +385,7 @@ public actor SearchPipeline {
             sourceType: "search",
             affectedCount: topK.count,
             excludedWritten: filterApplied,
-            sourceLanguage: queryLanguage,
+            sourceLanguage: auditLanguageInfo,
             elapsedMs: elapsedMs
         )
 
@@ -439,10 +444,33 @@ public actor SearchPipeline {
         return ql != sl
     }
 
+    /// 编码查询语言 + 结果语言信息为 JSON 字符串（用于审计日志 sourceLanguage 字段）。
+    ///
+    /// 格式: `{"queryLanguage":"en-US","resultLanguages":["zh-Hans"]}`
+    private nonisolated func encodeAuditLanguage(query: String?, results: [String]) -> String {
+        var dict: [String: Any] = [:]
+        if let q = query { dict["queryLanguage"] = q }
+        dict["resultLanguages"] = results
+        guard let data = try? JSONSerialization.data(withJSONObject: dict),
+              let json = String(data: data, encoding: .utf8) else {
+            return query ?? results.joined(separator: ",")
+        }
+        return json
+    }
+
     /// 应用元数据过滤器（US-RET-004 AC-1）。
     ///
-    /// 当前支持时间范围过滤（基于 `timestamp` 字段）。
-    /// 标签/地理/人物过滤保留接口，由后续任务实现具体逻辑。
+    /// **重要**: 当前实现为 ANN 后过滤（post-filter），非规格书中的 FTS5 预过滤。
+    /// 流程: ANN 检索 → 解码元数据 → 应用过滤条件 → 取 top-K。
+    ///
+    /// 真正的 FTS5 预过滤（ANN 检索前通过 SQLite FTS5 缩小候选集）
+    /// 需要建立元数据表与 FTS5 索引，留待后续优化任务实现。
+    ///
+    /// 当前支持的过滤维度:
+    /// - timeRange: ✅ 时间范围过滤（基于 metadata.timestamp）
+    /// - tags: ⚠️ 保留接口，暂无实现（需元数据扩展）
+    /// - geoRadius: ⚠️ 保留接口，暂无实现（需 geohash 存储）
+    /// - personIds: ⚠️ 保留接口，暂无实现（需人物 ID 存储）
     private nonisolated func applyFilter(
         _ items: [SearchResultItem],
         filter: SearchFilter
@@ -456,42 +484,57 @@ public actor SearchPipeline {
             }
         }
 
-        // Tags filter — stub (US-RET-004 AC-1)
-        // Full implementation requires tag storage in metadata
+        // Tags filter — NOT YET IMPLEMENTED
+        // TODO (Phase 3): Add tag storage in metadata + FTS5 index
         if let _ = filter.tags {
-            // Placeholder: would filter by tag intersection
+            // No-op: silently accepted, actual filtering requires metadata extension
         }
 
-        // Geo filter — stub (US-RET-004 AC-3)
-        // Full implementation requires geohash/coordinates in metadata
+        // Geo filter — NOT YET IMPLEMENTED
+        // TODO (Phase 3): Add geohash/coordinates in metadata + haversine filtering
         if let _ = filter.geoRadius {
-            // Placeholder: would filter by haversine distance
+            // No-op: silently accepted, actual filtering requires metadata extension
         }
 
-        // Person filter — stub (US-RET-004 AC-2)
-        // Full implementation requires personId in metadata
+        // Person filter — NOT YET IMPLEMENTED
+        // TODO (Phase 3): Add personId in metadata + filter by intersection
         if let _ = filter.personIds {
-            // Placeholder: would filter by person ID match
+            // No-op: silently accepted, actual filtering requires metadata extension
         }
 
         return filtered
     }
 
     /// 带超时的异步操作封装（US-RET-008 AC-1）。
+    ///
+    /// 使用 withThrowingTaskGroup 实现竞速模式：
+    /// - 操作先完成 → 返回结果，取消超时任务，消费取消错误
+    /// - 超时先触发 → 抛出 SearchError.searchTimeout
+    ///
+    /// ⚠️ Swift 6 注意: Task.sleep 被 cancel 后抛出 CancellationError，
+    /// withThrowingTaskGroup 会隐式等待所有子任务并重新抛出。因此必须
+    /// 显式消费被取消任务的错误，避免覆盖正常结果。
     private func withTimeout<T: Sendable>(
         seconds: Double,
-        operation: @escaping @Sendable () async -> T
+        operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
         try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask {
-                await operation()
+                try await operation()
             }
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
                 throw SearchError.searchTimeout(partialResults: [])
             }
-            let result = try await group.next()!
+            // Wait for whichever task completes first
+            guard let result = try await group.next() else {
+                throw SearchError.searchTimeout(partialResults: [])
+            }
+            // Cancel the remaining task
             group.cancelAll()
+            // Explicitly consume the cancelled task's error — do NOT let
+            // group's implicit wait re-throw the CancellationError.
+            do { _ = try await group.next() } catch { /* cancelled, expected */ }
             return result
         }
     }
