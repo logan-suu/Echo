@@ -33,9 +33,9 @@ Agent **不得**跳过分支/PR 直接运行测试；**不得**在未验证该�
 1. 查阅文档并引用原文
 2. 编写集成测试用例（`EchoTests/Phase{阶段ID}/Phase{阶段ID}IntegrationTests.swift`）
 3. TDD 增量实现
-4. **运行该阶段所有测试（包含单元测试 + 集成测试）**：
-   ```bash
-    # 运行该阶段所有单元测试（遍历该阶段每个任务的 test_file）
+4. **运行该阶段及所有之前阶段的全部测试（累积回归检查）**：
+    ```bash
+    # 运行全部阶段（Phase 1 ~ N）的单元测试 + 集成测试
      xcodebuild test -project Echo.xcodeproj -scheme Echo \
        -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
        -parallel-testing-enabled NO \
@@ -49,9 +49,9 @@ Agent **不得**跳过分支/PR 直接运行测试；**不得**在未验证该�
 9. 更新 `task-status.json`：阶段 `status` → `done`，`current_phase` 推进
 
 ### ⚠️ 质量门禁（不可跳过）
-在步骤 4 中，Agent **必须**确保该阶段的任务对应的所有单元测试文件全部通过，**然后**集成测试也通过，两者缺一不可：
+在步骤 4 中，Agent **必须**确保该阶段及所有之前阶段的任务对应的所有单元测试文件全部通过，**然后**集成测试也通过，两者缺一不可。这是累积回归检查——确保新阶段的代码变更不会破坏已交付阶段的功能。
 - 列出该阶段每个任务的 `test_file`，逐一运行验证
-- 运行阶段集成测试文件
+- **同时运行所有已交付阶段（Phase 1 ~ N）的全部单元测试 + 集成测试**
 - 仅当**全部**通过时，才能进入步骤 5
 
 ### 第四步：完成后
