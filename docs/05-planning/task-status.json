@@ -273,7 +273,8 @@
           ],
           "dependencies": ["2.6", "2.7"],
           "test_file": "EchoTests/Phase2/SearchWithFeedbackTests.swift",
-          "notes": "12 单元测试全部通过。AC-1~3 全覆盖。SearchPipeline 新增 FeedbackActor 依赖注入（默认 .shared），在检索流程中插入 computeBatchAdjustments() 调用，按 finalScore = cosineSimilarity + adjustment 重排结果。feedbackAdjustment 字段从保留字段变为实际填充。"
+          "notes": "12 单元测试全部通过。AC-1~3 全覆盖。SearchPipeline 新增 FeedbackActor 依赖注入（默认 .shared），在检索流程中插入 computeBatchAdjustments() 调用，按 finalScore = cosineSimilarity + adjustment 重排结果。feedbackAdjustment 字段从保留字段变为实际填充。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/20"
         },
         {
           "id": "2.9",
