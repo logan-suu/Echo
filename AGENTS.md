@@ -1231,6 +1231,28 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | **reviewer 未响应** | 24 小时后自动提醒              | 手动联系 reviewer 或更换         |
 | **PR 长时间未合并** | 每周提醒一次                   | 评估是否合并或关闭               |
 
+### 15.5 PR Review 修复后自动刷新描述（v5.13+）
+
+> **核心规则**：任何针对 PR Review 反馈（`pr-review-echo` 或人类 Reviewer）的修复提交，**必须**在推送后自动刷新 PR 描述中的 AC 覆盖对照表。
+
+**触发条件**：
+- `pr-review-echo` 审查发现缺陷（🔴/🟡），Agent 修复缺陷并提交 push 后
+- 人类 Reviewer 在 PR 中提出修改意见，Agent 据此修改并 push 后
+- 任何导致 AC 状态变更（✅ → 🔴 deferred / 🔮 Phase 3 等）的 commit
+
+**执行流程**：
+1. 修复提交 push 到 PR 分支后，Agent 立即执行 `gh pr edit [PR编号] --body "[更新的 PR 描述]"`
+2. 刷新后的 PR 描述必须：
+   - **完整重写** AC 覆盖对照表，反映当前真实状态
+   - 附状态说明图例（✅/🔴 deferred/🔮 Phase 3 等）
+   - 标记本次修复变更了哪些 AC 状态
+3. 同步更新 `docs/05-planning/task-status.json` 中对应任务的 `notes` 字段
+4. 同步更新核心实现文件头部的 AC 覆盖注释（`// AC 覆盖:` 行）
+
+**自动化边界**：
+- ✅ Agent 自动执行：`gh pr edit`、`task-status.json` notes 更新、文件头注释更新
+- ❌ Agent 不得执行：`gh pr merge`（始终需人类确认）
+
 ---
 
 ## 16. 版本与维护声明
@@ -1268,3 +1290,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.11 | 2026-07-05 | 明确阶段集成测试任务分支使用 `test/` 前缀（如 `test/phase1-integration-test-1.9`），非 `feature/`。更新 §3.1 分支命名规范：`test` 类型扩展为"测试补充/修复/阶段集成测试"，无关联用户故事时使用任务 ID 替代 US-XXX。 | AI 架构师 |
 | v5.12 | 2026-07-09 | Task 2.3 IngestPipeline 竣工：澄清 §4.1 Pipeline `actor` 声明为合法无状态模式；同步更新架构设计文档 §1.2、§4.2 含 `actor` 选项；数据流文档新增 §3.1.1 双写审计模式、§3.1.2 ExcludedAssets fail-closed；避坑手册追加 PIPE-010/AUD-009/EXCL-006 三条新陷阱。 | AI 架构师 |
 | v5.13 | 2026-07-11 | 修复 backlog→ready 级联缺失：§12.1 状态表中补充「级联触发时机」说明（启动时/合并后/查询时三场景）；§12.2 Agent 启动强制检查新增级联步骤；§12.3 第 9 步加入合并后级联。同步更新 `init-session-echo`、`next-task-echo`、`do-task-echo`、`pr-merge-echo` 四个自定义命令加入级联逻辑。 | AI 架构师 |
+| v5.14 | 2026-07-12 | 新增 §15.5「PR Review 修复后自动刷新描述」规则：修复缺陷 push 后必须通过 `gh pr edit` 刷新 PR 的 AC 覆盖对照表，同步更新 `task-status.json` notes 及文件头部 AC 注释。同步更新 `pr-review-echo`（新增第六步）和 `commit-pr-echo`（第五步新增自动检测已有 PR 并刷新描述）两个自定义命令。 | AI 架构师 |
