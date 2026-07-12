@@ -142,6 +142,7 @@ public enum AuditEvent: String, Sendable, Codable {
     case reauthorized
     case retrieval
     case contextualAwakening
+    case emotionalAwakening
 }
 
 // MARK: - Audit Log Entry

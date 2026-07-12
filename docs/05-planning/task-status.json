@@ -329,8 +329,8 @@
           "id": "2.12",
           "title": "AwakeningPipeline：情绪唤醒（US-AWK-003）",
           "story": "US-AWK-003",
-          "status": "ready",
-          "last_updated": "2026-07-12T04:15:00Z",
+          "status": "review",
+          "last_updated": "2026-07-12T18:30:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
