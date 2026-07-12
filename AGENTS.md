@@ -1,7 +1,7 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.13  
-**生效日期**：2026-07-11  
+**版本**：v5.15  
+**生效日期**：2026-07-12  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -1231,9 +1231,16 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | **reviewer 未响应** | 24 小时后自动提醒              | 手动联系 reviewer 或更换         |
 | **PR 长时间未合并** | 每周提醒一次                   | 评估是否合并或关闭               |
 
-### 15.5 PR Review 修复后自动刷新描述（v5.13+）
+### 15.5 PR Review 修复与外部 AI 审查工具评论审核（v5.15）
 
-> **核心规则**：任何针对 PR Review 反馈（`pr-review-echo` 或人类 Reviewer）的修复提交，**必须**在推送后自动刷新 PR 描述中的 AC 覆盖对照表。
+> **核心规则**：
+> 1. 任何针对 PR Review 反馈（`pr-review-echo` 或人类 Reviewer）的修复提交，**必须**在推送后自动刷新 PR 描述中的 AC 覆盖对照表。
+> 2. **外部 AI 审查工具（CodeRabbit 等）的评论不代表真理。** Agent **必须逐条审核**每条 comment 的有效性，仅对确实指出真实缺陷的评论进行修复。禁止无脑采纳。
+
+**CodeRabbit 评论审核标准**：
+- 🟢 **有效**：指出真实缺陷（绕过校验、竞态条件、静默丢弃错误等），有具体代码引用和影响说明 → **采纳并修复**
+- 🟡 **过度**：观点正确但影响有限或教条化应用规则（如单纯 UserDefaults flag 翻转硬要加 PrivacyCheckpoint）→ **驳回，记录理由**
+- 🔴 **误报**：基于错误理解或不准确代码分析 → **驳回，记录理由**
 
 **触发条件**：
 - `pr-review-echo` 审查发现缺陷（🔴/🟡），Agent 修复缺陷并提交 push 后
@@ -1291,3 +1298,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.12 | 2026-07-09 | Task 2.3 IngestPipeline 竣工：澄清 §4.1 Pipeline `actor` 声明为合法无状态模式；同步更新架构设计文档 §1.2、§4.2 含 `actor` 选项；数据流文档新增 §3.1.1 双写审计模式、§3.1.2 ExcludedAssets fail-closed；避坑手册追加 PIPE-010/AUD-009/EXCL-006 三条新陷阱。 | AI 架构师 |
 | v5.13 | 2026-07-11 | 修复 backlog→ready 级联缺失：§12.1 状态表中补充「级联触发时机」说明（启动时/合并后/查询时三场景）；§12.2 Agent 启动强制检查新增级联步骤；§12.3 第 9 步加入合并后级联。同步更新 `init-session-echo`、`next-task-echo`、`do-task-echo`、`pr-merge-echo` 四个自定义命令加入级联逻辑。 | AI 架构师 |
 | v5.14 | 2026-07-12 | 新增 §15.5「PR Review 修复后自动刷新描述」规则：修复缺陷 push 后必须通过 `gh pr edit` 刷新 PR 的 AC 覆盖对照表，同步更新 `task-status.json` notes 及文件头部 AC 注释。同步更新 `pr-review-echo`（新增第六步）和 `commit-pr-echo`（第五步新增自动检测已有 PR 并刷新描述）两个自定义命令。 | AI 架构师 |
+| v5.15 | 2026-07-12 | 新增 §15.5「外部 AI 审查工具评论审核」规则：CodeRabbit 等外部工具评论不代表真理，Agent 必须逐条审核，仅对 🟢 有效缺陷进行修复，🟡 过度/🔴 误报驳回并记录理由。同步更新 `pr-review-echo` 命令新增「第四步：CodeRabbit 评论审核」并重新编号后续步骤。 | AI 架构师 |

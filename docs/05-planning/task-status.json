@@ -313,14 +313,16 @@
           "id": "2.11",
           "title": "AwakeningPipeline：地理围栏（US-AWK-001）",
           "story": "US-AWK-001",
-          "status": "ready",
-          "last_updated": "2026-07-12T04:15:00Z",
+          "status": "review",
+          "last_updated": "2026-07-12T17:15:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["2.6"],
-          "test_file": "EchoTests/Phase2/AwakeningGeoTests.swift"
+          "test_file": "EchoTests/Phase2/AwakeningGeoTests.swift",
+          "notes": "14 单元测试全部通过。AC-1/2/4/5/6 ✅。AC-3 🔮 Phase 3（filterByThreshold 余弦≥0.7 过滤已实现，但上游 GeoFilter 为 no-op，当前以语义搜索过渡）。GeofenceStateStore 基于 UserDefaults（Phase 3 建议迁移至 SQLite）。PR review 修复：writeAwakeningAudit 移除冗余 validate()，接收已有 checkpoint.policyVersion。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/23"
         },
         {
           "id": "2.12",
