@@ -83,7 +83,7 @@ struct AwakeningEmotionTests {
 
     /// Stub HealthKit provider for testing AC-1
     final class StubHealthKitProvider: HealthKitProvider, @unchecked Sendable {
-        var mockMood: MoodState? = nil
+        var mockMood: MoodState?
         var mockAvailable = false
         var isAuthorized = false
 

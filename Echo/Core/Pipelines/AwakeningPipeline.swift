@@ -762,6 +762,7 @@ public actor AwakeningPipeline {
     }
 
     /// 获取情绪卡片文案（AC-4: 温和不评判）。
+    /// 🔮 Phase 3: localize via UserPolicy.preferredLanguage (zh-Hans/en-US).
     public func emotionCardCopy(for mood: MoodState) async -> String {
         switch mood {
         case .negative:
@@ -876,23 +877,51 @@ public actor AwakeningPipeline {
         }
 
         // Step 5: Search by mood tag (AC-3)
+        // L1 transient: retry 3x per query before giving up on that query
         let queriesForSearch = await searchQueriesForMood(mood)
         var matchedMemories: [SearchResultItem] = []
+        let maxRetries = 3
 
         for query in queriesForSearch {
-            do {
-                let results = try await searchPipeline.search(
-                    query: query,
-                    k: searchK,
-                    filter: nil,
-                    traceID: traceID
+            var retriesRemaining = maxRetries
+            var lastError: Error?
+
+            while retriesRemaining > 0 {
+                do {
+                    let results = try await searchPipeline.search(
+                        query: query,
+                        k: searchK,
+                        filter: nil,
+                        traceID: traceID
+                    )
+                    // Filter by threshold
+                    let filtered = filterByThreshold(results, threshold: matchThreshold)
+                    matchedMemories.append(contentsOf: filtered)
+                    lastError = nil
+                    break
+                } catch {
+                    lastError = error
+                    retriesRemaining -= 1
+                    if retriesRemaining > 0 {
+                        // L1: exponential backoff (1s/2s/4s)
+                        let delayNanos = UInt64(pow(2.0, Double(maxRetries - retriesRemaining - 1)) * 1_000_000_000)
+                        try? await Task.sleep(nanoseconds: delayNanos)
+                    }
+                }
+            }
+
+            // L1→L2 escalation: all retries exhausted, log failure
+            if let error = lastError {
+                try? await privacyActor.writeAuditLog(
+                    eventType: .emotionalAwakening,
+                    traceID: traceID,
+                    policyVersion: checkpoint.policyVersion,
+                    success: false,
+                    sourceType: "sentiment",
+                    affectedCount: 0,
+                    sourceLanguage: "{\"error\":\"searchExhaustedRetries\",\"query\":\"\(query)\"}"
                 )
-                // Filter by threshold
-                let filtered = filterByThreshold(results, threshold: matchThreshold)
-                matchedMemories.append(contentsOf: filtered)
-            } catch {
-                // L1 transient — continue with partial results
-                continue
+                _ = error  // Silenced but audit-logged — L2 recovery via user retry
             }
         }
 
