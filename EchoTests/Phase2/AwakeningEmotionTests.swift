@@ -94,7 +94,7 @@ struct AwakeningEmotionTests {
 
     /// Stub Sentiment provider for testing AC-2
     final class StubSentimentProvider: SentimentProvider, @unchecked Sendable {
-        var mockMood: MoodState? = nil
+        var mockMood: MoodState?
         var analyzeCallCount = 0
         var lastAnalyzedTexts: [String] = []
 
