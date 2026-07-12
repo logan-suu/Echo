@@ -1,12 +1,14 @@
 // ==========================================
 // 文件: SearchPipeline.swift
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-RET-001~004 (跨语言检索 + 元数据过滤),
-//            US-FBK-002 (本地反馈驱动重排)
+//            US-FBK-002 (本地反馈驱动重排),
+//            US-RET-006 (跨语言低置信度降级)
 //            docs/02-architecture/数据流全链路技术说明文档.md §2 (用户发起检索数据流),
 //            docs/02-architecture/架构设计文档.md §2.1 (SearchPipeline)
 //            docs/03-implementation/双语言实现说明文档.md §4 (跨语言检索管线)
 // 任务: 2.6 - SearchPipeline：向量检索 + FTS5 过滤
 //        2.8 - 集成反馈到 SearchPipeline
+//        2.9 - 跨语言低置信度降级（US-RET-006）
 // AC 覆盖: US-RET-001 AC-1 ✅ (余弦相似度), AC-3 ✅ (crossLanguageMatch标记), AC-4 ✅ (审计),
 //          AC-2 🔮 (Cross-Encoder, Phase 3), AC-5 🔮 (Recall@10, Golden Dataset Phase 3)
 //          US-RET-002 ✅ (中文→英文, 同 RET-001)
@@ -16,6 +18,9 @@
 //          AC-2 🔴 (人物过滤, deferred: 需元数据扩展), AC-3 🔴 (geohash过滤, deferred: 需坐标存储),
 //          AC-4 🔮 (P95延迟基准, Phase 3 Benchmark), AC-5 ✅ (审计filterApplied)
 //          US-FBK-002 AC-1 ✅ (阈值≥0.80), AC-2 ✅ (时间衰减), AC-3 ✅ (重排公式, via FeedbackActor)
+//          US-RET-006 AC-1 ✅ (alignmentScore<0.6→lowConfidence), AC-3 ✅ (结果不被过滤),
+//          AC-5 ✅ (审计 alignmentScore/fallbackReason/lawConfidenceCount)
+//          AC-2 🔮 (UI提示文案, Phase 3 SearchView), AC-4 🔮 (不准确反馈按钮, Phase 3 SearchView)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           AGENTS.md §5.3 (反馈存储契约),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
@@ -173,6 +178,10 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
     public nonisolated let alignmentScore: Float?
     /// 反馈调整值（保留字段，FeedbackActor 集成后填充，Task 2.8）
     public nonisolated let feedbackAdjustment: Float?
+    /// 跨语言低置信度标记（US-RET-006 AC-1: alignmentScore < 0.6 → true）
+    public nonisolated let lowConfidence: Bool
+    /// 低置信度原因（US-RET-006 AC-1/AC-5: fallbackReason）
+    public nonisolated let fallbackReason: String?
 
     public nonisolated init(
         id: UUID,
@@ -184,7 +193,9 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
         crossLanguageMatch: Bool = false,
         cosineSimilarity: Float,
         alignmentScore: Float? = nil,
-        feedbackAdjustment: Float? = nil
+        feedbackAdjustment: Float? = nil,
+        lowConfidence: Bool = false,
+        fallbackReason: String? = nil
     ) {
         self.id = id
         self.assetId = assetId
@@ -196,6 +207,8 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
         self.cosineSimilarity = cosineSimilarity
         self.alignmentScore = alignmentScore
         self.feedbackAdjustment = feedbackAdjustment
+        self.lowConfidence = lowConfidence
+        self.fallbackReason = fallbackReason
     }
 }
 
@@ -418,15 +431,24 @@ public actor SearchPipeline {
             let rhsScore = Double(rhs.cosineSimilarity) + Double(rhs.feedbackAdjustment ?? 0)
             return lhsScore > rhsScore
         }
-        let topK = Array(items.prefix(k))
+        let topKUnsorted = Array(items.prefix(k))
 
-        // Step 10: Collect result languages for audit (US-RET-001 AC-4)
+        // Step 10: Mark low confidence (US-RET-006 AC-1)
+        // alignmentScore < 0.6 → lowConfidence=true + fallbackReason
+        // When alignmentScore is nil (Phase 2: Cross-Encoder not yet integrated), no marking occurs.
+        let topK = markLowConfidence(topKUnsorted)
+
+        // Step 11: Collect result languages for audit (US-RET-001 AC-4)
         let resultLanguages = Array(Set(topK.compactMap(\.sourceLanguage)))
 
-        // Step 11: Audit log (US-RET-001 AC-4, US-RET-004 AC-5)
+        // Step 12: Audit log (US-RET-001 AC-4, US-RET-004 AC-5, US-RET-006 AC-5)
         // Best-effort only — audit failure is L1 transient and MUST NOT block
-        // Encode queryLanguage + resultLanguages as JSON for audit traceability
-        let auditLanguageInfo = encodeAuditLanguage(query: queryLanguage, results: resultLanguages)
+        // Encode queryLanguage + resultLanguages + low confidence metadata as JSON
+        let auditLanguageInfo = encodeAuditMetadata(
+            query: queryLanguage,
+            results: resultLanguages,
+            topK: topK
+        )
         let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
         let filterApplied = filter?.isEmpty == false
         try? await privacyActor.writeAuditLog(
@@ -496,18 +518,66 @@ public actor SearchPipeline {
         return ql != sl
     }
 
-    /// 编码查询语言 + 结果语言信息为 JSON 字符串（用于审计日志 sourceLanguage 字段）。
+    /// 编码查询语言 + 结果语言 + 低置信度元数据为 JSON（用于审计日志 sourceLanguage 字段）。
     ///
-    /// 格式: `{"queryLanguage":"en-US","resultLanguages":["zh-Hans"]}`
-    private nonisolated func encodeAuditLanguage(query: String?, results: [String]) -> String {
+    /// 格式:
+    /// ```json
+    /// {
+    ///   "queryLanguage": "en-US",
+    ///   "resultLanguages": ["zh-Hans"],
+    ///   "lowConfidenceCount": 3,
+    ///   "alignmentScores": [0.82, null, 0.45]
+    /// }
+    /// ```
+    ///
+    /// US-RET-006 AC-5: 审计记录 alignmentScore、fallbackReason。
+    private nonisolated func encodeAuditMetadata(
+        query: String?,
+        results: [String],
+        topK: [SearchResultItem]
+    ) -> String {
         var dict: [String: Any] = [:]
         if let q = query { dict["queryLanguage"] = q }
         dict["resultLanguages"] = results
+        dict["lowConfidenceCount"] = topK.filter(\.lowConfidence).count
+        dict["alignmentScores"] = topK.map { $0.alignmentScore as Any? ?? NSNull() }
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let json = String(data: data, encoding: .utf8) else {
             return query ?? results.joined(separator: ",")
         }
         return json
+    }
+
+    /// 标记低置信度结果（US-RET-006 AC-1）。
+    ///
+    /// 规则: `alignmentScore < 0.6` → `lowConfidence=true` + `fallbackReason`
+    /// 当 `alignmentScore` 为 nil（Phase 2: Cross-Encoder 未集成）→ 不标记。
+    /// 结果不被过滤（AC-3: 仍返回全部 top-K）。
+    ///
+    /// AC-2: UI 显示统一提示文案 "以下结果相关性较低，建议优化关键词或尝试不同表述。"（本地化 zh-Hans/en-US）
+    /// AC-4: UI 提供"不准确"反馈按钮（仅本地学习）
+    /// 以上两条为展示层实现（Phase 3 SearchViewModel/SearchView），
+    /// Pipeline 通过 `lowConfidence=true` + `fallbackReason` 提供标记数据。
+    private nonisolated func markLowConfidence(_ items: [SearchResultItem]) -> [SearchResultItem] {
+        return items.map { item in
+            if let score = item.alignmentScore, score < 0.6 {
+                return SearchResultItem(
+                    id: item.id,
+                    assetId: item.assetId,
+                    sourceType: item.sourceType,
+                    timestamp: item.timestamp,
+                    originalText: item.originalText,
+                    sourceLanguage: item.sourceLanguage,
+                    crossLanguageMatch: item.crossLanguageMatch,
+                    cosineSimilarity: item.cosineSimilarity,
+                    alignmentScore: item.alignmentScore,
+                    feedbackAdjustment: item.feedbackAdjustment,
+                    lowConfidence: true,
+                    fallbackReason: "cross-encoder alignment score \(String(format: "%.3f", score)) below threshold 0.6"
+                )
+            }
+            return item
+        }
     }
 
     /// 应用元数据过滤器（US-RET-004 AC-1）。

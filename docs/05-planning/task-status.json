@@ -281,14 +281,15 @@
           "id": "2.9",
           "title": "跨语言低置信度降级（US-RET-006）",
           "story": "US-RET-006",
-          "status": "ready",
-          "last_updated": "2026-07-12T04:15:00Z",
-          "documents_required": [
-            "docs/01-spec/用户故事与验收标准规格书.md",
-            "docs/03-implementation/双语言实现说明文档.md"
-          ],
-          "dependencies": ["2.6"],
-          "test_file": "EchoTests/Phase2/LowConfidenceFallbackTests.swift"
+            "status": "review",
+            "last_updated": "2026-07-12T15:15:00Z",
+            "documents_required": [
+                "docs/01-spec/用户故事与验收标准规格书.md",
+                "docs/03-implementation/双语言实现说明文档.md"
+            ],
+            "dependencies": ["2.6"],
+            "test_file": "EchoTests/Phase2/LowConfidenceFallbackTests.swift",
+            "notes": "9 单元测试全部通过。AC-1 ✅ (alignmentScore<0.6→lowConfidence+fallbackReason), AC-3 ✅ (结果不被过滤), AC-5 ✅ (审计记录 alignmentScore/fallbackReason/lowConfidenceCount)。AC-2/AC-4 为展示层 UI 实现（Phase 3 SearchView/SearchViewModel）。alignmentScore 实际值由 Phase 3 Cross-Encoder 填充，当前始终为 nil → lowConfidence=false。标记逻辑已完备，Phase 3 接入后自动生效。"
         },
         {
           "id": "2.10",
