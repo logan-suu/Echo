@@ -325,7 +325,8 @@ struct AwakeningGeoTests {
             regionId: regionId,
             memoryIds: [memoryId],
             resetByExit: true,
-            success: true
+            success: true,
+            policyVersion: 1
         )
 
         // Then: verify audit log was written

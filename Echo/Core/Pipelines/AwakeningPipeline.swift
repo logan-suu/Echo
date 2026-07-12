@@ -5,8 +5,9 @@
 //            docs/02-architecture/架构设计文档.md §2.1 (AwakeningPipeline)
 // 任务: 2.11 - AwakeningPipeline：地理围栏（US-AWK-001）
 // AC 覆盖: US-AWK-001 AC-1 ✅ (仅didEnter触发), AC-2 ✅ (离开重置, 永不重复推送),
-//          AC-3 ✅ (匹配度≥0.7), AC-4 ✅ (回忆卡片生成接口),
+//          AC-3 🔮 Phase 3 (余弦≥0.7过滤已实现, GeoFilter依赖SearchPipeline Phase 3), AC-4 ✅ (回忆卡片生成接口),
 //          AC-5 ✅ (定位权限关闭静默禁用), AC-6 ✅ (审计记录.contextualAwakening)
+// PR Review fix: writeAwakeningAudit 移除冗余 validate(), 接收已有 checkpoint.policyVersion
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
 //           AGENTS.md §4.4 (L1~L4 统一错误分级),
@@ -356,7 +357,8 @@ public actor AwakeningPipeline {
                 regionId: regionId,
                 memoryIds: [],
                 resetByExit: resetByExit,
-                success: true
+                success: true,
+                policyVersion: checkpoint.policyVersion
             )
 
             return .noMemories
@@ -375,7 +377,8 @@ public actor AwakeningPipeline {
             regionId: regionId,
             memoryIds: memoryIds,
             resetByExit: resetByExit,
-            success: true
+            success: true,
+            policyVersion: checkpoint.policyVersion
         )
 
         return .processed(card: card)
@@ -435,7 +438,8 @@ public actor AwakeningPipeline {
         regionId: String,
         memoryIds: [UUID],
         resetByExit: Bool,
-        success: Bool
+        success: Bool,
+        policyVersion: Int
     ) async {
         let metadata = AwakeningAuditMetadata(
             triggerType: "geofenceOnly",
@@ -444,16 +448,10 @@ public actor AwakeningPipeline {
         )
         let metadataJSON = metadata.encode() ?? "{}"
 
-        let checkpoint = await privacyActor.validate(
-            operation: .awakening,
-            traceID: traceID,
-            sourceTypes: ["geofence"]
-        )
-
         try? await privacyActor.writeAuditLog(
             eventType: .contextualAwakening,
             traceID: traceID,
-            policyVersion: checkpoint.policyVersion,
+            policyVersion: policyVersion,
             success: success,
             sourceType: "geofence",
             affectedCount: memoryIds.count,
