@@ -500,7 +500,8 @@
           "id": "4.1",
           "title": "扩展 Golden Dataset 至 800+ 跨语言用例",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T19:00:00Z",
           "documents_required": [
             "docs/03-implementation/双语言实现说明文档.md",
             "docs/01-spec/用户故事与验收标准规格书.md"
@@ -546,7 +547,8 @@
           "id": "4.5",
           "title": "模型加载失败手动重试测试",
           "story": "US-RES-004",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T19:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
@@ -557,7 +559,8 @@
           "id": "4.6",
           "title": "ExcludedAssets 边界场景测试",
           "story": "US-PRV-007, US-SRC-008",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T19:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
@@ -568,7 +571,8 @@
           "id": "4.7",
           "title": "反馈重排准确性验证",
           "story": "US-FBK-002",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T19:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
