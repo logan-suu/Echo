@@ -15,7 +15,7 @@
 //          US-RET-004 AC-1 🔴 (FTS5预过滤, deferred: 当前为ANN post-filter过渡; 需SQLite FTS5+IngestPipeline同步),
 //          AC-2 🔴 (人物过滤, deferred: 需元数据扩展), AC-3 🔴 (geohash过滤, deferred: 需坐标存储),
 //          AC-4 🔮 (P95延迟基准, Phase 3 Benchmark), AC-5 ✅ (审计filterApplied)
-//          US-FBK-002 AC-1 ✅ (阈值≥0.80), AC-2 ✅ (时间衰减), AC-3 ✅ (重排公式)
+//          US-FBK-002 AC-1 ✅ (阈值≥0.80), AC-2 ✅ (时间衰减), AC-3 ✅ (重排公式, via FeedbackActor)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           AGENTS.md §5.3 (反馈存储契约),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
