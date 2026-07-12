@@ -109,7 +109,8 @@ public struct MemoryEntry: Sendable, Codable, Equatable {
             hasExif: (dict["hasExif"] as? Bool) ?? false,
             privacyBlurApplied: (dict["privacyBlurApplied"] as? Bool) ?? false,
             traceID: (dict["traceID"] as? String) ?? "",
-            memoryGroupId: dict["memoryGroupId"] as? String
+            memoryGroupId: dict["memoryGroupId"] as? String,
+            originalText: dict["originalText"] as? String
         )
     }
 }
@@ -127,6 +128,9 @@ public struct MemoryMetadata: Sendable, Codable, Equatable {
     public nonisolated let privacyBlurApplied: Bool
     public nonisolated let traceID: String
     public nonisolated let memoryGroupId: String?
+    /// 原始文本内容（备忘录/语音转写文本），用于搜索时语言检测与跨语言匹配标记
+    /// nil 表示图片/视频帧等非文本记忆
+    public nonisolated let originalText: String?
 
     public nonisolated init(
         assetId: String,
@@ -135,7 +139,8 @@ public struct MemoryMetadata: Sendable, Codable, Equatable {
         hasExif: Bool = false,
         privacyBlurApplied: Bool = false,
         traceID: String,
-        memoryGroupId: String? = nil
+        memoryGroupId: String? = nil,
+        originalText: String? = nil
     ) {
         self.assetId = assetId
         self.sourceType = sourceType
@@ -144,5 +149,6 @@ public struct MemoryMetadata: Sendable, Codable, Equatable {
         self.privacyBlurApplied = privacyBlurApplied
         self.traceID = traceID
         self.memoryGroupId = memoryGroupId
+        self.originalText = originalText
     }
 }

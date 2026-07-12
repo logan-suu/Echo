@@ -63,6 +63,11 @@ agent: build
 5. **PR 描述**：必须包含上述 AC 覆盖对照表（§3.3）。
 
 ### 第五步：后续
-1. 输出 PR 链接。
-2. 提醒用户：“请执行 `pr-review-echo` 进行 AI 预审，或等待人类 Reviewer 批准。”
-3. **可选**：检查 GitHub Actions 是否已触发（通过 API 查询），如果未触发，提醒用户检查配置。
+1. **自动刷新已有 PR 描述（AGENTS.md §15.5）**：
+   - 如果当前分支已有关联的开放 PR（通过 `gh pr list --head [分支名] --json number --jq '.[0].number'` 检测）
+   - 且本次提交为 PR Review 修复提交（commit body 中包含 "PR review" / "Addresses review" 等关键词）
+   - 则自动执行 `gh pr edit [PR编号] --body "[更新的 PR 描述]"`，刷新 AC 覆盖对照表
+   - 同时更新 `task-status.json` notes + 核心文件头部 AC 覆盖注释
+2. 输出 PR 链接。
+3. 提醒用户：“请执行 `pr-review-echo` 进行 AI 预审，或等待人类 Reviewer 批准。”
+4. **可选**：检查 GitHub Actions 是否已触发（通过 API 查询），如果未触发，提醒用户检查配置。
