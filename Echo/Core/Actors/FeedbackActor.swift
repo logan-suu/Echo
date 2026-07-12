@@ -53,10 +53,11 @@ public actor FeedbackActor {
         )
 
         // AC-7: 审计记录 .feedbackReceived
+        let currentPolicyVersion = await privacyActor.getPolicy().policyVersion
         try? await privacyActor.writeAuditLog(
             eventType: .feedbackReceived,
             traceID: traceID,
-            policyVersion: 1,
+            policyVersion: currentPolicyVersion,
             success: true
         )
     }
@@ -181,10 +182,11 @@ public actor FeedbackActor {
         try await db.execute(sql: "DELETE FROM FeedbackStore")
 
         // AC-7: 审计记录 .feedbackReset
+        let currentPolicyVersion = await privacyActor.getPolicy().policyVersion
         try? await privacyActor.writeAuditLog(
             eventType: .feedbackReset,
             traceID: traceID,
-            policyVersion: 1,
+            policyVersion: currentPolicyVersion,
             success: true
         )
     }
@@ -203,10 +205,11 @@ public actor FeedbackActor {
 
         // AC-7: 审计记录 .feedbackRevoked（仅成功删除时记录）
         if success {
+            let currentPolicyVersion = await privacyActor.getPolicy().policyVersion
             try? await privacyActor.writeAuditLog(
                 eventType: .feedbackRevoked,
                 traceID: traceID,
-                policyVersion: 1,
+                policyVersion: currentPolicyVersion,
                 success: true
             )
         }
