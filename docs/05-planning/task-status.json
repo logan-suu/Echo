@@ -250,13 +250,16 @@
           "id": "2.7",
           "title": "FeedbackActor + 重排公式（阈值0.80，截断±0.5）",
           "story": "US-FBK-002",
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-07-12T06:36:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["1.4"],
-          "test_file": "EchoTests/Phase2/FeedbackActorTests.swift"
+          "test_file": "EchoTests/Phase2/FeedbackActorTests.swift",
+          "notes": "19 单元测试全部通过。AC-1~7 全覆盖。recordFeedback/reset/revoke 新增 traceID 参数 (默认空串向后兼容)，rawInsert() 供测试注入历史日期。PR review 修复: policyVersion 硬编码1→getPolicy().policyVersion (1e47b0e)。AC-7 decayFactor 可自 createdAt 计算，等待 schema migration 加专用列。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/19"
         },
         {
           "id": "2.8",
@@ -391,7 +394,8 @@
           "id": "3.4",
           "title": "设置页面 SettingsView + ViewModel（数据源开关、排除项管理、缓存清理）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T04:15:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],

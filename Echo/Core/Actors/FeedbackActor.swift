@@ -3,9 +3,11 @@
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-FBK-001/002/003
 //            docs/02-architecture/架构设计文档.md §8 (反馈学习与重排集成)
 // 任务: 1.4 - 集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表
-// AC: US-FBK-002 AC-1 (阈值≥0.80), AC-2 (时间衰减 90d/180d), AC-3 (截断±0.5)
-// 架构约束: AGENTS.md §5.3 (反馈存储契约)
-// 生成时间: 2026-07-04
+//        2.7 - FeedbackActor + 重排公式（阈值0.80，截断±0.5）
+// AC 覆盖: US-FBK-002 AC-1 (阈值≥0.80), AC-2 (时间衰减 90d/180d), AC-3 (截断±0.5),
+//           AC-4 (本地存储), AC-5 (清空), AC-6 (撤销), AC-7 (审计 .feedbackReceived/.feedbackReset/.feedbackRevoked)
+// 架构约束: AGENTS.md §5.3 (反馈存储契约), AGENTS.md §7.3 (审计事件)
+// 生成时间: 2026-07-04 | 更新: 2026-07-12 (AC-7 审计集成, PR review: policyVersion fix)
 // ==========================================
 
 import Foundation
@@ -22,14 +24,46 @@ public actor FeedbackActor {
     public static let archiveAgeDays: Int = 180
 
     public static let shared = FeedbackActor()
-    private let db: DatabaseManager
 
-    private init(db: DatabaseManager = .shared) {
+    private let db: DatabaseManager
+    private let privacyActor: PrivacyActor
+
+    public init(db: DatabaseManager = .shared, privacyActor: PrivacyActor = .shared) {
         self.db = db
+        self.privacyActor = privacyActor
     }
 
     /// 记录一条用户反馈
-    public func recordFeedback(_ entry: FeedbackEntry) async throws {
+    /// - Parameters:
+    ///   - entry: 反馈条目
+    ///   - traceID: 审计追踪 ID（AC-7）
+    public func recordFeedback(_ entry: FeedbackEntry, traceID: String = "") async throws {
+        try await db.executeWrite(
+            sql: "INSERT INTO FeedbackStore (feedbackId, memoryId, queryText, sentiment, cosineSimilarity, createdAt, isBadCase, badCaseReason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            bindings: [
+                .text(entry.id.uuidString),
+                .text(entry.memoryId.uuidString),
+                .text(entry.queryText),
+                .text(entry.sentiment.rawValue),
+                .double(entry.cosineSimilarity),
+                .double(entry.createdAt.timeIntervalSince1970),
+                .int(entry.isBadCase ? 1 : 0),
+                entry.badCaseReason.map { .text($0) } ?? .null,
+            ]
+        )
+
+        // AC-7: 审计记录 .feedbackReceived
+        let currentPolicyVersion = await privacyActor.getPolicy().policyVersion
+        try? await privacyActor.writeAuditLog(
+            eventType: .feedbackReceived,
+            traceID: traceID,
+            policyVersion: currentPolicyVersion,
+            success: true
+        )
+    }
+
+    /// 原始插入（供测试使用，绕过审计日志以允许注入历史日期）
+    public func rawInsert(_ entry: FeedbackEntry) async throws {
         try await db.executeWrite(
             sql: "INSERT INTO FeedbackStore (feedbackId, memoryId, queryText, sentiment, cosineSimilarity, createdAt, isBadCase, badCaseReason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             bindings: [
@@ -143,17 +177,42 @@ public actor FeedbackActor {
     }
 
     /// 清空所有反馈（US-FBK-001）
-    public func reset() async throws {
+    /// - Parameter traceID: 审计追踪 ID（AC-7）
+    public func reset(traceID: String = "") async throws {
         try await db.execute(sql: "DELETE FROM FeedbackStore")
+
+        // AC-7: 审计记录 .feedbackReset
+        let currentPolicyVersion = await privacyActor.getPolicy().policyVersion
+        try? await privacyActor.writeAuditLog(
+            eventType: .feedbackReset,
+            traceID: traceID,
+            policyVersion: currentPolicyVersion,
+            success: true
+        )
     }
 
     /// 撤销单条反馈（US-FBK-003）
+    /// - Parameters:
+    ///   - feedbackId: 要撤销的反馈 ID
+    ///   - traceID: 审计追踪 ID（AC-7）
     @discardableResult
-    public func revoke(feedbackId: UUID) async throws -> Bool {
+    public func revoke(feedbackId: UUID, traceID: String = "") async throws -> Bool {
         let changes = try await db.executeWrite(
             sql: "DELETE FROM FeedbackStore WHERE feedbackId = ?",
             bindings: [.text(feedbackId.uuidString)]
         )
-        return changes > 0
+        let success = changes > 0
+
+        // AC-7: 审计记录 .feedbackRevoked（仅成功删除时记录）
+        if success {
+            let currentPolicyVersion = await privacyActor.getPolicy().policyVersion
+            try? await privacyActor.writeAuditLog(
+                eventType: .feedbackRevoked,
+                traceID: traceID,
+                policyVersion: currentPolicyVersion,
+                success: true
+            )
+        }
+        return success
     }
 }
