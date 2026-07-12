@@ -299,6 +299,8 @@
           "story": "US-SRC-012",
           "status": "review",
           "last_updated": "2026-07-12T16:15:00Z",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/22",
+          "notes": "12 单元测试全部通过。AC-1/AC-3/AC-8 的 UI 层实现（PHPhotoLibraryChangeObserver 注册、开关UI、手动触发UI）留待 Phase 3。SyncPipeline 核心逻辑（增量替换、ExcludedAssets 校验、冲突锁定、进度报告、审计记录）全部完成。",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
