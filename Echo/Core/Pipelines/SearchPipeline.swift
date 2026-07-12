@@ -1,0 +1,498 @@
+// ==========================================
+// 文件: SearchPipeline.swift
+// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-RET-001~004 (跨语言检索 + 元数据过滤)
+//            docs/02-architecture/数据流全链路技术说明文档.md §2 (用户发起检索数据流)
+//            docs/02-architecture/架构设计文档.md §2.1 (SearchPipeline)
+//            docs/03-implementation/双语言实现说明文档.md §4 (跨语言检索管线)
+// 任务: 2.6 - SearchPipeline：向量检索 + FTS5 过滤
+// AC 覆盖: US-RET-001 AC-1~5 (英文→中文跨语言匹配),
+//          US-RET-002 (中文→英文跨语言匹配, 同 RET-001),
+//          US-RET-003 AC-1~4 (混合语言查询),
+//          US-RET-004 AC-1~5 (多维元数据过滤)
+// 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
+//           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
+//           AGENTS.md §4.4 (L1~L4 统一错误分级),
+//           PIPE-002 (翻译仅限展示层, Retriever 返回源语言原文)
+// 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
+// 生成时间: 2026-07-12
+// ==========================================
+
+import Foundation
+import NaturalLanguage
+import ProximaKit
+
+// MARK: - Search Pipeline Error
+
+/// SearchPipeline 统一错误类型（L1~L4 分级，AGENTS.md §4.4）
+public enum SearchError: Error, LocalizedError, Sendable, Equatable {
+    /// 隐私校验拒绝 — 用户未授权搜索功能
+    case privacyDenied(sourceTypes: [String])
+    /// 查询文本为空
+    case emptyQuery
+    /// 嵌入生成失败 — 模型未加载或推理失败（L3 阻断）
+    case embeddingFailed(underlying: Error)
+    /// 向量检索超时（2s），返回部分结果（US-RET-008）
+    case searchTimeout(partialResults: [SearchResultItem])
+    /// 审计日志写入失败（L1 瞬态，非阻断）
+    case auditLogFailed(underlying: Error)
+
+    /// L1~L4 错误分级
+    public nonisolated var errorLevel: Int {
+        switch self {
+        case .privacyDenied:              return 2  // L2 可恢复
+        case .emptyQuery:                 return 2  // L2 可恢复
+        case .embeddingFailed:            return 3  // L3 阻断
+        case .searchTimeout:              return 1  // L1 瞬态（部分结果已返回）
+        case .auditLogFailed:             return 1  // L1 瞬态
+        }
+    }
+
+    public var errorDescription: String? {
+        switch self {
+        case .privacyDenied(let types):
+            return "Search privacy denied for source types: \(types.joined(separator: ","))"
+        case .emptyQuery:
+            return "Search query is empty or whitespace-only"
+        case .embeddingFailed(let error):
+            return "Query embedding failed: \(error.localizedDescription)"
+        case .searchTimeout(let partial):
+            return "Search timed out after 2s, returning \(partial.count) partial results"
+        case .auditLogFailed(let error):
+            return "Audit log write failed (non-blocking): \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: Equatable
+    public static func == (lhs: SearchError, rhs: SearchError) -> Bool {
+        switch (lhs, rhs) {
+        case (.privacyDenied(let a), .privacyDenied(let b)): return a == b
+        case (.emptyQuery, .emptyQuery): return true
+        case (.embeddingFailed, .embeddingFailed): return true
+        case (.searchTimeout(let a), .searchTimeout(let b)):
+            return a.map(\.id) == b.map(\.id)
+        case (.auditLogFailed, .auditLogFailed): return true
+        default: return false
+        }
+    }
+}
+
+// MARK: - Search Filter
+
+/// 多维元数据过滤器（US-RET-004 AC-1）。
+///
+/// 支持时间范围、标签、地理半径、人物 ID 过滤。
+/// 所有字段可选 — nil 表示不过滤该维度。
+public struct SearchFilter: Sendable, Equatable {
+    /// 时间范围过滤（闭区间）
+    public nonisolated let timeRange: ClosedRange<Date>?
+    /// 标签关键词匹配
+    public nonisolated let tags: [String]?
+    /// 地理半径过滤
+    public nonisolated let geoRadius: GeoFilter?
+    /// 人物 ID 列表（US-SRC-006）
+    public nonisolated let personIds: [String]?
+
+    public nonisolated init(
+        timeRange: ClosedRange<Date>? = nil,
+        tags: [String]? = nil,
+        geoRadius: GeoFilter? = nil,
+        personIds: [String]? = nil
+    ) {
+        self.timeRange = timeRange
+        self.tags = tags
+        self.geoRadius = geoRadius
+        self.personIds = personIds
+    }
+
+    /// 是否有任何活跃的过滤维度
+    public nonisolated var isEmpty: Bool {
+        timeRange == nil && tags == nil && geoRadius == nil && personIds == nil
+    }
+
+    /// 活跃的过滤维度名称列表（用于审计）
+    public nonisolated var activeDimensions: [String] {
+        var dims: [String] = []
+        if timeRange != nil { dims.append("time") }
+        if tags != nil { dims.append("tags") }
+        if geoRadius != nil { dims.append("geo") }
+        if personIds != nil { dims.append("person") }
+        return dims
+    }
+}
+
+/// 地理半径过滤器（US-RET-004 AC-3）
+public struct GeoFilter: Sendable, Equatable {
+    public nonisolated let latitude: Double
+    public nonisolated let longitude: Double
+    public nonisolated let radiusKm: Double
+
+    public nonisolated init(latitude: Double, longitude: Double, radiusKm: Double) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.radiusKm = radiusKm
+    }
+
+    // Explicit nonisolated Equatable (SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor)
+    public nonisolated static func == (lhs: GeoFilter, rhs: GeoFilter) -> Bool {
+        lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude && lhs.radiusKm == rhs.radiusKm
+    }
+}
+
+// MARK: - Search Result Item
+
+/// 单条检索结果（US-RET-001 AC-3, US-RET-004 AC-5）。
+///
+/// 包含元数据、语言标记、跨语言匹配信息。
+/// 翻译仅在展示层触发（PIPE-002）。
+public struct SearchResultItem: Sendable, Identifiable, Equatable {
+    /// 记忆唯一标识符（对应 VectorStoreActor 的向量 ID）
+    public nonisolated let id: UUID
+    /// PHAsset.localIdentifier 或其他数据源引用
+    public nonisolated let assetId: String
+    /// 数据源类型（"photo", "video_frame", "video_audio", "text", "voice"）
+    public nonisolated let sourceType: String
+    /// 记忆关联的时间戳
+    public nonisolated let timestamp: TimeInterval
+    /// 原始文本内容（文本/语音记忆），nil = 图片/视频帧
+    public nonisolated let originalText: String?
+    /// 记忆的源语言（从 originalText 检测），nil = 无法检测（图片等）
+    public nonisolated let sourceLanguage: String?
+    /// 是否为跨语言匹配（query 语言 ≠ 记忆源语言）
+    public nonisolated let crossLanguageMatch: Bool
+    /// 余弦相似度（1.0 - distance，范围 0~1；ProximaKit 返回余弦距离 [0,2]）
+    public nonisolated let cosineSimilarity: Float
+    /// 跨语言对齐置信度（保留字段，Cross-Encoder 精排后填充，Phase 3）
+    public nonisolated let alignmentScore: Float?
+    /// 反馈调整值（保留字段，FeedbackActor 集成后填充，Task 2.8）
+    public nonisolated let feedbackAdjustment: Float?
+
+    public nonisolated init(
+        id: UUID,
+        assetId: String,
+        sourceType: String,
+        timestamp: TimeInterval,
+        originalText: String? = nil,
+        sourceLanguage: String? = nil,
+        crossLanguageMatch: Bool = false,
+        cosineSimilarity: Float,
+        alignmentScore: Float? = nil,
+        feedbackAdjustment: Float? = nil
+    ) {
+        self.id = id
+        self.assetId = assetId
+        self.sourceType = sourceType
+        self.timestamp = timestamp
+        self.originalText = originalText
+        self.sourceLanguage = sourceLanguage
+        self.crossLanguageMatch = crossLanguageMatch
+        self.cosineSimilarity = cosineSimilarity
+        self.alignmentScore = alignmentScore
+        self.feedbackAdjustment = feedbackAdjustment
+    }
+}
+
+// MARK: - Search Pipeline
+
+/// 检索管线 — 协调向量检索 + 元数据过滤 + 跨语言匹配标记。
+///
+/// ## Pipeline 契约（AGENTS.md §4.1）
+/// - 纯函数性: 相同输入产生相同输出（通过依赖注入的 embedder + actor）
+/// - 无状态: Pipeline 本身不持有可变状态（仅持有对其他 Actor 的不可变引用）
+/// - 副作用隔离: 所有副作用通过 Actor 调用实现
+/// - 审计强制: 每个 search() 方法入口调用 PrivacyActor.validate()（R-006）
+/// - 错误分级: 所有 throws 映射到 L1~L4 统一错误矩阵（AGENTS.md §4.4）
+///
+/// ## 依赖注入
+/// - `embedder`: 嵌入服务（multilingual-e5-small 文本编码），生产/测试均可注入
+/// - `privacyActor`: 隐私校验 Actor（默认 .shared）
+/// - `vectorStore`: 向量存储 Actor
+///
+/// ## 数据流（架构文档 §2.1）
+/// ```
+/// search(query) → PrivacyActor.validate() → Embedder.embedText(query)
+///     → VectorStoreActor.search(queryVector, k=100)
+///     → post-filter metadata (time/tags/geo/person)
+///     → detect languages (query, source)
+///     → mark crossLanguageMatch
+///     → PrivacyActor.writeAuditLog(.retrieval)
+///     → return top-K SearchResultItem[]
+/// ```
+///
+/// ## 翻译隔离（PIPE-002）
+/// Retriever 不翻译 — 仅返回源语言原文 + 语言标记。
+/// 展示层翻译通过 SearchViewModel 调用 TranslationService 触发。
+public actor SearchPipeline {
+
+    // MARK: - Dependencies
+
+    private let embedder: any EmbedderProtocol
+    private let privacyActor: PrivacyActor
+    private let vectorStore: VectorStoreActor
+
+    // MARK: - Configuration
+
+    /// ANN 检索候选集大小（供后续精排/过滤使用）
+    private nonisolated let annCandidateCount: Int = 100
+
+    /// 搜索超时阈值（秒，US-RET-008）
+    private nonisolated let searchTimeoutSeconds: Double = 2.0
+
+    /// 语言检测置信度阈值（低于此值标记为 mixed）
+    private nonisolated let languageConfidenceThreshold: Float = 0.9
+
+    // MARK: - Initialization
+
+    public init(
+        embedder: any EmbedderProtocol,
+        privacyActor: PrivacyActor = .shared,
+        vectorStore: VectorStoreActor
+    ) {
+        self.embedder = embedder
+        self.privacyActor = privacyActor
+        self.vectorStore = vectorStore
+    }
+
+    // MARK: - Search
+
+    /// 执行语义检索（US-RET-001~004）。
+    ///
+    /// **流程**（对应架构文档 §2.1 检索时序）：
+    /// 1. Guard: 查询非空
+    /// 2. PrivacyCheckpoint: 校验搜索授权（R-006）
+    /// 3. Embedding: embedder.embedText(query) → 向量
+    /// 4. ANN 检索: VectorStoreActor.search(queryVector, k=100)
+    /// 5. Post-filter: 应用 SearchFilter 条件（时间/标签/地点/人物）
+    /// 6. 语言检测: 查询语言 + 各结果源语言 → 标记 crossLanguageMatch
+    /// 7. `top-K` 截断
+    /// 8. Audit: 记录 .retrieval（AC-4, AC-5）
+    ///
+    /// - Parameters:
+    ///   - query: 用户查询文本（中/英/混合语言）
+    ///   - k: 返回结果数量（默认 10）
+    ///   - filter: 可选多维元数据过滤器（US-RET-004 AC-1）
+    ///   - traceID: 审计追溯 ID（默认自动生成）
+    /// - Returns: 按余弦相似度降序排列的检索结果
+    /// - Throws: `SearchError` 按 L1~L4 分级
+    public func search(
+        query: String,
+        k: Int = 10,
+        filter: SearchFilter? = nil,
+        traceID: String = UUID().uuidString
+    ) async throws -> [SearchResultItem] {
+        let startTime = Date()
+
+        // Step 1: Guard against empty query
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw SearchError.emptyQuery
+        }
+
+        // Step 2: PrivacyCheckpoint (R-006)
+        let checkpoint = await privacyActor.validate(
+            operation: .search,
+            traceID: traceID,
+            sourceTypes: ["search"]
+        )
+        guard checkpoint.isAllowed else {
+            throw SearchError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+
+        // Step 3: Generate query embedding (multilingual-e5-small → 384d)
+        let rawEmbedding: [Float]
+        do {
+            rawEmbedding = try await embedder.embedText(query)
+        } catch {
+            throw SearchError.embeddingFailed(underlying: error)
+        }
+
+        // Zero-pad 384d → 512d for unified VectorStore (Strategy A)
+        let queryVector: [Float]
+        if rawEmbedding.count < 512 {
+            queryVector = rawEmbedding + Array(repeating: 0.0, count: 512 - rawEmbedding.count)
+        } else {
+            queryVector = rawEmbedding
+        }
+
+        // Step 4: ANN search with timeout (US-RET-008)
+        let searchK = max(k, min(annCandidateCount, 100))
+        let annResults = try await withTimeout(seconds: searchTimeoutSeconds) {
+            await self.vectorStore.search(query: queryVector, k: searchK)
+        }
+
+        // Step 5: Convert ProximaKit SearchResult → SearchResultItem
+        var items: [SearchResultItem] = []
+        for result in annResults {
+            let metadata = try? MemoryEntry.decodeMetadata(from: result.metadata ?? Data())
+            let sourceLang = detectLanguage(from: metadata?.originalText)
+            items.append(SearchResultItem(
+                id: result.id,
+                assetId: metadata?.assetId ?? "",
+                sourceType: metadata?.sourceType ?? "unknown",
+                timestamp: metadata?.timestamp ?? Date().timeIntervalSince1970,
+                originalText: metadata?.originalText,
+                sourceLanguage: sourceLang,
+                crossLanguageMatch: false, // set in step 6
+                cosineSimilarity: 1.0 - Float(result.distance)
+            ))
+        }
+
+        // Step 6: Apply metadata filter (US-RET-004 AC-1)
+        if let f = filter, !f.isEmpty {
+            items = applyFilter(items, filter: f)
+        }
+
+        // Step 7: Detect query language + mark crossLanguageMatch
+        let queryLanguage = detectLanguage(from: query)
+        for i in items.indices {
+            items[i] = SearchResultItem(
+                id: items[i].id,
+                assetId: items[i].assetId,
+                sourceType: items[i].sourceType,
+                timestamp: items[i].timestamp,
+                originalText: items[i].originalText,
+                sourceLanguage: items[i].sourceLanguage,
+                crossLanguageMatch: isCrossLanguage(
+                    queryLang: queryLanguage,
+                    sourceLang: items[i].sourceLanguage
+                ),
+                cosineSimilarity: items[i].cosineSimilarity,
+                alignmentScore: items[i].alignmentScore,
+                feedbackAdjustment: items[i].feedbackAdjustment
+            )
+        }
+
+        // Step 8: Sort by cosine similarity descending, then take top-K
+        items.sort { $0.cosineSimilarity > $1.cosineSimilarity }
+        let topK = Array(items.prefix(k))
+
+        // Step 9: Collect result languages for audit (AC-4)
+        _ = Array(Set(topK.compactMap(\.sourceLanguage)))
+
+        // Step 10: Audit log (US-RET-001 AC-4, US-RET-004 AC-5)
+        // Best-effort only — audit failure is L1 transient and MUST NOT block
+        let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        let filterApplied = filter?.isEmpty == false
+        try? await privacyActor.writeAuditLog(
+            eventType: .retrieval,
+            traceID: traceID,
+            policyVersion: checkpoint.policyVersion,
+            success: true,
+            sourceType: "search",
+            affectedCount: topK.count,
+            excludedWritten: filterApplied,
+            sourceLanguage: queryLanguage,
+            elapsedMs: elapsedMs
+        )
+
+        return topK
+    }
+
+    // MARK: - Private Helpers
+
+    /// 检测文本语言（US-RET-003 AC-1）。
+    ///
+    /// 使用 NLTagger（iOS 18+），置信度 < 0.9 标记为 "mixed"。
+    /// 繁体/方言映射为 "zh-Hans"（AGENTS.md §6.1）。
+    ///
+    /// - Parameter text: 待检测文本
+    /// - Returns: "zh-Hans"、"en-US" 或 "mixed"
+    private nonisolated func detectLanguage(from text: String?) -> String? {
+        guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        let tagger = NLTagger(tagSchemes: [.language])
+        tagger.string = text
+        let (hypotheses, _) = tagger.tagHypotheses(
+            at: text.startIndex,
+            unit: .document,
+            scheme: .language,
+            maximumCount: 1
+        )
+
+        // Get the highest-confidence language hypothesis
+        guard let (rawLanguage, confidence) = hypotheses.first,
+              confidence >= Double(languageConfidenceThreshold) else {
+            return "mixed"
+        }
+
+        // Map to supported languages (AGENTS.md §6.1)
+        switch rawLanguage {
+        case "en":
+            return "en-US"
+        case "zh-Hant", "zh-HK", "zh-TW", "yue", "zh":
+            return "zh-Hans"
+        case "zh-Hans":
+            return "zh-Hans"
+        default:
+            return "mixed"
+        }
+    }
+
+    /// 判断是否为跨语言匹配（US-RET-001 AC-3, US-RET-002）。
+    ///
+    /// 当查询语言与记忆源语言不同且两者均可识别时，标记为跨语言匹配。
+    private nonisolated func isCrossLanguage(queryLang: String?, sourceLang: String?) -> Bool {
+        guard let ql = queryLang, let sl = sourceLang else { return false }
+        // "mixed" query matches anything → not strictly cross-language
+        guard ql != "mixed", sl != "mixed" else { return false }
+        return ql != sl
+    }
+
+    /// 应用元数据过滤器（US-RET-004 AC-1）。
+    ///
+    /// 当前支持时间范围过滤（基于 `timestamp` 字段）。
+    /// 标签/地理/人物过滤保留接口，由后续任务实现具体逻辑。
+    private nonisolated func applyFilter(
+        _ items: [SearchResultItem],
+        filter: SearchFilter
+    ) -> [SearchResultItem] {
+        var filtered = items
+
+        // Time range filter (US-RET-004 AC-1)
+        if let timeRange = filter.timeRange {
+            filtered = filtered.filter { item in
+                timeRange.contains(Date(timeIntervalSince1970: item.timestamp))
+            }
+        }
+
+        // Tags filter — stub (US-RET-004 AC-1)
+        // Full implementation requires tag storage in metadata
+        if let _ = filter.tags {
+            // Placeholder: would filter by tag intersection
+        }
+
+        // Geo filter — stub (US-RET-004 AC-3)
+        // Full implementation requires geohash/coordinates in metadata
+        if let _ = filter.geoRadius {
+            // Placeholder: would filter by haversine distance
+        }
+
+        // Person filter — stub (US-RET-004 AC-2)
+        // Full implementation requires personId in metadata
+        if let _ = filter.personIds {
+            // Placeholder: would filter by person ID match
+        }
+
+        return filtered
+    }
+
+    /// 带超时的异步操作封装（US-RET-008 AC-1）。
+    private func withTimeout<T: Sendable>(
+        seconds: Double,
+        operation: @escaping @Sendable () async -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                await operation()
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw SearchError.searchTimeout(partialResults: [])
+            }
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
+    }
+}

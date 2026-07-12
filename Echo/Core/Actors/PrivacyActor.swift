@@ -140,6 +140,7 @@ public enum AuditEvent: String, Sendable, Codable {
     case retryPending
     case syncConflict
     case reauthorized
+    case retrieval
 }
 
 // MARK: - Audit Log Entry
