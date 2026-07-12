@@ -35,9 +35,12 @@ Agent **不得**跳过分支/PR 直接运行测试；**不得**在未验证该�
 3. TDD 增量实现
 4. **运行该阶段所有测试（包含单元测试 + 集成测试）**：
    ```bash
-   # 运行该阶段所有单元测试（遍历该阶段每个任务的 test_file）
-    xcodebuild test -project Echo.xcodeproj -scheme Echo -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:EchoTests
-   ```
+    # 运行该阶段所有单元测试（遍历该阶段每个任务的 test_file）
+     xcodebuild test -project Echo.xcodeproj -scheme Echo \
+       -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+       -parallel-testing-enabled NO \
+       -only-testing:EchoTests
+    ```
    验证该阶段所有单元测试 + 集成测试**全部通过**（0 失败）。
 5. 更新任务状态为 `review`
 6. 创建分支并提交代码

@@ -224,8 +224,10 @@ do-task-echo {任务ID}
 # 阶段集成测试（每个 Phase 的最后一个正式任务，走分支→PR流程）
 test-phase-echo [{阶段ID}]
 
-# 全量集成测试
-swift test --filter IntegrationTests
+# 全量集成测试（串行执行，避免数据库竞争）
+xcodebuild test -project Echo.xcodeproj -scheme Echo \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -parallel-testing-enabled NO
 ```
 
 **质量门禁**：
