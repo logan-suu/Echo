@@ -314,9 +314,9 @@ public actor FeedbackPipeline {
             traceID: traceID
         )
 
-        // 先查询是否为 Bad Case（用于审计事件选择）
-        let allBadCases = try? await feedbackActor.fetchBadCases()
-        let isBadCase = allBadCases?.contains(where: { $0.id == feedbackId }) ?? false
+        // W4 fix (PR review): 原子查询是否为 Bad Case — 先于删除执行，
+        // 避免两次 await 之间的非原子读（FeedbackActor 串行保证同一 actor 内原子性）
+        let badCaseBeforeRevoke: Bool = (try? await feedbackActor.isBadCase(feedbackId: feedbackId)) ?? false
 
         let success = try await feedbackActor.revoke(feedbackId: feedbackId, traceID: traceID)
 
@@ -325,7 +325,7 @@ public actor FeedbackPipeline {
         }
 
         // US-FBK-003 AC-6: 若撤销的是 Bad Case，额外记录 .badCaseRevoked
-        if isBadCase {
+        if badCaseBeforeRevoke {
             await writeBadCaseAudit(
                 event: .badCaseRevoked,
                 traceID: traceID,
@@ -341,14 +341,17 @@ public actor FeedbackPipeline {
     /// 获取所有 Bad Case 记录（US-FBK-003 AC-3: "我的反馈记录"查看入口）
     /// - Returns: Bad Case 反馈列表
     public func fetchBadCases() async throws -> [FeedbackEntry] {
-        try await feedbackActor.fetchBadCases()
+        // W1 fix (PR review): 读方法也注入 PrivacyCheckpoint 保持一致性
+        _ = try await validatePrivacy(operation: .feedback, traceID: UUID().uuidString)
+        return try await feedbackActor.fetchBadCases()
     }
 
     /// 获取指定记忆的所有反馈记录（含 Bad Case）
     /// - Parameter memoryId: 记忆 ID
     /// - Returns: 该记忆的反馈列表
     public func fetchFeedback(for memoryId: UUID) async throws -> [FeedbackEntry] {
-        try await feedbackActor.fetchEntries(for: memoryId)
+        _ = try await validatePrivacy(operation: .feedback, traceID: UUID().uuidString)
+        return try await feedbackActor.fetchEntries(for: memoryId)
     }
 
     /// 清空所有反馈（US-FBK-002 AC-5 路径：设置页"清除所有反馈学习数据"）
