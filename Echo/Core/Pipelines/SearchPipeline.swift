@@ -19,7 +19,7 @@
 //          AC-4 🔮 (P95延迟基准, Phase 3 Benchmark), AC-5 ✅ (审计filterApplied)
 //          US-FBK-002 AC-1 ✅ (阈值≥0.80), AC-2 ✅ (时间衰减), AC-3 ✅ (重排公式, via FeedbackActor)
 //          US-RET-006 AC-1 ✅ (alignmentScore<0.6→lowConfidence), AC-3 ✅ (结果不被过滤),
-//          AC-5 ✅ (审计 alignmentScore/fallbackReason/lawConfidenceCount)
+//          AC-5 ✅ (审计 alignmentScore/fallbackReason/lowConfidenceCount/fallbackReasons)
 //          AC-2 🔮 (UI提示文案, Phase 3 SearchView), AC-4 🔮 (不准确反馈按钮, Phase 3 SearchView)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           AGENTS.md §5.3 (反馈存储契约),
@@ -541,6 +541,7 @@ public actor SearchPipeline {
         dict["resultLanguages"] = results
         dict["lowConfidenceCount"] = topK.filter(\.lowConfidence).count
         dict["alignmentScores"] = topK.map { $0.alignmentScore as Any? ?? NSNull() }
+        dict["fallbackReasons"] = topK.compactMap { $0.fallbackReason }
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let json = String(data: data, encoding: .utf8) else {
             return query ?? results.joined(separator: ",")
