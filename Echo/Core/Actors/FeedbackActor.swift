@@ -7,7 +7,7 @@
 // AC 覆盖: US-FBK-002 AC-1 (阈值≥0.80), AC-2 (时间衰减 90d/180d), AC-3 (截断±0.5),
 //           AC-4 (本地存储), AC-5 (清空), AC-6 (撤销), AC-7 (审计 .feedbackReceived/.feedbackReset/.feedbackRevoked)
 // 架构约束: AGENTS.md §5.3 (反馈存储契约), AGENTS.md §7.3 (审计事件)
-// 生成时间: 2026-07-04 | 更新: 2026-07-12 (AC-7 审计集成)
+// 生成时间: 2026-07-04 | 更新: 2026-07-12 (AC-7 审计集成, PR review: policyVersion fix)
 // ==========================================
 
 import Foundation

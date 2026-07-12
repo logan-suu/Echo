@@ -258,7 +258,7 @@
           ],
           "dependencies": ["1.4"],
           "test_file": "EchoTests/Phase2/FeedbackActorTests.swift",
-          "notes": "19 单元测试全部通过。AC-1~7 全覆盖：AC-1 阈值 0.80、AC-2 时间衰减 90d/180d、AC-3 截断 ±0.5、AC-4 本地存储、AC-5 reset 清空、AC-6 revoke 撤销、AC-7 审计事件 (.feedbackReceived/.feedbackReset/.feedbackRevoked)。recordFeedback/reset/revoke 新增 traceID 参数 (默认空串向后兼容)，rawInsert() 供测试注入历史日期。",
+          "notes": "19 单元测试全部通过。AC-1~7 全覆盖。recordFeedback/reset/revoke 新增 traceID 参数 (默认空串向后兼容)，rawInsert() 供测试注入历史日期。PR review 修复: policyVersion 硬编码1→getPolicy().policyVersion (1e47b0e)。AC-7 decayFactor 可自 createdAt 计算，等待 schema migration 加专用列。",
           "pr": "https://github.com/LOGANSWP/Echo/pull/19"
         },
         {
