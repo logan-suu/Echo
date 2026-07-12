@@ -364,8 +364,8 @@
           "story": null,
           "status": "review",
           "last_updated": "2026-07-13T00:00:00Z",
-          "notes": "42 集成测试全部通过。覆盖 12 个测试集：检索全链路、摄入全链路、摄入→检索联调、反馈重排、同步管线、唤醒管线、反馈收集、低置信度降级、隐私拒绝、排除过滤、审计日志、向量持久化。跨 6 个 Pipeline + 5 个 Actor 联调验证。",
-          "pr": "https://github.com/LOGANSWP/Echo/pull/26"
+          "notes": "36 集成测试全部通过。覆盖 12 个测试集：检索全链路、摄入全链路、摄入→检索联调、反馈重排、同步管线、唤醒管线、反馈收集、低置信度降级、隐私拒绝、排除过滤、审计日志、向量持久化。跨 6 个 Pipeline + 5 个 Actor 联调验证。",
+          "pr": "https://github.com/LOGANSWP/Echo/pull/26",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/02-architecture/架构设计文档.md"
@@ -596,7 +596,7 @@
           "story": null,
           "status": "backlog",
           "documents_required": [
-            "docs/",  // 所有文档
+            "docs/",
             "AGENTS.md"
           ],
           "dependencies": ["3.9"],
