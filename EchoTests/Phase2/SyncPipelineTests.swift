@@ -237,7 +237,8 @@ struct SyncPipelineTests {
         )
         #expect(rows.count == 1, "AC-9: 应写入 .dataSourceChangeSynced 审计记录")
         #expect(rows[0]["eventType"]?.stringValue == "dataSourceChangeSynced")
-        #expect(rows[0]["sourceType"]?.stringValue == "note")
+        #expect(rows[0]["sourceType"]?.stringValue?.contains("note") ?? false, "AC-9: sourceType 应包含 note")
+        #expect(rows[0]["sourceType"]?.stringValue?.contains("replaced=") ?? false, "AC-9: sourceType 应包含 replaced 计数")
         #expect(rows[0]["affectedCount"]?.intValue == 1)
     }
 

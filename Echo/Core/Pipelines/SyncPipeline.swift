@@ -359,13 +359,20 @@ public actor SyncPipeline {
         }
 
         // Step 4: Audit log (AC-9)
+        // AC-9 requires: changeType, sourceType, affectedCount, replacedFlag=true,
+        // excludedNotWritten=true, hashSkipped. Encoded in sourceType as:
+        // "photo,note|replaced=3|skipped=1|hashSkipped=2"
         let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        let auditSourceDetail = sourceTypes.joined(separator: ",")
+            + "|replaced=\(replacedCount)"
+            + "|skipped=\(skippedCount)"
+            + "|hashSkipped=\(hashSkippedCount)"
         try? await privacyActor.writeAuditLog(
             eventType: .dataSourceChangeSynced,
             traceID: traceID,
             policyVersion: checkpoint.policyVersion,
             success: true,
-            sourceType: sourceTypes.joined(separator: ","),
+            sourceType: auditSourceDetail,
             affectedCount: replacedCount,
             excludedWritten: false,  // red line R-003: 系统自动删除不写 ExcludedAssets
             sourceLanguage: nil,
@@ -429,7 +436,14 @@ public actor SyncPipeline {
             }
         }
         if !shouldSkipHash {
-            // Check available memory (rough estimate via ProcessInfo)
+            // AC-2: Check available memory <300MB
+            let availableMemory = os_proc_available_memory()
+            if availableMemory < 314_572_800 {  // <300MB
+                shouldSkipHash = true
+            }
+        }
+        if !shouldSkipHash {
+            // Check total physical memory (rough estimate via ProcessInfo)
             let physicalMemory = ProcessInfo.processInfo.physicalMemory
             if physicalMemory <= 2_147_483_648 {  // ≤2GB total
                 shouldSkipHash = true
