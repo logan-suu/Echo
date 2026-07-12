@@ -330,7 +330,7 @@
           "title": "AwakeningPipeline：情绪唤醒（US-AWK-003）",
           "story": "US-AWK-003",
           "status": "done",
-          "last_updated": "2026-07-12T18:55:00Z",
+  "last_updated": "2026-07-12T19:15:00Z",
           "merged_at": "2026-07-12T18:55:00Z",
           "pr": "https://github.com/LOGANSWP/Echo/pull/24",
           "notes": "22 单元测试全部通过。AC-1~5 全覆盖。HealthKitProvider + SentimentProvider 协议/stub 模式（Phase 3 集成真实 HealthKit/Core ML 情感模型）。防抖机制：actor 隔离 Task + 30s 延迟合并。情绪卡片文案为英文占位（Phase 3 本地化）。PR review 修复 (fb0c06f): Swap: SwiftLint implicit_optional_initialization ×2 → 0, Search 错误追加 L1 3次重试+指数退避+耗尽审计, emotionCardCopy 添加 Phase 3 i18n 注释。",
@@ -345,8 +345,9 @@
           "id": "2.13",
           "title": "FeedbackPipeline：点赞/点踩/Bad Case 记录",
           "story": "US-FBK-001, US-FBK-003",
-          "status": "review",
-          "last_updated": "2026-07-12T19:05:00Z",
+          "status": "done",
+          "last_updated": "2026-07-12T19:15:00Z",
+          "merged_at": "2026-07-12T19:15:00Z",
           "notes": "23 单元测试全部通过。US-FBK-001 AC-2/4/5 ✅, US-FBK-003 AC-2/5/6 ✅。AuditEvent 新增 .badCaseMarked/.badCaseRevoked。FeedbackActor 新增 isBadCase() 原子查询。PR review 修复 (40c6b30): W1 fetchBadCases/fetchFeedback 加 PrivacyCheckpoint, W4 revokeFeedback 改用 isBadCase() 原子查询。W2/W3 已知设计权衡/预存行为。AC-1/AC-3/AC-4 (UI) → 🔮 Phase 3。Pipeline 遵循 actor 声明模式 (AGENTS.md v5.12)。",
           "pr": "https://github.com/LOGANSWP/Echo/pull/25",
           "documents_required": [
@@ -359,7 +360,8 @@
           "id": "2.14",
           "title": "Phase 2 集成测试：核心认知管线联调验证",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T19:15:00Z",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/02-architecture/架构设计文档.md"
