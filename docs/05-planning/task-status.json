@@ -250,8 +250,9 @@
           "id": "2.7",
           "title": "FeedbackActor + 重排公式（阈值0.80，截断±0.5）",
           "story": "US-FBK-002",
-          "status": "review",
-          "last_updated": "2026-07-12T06:36:00Z",
+          "status": "done",
+          "last_updated": "2026-07-12T08:00:00Z",
+          "merged_at": "2026-07-12T08:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
@@ -265,7 +266,8 @@
           "id": "2.8",
           "title": "集成反馈到 SearchPipeline",
           "story": "US-FBK-002",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T08:00:00Z",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
@@ -327,7 +329,8 @@
           "id": "2.13",
           "title": "FeedbackPipeline：点赞/点踩/Bad Case 记录",
           "story": "US-FBK-001, US-FBK-003",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T08:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
@@ -418,7 +421,8 @@
           "id": "3.6",
           "title": "统一错误处理 UI（L1~L4）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-07-12T08:00:00Z",
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/02-architecture/架构设计文档.md"
