@@ -397,6 +397,7 @@
           ],
           "dependencies": [],
           "test_file": "EchoTests/Phase3/AppShellTests.swift",
+          "pr": "https://github.com/logan-suu/Echo/pull/28",
           "notes": "✅ 完成 (2026-07-26)。更新 EchoApp.swift 使用 AppRootView（TabView + NavigationStack × 3），创建 AppViewModel (@MainActor @Observable)，3 个 stub 视图（Home/Search/Settings），10 个单元测试全部通过。BUILD SUCCEEDED。未修改 Core 文件。"
         },
         {
