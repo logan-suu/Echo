@@ -54,26 +54,26 @@ agent: build
 3. **输出审核结论**：标记每条 CodeRabbit comment 为「采纳/驳回」，驳回的附理由。
 4. **仅对 🟢 有效项进行修复**。
 
-### 第五步：输出报告
-生成结构化报告，每条问题包含：
-- **风险等级**：🔴 严重 / 🟡 警告 / ✅ 合规
-- **问题描述**：具体违反了哪条规约
-- **文件位置**：`文件名:行号`（如 `PrivacyActor.swift:45`）
-- **修改建议**：具体的代码修改示例
-- **关联规约**：引用 AGENTS.md 中的章节编号
+### Step 5: Output Report
+Generate a structured report, each issue includes:
+- **Severity**: 🔴 Critical / 🟡 Warning / ✅ Compliant
+- **Description**: Which rule was violated
+- **File Location**: `filename:line` (e.g. `PrivacyActor.swift:45`)
+- **Fix Suggestion**: Concrete code modification example
+- **Related Rule**: Reference AGENTS.md section number
 
 ### 第六步：审查结论
 - **阻断项（🔴）**：如果存在任何 🔴 项，输出：“❌ 审查未通过，建议拒绝合并。”
 - **警告项（🟡）**：如果仅存在 🟡 项，输出：“⚠️ 审查有条件通过，建议修复警告后再合并。”
 - **全部合规（✅）**：输出：“✅ 审查通过，建议合并。”
 
-### 第七步：修复后自动刷新 PR 描述（AGENTS.md §15.5）
-当 Agent 根据审查报告修复缺陷并 push 后，**必须**执行以下操作：
-1. 使用 `gh pr edit [PR编号] --body "[更新的 PR 描述]"` 刷新 PR 描述
-2. 完整重写 AC 覆盖对照表，反映修复后的实际状态：
-   - 已修复的 AC → ✅
-   - 明确标记暂缓 AC（🔴 deferred / 🔮 Phase 3 等）
-   - 附状态说明图例
-3. 同步更新 `docs/05-planning/task-status.json` 中对应任务的 `notes` 字段
-4. 同步更新核心实现文件头部的 AC 覆盖注释（`// AC 覆盖:` 行）
-5. 在修复 commit 的 body 中注明："Addresses PR review feedback: [修复的缺陷列表]"
+### Step 7: Auto-Refresh PR Description After Fixes (AGENTS.md §15.5)
+After the Agent fixes defects per the review report and pushes, **must** perform these steps:
+1. Use `gh pr edit [PR#] --body "[updated PR description]"` to refresh the PR description
+2. Fully rewrite the AC coverage table, reflecting the actual post-fix state:
+   - Fixed ACs → ✅
+   - Clearly mark deferred ACs (🔴 deferred / 🔮 Phase 3 etc.)
+   - Include status legend
+3. Sync update `docs/05-planning/task-status.json` `notes` field for the corresponding task
+4. Sync update core implementation file header AC coverage comment (`// AC 覆盖:` line)
+5. Note in fix commit body: "Addresses PR review feedback: [list of fixed defects]"

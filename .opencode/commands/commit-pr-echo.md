@@ -44,7 +44,7 @@ agent: build
    ```
    feat(actor): add ExcludedAssetsActor with cascade cleanup
 
-   - Implements AC-1: 系统自动删除不写入 ExcludedAssets
+   - Implements AC-1: system auto-delete does not write to ExcludedAssets
    - Adds cascade cleanup for invalid records per US-PRV-007
    - Includes unit tests covering all write paths
 
@@ -64,7 +64,7 @@ agent: build
    - 提取所有 AC（验收标准）。
    - 对比代码变更（通过 `git diff` 分析实现了哪些 AC）。
    - 生成表格：
-     | AC 编号 | 规格原文摘要 | 测试文件 | 实现文件 | 状态 |
+     | AC # | Spec Summary | Test File | Implementation | Status |
      | --- | --- | --- | --- | --- |
      | AC-1 | ... | ... | ... | ✅ |
      | AC-2 | ... | ... | ... | ✅ |

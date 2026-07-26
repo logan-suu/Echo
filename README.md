@@ -300,6 +300,6 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 
 **文档维护声明**
 
-本 README 与 Echo v4.6 全量规格书、AGENTS.md v5.19 及所有 docs/ 文档协同维护。任何重大变更需同步更新本文档。
+This README is co-maintained with Echo v4.6 full spec, AGENTS.md v5.20, and all docs/ documents. Any major changes must update this document accordingly.
 
 **下次全面复审日期**：2026-08-15（与 Phase 3 UI 阶段同步）

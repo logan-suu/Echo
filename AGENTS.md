@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.19  
+**版本**：v5.20  
 **生效日期**：2026-07-26  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -275,48 +275,61 @@ refactor(actor): fixed things  # subject 不是祈使句
 **PR 描述模板**（Agent 与人类开发者通用）：
 
 ```markdown
-## 📋 概述
-[简要描述这个 PR 实现的功能或修复的问题]
+## 📋 Overview
+[Brief description of the feature or fix implemented by this PR]
 
-## 🔗 关联规格
-- 用户故事: US-PRV-001
-- 文档路径: docs/01-spec/用户故事与验收标准规格书.md
-- 任务 ID: [如 2.1]
+## 🔗 Related Specs
+- User Story: US-PRV-001
+- Doc Path: docs/01-spec/用户故事与验收标准规格书.md
+- Task ID: [e.g. 2.1]
 
-## ✅ AC 覆盖对照表
-| AC 编号 | 规格原文摘要 | 测试文件 | 实现文件 | 状态 |
+## ✅ AC Coverage Table
+| AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
 | AC-1 | ... | ... | ... | ✅ |
 | AC-2 | ... | ... | ... | ✅ |
 
-## 🧪 测试
-- [ ] 单元测试通过，覆盖率 ≥95%
-- [ ] 集成测试通过（含跨语言 Golden 用例）
-- [ ] 无并发警告（-strict-concurrency=complete）
+## 🧪 Testing
+- [ ] Unit tests pass, coverage ≥95%
+- [ ] Integration tests pass (including cross-language Golden dataset)
+- [ ] No concurrency warnings (-strict-concurrency=complete)
 
-## 🔍 自检清单
-- [ ] 所有新增 Actor 方法入口包含 PrivacyCheckpoint
-- [ ] 无 @unchecked Sendable / nonisolated(unsafe) / Combine
-- [ ] 无硬编码语言字符串
-- [ ] 错误已按 L1~L4 分级，L2 写入 PendingOperations
-- [ ] 长任务已通过 TaskQueueActor 入队
+## 🔍 Self-Check
+- [ ] All new Actor methods include PrivacyCheckpoint at entry
+- [ ] No @unchecked Sendable / nonisolated(unsafe) / Combine
+- [ ] No hardcoded language strings
+- [ ] Errors mapped to L1~L4 levels, L2 written to PendingOperations
+- [ ] Long-running tasks enqueued via TaskQueueActor
 
-## 📝 Agent 备注
-[如有需要特别说明的实现决策，在此记录]
+## 📝 Agent Notes
+[Record any implementation decisions requiring special explanation here]
 ```
 
 ### 3.4 Agent 提交前的强制自检
 
 在 Agent 执行 `git commit` 或发起 PR 之前，必须完成以下检查：
 
-1. **运行 SwiftLint**：确保 0 违规
-2. **运行单元测试**：确保全部通过
-3. **检查 Commit Message 格式**：符合上述规范
-4. **检查 PR 描述**：包含 AC 覆盖对照表
-5. **检查文件头部**：核心文件包含“出生证明”水印（见 §12.3）
-6. **更新任务状态**：在 `docs/05-planning/task-status.json` 中标记任务为 `review`，并记录 `pr` 信息
+1. **Run SwiftLint**: ensure 0 violations
+2. **Run unit tests**: ensure all pass
+3. **Verify commit message format**: conforms to the above specification
+4. **Verify PR description**: includes AC coverage table
+5. **Verify file headers**: core files include "birth certificate" watermark (see §12.3)
+6. **Update task status**: mark task as `review` in `docs/05-planning/task-status.json`, record `pr` info
 
-若任何检查失败，Agent **必须**修复后再提交。
+If any check fails, Agent **must** fix before committing.
+
+### 3.5 External Content Language (v5.20)
+
+All externally visible content **MUST** be in English:
+
+- PR titles, descriptions, comments
+- Commit messages (already enforced by §3.2)
+- Branch names (already enforced by §3.1)
+- Code comments visible in PR diffs
+- GitHub issue titles and descriptions
+- Custom command templates that generate PR body / review reports / test summaries
+
+**Exemption**: Project documentation (`docs/*.md`) and internal agent communication may remain in Chinese/dual-language.
 
 ---
 
@@ -818,61 +831,61 @@ flowchart TD
 ### 11.3 Agent 自检清单（PR 描述必填）
 
 ```markdown
-## Agent 自检清单
+## Agent Self-Check
 
-### 通用检查
-- [ ] 所有新增 Actor 方法入口包含 PrivacyCheckpoint
-- [ ] 无 `@unchecked Sendable`、`nonisolated(unsafe)`、Combine 业务代码
-- [ ] 跨 Actor 传递均为 Sendable 值类型
-- [ ] ViewModel action 方法首行设置加载态
-- [ ] 无硬编码语言、配置、魔法数字
-- [ ] 审计日志仅含哈希摘要，无原文
-- [ ] 错误已按 L1~L4 分级，L2 写入 PendingOperations
-- [ ] 长任务已通过 TaskQueueActor 入队，支持暂停/取消
-- [ ] 断点续传进度已通过 ProgressActor 持久化
-- [ ] 模型文件已在 Bundle 内，无网络下载代码
+### General
+- [ ] All new Actor methods include PrivacyCheckpoint at entry
+- [ ] No `@unchecked Sendable`, `nonisolated(unsafe)`, Combine in business code
+- [ ] Cross-Actor parameters are all Sendable value types
+- [ ] ViewModel action methods set loading state on first line
+- [ ] No hardcoded language, config, or magic numbers
+- [ ] Audit logs contain only hash digests, no plaintext
+- [ ] Errors mapped to L1~L4 levels, L2 written to PendingOperations
+- [ ] Long-running tasks enqueued via TaskQueueActor, support pause/cancel
+- [ ] Resume progress persisted via ProgressActor
+- [ ] Model files bundled in app, no network download code
 
-### Git 规范检查
-- [ ] 分支命名符合 `{type}/{description}-US-XXX` 格式
-- [ ] Commit Message 符合 `{type}({scope}): {subject}` 格式
-- [ ] PR 标题包含关联的用户故事编号
+### Git Compliance
+- [ ] Branch name follows `{type}/{description}-US-XXX` format
+- [ ] Commit message follows `{type}({scope}): {subject}` format
+- [ ] PR title includes associated user story number
 
-### 文档引用检查
-- [ ] 已根据 §0.2 任务映射表读取相关文档章节
-- [ ] 已逐字粘贴相关 AC/规则原文
-- [ ] 核心文件头部包含“出生证明”水印（见 §12.3）
+### Doc Traceability
+- [ ] Relevant doc sections read per §0.2 task mapping table
+- [ ] AC/rule text quoted verbatim
+- [ ] Core files include "birth certificate" watermark header (see §12.3)
 
-### 任务状态检查
-- [ ] task-status.json 中该任务已标记为 in_progress/review
-- [ ] 所有依赖任务已确认完成
-- [ ] PR 链接已记录到 task-status.json
+### Task Status
+- [ ] Task marked in_progress/review in task-status.json
+- [ ] All dependency tasks confirmed complete
+- [ ] PR link recorded in task-status.json
 
-### 跨语言专项
-- [ ] 向量模型变更附带跨语言 Recall@10 ≥85% 报告
-- [ ] FTS5 未参与语义排序
-- [ ] originalText 字段未被修改
-- [ ] Language Aligner 重试 ≤1 次
-- [ ] 术语表变更同步 String Catalog + Golden Dataset
-- [ ] 展示层翻译未在管线内触发
-- [ ] 反馈仅应用于余弦相似度 ≥0.80 的记忆
-- [ ] UI 无“新建文本记忆”入口
+### Cross-Language
+- [ ] Vector model changes accompanied by cross-language Recall@10 ≥85% report
+- [ ] FTS5 not used for semantic ranking
+- [ ] originalText field not modified
+- [ ] Language Aligner retries ≤1
+- [ ] Terminology changes synced with String Catalog + Golden Dataset
+- [ ] Display-layer translation not triggered inside pipeline
+- [ ] Feedback applied only to memories with cosine similarity ≥0.80
+- [ ] UI has no "create text memory" entry
 
-### ExcludedAssets 专项
-- [ ] 系统自动删除不写入 ExcludedAssets
-- [ ] 级联删除时清理无效排除记录
-- [ ] 重新授权数据源提供一键恢复排除项
-- [ ] 已排除项目界面校验原始文件存在性 + 手动刷新
+### ExcludedAssets
+- [ ] System auto-delete does not write to ExcludedAssets
+- [ ] Cascade delete cleans up invalid exclusion records
+- [ ] Re-authorization provides one-click restore of excluded items
+- [ ] Excluded items UI validates original file existence + manual refresh
 
-### 测试专项
-- [ ] 单元测试覆盖率 ≥95%
-- [ ] 集成测试包含跨语言 Golden 用例
-- [ ] 边界场景测试 (磁盘满、模型损坏、权限拒绝)
-- [ ] 错误注入测试 (L1~L4 全覆盖)
+### Testing
+- [ ] Unit test coverage ≥95%
+- [ ] Integration tests include cross-language Golden cases
+- [ ] Edge case tests (disk full, model corrupt, permission denied)
+- [ ] Error injection tests (L1~L4 full coverage)
 
-### GitHub 自动化检查
-- [ ] OpenCode 桌面版已登录 GitHub
-- [ ] PR 已自动请求指定 reviewer
-- [ ] 所有 CI 检查已触发并等待结果
+### GitHub Automation
+- [ ] OpenCode Desktop logged in to GitHub
+- [ ] PR auto-requested specified reviewer
+- [ ] All CI checks triggered and awaiting results
 ```
 
 ### 11.4 Agent 禁忌清单
@@ -1145,9 +1158,9 @@ Agent 在创建或修改核心架构文件时，**必须在文件头部注入溯
 
 ### 13.3 AC 覆盖对照表（PR 必附）
 
-| AC 编号 | 规格文档原文摘要 | 对应测试文件 | 对应实现文件 | 状态 |
-| ------- | ---------------- | ------------ | ------------ | ---- |
-| AC-1    | ...              | ...          | ...          | ✅    |
+| AC # | Spec Summary | Test File | Implementation | Status |
+| --- | --- | --- | --- | --- |
+| AC-1 | ... | ... | ... | ✅ |
 
 ### 13.4 幻觉熔断机制
 
@@ -1404,3 +1417,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.17 | 2026-07-13 | 强化 §12.6 阶段集成测试累积回归要求：集成测试 PR 提交前必须验证「当前阶段及所有之前阶段」的全部单元测试 + 集成测试（而非仅当前阶段）。同步更新 `test-phase-echo` 质量门禁描述。 | AI 架构师 |
 | v5.18 | 2026-07-25 | Phase 3 UI Bootstrap 物化：新增 §17 Phase 3 UI 协作规约（`echo-memory-canvas` 设计配置、三类 surface family、受保护资产、UI 专用命令、停止条件）。新增 `docs/ui/` 6 文件、`UIAutomation/` 4 目录、`.ui-automation/state.schema.json`。适配 `init-session-echo`（UI 分支）、`next-task-echo`（UI handoff）。新增 `ui-bootstrap-build-echo`、`ui-status-echo`、`ui-retry-echo` 三个命令。 | AI 架构师 |
 | v5.19 | 2026-07-26 | Phase 3 任务重构（审计后）：新增 3.0（App Shell）、3.11（引导流程）、3.12（唤醒投递）三个任务；扩展 3.1/3.2/3.3/3.4/3.6/3.9 范围以覆盖审计发现的缺失故事（PRV-002/003/008、SRC-005/013、SYN-003/004、DIS-002/003、FBK-001/002/003）。所有受影响的 `ready` 任务回退 `backlog`（新增 3.0 依赖）。AWK-004/006 延后 Phase 4。 | AI 架构师 |
+| v5.20 | 2026-07-26 | External content English-only mandate: all PR titles/descriptions/comments, commit messages, branch names, code comments in diffs, and custom command templates enforcing PR body/review report generation must be in English. Project documentation (`docs/*.md`) exempt. Added §3.5 External Content Language rule. Converted §3.3 PR template, §3.4 pre-commit checklist, §11.3 self-check list, and §13.3 AC coverage table from Chinese to English. | AI 架构师 |

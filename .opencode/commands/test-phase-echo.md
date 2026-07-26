@@ -64,10 +64,10 @@ Agent **不得**跳过分支/PR 直接运行测试；**不得**在未验证该�
 3. 如果发现**可解决**的任务：
    - 在 `task-status.json` 中创建新任务或扩展现有任务范围
    - 将原条目从 `deferred_*` 移至 `resolved_deferred` 数组
-   - 在本 PR 的 commit message 中记录："Phase N 集成测试：发现 [story] 已可解决，移入 task X"
+   - Record in this PR commit message: "Phase N integration test: found [story] now resolvable, moved to task X"
 4. 如果仍无法解决：
    - 更新 `last_checked_at` 时间戳
-   - 在集成测试 PR 描述中简要说明："已扫描 deferred-items.json，[N] 条延期任务仍不可解决"
+   - Briefly note in integration test PR description: "Scanned deferred-items.json, [N] deferred items remain unresolvable"
 
 ### 第四步：完成后
 阶段集成测试通过后：

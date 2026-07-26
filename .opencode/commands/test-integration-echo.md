@@ -13,7 +13,7 @@ agent: build
      ```bash
      xcodebuild build -project Echo.xcodeproj -scheme Echo -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
      ```
-   - 如果编译失败，输出错误，建议先修复编译问题。
+   - If build fails, output the error and suggest fixing compilation issues first.
 1. 运行所有测试（包括所有 Phase 的单元测试和集成测试）：
     ```bash
     xcodebuild test -project Echo.xcodeproj -scheme Echo \
@@ -45,30 +45,30 @@ agent: build
 3. 如果发现新增失败，分析是否由本次变更引起。
 
 ### 第四步：输出报告
-1. **输出到对话**：在 OpenCode 对话中以 Markdown 表格形式展示报告。
-2. **输出到文件**：将报告保存到 `docs/05-planning/test-logs/integration-[YYYY-MM-DD].md`。
-3. **如果存在 PR**：将报告摘要评论到当前 PR 中。
+1. **Output to chat**：在 OpenCode 对话中以 Markdown 表格形式展示报告。
+2. **Output to file**：将报告保存到 `docs/05-planning/test-logs/integration-[YYYY-MM-DD].md`。
+3. **如果存在 PR**：Comment the report summary on the current PR.
 4. 输出格式：
    ```markdown
-   ## 🌐 全量集成测试报告
-   | 指标 | 结果 | 状态 |
+   ## 🌐 Full Integration Test Report
+   | Metric | Result | Status |
    | --- | --- | --- |
-   | 总用例数 | X | - |
-   | 通过数 | X | - |
-   | 失败数 | X | ✅/❌ |
-   | 通过率 | X% | ✅/❌ |
-   | 跨语言召回率 | X% | ✅/❌ (≥85%) |
-   | 检索 P95 | Xms | ✅/⚠️/❌ (<200ms) |
-   | 新增失败 | [无 / 列表] | - |
+   | Total Cases | X | - |
+   | Passed | X | - |
+   | Failed | X | ✅/❌ |
+   | Pass Rate | X% | ✅/❌ |
+   | Cross-Language Recall | X% | ✅/❌ (≥85%) |
+   | P95 Latency | Xms | ✅/⚠️/❌ (<200ms) |
+   | New Failures | [None / List] | - |
    ```
 
-### 第五步：后续操作
-1. **全部通过**：输出 ✅，提示“全量集成测试通过，可进入发布流程。”
-2. **部分失败**：
-   - 输出失败用例列表。
-   - 提供选项：
-     - A：修复失败后重新运行 `test-integration-echo`
-     - B：标记为已知问题，继续（需人类确认并记录）
-     - C：跳过本次测试（仅限非关键路径）
+### Step 5: Follow-up
+1. **All passed**: Output ✅ with "Full integration test passed, ready for release."
+2. **Partial failures**:
+   - Output failure list.
+   - Provide options:
+     - A: Fix failures and re-run `test-integration-echo`
+     - B: Mark as known issue, continue (needs human confirmation)
+     - C: Skip this test (non-critical path only)
 
 
