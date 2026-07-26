@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2365044C3016658C00B33DEE /* ProximaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 231256F12FE983AE0065B780 /* ProximaKit */; };
+		2365044D3016658C00B33DEE /* ProximaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 231256F22FE983AE0065B780 /* ProximaKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		231256CD2FE983AF0065B780 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2365044C3016658C00B33DEE /* ProximaKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2365044D3016658C00B33DEE /* ProximaKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -197,10 +204,10 @@
 			);
 			mainGroup = 231256B62FE983AE0065B780;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				231256F02FE983AE0065B780 /* XCRemoteSwiftPackageReference "ProximaKit" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = 231256C02FE983AE0065B780 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -624,7 +631,6 @@
 			productName = ProximaKit;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = 231256B72FE983AE0065B780 /* Project object */;
 }
