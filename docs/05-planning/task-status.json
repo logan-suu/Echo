@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-26T16:00:54Z",
+  "last_updated": "2026-07-26T16:01:46Z",
   "current_phase": 3,
   "phases": [
     {
@@ -481,7 +481,13 @@
             "3.0"
           ],
           "test_file": "EchoTests/Phase3/HomeViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：卡片列表+今日回忆。新增：唤醒卡片展示(AWK-001/002/003/005)、离线模式指示器(RES-001 AC-3)。依赖新增 3.0。"
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：卡片列表+今日回忆。新增：唤醒卡片展示(AWK-001/002/003/005)、离线模式指示器(RES-001 AC-3)。依赖新增 3.0。",
+          "pr": {
+            "number": 29,
+            "url": "https://github.com/logan-suu/Echo/pull/29",
+            "branch": "feature/homeview-awakening-US-AWK-001",
+            "created_at": "2026-07-26T16:01:46Z"
+          }
         },
         {
           "id": "3.2",
