@@ -14,14 +14,12 @@ import SwiftUI
 struct EchoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    /// App 级 ViewModel — 依赖注入容器
-    /// Task surface family: 系统 TabView + NavigationStack
-    @State private var appViewModel = AppViewModel()
+    // TODO(3.1+): 子视图接入 @Environment(AppViewModel.self) 时，通过 .environment(appViewModel) 注入
+    // 当前 AppRootView 自建 @State viewModel，无需冗余环境注入。
 
     var body: some Scene {
         WindowGroup {
             AppRootView()
-                .environment(appViewModel)
         }
     }
 }

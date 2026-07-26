@@ -66,7 +66,16 @@ final class AppViewModel {
         case error(ErrorLevel)
     }
 
-    /// 错误等级（映射 Core L1~L4）
+    /// 错误等级 — 映射 Core AGENTS.md §4.4 L1~L4 错误分级契约
+    ///
+    /// | 等级 | 映射 | 系统行为 | 用户感知 |
+    /// |------|------|---------|---------|
+    /// | l1Transient | L1 瞬态 | 指数退避重试 3 次，失败升级 L2 | 无提示 |
+    /// | l2Recoverable | L2 可恢复 | 写入 PendingOperations，仅手动重试 | Toast + 重试按钮 |
+    /// | l3Blocking | L3 阻断 | 停止功能，引导跳转系统设置 | 全屏引导页 |
+    /// | l4Conflict | L4 数据冲突 | 标记 conflict，手动合并 UI | Banner + 冲突入口 |
+    ///
+    /// 当前 App Shell 预留；3.11+ 在 Core 接入时由 Adapter do/catch 统一映射。
     enum ErrorLevel: Equatable, Sendable {
         case l1Transient
         case l2Recoverable
