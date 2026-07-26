@@ -388,8 +388,8 @@
           "id": "3.0",
           "title": "App Shell：TabView + NavigationStack + DI 注入",
           "story": null,
-          "status": "ready",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "review",
+          "last_updated": "2026-07-26T22:30:00Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/architecture.md",
@@ -397,7 +397,7 @@
           ],
           "dependencies": [],
           "test_file": "EchoTests/Phase3/AppShellTests.swift",
-          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。建立 App 根导航框架：TabView(Home/Search/Settings)、NavigationStack、ViewModel 依赖注入。所有 Phase 3 UI 任务的硬依赖。"
+          "notes": "✅ 完成 (2026-07-26)。更新 EchoApp.swift 使用 AppRootView（TabView + NavigationStack × 3），创建 AppViewModel (@MainActor @Observable)，3 个 stub 视图（Home/Search/Settings），10 个单元测试全部通过。BUILD SUCCEEDED。未修改 Core 文件。"
         },
         {
           "id": "3.11",
