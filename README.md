@@ -120,7 +120,21 @@ Echo/
 │   ├── Phase4/                   # Phase 4 测试
 │   └── Phase5/                   # Phase 5 测试
 ├── docs/                       # 📚 项目文档中心
-├── .codex/commands/            # OpenCode 自定义命令
+│   ├── ui/                     # Phase 3 UI 设计、架构、自动化、测试
+│   │   ├── README.md           # UI 文档路由
+│   │   ├── echo-memory-canvas-style.md
+│   │   ├── automation-workflow.md
+│   │   ├── architecture.md
+│   │   ├── testing-and-artifacts.md
+│   │   └── echo-readiness.md
+│   └── ...
+├── UIAutomation/               # UI 自动化合约、Fixtures、策略、Artifacts
+│   ├── Contracts/
+│   ├── Fixtures/
+│   ├── Policies/
+│   └── Artifacts/
+├── .ui-automation/             # 单次 UI 运行状态
+├── .opencode/commands/         # OpenCode 自定义命令
 ├── AGENTS.md                   # Agent 协作规约
 └── README.md
 ```
@@ -142,6 +156,8 @@ Echo/
 | **产品创新工具**       | `docs/04-ai-native/产品创新工具全景指南.md`            | 前沿工具与融入方案              |
 | **开发计划**           | `docs/05-planning/开发计划安排文档.md`                 | 里程碑、时间线、资源安排        |
 | **任务状态**           | `docs/05-planning/task-status.json`                    | 任务执行状态追踪                |
+| **延期任务**           | `docs/05-planning/deferred-items.json`                 | 延期到后续 Phase 的任务追踪      |
+| **UI 文档路由**        | `docs/ui/README.md`                                    | Phase 3 UI 设计、架构、自动化、测试 |
 | **Agent 规约**         | `AGENTS.md`                                            | OpenCode/Codex 协作规约         |
 
 ---
@@ -188,6 +204,9 @@ cd Echo
 | `pr-review-echo`        | AI 预审 PR            |
 | `explain-echo`          | 解释代码/架构逻辑     |
 | `sync-docs-echo`        | 同步更新文档          |
+| `ui-bootstrap-build-echo` | Phase 3 UI 实现入口   |
+| `ui-status-echo`        | Phase 3 UI 状态查询   |
+| `ui-retry-echo`         | Phase 3 UI 失败重试   |
 
 ---
 
@@ -245,7 +264,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | ---------- | ------------------- | -------------- |
 | **阶段 1** | 6月15日 - 7月12日   | 基础设施搭建   |
 | **阶段 2** | 7月13日 - 9月20日   | 核心认知管线   |
-| **阶段 3** | 9月21日 - 11月15日  | UI 与集成      |
+| **阶段 3** | 7月26日 - 10月18日  | UI 与集成（13 个任务，44 个故事） |
 | **阶段 4** | 11月16日 - 12月15日 | 质量保障与发布 |
 | **阶段 5** | 并行                | 创新工具预研   |
 
@@ -281,6 +300,6 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 
 **文档维护声明**
 
-本 README 与 Echo v4.6 全量规格书、AGENTS.md v5.7 及所有 docs/ 文档协同维护。任何重大变更需同步更新本文档。
+本 README 与 Echo v4.6 全量规格书、AGENTS.md v5.19 及所有 docs/ 文档协同维护。任何重大变更需同步更新本文档。
 
-**下次全面复审日期**：2026-07-16（与开发计划阶段1结束同步）
+**下次全面复审日期**：2026-08-15（与 Phase 3 UI 阶段同步）

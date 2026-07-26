@@ -1,0 +1,81 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/policy/v1",
+  "id": "protected-paths",
+  "version": "1.0.0",
+  "description": "Echo protected paths — absolute read-only for UI automation. Any modification triggers immediate STOPPED.",
+
+  "protected_categories": [
+    {
+      "category": "core_domain_logic",
+      "description": "Core domain logic and public semantics",
+      "paths": ["Echo/Core/Actors/**", "Echo/Core/Pipelines/**"],
+      "severity": "stopped"
+    },
+    {
+      "category": "data_models_and_migrations",
+      "description": "Data models, database schema, migrations, persistence rules",
+      "paths": ["Echo/Core/Models/**"],
+      "severity": "stopped"
+    },
+    {
+      "category": "database_manager",
+      "description": "DatabaseManager open/transaction/lifecycle rules",
+      "paths": ["Echo/Core/Actors/DatabaseManager.swift"],
+      "severity": "stopped"
+    },
+    {
+      "category": "privacy_and_signing",
+      "description": "Privacy declarations, signatures, entitlements, release configs, secrets",
+      "paths": ["Echo/App/**", "**/*.entitlements", "**/Info.plist"],
+      "severity": "stopped"
+    },
+    {
+      "category": "ci_gates",
+      "description": "CI security gates, SwiftLint baseline, acceptance policy",
+      "paths": [".github/workflows/ci.yml", ".swiftlint.yml"],
+      "severity": "stopped"
+    },
+    {
+      "category": "live_sim_review",
+      "description": "Live Simulator review rules and acceptance policy",
+      "paths": ["UIAutomation/Policies/acceptance-policy.json"],
+      "severity": "stopped"
+    },
+    {
+      "category": "model_files",
+      "description": "Model files, model download/packaging logic, ProximaKit integration boundaries",
+      "paths": ["Echo/Resources/Models/**", "Echo/Core/Services/EmbedderService.swift", "Echo/Core/Services/ASREngineService.swift"],
+      "severity": "stopped"
+    }
+  ],
+
+  "allowed_categories": [
+    {
+      "category": "swiftui_views",
+      "description": "SwiftUI Views and pure presentation components",
+      "paths": ["Echo/UI/Views/**"]
+    },
+    {
+      "category": "ui_tokens",
+      "description": "UI semantic tokens and component styles",
+      "paths": ["Echo/UI/DesignSystem/**"]
+    },
+    {
+      "category": "adapters",
+      "description": "@MainActor @Observable thin adapters",
+      "paths": ["Echo/UI/ViewModels/**", "Echo/UI/Adapters/**"]
+    },
+    {
+      "category": "preview_fixtures",
+      "description": "Preview support and deterministic fixtures",
+      "paths": ["UIAutomation/Fixtures/**"]
+    },
+    {
+      "category": "ui_contracts_tests",
+      "description": "UI contracts, UI-layer tests, artifact collection config",
+      "paths": ["UIAutomation/Contracts/**", "EchoTests/Phase3/**", "EchoUITests/**", "UIAutomation/Artifacts/**"]
+    }
+  ],
+
+  "stop_rule": "Any write to protected paths triggers immediate STOPPED. No retry budget consumed."
+}

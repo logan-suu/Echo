@@ -8,7 +8,17 @@ agent: build
 请严格按照 Echo 项目 AGENTS.md 的 Git 协作规范（第 3 章）和任务执行第 6 步（§12.3）执行：
 
 ### 第一步：前置检查（强制门禁）
-0. **Git 状态检查**：
+0. **Phase 3 UI 任务交付门禁（AGENTS.md §17.6）**：
+   - 如果当前任务属于 Phase 3 UI（3.1–3.9），检查 `.ui-automation/state.json`：
+     - `automation_phase` 必须为 `accepted`（用户已完成 Live Sim Review 批准）
+     - `delivery_approval.approved` 必须为 `true`
+   - 如果未通过，**阻断**并输出：
+     ```
+     ⛔ Phase 3 UI 任务尚未通过 Live Simulator 视觉审批。
+     请先执行 /ui-bootstrap-build-echo [任务ID] 完成验证与 Simulator Review，
+     获得用户明确批准后再提交。
+     ```
+1. **Git 状态检查**：
    - 执行 `git status`，确认有变更可提交。
    - 如果无变更，输出：“当前没有可提交的变更。请确认代码已修改或使用 `git add` 添加文件。”并退出。
    - 执行 `git branch --show-current`，获取当前分支名。
@@ -20,8 +30,8 @@ agent: build
 3. **检查水印**：确认核心文件（Actor/Pipeline）头部包含“出生证明”水印（§12.5）。
 
 ### 第二步：更新任务状态
-1. 将 `docs/05-planning/task-status.json` 中当前任务的 `status` 更新为 `review`。
-2. 记录当前时间戳。
+1. 将 `docs/05-planning/task-status.json` 中当前任务的 `status` 更新为 `review`，记录当前时间戳。
+2. 检查 `docs/05-planning/deferred-items.json`：如果本次 PR 涉及解封某个延期任务（如环境就绪、依赖完成），将其移至 `resolved_deferred` 数组并更新 `resolved_at`。
 
 ### 第三步：Git 提交
 1. **分支命名**：`{type}/{description}-US-XXX`（如 `feature/search-pipeline-US-RET-001`）。

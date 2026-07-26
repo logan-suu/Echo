@@ -1,0 +1,53 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/policy/v1",
+  "id": "simulator-ownership",
+  "version": "1.0.0",
+  "description": "Simulator lifecycle and interaction ownership rules for Phase 3 UI automation",
+
+  "single_owner_rule": {
+    "description": "One run = one simulator lifecycle and interaction owner. All other tools disabled or restricted to read-only no-simulator tasks.",
+    "max_owners_per_run": 1
+  },
+
+  "owner_candidates": [
+    {
+      "id": "mcpbridge",
+      "platform": "Xcode 26.5+",
+      "preflight_required": true,
+      "preflight_steps": [
+        "verify_xcode_select_points_to_26_5",
+        "xcrun_find_mcpbridge_returns_path",
+        "xcode_intelligence_allows_external_agent",
+        "opencode_mcp_config_connected",
+        "enumerate_expected_tools",
+        "smoke_test_read_build_test_recovery"
+      ],
+      "on_preflight_fail": "fallback_to_cli_xctest",
+      "exclusive": true
+    },
+    {
+      "id": "cli_xctest",
+      "platform": "macOS 15+",
+      "tools": ["xcodebuild", "simctl", "XCTest", "XCUITest", "xcresulttool"],
+      "always_available": true,
+      "default_fallback": true
+    }
+  ],
+
+  "conflict_detection": {
+    "checks": [
+      "no_duplicate_simulator_owners",
+      "no_simulator_server_port_conflicts",
+      "no_xctest_session_overlap"
+    ],
+    "on_conflict": "stopped"
+  },
+
+  "lifecycle_rules": {
+    "boot": "one_simulator_per_run",
+    "install": "reinstall_app_on_each_run",
+    "launch": "launch_app_after_install",
+    "terminate": "terminate_on_run_completion_or_stop",
+    "cleanup": "remove_app_on_session_end"
+  }
+}

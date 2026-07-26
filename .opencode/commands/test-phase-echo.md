@@ -54,6 +54,21 @@ Agent **不得**跳过分支/PR 直接运行测试；**不得**在未验证该�
 - **同时运行所有已交付阶段（Phase 1 ~ N）的全部单元测试 + 集成测试**
 - 仅当**全部**通过时，才能进入步骤 5
 
+### 🗂️ 延期任务扫描（不可跳过）
+在步骤 4 测试通过后、步骤 5 更新状态前，Agent **必须**：
+1. 读取 `docs/05-planning/deferred-items.json`
+2. 遍历 `deferred_to_phase_*` 数组中每条延期任务：
+   - 检查其 dependencies 是否已全部 `done`
+   - 检查是否在实现当前 Phase 其他任务时被**顺带覆盖**
+   - 检查其 blocker 是否已消除（如环境就绪、依赖可用）
+3. 如果发现**可解决**的任务：
+   - 在 `task-status.json` 中创建新任务或扩展现有任务范围
+   - 将原条目从 `deferred_*` 移至 `resolved_deferred` 数组
+   - 在本 PR 的 commit message 中记录："Phase N 集成测试：发现 [story] 已可解决，移入 task X"
+4. 如果仍无法解决：
+   - 更新 `last_checked_at` 时间戳
+   - 在集成测试 PR 描述中简要说明："已扫描 deferred-items.json，[N] 条延期任务仍不可解决"
+
 ### 第四步：完成后
 阶段集成测试通过后：
 - 更新该阶段 `status` 为 `done`

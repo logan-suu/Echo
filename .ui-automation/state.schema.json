@@ -1,0 +1,221 @@
+{
+  "_schema": "https://echo-ui-automation/schemas/state/v1",
+  "_description": "Echo UI 自动化单次运行状态。只保存 task_id 外键关联 task-status.json，不得复制项目 phase、task title、dependencies、lifecycle status、test_file、PR 或 merge evidence。",
+  "_managed_by": ".opencode/commands/ui-bootstrap-build-echo.md",
+  "_created_by": "Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范 §9.4",
+  "_version": "1.0.0",
+
+  "$defs": {
+    "RunState": {
+      "title": "RunState",
+      "description": "单次 UI bootstrap 运行的完整执行状态",
+      "type": "object",
+      "required": ["schemaVersion", "task_id", "runId", "sourceRevision", "automation_phase"],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "description": "本 schema 版本",
+          "const": "1.0.0"
+        },
+        "repositoryRoot": {
+          "type": "string",
+          "description": "Echo 仓库根路径（运行时填充）"
+        },
+        "task_id": {
+          "type": "string",
+          "description": "外键 → docs/05-planning/task-status.json 中的 task.id",
+          "examples": ["3.1", "3.2"]
+        },
+        "runId": {
+          "type": "string",
+          "description": "UUID v4，本次运行唯一标识"
+        },
+        "sourceRevision": {
+          "type": "string",
+          "description": "git rev-parse HEAD"
+        },
+        "sourceDirty": {
+          "type": "boolean",
+          "description": "git status --porcelain 是否为空"
+        },
+        "bootstrapSourceHash": {
+          "type": "string",
+          "description": "bootstrap 输入文档的内容 hash"
+        },
+        "inventoryHash": {
+          "type": "string",
+          "description": "repo_discovery 阶段 inventory 的 hash"
+        },
+        "migrationMapHash": {
+          "type": "string",
+          "description": "materialize_structure 阶段 migration map 的 hash"
+        },
+        "automation_phase": {
+          "type": "string",
+          "description": "当前 UI 自动化阶段",
+          "enum": [
+            "selected",
+            "repo_discovery",
+            "materialize_structure",
+            "readiness_check",
+            "select_pilot",
+            "contract_drafting",
+            "design_profile_validation",
+            "ui_slice_generation",
+            "verification",
+            "awaiting_exception_decision",
+            "awaiting_delivery_approval",
+            "accepted",
+            "failed",
+            "stopped"
+          ]
+        },
+        "automation_phase_status": {
+          "type": "string",
+          "description": "当前阶段状态",
+          "enum": ["pending", "in_progress", "completed", "failed", "skipped"]
+        },
+        "last_successful_command": {
+          "type": "string",
+          "description": "最后成功执行的命令/步骤"
+        },
+        "command_exit_code": {
+          "type": "integer"
+        },
+        "command_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "design_profile": {
+          "type": "object",
+          "properties": {
+            "profile_id": {
+              "type": "string",
+              "const": "echo-memory-canvas"
+            },
+            "profile_version": {
+              "type": "string"
+            },
+            "base_profile": {
+              "type": "string",
+              "const": "apple-native"
+            },
+            "approval_record": {
+              "type": "object",
+              "properties": {
+                "approved_by": {"type": "string"},
+                "approved_at": {"type": "string", "format": "date"},
+                "source": {"type": "string"}
+              }
+            },
+            "surface_family": {
+              "type": "string",
+              "enum": ["discovery", "focus", "task"]
+            },
+            "layout_mode": {
+              "type": "string",
+              "description": "当前 surface 的实际布局模式"
+            },
+            "fallback_reason": {
+              "type": "string",
+              "description": "若回退到单列，记录原因"
+            }
+          }
+        },
+        "contracts": {
+          "type": "object",
+          "properties": {
+            "surface_id": {"type": "string"},
+            "state_id": {"type": "string"},
+            "action_ids": {"type": "array", "items": {"type": "string"}},
+            "journey_id": {"type": "string"},
+            "fixture_ids": {"type": "array", "items": {"type": "string"}},
+            "content_hash": {"type": "string"}
+          }
+        },
+        "fixtures_hash": {
+          "type": "string"
+        },
+        "policies_hash": {
+          "type": "string"
+        },
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "manifest_path": {"type": "string"},
+            "build_log_path": {"type": "string"},
+            "test_summary_path": {"type": "string"},
+            "accessibility_tree_path": {"type": "string"},
+            "xcresult_path": {"type": "string"},
+            "crash_report_path": {"type": "string"},
+            "content_hashes": {"type": "object"}
+          }
+        },
+        "simulator_owner": {
+          "type": "object",
+          "properties": {
+            "owner_type": {
+              "type": "string",
+              "enum": ["mcpbridge", "cli_xctest", "xcodebuild_mcp", "agent_device", "maestro", "none"]
+            },
+            "device_udid": {"type": "string"},
+            "runtime": {"type": "string"},
+            "surface_id": {"type": "string"},
+            "state_id": {"type": "string"},
+            "fixture_id": {"type": "string"}
+          }
+        },
+        "xcode": {
+          "type": "object",
+          "properties": {
+            "version": {"type": "string"},
+            "build_version": {"type": "string"},
+            "sdk": {"type": "string"},
+            "runtime": {"type": "string"}
+          }
+        },
+        "mcpbridge": {
+          "type": "object",
+          "properties": {
+            "preflight_passed": {"type": "boolean"},
+            "preflight_detail": {"type": "string"},
+            "selected_as_owner": {"type": "boolean"}
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {"type": "string", "enum": ["contract", "implementation", "environment", "product_divergence", "security_scope"]},
+              "detail": {"type": "string"},
+              "phase": {"type": "string"},
+              "retry_count": {"type": "integer"}
+            }
+          }
+        },
+        "exception_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "trigger": {"type": "string"},
+              "decision": {"type": "string"},
+              "decided_by": {"type": "string"},
+              "timestamp": {"type": "string", "format": "date-time"}
+            }
+          }
+        },
+        "delivery_approval": {
+          "type": "object",
+          "properties": {
+            "approved": {"type": "boolean"},
+            "approved_by": {"type": "string"},
+            "approved_at": {"type": "string", "format": "date-time"},
+            "simulator_uri": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

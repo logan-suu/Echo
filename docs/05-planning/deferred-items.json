@@ -1,0 +1,68 @@
+{
+  "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
+  "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
+  "_version": "1.1.0",
+  "_last_updated": "2026-07-26T18:30:00Z",
+
+  "deferred_to_phase_4": [
+    {
+      "id": "DEF-001",
+      "story": "US-AWK-004",
+      "title": "Widget / Live Activity",
+      "priority": "P1",
+      "deferred_from": "Phase 3",
+      "deferred_to": "Phase 4",
+      "reason": "需要 Widget Extension target + App Group 共享数据。当前 Phase 3 聚焦主 App UI，Widget 是独立 target 开发。",
+      "ac_count": 5,
+      "blocker": "Widget Extension 需要独立的 provisioning profile 和 App Group entitlement 配置，当前开发环境未准备。",
+      "deferred_at": "2026-07-26"
+    },
+    {
+      "id": "DEF-002",
+      "story": "US-AWK-006",
+      "title": "Siri Shortcuts / App Intents",
+      "priority": "P1",
+      "deferred_from": "Phase 3",
+      "deferred_to": "Phase 4",
+      "reason": "需要 AppIntents framework 集成 + Siri 语音交互环境。当前 Phase 3 聚焦主 App UI，App Intents 是独立扩展开发。",
+      "ac_count": 5,
+      "blocker": "AppIntents 扩展需要 Siri Intent Definition 文件 + 独立 AppIntents Extension target，当前开发环境未配置。",
+      "deferred_at": "2026-07-26"
+    }
+  ],
+
+  "moved_back_to_phase_3": [
+    {
+      "id": "MOV-001",
+      "story": "US-SRC-007",
+      "title": "设备迁移冲突解决 UI",
+      "original_status": "deferred_to_phase_4",
+      "resolution": "移回 Phase 3 → 融入任务 3.4（SettingsView）。冲突解决 UI（覆盖/合并弹窗、逐项冲突界面）可在单设备上用模拟数据实现，无需两台设备的实际迁移测试。",
+      "moved_at": "2026-07-26"
+    },
+    {
+      "id": "MOV-002",
+      "story": "US-SYN-005",
+      "title": "私有 Prompt 草稿编辑确认 UI（AC-4）",
+      "original_status": "deferred_to_phase_4",
+      "resolution": "移回 Phase 3 → 融入任务 3.9（整合 ViewModel 与 Pipeline）。Prompt 编辑弹窗为简单 UI 组件，可在 3.9 的整体整合中一并实现。",
+      "moved_at": "2026-07-26"
+    }
+  ],
+
+  "resolved_deferred": [
+    { "id": "RES-001", "story": "US-RET-004", "resolution": "融入 Phase 3 任务 3.2。FTS5 预过滤/人物/地理过滤 UI。", "resolved_at": "2026-07-26" },
+    { "id": "RES-002", "story": "US-RET-006", "resolution": "融入 Phase 3 任务 3.2。低置信度降级横幅 + 反馈按钮。", "resolved_at": "2026-07-26" },
+    { "id": "RES-003", "story": "US-SRC-012", "resolution": "融入 Phase 3 任务 3.4 + 3.5。同步设置 UI 控制。", "resolved_at": "2026-07-26" },
+    { "id": "RES-004", "story": "US-AWK-001", "resolution": "融入 Phase 3 任务 3.1 + 3.12。GeoFilter 阈值 UI。", "resolved_at": "2026-07-26" },
+    { "id": "RES-005", "story": "US-AWK-003", "resolution": "融入 Phase 3 任务 3.8。情绪卡片本地化。", "resolved_at": "2026-07-26" },
+    { "id": "RES-006", "story": "US-FBK-001, US-FBK-003", "resolution": "融入 Phase 3 任务 3.2 + 3.4。反馈 UI。", "resolved_at": "2026-07-26" }
+  ],
+
+  "phase_integration_scan_rules": {
+    "description": "每次 Phase 集成测试时，Agent 必须扫描本文件：",
+    "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
+    "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
+    "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳"
+  }
+}

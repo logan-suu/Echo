@@ -1,7 +1,7 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.15  
-**生效日期**：2026-07-12  
+**版本**：v5.19  
+**生效日期**：2026-07-26  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -32,6 +32,7 @@
 | **产品创新工具**       | `docs/04-ai-native/产品创新工具全景指南.md`            | 前沿创新工具介绍及融入 Echo 的方案         |
 | **开发计划**           | `docs/05-planning/开发计划安排文档.md`                 | 里程碑、时间线及资源安排                   |
 | **任务状态**           | `docs/05-planning/task-status.json`                    | 每个任务的执行状态、依赖关系、测试文件映射 |
+| **延期任务**           | `docs/05-planning/deferred-items.json`                 | 延期到后续 Phase 的未解决任务追踪          |
 
 ### 0.2 任务类型 → 文档快速索引（Agent 必读）
 
@@ -58,10 +59,11 @@
 | **创新工具集成**          | `docs/04-ai-native/产品创新工具全景指南.md`            | 对应工具章节                                       |
 | **查阅开发计划/任务**     | `docs/05-planning/开发计划安排文档.md`                 | 里程碑、时间线                                     |
 |                           | `docs/05-planning/task-status.json`                    | 当前任务状态、依赖关系                             |
+|                           | `docs/05-planning/deferred-items.json`                 | 延期任务追踪                                       |
 
 ### 0.3 Agent 文档读取规范
 
-1. **启动时**：Agent 自动加载本文件（`AGENTS.md`），并**必须**读取 `docs/INDEX.md` 以建立全局文档认知，同时读取 `docs/05-planning/task-status.json` 以确认当前任务状态。
+1. **启动时**：Agent 自动加载本文件（`AGENTS.md`），并**必须**读取 `docs/INDEX.md` 以建立全局文档认知，同时读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json` 以确认当前任务状态与延期任务。
 2. **执行任务时**：根据 §0.2 的映射表确定需要读取的文档和章节，使用 `read_file` 工具的 `offset` 和 `limit` 参数精准读取。
 3. **引用原文**：在回复中必须**逐字粘贴**相关 AC 原文或架构约束原文。
 4. **禁止推断**：严禁使用“根据常规做法，我认为应该...”之类的推断。如果文档描述模糊，Agent 必须停止编码并向人类提出澄清问题。
@@ -725,6 +727,12 @@ Echo/
 │   ├── Phase3/                   # Phase 3 测试
 │   ├── Phase4/                   # Phase 4 测试
 │   └── Phase5/                   # Phase 5 测试
+├── UIAutomation/                  # 🤖 UI 自动化合约与策略（Phase 3+）
+│   ├── Contracts/                 # Surface/State/Action/Fixture schema
+│   ├── Fixtures/                  # 确定性 UI 测试数据
+│   ├── Policies/                  # 机器可读 acceptance 策略
+│   └── Artifacts/                 # run manifest + 测试证据
+├── .ui-automation/                # 单次 UI 运行状态（Phase 3+）
 ├── docs/                        # 📚 项目文档中心（详见第0章）
 │   ├── INDEX.md                 # 文档摘要索引
 │   ├── 01-spec/
@@ -892,7 +900,7 @@ flowchart TD
 
 ### 12.1 任务状态管理
 
-所有任务状态记录在 `docs/05-planning/task-status.json` 中，包含以下状态流转：
+所有任务状态记录在 `docs/05-planning/task-status.json` 中；延期任务追踪记录在 `docs/05-planning/deferred-items.json` 中。任务状态包含以下流转：
 
 ```mermaid
 stateDiagram-v2
@@ -1109,6 +1117,7 @@ Agent 在创建或修改核心架构文件时，**必须在文件头部注入溯
 - Agent **不得**在任务未完成时自动运行阶段集成测试
 - 集成测试任务**必须**开分支、写测试、创建 PR，与其他任务无差别
 - 集成测试 PR 提交前，**必须**验证**当前阶段及所有之前阶段的全部单元测试 + 集成测试**全部通过（0 失败），缺一不可。这是累积回归检查——确保新阶段的代码变更不会破坏已交付阶段的功能。
+- **延期任务扫描**：集成测试时**必须**读取 `docs/05-planning/deferred-items.json`，检查每个延期任务是否已被顺带解决或 blocker 已消除。若发现可解决的任务，立即创建/扩展任务并移回当前 Phase；若仍不可解决，更新 `last_checked_at`。
 - 测试通过后，`task-status.json` 中该阶段 `status` 更新为 `done`，`current_phase` 推进到下一阶段
 
 **跨阶段阻断规则**：`current_phase` 为 N 时，阶段 N-1 的集成测试任务（如 1.9、2.14）必须为 `done` 状态，`current_phase` 方可指向 N。Agent 在 `do-task-echo`、`next-task-echo`、`init-session-echo` 中执行任何阶段 N 的任务前，**必须**检查阶段 N-1 的集成测试任务是否为 `done`——如未完成，阻断并提示先执行前一阶段的集成测试。
@@ -1273,7 +1282,97 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 3. 更新 CI 规则（如有）
 4. 更新 Agent 模板（如有）
 
-**下次全面复审日期**：2026-07-16（与开发计划阶段1结束同步）
+**下次全面复审日期**：2026-08-01（Phase 3 开始后）
+
+---
+
+## 17. Phase 3 UI 协作规约
+
+> **路由文档**：`docs/ui/README.md` — 告诉 Agent 针对 Phase 3 UI 任务读取哪份文档，**无需重读 bootstrap 全文**。
+> **物化日期**：2026-07-25
+
+### 17.1 设计配置
+
+Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩展 `apple-native` 基础。不再执行多视觉方向探索。
+
+| 属性 | 值 |
+|------|-----|
+| Profile ID | `echo-memory-canvas` |
+| Base | `apple-native`（系统组件、SF Symbols、系统字体、semantic colors、平台自适应、完整可访问性） |
+| 批准状态 | 用户已批准（记录于 `docs/ui/echo-memory-canvas-style.md`） |
+| 灵感来源 | Pinterest 仅启发 Discovery surfaces 的内容组织密度，**不是**产品依赖、品牌关系或复制 UI 的许可 |
+
+### 17.2 三类 Surface Family
+
+所有 UI 任务必须声明 `surfaceFamily`，并按责任选择布局：
+
+| Family | 布局 | Masonry | 适用场景 |
+|--------|------|:---:|------|
+| **Discovery** | Adaptive masonry 或卡片（条件启用） | ✅ 条件触发 | Home、Search、collection browsing |
+| **Focus** | 沉浸式单列 + grouped metadata | ❌ 禁止 | Memory detail、media viewing、translation |
+| **Task** | Form、List、Sheet、Alert、Menu、Toolbar | ❌ 禁止 | Edit、settings、permissions、background tasks、errors、recovery |
+
+### 17.3 双状态模型
+
+Phase 3 UI 维护两个严格分离的状态文件：
+
+| 文件 | 职责 | 唯一权威 |
+|------|------|:---:|
+| `docs/05-planning/task-status.json` | 项目 phase、task ID/title、依赖、生命周期 status、test file、PR、merge evidence | ✅ 项目账本 |
+| `.ui-automation/state.json` | 单次 UI bootstrap 运行状态（run ID、automation_phase、hash、artifact、blocker） | ✅ 运行状态 |
+
+约束：
+- 运行状态**只用 `task_id` 外键**关联项目账本，不得复制 title、phase、dependencies、task status、test file、PR 或 merge evidence
+- 一个 task 同时只能有一个活动 UI run
+- 两者不一致时停止，不以运行状态修正项目账本
+- `selected` 是 handoff checkpoint，**不是**第二任务状态
+
+### 17.4 受保护资产
+
+**Core 层绝对只读**：`Echo/Core/Actors/`、`Echo/Core/Pipelines/`、`Echo/Core/Models/`、`Echo/Core/Services/`、数据库 schema、迁移、隐私声明、签名、entitlements、CI 门禁、模型文件。
+
+UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。适配器负责线程隔离、状态映射和 UI 事件转发，不复制业务规则，不保存第二份领域真相。
+
+长任务（build、test、XCUITest）通过 `TaskQueueActor` 串行入队，进度通过 `ProgressActor` 持久化到 SQLite TaskProgress 表。
+
+### 17.5 Phase 3 UI 专用命令
+
+| 命令 | 用途 | 存在 |
+|------|------|:---:|
+| `/ui-bootstrap-build-echo <task-id>` | Phase 3 UI 实现入口（完整流水线 → Live Sim Review） | ✅ 已物化 |
+| `/ui-status-echo` | 只读双状态查询 | ✅ 已物化 |
+| `/ui-retry-echo <task-id>` | 受限阶段重试 | ✅ 已物化 |
+
+**现有命令适配**：`/init-session-echo`（UI 分支：只读初始化不选任务）、`/next-task-echo`（UI handoff：只建立 `selected` checkpoint）。
+
+**禁止**：`/do-task-echo` 对 Phase 3 UI 任务无效。Phase 3 UI 任务必须通过 `/ui-bootstrap-build-echo` 执行。
+
+### 17.6 推荐三命令序列
+
+```
+/init-session-echo → /next-task-echo → /ui-bootstrap-build-echo <task-id>
+```
+
+跳过前两步时可直接调用 `/ui-bootstrap-build-echo <ready-task-id>`（direct fallback）。
+
+### 17.7 关键禁止项
+
+- ❌ **禁止自动 commit/push/PR**：Git 交付必须由用户明确调用适配后的 `/commit-pr-echo` 触发
+- ❌ **禁止生成 screenshot/video**：视觉审批只通过 Live Simulator Review
+- ❌ **禁止在 Focus/Task surfaces 使用 masonry**
+- ❌ **禁止修改 Core、数据模型、迁移、签名或 acceptance policy**
+- ❌ **禁止复制 Pinterest 品牌、文案、控件或 trade dress**
+- ❌ **禁止在一个任务中重新提出多套视觉方向**
+
+### 17.8 停止条件（立即 `stopped`）
+
+以下任一情况立即停止，不消耗重试预算：
+- 修改 Core、数据模型、数据库迁移或保护配置
+- 需要猜测领域规则或绕过现有 Core 接口
+- 需要生产签名、发布凭据、真实用户数据
+- 契约/方向/验收策略存在未批准变化
+- Simulator 重复所有者或控制冲突
+- Artifact 包含凭据、PII
 
 ---
 
@@ -1303,3 +1402,5 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.15 | 2026-07-12 | 新增 §15.5「外部 AI 审查工具评论审核」规则：CodeRabbit 等外部工具评论不代表真理，Agent 必须逐条审核，仅对 🟢 有效缺陷进行修复，🟡 过度/🔴 误报驳回并记录理由。同步更新 `pr-review-echo` 命令新增「第四步：CodeRabbit 评论审核」并重新编号后续步骤。 | AI 架构师 |
 | v5.16 | 2026-07-13 | Task 2.14 集成测试实战发现并行测试导致 SQLite 状态污染。§9.4 新增「串行执行」行，要求所有 `xcodebuild test` 必须加 `-parallel-testing-enabled NO`。同步更新 `test-unit-echo`、`test-phase-echo`、`test-integration-echo` 三个命令及 README.md 测试章节。 | AI 架构师 |
 | v5.17 | 2026-07-13 | 强化 §12.6 阶段集成测试累积回归要求：集成测试 PR 提交前必须验证「当前阶段及所有之前阶段」的全部单元测试 + 集成测试（而非仅当前阶段）。同步更新 `test-phase-echo` 质量门禁描述。 | AI 架构师 |
+| v5.18 | 2026-07-25 | Phase 3 UI Bootstrap 物化：新增 §17 Phase 3 UI 协作规约（`echo-memory-canvas` 设计配置、三类 surface family、受保护资产、UI 专用命令、停止条件）。新增 `docs/ui/` 6 文件、`UIAutomation/` 4 目录、`.ui-automation/state.schema.json`。适配 `init-session-echo`（UI 分支）、`next-task-echo`（UI handoff）。新增 `ui-bootstrap-build-echo`、`ui-status-echo`、`ui-retry-echo` 三个命令。 | AI 架构师 |
+| v5.19 | 2026-07-26 | Phase 3 任务重构（审计后）：新增 3.0（App Shell）、3.11（引导流程）、3.12（唤醒投递）三个任务；扩展 3.1/3.2/3.3/3.4/3.6/3.9 范围以覆盖审计发现的缺失故事（PRV-002/003/008、SRC-005/013、SYN-003/004、DIS-002/003、FBK-001/002/003）。所有受影响的 `ready` 任务回退 `backlog`（新增 3.0 依赖）。AWK-004/006 延后 Phase 4。 | AI 架构师 |

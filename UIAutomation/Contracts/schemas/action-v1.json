@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "title": "Action Contract",
+  "description": "A user or system event on a Surface",
+  "type": "object",
+  "required": ["actionId", "source", "targetIntent"],
+  "properties": {
+    "actionId": { "type": "string", "description": "Stable identifier" },
+    "source": { "type": "string", "enum": ["user", "system"], "description": "Origin of the action" },
+    "targetIntent": { "type": "string", "description": "The adapter intent this action maps to" },
+    "expectedOutcome": { "type": "string", "description": "Observable result of this action" },
+    "requiresConfirmation": { "type": "boolean", "description": "Whether destructive actions need confirmation" },
+    "version": { "type": "string", "const": "1.0.0" }
+  }
+}
