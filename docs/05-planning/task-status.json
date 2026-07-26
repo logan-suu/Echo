@@ -388,8 +388,9 @@
           "id": "3.0",
           "title": "App Shell：TabView + NavigationStack + DI 注入",
           "story": null,
-          "status": "review",
-          "last_updated": "2026-07-26T22:30:00Z",
+          "status": "done",
+          "last_updated": "2026-07-26T23:00:00Z",
+          "merged_at": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/architecture.md",
@@ -404,8 +405,8 @@
           "id": "3.11",
           "title": "引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载",
           "story": "US-PRV-008, US-SRC-001, US-SYN-001",
-          "status": "backlog",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "ready",
+          "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/ui/echo-memory-canvas-style.md"
@@ -418,8 +419,8 @@
           "id": "3.1",
           "title": "主视图 HomeView + HomeViewModel + 唤醒卡片展示 + 离线模式指示器",
           "story": "US-AWK-001, US-AWK-002, US-AWK-003, US-AWK-005, US-RES-001",
-          "status": "backlog",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "ready",
+          "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/01-spec/用户故事与验收标准规格书.md",
@@ -433,8 +434,8 @@
           "id": "3.2",
           "title": "检索视图 SearchView + SearchViewModel + 反馈按钮 + 低置信度横幅 + 手动扫描结果页",
           "story": "US-RET-001, US-RET-004, US-RET-006, US-RET-008, US-FBK-001, US-FBK-003, US-SRC-005, US-SRC-013",
-          "status": "backlog",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "ready",
+          "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/echo-memory-canvas-style.md"
@@ -462,8 +463,8 @@
           "id": "3.4",
           "title": "设置页面 SettingsView + ViewModel（数据源开关、排除项管理、审计日志、模型状态、反馈记录、索引统计、迁移指引、设备迁移冲突UI）",
           "story": "US-SRC-004, US-SRC-007, US-SRC-008, US-SRC-009, US-PRV-002, US-PRV-003, US-RES-004, US-SET-001, US-SET-002, US-SET-003, US-SET-004, US-FBK-002, US-PRV-005",
-          "status": "backlog",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "ready",
+          "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/ui/echo-memory-canvas-style.md"
@@ -488,8 +489,8 @@
           "id": "3.6",
           "title": "统一错误处理 UI（L1~L4）+ 空态/加载态 + 降级横幅 + 冷却期提醒",
           "story": "US-DIS-003, US-RES-002, US-RES-003, US-RES-004, US-SYN-008, US-PRV-005",
-          "status": "backlog",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "ready",
+          "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/02-architecture/架构设计文档.md",
@@ -538,8 +539,8 @@
           "id": "3.12",
           "title": "唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置",
           "story": "US-AWK-001, US-AWK-002, US-AWK-003",
-          "status": "backlog",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "ready",
+          "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
