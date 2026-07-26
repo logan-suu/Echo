@@ -1,5 +1,6 @@
 // ==========================================
 // 文件: HomeViewModel.swift
+// i18n: AwakeningCardModel title/subtitle strings are hardcoded English. String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 AC-4 (唤醒卡片),
 //            US-AWK-002 AC-3 (纪念日唤醒), US-AWK-003 AC-4 (情绪唤醒卡片),
 //            US-AWK-005 AC-1~3 (交互式卡片展示), US-RES-001 AC-3 (离线标识)
@@ -171,10 +172,6 @@ final class HomeViewModel {
         self.awakeningPipeline = awakeningPipeline
     }
 
-    deinit {
-        loadingTask?.cancel()
-    }
-
     // MARK: - Actions
 
     /// 加载唤醒卡片列表。
@@ -188,9 +185,11 @@ final class HomeViewModel {
         // 取消已有 Task
         loadingTask?.cancel()
 
+        // Set loading synchronously (AGENTS.md §8.1: first line of action)
+        viewState = .loading
+
         loadingTask = Task { [weak self] in
             guard let self else { return }
-            self.viewState = .loading
 
             do {
                 // 🔮 Phase 3.12+: 从 AwakeningPipeline 获取已持久化的卡片列表

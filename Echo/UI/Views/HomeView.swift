@@ -1,5 +1,6 @@
 // ==========================================
 // 文件: HomeView.swift
+// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
 // 对应规格: docs/ui/echo-memory-canvas-style.md §3.1 (Discovery surfaces — 自适应卡片, 非 masonry),
 //            §4 (共享 Token), §10.1.1 (无记忆时品牌欢迎页), §10.2.1 (骨架屏),
 //            §16.1 (离线模式指示器 US-RES-001 AC-3)
