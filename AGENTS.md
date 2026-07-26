@@ -1303,11 +1303,30 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 | **Focus** | 沉浸式单列 + grouped metadata | ❌ 禁止 | Memory detail、media viewing、translation |
 | **Task** | Form、List、Sheet、Alert、Menu、Toolbar | ❌ 禁止 | Edit、settings、permissions、background tasks、errors、recovery |
 
-### 17.3 受保护资产
+### 17.3 双状态模型
+
+Phase 3 UI 维护两个严格分离的状态文件：
+
+| 文件 | 职责 | 唯一权威 |
+|------|------|:---:|
+| `docs/05-planning/task-status.json` | 项目 phase、task ID/title、依赖、生命周期 status、test file、PR、merge evidence | ✅ 项目账本 |
+| `.ui-automation/state.json` | 单次 UI bootstrap 运行状态（run ID、automation_phase、hash、artifact、blocker） | ✅ 运行状态 |
+
+约束：
+- 运行状态**只用 `task_id` 外键**关联项目账本，不得复制 title、phase、dependencies、task status、test file、PR 或 merge evidence
+- 一个 task 同时只能有一个活动 UI run
+- 两者不一致时停止，不以运行状态修正项目账本
+- `selected` 是 handoff checkpoint，**不是**第二任务状态
+
+### 17.4 受保护资产
 
 **Core 层绝对只读**：`Echo/Core/Actors/`、`Echo/Core/Pipelines/`、`Echo/Core/Models/`、`Echo/Core/Services/`、数据库 schema、迁移、隐私声明、签名、entitlements、CI 门禁、模型文件。
 
 UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。适配器负责线程隔离、状态映射和 UI 事件转发，不复制业务规则，不保存第二份领域真相。
+
+长任务（build、test、XCUITest）通过 `TaskQueueActor` 串行入队，进度通过 `ProgressActor` 持久化到 SQLite TaskProgress 表。
+
+### 17.6 Phase 3 UI 专用命令
 
 ### 17.4 Phase 3 UI 专用命令
 
@@ -1321,7 +1340,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 
 **禁止**：`/do-task-echo` 对 Phase 3 UI 任务无效。Phase 3 UI 任务必须通过 `/ui-bootstrap-build-echo` 执行。
 
-### 17.5 推荐三命令序列
+### 17.7 推荐三命令序列
 
 ```
 /init-session-echo → /next-task-echo → /ui-bootstrap-build-echo <task-id>
@@ -1329,7 +1348,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 
 跳过前两步时可直接调用 `/ui-bootstrap-build-echo <ready-task-id>`（direct fallback）。
 
-### 17.6 关键禁止项
+### 17.8 关键禁止项
 
 - ❌ **禁止自动 commit/push/PR**：Git 交付必须由用户明确调用适配后的 `/commit-pr-echo` 触发
 - ❌ **禁止生成 screenshot/video**：视觉审批只通过 Live Simulator Review
@@ -1338,7 +1357,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 - ❌ **禁止复制 Pinterest 品牌、文案、控件或 trade dress**
 - ❌ **禁止在一个任务中重新提出多套视觉方向**
 
-### 17.7 停止条件（立即 `stopped`）
+### 17.9 停止条件（立即 `stopped`）
 
 以下任一情况立即停止，不消耗重试预算：
 - 修改 Core、数据模型、数据库迁移或保护配置

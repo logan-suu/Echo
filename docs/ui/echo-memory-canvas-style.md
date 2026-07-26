@@ -64,7 +64,7 @@
 
 - 使用内容优先的 adaptive masonry 或内容卡片布局
 - 布局服务于扫描、比较和发现，不改变系统导航、Tab、搜索、菜单或选择行为
-- **Masonry 启用条件**（见 §5）
+- **Masonry 启用条件**（见 §6.1）
 
 ### 3.2 Focus surfaces
 **适用场景**：Memory detail、media viewing、translation

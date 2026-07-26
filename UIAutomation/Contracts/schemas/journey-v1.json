@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "title": "Journey Contract",
+  "description": "A cross-surface behavioral path",
+  "type": "object",
+  "required": ["journeyId", "steps", "preconditionFixtures"],
+  "properties": {
+    "journeyId": { "type": "string", "description": "Stable identifier" },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["surfaceId", "stateId", "actionId"],
+        "properties": {
+          "surfaceId": { "type": "string" },
+          "stateId": { "type": "string" },
+          "actionId": { "type": "string" }
+        }
+      }
+    },
+    "preconditionFixtures": { "type": "array", "items": { "type": "string" }, "description": "Fixture IDs required before journey starts" },
+    "assertions": { "type": "array", "items": { "type": "object" }, "description": "Observable assertions, never Core internals" },
+    "version": { "type": "string", "const": "1.0.0" }
+  }
+}

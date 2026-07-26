@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "title": "Fixture Contract",
+  "description": "Deterministic, offline, reproducible input data for Preview and testing",
+  "type": "object",
+  "required": ["fixtureId", "schemaVersion", "locale", "theme", "payload"],
+  "properties": {
+    "fixtureId": { "type": "string", "description": "Stable identifier" },
+    "schemaVersion": { "type": "string", "const": "1.0.0" },
+    "locale": { "type": "string", "enum": ["zh-Hans", "en-US"] },
+    "theme": { "type": "string", "enum": ["light", "dark"] },
+    "dynamicTypeSize": { "type": "string", "description": "Dynamic Type size category" },
+    "surfaceFamily": { "type": "string", "enum": ["discovery", "focus", "task"] },
+    "payload": { "type": "object", "description": "The deterministic data payload" },
+    "controlledVariables": { "type": "array", "items": { "type": "string" }, "description": "Clocks, UUIDs, random seeds, animation state that this fixture controls" },
+    "version": { "type": "string", "const": "1.0.0" }
+  }
+}

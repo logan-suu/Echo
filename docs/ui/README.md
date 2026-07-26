@@ -14,7 +14,7 @@
 | **自动化工作流** | `automation-workflow.md` | 状态机、任务账本桥接、自动继续、唯一 simulator 所有者、重试、停止、恢复、试点评分和批准点 | 执行 `/ui-bootstrap-build-echo` 时 |
 | **架构** | `architecture.md` | 六层职责、单向数据流、组件边界、受保护和允许内容 | 理解 UI 层与 Core 层的边界时 |
 | **测试与 Artifact** | `testing-and-artifacts.md` | PR 与 nightly 矩阵、artifact 字段、测试层级、安全、各阶段 Definition of Done | 编写测试或收集 artifact 时 |
-| **Echo 就绪** | `echo-readiness.md` | Echo inventory 摘要、就绪检查、证据位置、阻塞分类和复检条件 | 首次 bootstrap 或 readiness 复检时 |
+| **命令兼容性** | `command-compatibility.md` | 14 个现有命令 + 3 个新增命令在 Phase 3 UI 模式下的行为表 | 不确定某个命令是否可用于 Phase 3 时 |
 
 ---
 

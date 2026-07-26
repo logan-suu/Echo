@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "title": "Surface Contract",
+  "description": "An independently renderable and verifiable UI boundary",
+  "type": "object",
+  "required": ["surfaceId", "surfaceFamily", "responsibility", "inputs", "outputs"],
+  "properties": {
+    "surfaceId": { "type": "string", "description": "Stable identifier, used in briefs, fixtures, Previews, tests, and artifacts" },
+    "surfaceFamily": { "type": "string", "enum": ["discovery", "focus", "task"] },
+    "responsibility": { "type": "string", "description": "What this surface is responsible for rendering" },
+    "inputs": { "type": "object", "description": "Data and configuration this surface requires" },
+    "outputs": { "type": "object", "description": "Observable outputs: visible content, accessibility tree, interaction targets" },
+    "systemContainer": { "type": "string", "description": "Primary system container (NavigationStack, TabView, List, Form, Sheet, etc.)" },
+    "layoutMode": { "type": "string", "enum": ["adaptive_masonry", "single_column", "system_list", "form", "sheet", "alert"] },
+    "masonryEnabled": { "type": "boolean", "description": "Whether masonry is conditionally enabled (Discovery only)" },
+    "fallbackConditions": { "type": "array", "items": { "type": "string" }, "description": "Conditions that trigger single-column/List fallback" },
+    "states": { "type": "array", "items": { "type": "string" }, "description": "Array of stateId values this surface supports" },
+    "version": { "type": "string", "const": "1.0.0" }
+  }
+}

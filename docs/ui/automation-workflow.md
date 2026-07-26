@@ -55,7 +55,15 @@ selected → repo_discovery → materialize_structure → readiness_check
 
 ## 3. 自动继续规则
 
-`materialize_structure` 和 `readiness_check` 通过后自动进入下一状态，不请求例行批准。下列操作不触发审批：
+以下状态转换**自动继续**，不等待人工审批：
+- `repo_discovery` → `materialize_structure`（结构物化自动触发）
+- `materialize_structure` → `readiness_check`（物化后自动进入就绪检查）
+- `readiness_check` → `select_pilot`（就绪通过后自动选择试点）
+- `select_pilot` → `contract_drafting`（试点选定后自动草拟契约）
+- `contract_drafting` → `design_profile_validation`（契约 schema 通过 policy 校验后自动验证 profile）
+- `design_profile_validation` → `ui_slice_generation`（profile 与已批准的 echo-memory-canvas 一致后自动生成）
+
+下列操作**不触发审批**：
 - 使用现有系统组件、已有 token、薄 adapter
 - Fixtures、Preview、测试
 
@@ -72,8 +80,19 @@ selected → repo_discovery → materialize_structure → readiness_check
 
 ## 5. 重试、停止规则
 
+### 错误分类（5 类型）
+
+| 类型 | 描述 | 可重试 | 最大重试 | 特殊规则 |
+|------|------|:---:|:---:|------|
+| **contract** | Schema 无效、引用缺失、fixture-state 不一致 | ✅ | 2 | 需改变的假设或修复点 |
+| **implementation** | 编译失败、类型错误、adapter 映射错误、测试断言失败 | ✅ | 2 | 需改变的假设或修复点 |
+| **environment** | Simulator 不健康、进程挂起、DerivedData 污染、工具不可用 | ✅ | 1 | 首次：健康检查+清理→重试1次；再次：failed |
+| **product_divergence** | 偏离 echo-memory-canvas、apple-native 基础、surface-family 映射、信息层级 | ❌ | 0 | 返回 `awaiting_exception_decision` |
+| **security_scope** | 触碰保护路径、请求真实凭据、产生敏感 artifact、修改验收规则 | ❌ | 0 | 立即 `stopped`，不消耗重试预算 |
+
 ### 自动重试
 - 同阶段最多 2 次有证据支持的修复重试
+- 每次重试必须改变具体假设或修复点，禁止无差别循环
 - 环境错误首次出现：健康检查 + 清理 → 再重试 1 次
 - 第 2 次失败 → `failed`，保留全部 artifact
 

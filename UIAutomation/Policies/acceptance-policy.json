@@ -1,0 +1,106 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/policy/v1",
+  "id": "acceptance-policy",
+  "version": "1.0.0",
+  "description": "Echo Phase 3 UI acceptance criteria and verification thresholds",
+
+  "pr_matrix": {
+    "dimensions": [
+      "contract", "build", "state", "journey", "device",
+      "theme", "dynamicType", "locale", "contrast", "motion",
+      "accessibility", "visual", "security"
+    ],
+    "rules": {
+      "contract": { "mode": "affected", "threshold": "all_schema_and_references" },
+      "build": { "mode": "affected", "threshold": "clean_build" },
+      "state": { "mode": "affected", "threshold": "canonical_loaded_plus_related" },
+      "journey": { "mode": "affected", "threshold": "key_paths_smoke" },
+      "device": { "mode": "fixed", "threshold": "one_mainstream_simulator" },
+      "theme": { "mode": "affected", "threshold": "changed_themes_only" },
+      "dynamicType": { "mode": "fixed", "threshold": "default_plus_one_accessibility" },
+      "locale": { "mode": "fixed", "threshold": "default_locale" },
+      "contrast": { "mode": "fixed", "threshold": "default" },
+      "motion": { "mode": "affected", "threshold": "changed_checks_only" },
+      "accessibility": { "mode": "all", "threshold": "auto_audit_stable_ids_key_labels" },
+      "visual": { "mode": "affected", "threshold": "live_sim_review_changed_surfaces" },
+      "security": { "mode": "all", "threshold": "artifact_secret_pii_scan" }
+    }
+  },
+
+  "nightly_matrix": {
+    "dimensions": [
+      "contract", "build", "state", "journey", "device",
+      "theme", "dynamicType", "locale", "contrast", "motion",
+      "accessibility", "visual", "security"
+    ],
+    "rules": {
+      "contract": { "mode": "full", "threshold": "full_validation_orphan_id_check" },
+      "build": { "mode": "full", "threshold": "all_supported_configs" },
+      "state": { "mode": "full", "threshold": "loading_loaded_empty_error_modal" },
+      "journey": { "mode": "full", "threshold": "all_key_journeys" },
+      "device": { "mode": "full", "threshold": "small_standard_ipad" },
+      "theme": { "mode": "full", "threshold": "light_dark" },
+      "dynamicType": { "mode": "full", "threshold": "default_intermediate_max" },
+      "locale": { "mode": "full", "threshold": "long_latin_cjk_rtl_pseudo" },
+      "contrast": { "mode": "fixed", "threshold": "increased_contrast" },
+      "motion": { "mode": "full", "threshold": "reduce_motion_on_off" },
+      "accessibility": { "mode": "full", "threshold": "audit_semantic_manual_notes" },
+      "visual": { "mode": "structured", "threshold": "structured_checks_no_media_saved" },
+      "security": { "mode": "full", "threshold": "deps_permissions_telemetry_retention_review" }
+    }
+  },
+
+  "approval_points": {
+    "fixed_delivery_approval": {
+      "type": "live_simulator_review",
+      "description": "Agent navigates Simulator to contract-specified UI state, stops interaction, user inspects directly",
+      "auto_approve": false,
+      "requires_human": true,
+      "media_prohibited": true
+    },
+    "conditional_exception_decision": {
+      "type": "human_decision_required",
+      "triggers": [
+        "new_token_or_component",
+        "new_navigation_pattern",
+        "new_dependency",
+        "new_permission",
+        "ambiguous_core_semantics",
+        "profile_change",
+        "acceptance_policy_change"
+      ]
+    }
+  },
+
+  "verification_gates": {
+    "contract_validation": { "required": true, "auto_continue": true },
+    "build": { "required": true, "auto_continue": false },
+    "unit_tests": { "required": true, "coverage_threshold_pct": 95 },
+    "xcuitest": { "required": true },
+    "accessibility_audit": { "required": true },
+    "surface_family_rules": { "required": true, "description": "Discovery masonry conditions, Focus/Task no-masonry check" },
+    "visual_media_prohibition": { "required": true, "description": "No screenshot/screen-recording API calls permitted" }
+  },
+
+  "artifact_requirements": {
+    "mandatory": [
+      "run_manifest",
+      "build_log",
+      "structured_test_summary",
+      "accessibility_tree",
+      "xcresult"
+    ],
+    "prohibited": [
+      "screenshot_png",
+      "reference_actual_diff_images",
+      "video_mp4_gif",
+      "screen_recording"
+    ],
+    "retention": {
+      "manifest_summaries_accessibility_logs": "persist",
+      "passed_xcresult": "deletable_after_summary",
+      "failed_xcresult": "keep_until_blocker_resolved",
+      "ci_artifacts": "short_term_no_git_commit"
+    }
+  }
+}

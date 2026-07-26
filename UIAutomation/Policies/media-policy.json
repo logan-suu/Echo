@@ -1,0 +1,48 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/policy/v1",
+  "id": "media-policy",
+  "version": "1.0.0",
+  "description": "Prohibition of all persistent visual media generation for Phase 3 UI automation",
+
+  "global_prohibition": {
+    "rule": "No persistent visual media of any kind shall be generated, stored, or committed",
+    "reason": "Live Simulator Review is the sole visual approval channel. Media bypasses human judgment."
+  },
+
+  "prohibited_api_calls": [
+    "XCUIScreen.screenshot()",
+    "XCUIScreenshot",
+    "XCUIScreenRecording",
+    "AVAssetWriter (screen recording)",
+    "ReplayKit",
+    "Any API that captures screen pixels or video frames"
+  ],
+
+  "prohibited_file_types": {
+    "images": ["png", "jpg", "jpeg", "heic", "tiff", "bmp"],
+    "diffs": ["reference images", "actual images", "diff images", "baseline images"],
+    "videos": ["mp4", "mov", "gif", "m4v"],
+    "recordings": ["screen recordings", "simulator recordings", "any real-time capture"]
+  },
+
+  "prohibited_artifact_paths": [
+    "UIAutomation/Artifacts/screenshots",
+    "UIAutomation/Artifacts/reference",
+    "UIAutomation/Artifacts/actual",
+    "UIAutomation/Artifacts/diff",
+    "UIAutomation/Artifacts/baselines",
+    "UIAutomation/Artifacts/videos",
+    "UIAutomation/Artifacts/recordings"
+  ],
+
+  "allowed_evidence": [
+    "UIAutomation/Artifacts/manifests",
+    "UIAutomation/Artifacts/summaries",
+    "UIAutomation/Artifacts/accessibility",
+    "UIAutomation/Artifacts/logs",
+    "UIAutomation/Artifacts/xcresults",
+    "UIAutomation/Artifacts/crashes"
+  ],
+
+  "enforcement": "CI scan for prohibited API calls + directory existence checks. PR blocked on violation."
+}

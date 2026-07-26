@@ -57,7 +57,22 @@
 
 ---
 
-## 4. 首次 Bootstrap 证据位置
+## 4. 复检触发条件
+
+以下任一情况发生时，必须重新执行 readiness_check：
+- Echo 仓库发生新的 commit（`sourceRevision` 变化）
+- Xcode 版本或 SDK 升级
+- `DatabaseManager` 公共接口变更
+- 模型文件（`Echo/Resources/Models/`）增删或版本变更
+- CI workflow（`.github/workflows/ci.yml`）或 SwiftLint（`.swiftlint.yml`）修改
+- 上次 readiness_check 通过后超过 30 天
+- `task-status.json` 中 Phase 3 任务的 `dependencies` 发生变化
+
+复检时只验证受影响的类别，不重做全部五类门禁。hash 未变的门禁结果可复用。
+
+---
+
+## 5. 首次 Bootstrap 证据位置
 
 | 证据 | 路径 |
 |------|------|

@@ -68,7 +68,7 @@
 5. surface/state/journey/test ID
 6. build/test/audit/视觉结果
 7. raw build log、结构化测试摘要、accessibility tree、`.xcresult`、crash report、manifest hash
-8. **禁止**记录 screenshot、reference/actual/diff、video 路径
+8. `visualMediaCaptured`：布尔字段，必须为 `false`。**绝不**记录 screenshot、reference/actual/diff、video 路径
 
 ### Artifact 保留策略
 | 产物 | 保留规则 |
@@ -95,10 +95,12 @@
 - 每批结构变更后的 build 原始日志
 
 ### 试点 DoD
-- 候选评分表、试点 surface/state/journey/fixture 契约
+- 候选评分表与选择记录（8 维度评分 + 淘汰原因）
+- 试点 surface/state/action/journey/fixture 契约（schema 校验通过）
+- Fixture 完整性验证（覆盖契约声明的所有 state）
 - SwiftUI View + 薄 adapter + 具名 Previews
 - Adapter/行为/XCUITest/accessibility 证据
-- Live Simulator Review 上下文
+- Live Simulator Review 上下文（surfaceId/stateId/fixtureId 匹配）
 - **不生成持久化视觉媒体**
 
 ### 后续切片 DoD
