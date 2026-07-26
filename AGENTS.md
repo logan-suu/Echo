@@ -727,6 +727,12 @@ Echo/
 │   ├── Phase3/                   # Phase 3 测试
 │   ├── Phase4/                   # Phase 4 测试
 │   └── Phase5/                   # Phase 5 测试
+├── UIAutomation/                  # 🤖 UI 自动化合约与策略（Phase 3+）
+│   ├── Contracts/                 # Surface/State/Action/Fixture schema
+│   ├── Fixtures/                  # 确定性 UI 测试数据
+│   ├── Policies/                  # 机器可读 acceptance 策略
+│   └── Artifacts/                 # run manifest + 测试证据
+├── .ui-automation/                # 单次 UI 运行状态（Phase 3+）
 ├── docs/                        # 📚 项目文档中心（详见第0章）
 │   ├── INDEX.md                 # 文档摘要索引
 │   ├── 01-spec/
@@ -1329,9 +1335,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 
 长任务（build、test、XCUITest）通过 `TaskQueueActor` 串行入队，进度通过 `ProgressActor` 持久化到 SQLite TaskProgress 表。
 
-### 17.6 Phase 3 UI 专用命令
-
-### 17.4 Phase 3 UI 专用命令
+### 17.5 Phase 3 UI 专用命令
 
 | 命令 | 用途 | 存在 |
 |------|------|:---:|
@@ -1343,7 +1347,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 
 **禁止**：`/do-task-echo` 对 Phase 3 UI 任务无效。Phase 3 UI 任务必须通过 `/ui-bootstrap-build-echo` 执行。
 
-### 17.7 推荐三命令序列
+### 17.6 推荐三命令序列
 
 ```
 /init-session-echo → /next-task-echo → /ui-bootstrap-build-echo <task-id>
@@ -1351,7 +1355,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 
 跳过前两步时可直接调用 `/ui-bootstrap-build-echo <ready-task-id>`（direct fallback）。
 
-### 17.8 关键禁止项
+### 17.7 关键禁止项
 
 - ❌ **禁止自动 commit/push/PR**：Git 交付必须由用户明确调用适配后的 `/commit-pr-echo` 触发
 - ❌ **禁止生成 screenshot/video**：视觉审批只通过 Live Simulator Review
@@ -1360,7 +1364,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 - ❌ **禁止复制 Pinterest 品牌、文案、控件或 trade dress**
 - ❌ **禁止在一个任务中重新提出多套视觉方向**
 
-### 17.9 停止条件（立即 `stopped`）
+### 17.8 停止条件（立即 `stopped`）
 
 以下任一情况立即停止，不消耗重试预算：
 - 修改 Core、数据模型、数据库迁移或保护配置
