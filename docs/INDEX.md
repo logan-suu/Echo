@@ -19,6 +19,12 @@
 | **AI Native 开发理念** | `04-ai-native/AI Native开发理念与实战技巧手册.md` | AI Native 方法论、工具、Agent 协作                |
 | **产品创新工具**       | `04-ai-native/产品创新工具全景指南.md`            | 前沿 AI 工具介绍及融入方案                        |
 | **开发计划**           | `05-planning/开发计划安排文档.md`                 | 里程碑、时间线、资源安排                          |
+| **UI 文档路由**        | `ui/README.md`                                     | Phase 3 UI 设计配置、自动化工作流、架构边界、测试 |
+| **UI 设计风格**        | `ui/echo-memory-canvas-style.md`                   | echo-memory-canvas 完整设计规范、surface family、token |
+| **UI 自动化工作流**    | `ui/automation-workflow.md`                        | 状态机、批准点、重试/停止规则、试点评分           |
+| **UI 架构**            | `ui/architecture.md`                               | 六层架构、单向数据流、保护路径、组件边界          |
+| **UI 测试与 Artifact** | `ui/testing-and-artifacts.md`                      | PR/Nightly 矩阵、artifact 策略、DoD                |
+| **UI 就绪门禁**        | `ui/echo-readiness.md`                             | Echo 五类门禁、首次 bootstrap 证据位置             |
 | **任务状态**           | `05-planning/task-status.json`                    | 任务状态、依赖、测试文件映射                      |
 
 ---
@@ -42,6 +48,11 @@
 | 创新工具选型与融入方案                    | `04-ai-native/产品创新工具全景指南.md` §3~7            |
 | 工具融入优先级                            | `04-ai-native/产品创新工具全景指南.md` §8              |
 | 开发里程碑与时间线                        | `05-planning/开发计划安排文档.md` §2                   |
+| Phase 3 UI 设计配置与规范                  | `ui/echo-memory-canvas-style.md`                       |
+| UI 自动化工作流与试点选择                  | `ui/automation-workflow.md`                            |
+| UI 架构边界与保护路径                      | `ui/architecture.md`                                   |
+| UI 测试策略与 artifact                     | `ui/testing-and-artifacts.md`                          |
+| Echo 就绪门禁                              | `ui/echo-readiness.md`                                 |
 | 当前开发任务与进度                        | `05-planning/task-status.json`                         |
 
 ---
@@ -105,4 +116,4 @@
 **文档维护声明**
 本索引与 Echo v4.6 全量规格书、架构设计、技术选型等文档协同维护。当文档目录或结构发生变化时，需同步更新本文件。
 
-**下次全面复审日期**：2026-07-16（与开发计划阶段1结束同步）
+**下次全面复审日期**：2026-08-15（与 Phase 3 UI 阶段同步）
