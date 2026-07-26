@@ -1,7 +1,7 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.18  
-**生效日期**：2026-07-25  
+**版本**：v5.19  
+**生效日期**：2026-07-26  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -1396,3 +1396,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.16 | 2026-07-13 | Task 2.14 集成测试实战发现并行测试导致 SQLite 状态污染。§9.4 新增「串行执行」行，要求所有 `xcodebuild test` 必须加 `-parallel-testing-enabled NO`。同步更新 `test-unit-echo`、`test-phase-echo`、`test-integration-echo` 三个命令及 README.md 测试章节。 | AI 架构师 |
 | v5.17 | 2026-07-13 | 强化 §12.6 阶段集成测试累积回归要求：集成测试 PR 提交前必须验证「当前阶段及所有之前阶段」的全部单元测试 + 集成测试（而非仅当前阶段）。同步更新 `test-phase-echo` 质量门禁描述。 | AI 架构师 |
 | v5.18 | 2026-07-25 | Phase 3 UI Bootstrap 物化：新增 §17 Phase 3 UI 协作规约（`echo-memory-canvas` 设计配置、三类 surface family、受保护资产、UI 专用命令、停止条件）。新增 `docs/ui/` 6 文件、`UIAutomation/` 4 目录、`.ui-automation/state.schema.json`。适配 `init-session-echo`（UI 分支）、`next-task-echo`（UI handoff）。新增 `ui-bootstrap-build-echo`、`ui-status-echo`、`ui-retry-echo` 三个命令。 | AI 架构师 |
+| v5.19 | 2026-07-26 | Phase 3 任务重构（审计后）：新增 3.0（App Shell）、3.11（引导流程）、3.12（唤醒投递）三个任务；扩展 3.1/3.2/3.3/3.4/3.6/3.9 范围以覆盖审计发现的缺失故事（PRV-002/003/008、SRC-005/013、SYN-003/004、DIS-002/003、FBK-001/002/003）。所有受影响的 `ready` 任务回退 `backlog`（新增 3.0 依赖）。AWK-004/006 延后 Phase 4。 | AI 架构师 |
