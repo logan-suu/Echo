@@ -67,10 +67,15 @@ agent: build
    | 3.2 | 检索视图 SearchView + SearchViewModel | 2.6 ✅ |
    | … | … | … |
 
-   ### In-Progress 任务
-   [列出所有 in_progress 的 Phase 3 任务]
+    ### In-Progress 任务
+    [列出所有 in_progress 的 Phase 3 任务]
 
-   ### UI Bootstrap 可用性
+    ### 延期任务（deferred-items.json）
+    - 延后到 Phase 4：[N] 条
+    - 上次扫描：[日期]
+    - 提示：阶段集成测试时会自动扫描是否可解决
+
+    ### UI Bootstrap 可用性
    - ✅ docs/ui/ 已物化
    - ✅ UIAutomation/ 已就绪
    - ✅ .ui-automation/state.schema.json 已创建

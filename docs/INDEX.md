@@ -26,6 +26,7 @@
 | **UI 测试与 Artifact** | `ui/testing-and-artifacts.md`                      | PR/Nightly 矩阵、artifact 策略、DoD                |
 | **UI 就绪门禁**        | `ui/echo-readiness.md`                             | Echo 五类门禁、首次 bootstrap 证据位置             |
 | **任务状态**           | `05-planning/task-status.json`                    | 任务状态、依赖、测试文件映射                      |
+| **延期任务**           | `05-planning/deferred-items.json`                 | 延期到后续 Phase 的未解决任务，集成测试时扫描     |
 
 ---
 

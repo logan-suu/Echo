@@ -459,8 +459,8 @@
         },
         {
           "id": "3.4",
-          "title": "设置页面 SettingsView + ViewModel（数据源开关、排除项管理、审计日志、模型状态、反馈记录、索引统计、迁移指引）",
-          "story": "US-SRC-004, US-SRC-008, US-SRC-009, US-PRV-002, US-PRV-003, US-RES-004, US-SET-001, US-SET-002, US-SET-003, US-SET-004, US-FBK-002, US-PRV-005",
+          "title": "设置页面 SettingsView + ViewModel（数据源开关、排除项管理、审计日志、模型状态、反馈记录、索引统计、迁移指引、设备迁移冲突UI）",
+          "story": "US-SRC-004, US-SRC-007, US-SRC-008, US-SRC-009, US-PRV-002, US-PRV-003, US-RES-004, US-SET-001, US-SET-002, US-SET-003, US-SET-004, US-FBK-002, US-PRV-005",
           "status": "backlog",
           "last_updated": "2026-07-26T18:00:00Z",
           "documents_required": [
@@ -524,14 +524,14 @@
         {
           "id": "3.9",
           "title": "整合所有 ViewModel 与 Pipeline + 创作保存 UI",
-          "story": "US-SYN-003, US-SYN-004",
+          "story": "US-SYN-003, US-SYN-004, US-SYN-005",
           "status": "backlog",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7", "3.8"],
           "test_file": "EchoTests/Phase3/EndToEndFlowTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)。"
+          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。"
         },
         {
           "id": "3.12",

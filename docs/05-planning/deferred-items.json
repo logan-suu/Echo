@@ -1,7 +1,8 @@
 {
-  "_description": "Echo 项目延期/暂缓条目追踪。防止在后续阶段遗漏。与 task-status.json 同级维护。",
-  "_version": "1.0.0",
-  "_last_updated": "2026-07-26T18:00:00Z",
+  "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
+  "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
+  "_version": "1.1.0",
+  "_last_updated": "2026-07-26T18:30:00Z",
 
   "deferred_to_phase_4": [
     {
@@ -11,10 +12,9 @@
       "priority": "P1",
       "deferred_from": "Phase 3",
       "deferred_to": "Phase 4",
-      "reason": "独立功能（WidgetKit 小组件 + Lock Screen Live Activity），不阻塞核心流程。实现复杂度高，需要 Widget 独立 target 和 timeline provider。",
+      "reason": "需要 Widget Extension target + App Group 共享数据。当前 Phase 3 聚焦主 App UI，Widget 是独立 target 开发。",
       "ac_count": 5,
-      "ac_summary": "Small/Medium/Large Widget sizes, daily auto-refresh, Live Activity on lock screen, sensitive content filtering",
-      "notes": "Phase 3 结束时重新评估。需 Widget Extension target + App Group 共享数据。",
+      "blocker": "Widget Extension 需要独立的 provisioning profile 和 App Group entitlement 配置，当前开发环境未准备。",
       "deferred_at": "2026-07-26"
     },
     {
@@ -24,99 +24,45 @@
       "priority": "P1",
       "deferred_from": "Phase 3",
       "deferred_to": "Phase 4",
-      "reason": "独立功能（App Intents + Siri Shortcuts），不阻塞核心流程。需要 AppIntents framework 集成 + Siri 语音交互调试。",
+      "reason": "需要 AppIntents framework 集成 + Siri 语音交互环境。当前 Phase 3 聚焦主 App UI，App Intents 是独立扩展开发。",
       "ac_count": 5,
-      "ac_summary": "SearchMemory/CreateMemory/GetTodayRecall intents, voice playback, home screen shortcuts",
-      "notes": "Phase 3 结束时重新评估。需 Siri Intent Definition 文件 + AppIntents 扩展。",
+      "blocker": "AppIntents 扩展需要 Siri Intent Definition 文件 + 独立 AppIntents Extension target，当前开发环境未配置。",
       "deferred_at": "2026-07-26"
-    },
+    }
+  ],
+
+  "moved_back_to_phase_3": [
     {
-      "id": "DEF-003",
+      "id": "MOV-001",
       "story": "US-SRC-007",
       "title": "设备迁移冲突解决 UI",
-      "priority": "P1",
-      "deferred_from": "Phase 3",
-      "deferred_to": "Phase 4",
-      "reason": "需要两台设备进行实际迁移测试。AC-4（弹窗选择覆盖/合并 + 冲突解决界面）在单设备开发环境无法完整验证。",
-      "ac_count": 5,
-      "ac_summary": "Merge/overwrite dialog, batch conflict resolution, item-by-item conflict, post-migration integrity check",
-      "notes": "Core 层已有迁移逻辑（US-SRC-007），Phase 4 只需补充冲突 UI。Phase 3 实现单设备数据导入/导出即可。",
-      "deferred_at": "2026-07-26"
+      "original_status": "deferred_to_phase_4",
+      "resolution": "移回 Phase 3 → 融入任务 3.4（SettingsView）。冲突解决 UI（覆盖/合并弹窗、逐项冲突界面）可在单设备上用模拟数据实现，无需两台设备的实际迁移测试。",
+      "moved_at": "2026-07-26"
     },
     {
-      "id": "DEF-004",
+      "id": "MOV-002",
       "story": "US-SYN-005",
-      "title": "私有 Prompt 草稿编辑确认 UI",
-      "priority": "P2",
-      "deferred_from": "Phase 3",
-      "deferred_to": "Phase 4",
-      "reason": "P2 用户故事，不影响核心流程。AC-4（Prompt 草稿编辑确认弹窗）可延后实现。",
-      "ac_count": 4,
-      "ac_summary": "User-editable system prompt with confirm/reset, per-source time window adjustment",
-      "notes": "AC-3（设置页调整窗口）已融入 3.4。AC-4（Prompt 编辑）为 P2 延后。",
-      "deferred_at": "2026-07-26"
+      "title": "私有 Prompt 草稿编辑确认 UI（AC-4）",
+      "original_status": "deferred_to_phase_4",
+      "resolution": "移回 Phase 3 → 融入任务 3.9（整合 ViewModel 与 Pipeline）。Prompt 编辑弹窗为简单 UI 组件，可在 3.9 的整体整合中一并实现。",
+      "moved_at": "2026-07-26"
     }
   ],
 
   "resolved_deferred": [
-    {
-      "id": "RES-001",
-      "story": "US-RET-004",
-      "title": "FTS5 预过滤 / 人物 / 地理过滤 UI",
-      "original_note": "Task 2.6: deferred to Phase 3 (ANN post-filter 过渡方案)",
-      "resolution": "融入 Phase 3 任务 3.2（SearchView）范围。搜索过滤器控件。",
-      "resolved_at": "2026-07-26"
-    },
-    {
-      "id": "RES-002",
-      "story": "US-RET-006",
-      "title": "低置信度降级横幅 + 反馈按钮",
-      "original_note": "Task 2.9: AC-2/AC-4 展示层 UI 留待 Phase 3",
-      "resolution": "融入 Phase 3 任务 3.2（SearchView）范围。低置信度横幅 + '不准确'反馈按钮。",
-      "resolved_at": "2026-07-26"
-    },
-    {
-      "id": "RES-003",
-      "story": "US-SRC-012",
-      "title": "同步设置 UI 控制",
-      "original_note": "Task 2.10: AC-1/AC-3/AC-8 UI 层留待 Phase 3",
-      "resolution": "融入 Phase 3 任务 3.4（Settings）+ 3.5（Background Task Panel）。",
-      "resolved_at": "2026-07-26"
-    },
-    {
-      "id": "RES-004",
-      "story": "US-AWK-001",
-      "title": "GeoFilter 阈值 UI",
-      "original_note": "Task 2.11: AC-3 🔮 Phase 3",
-      "resolution": "融入 Phase 3 任务 3.1（HomeView）+ 3.12（Awakening Delivery）范围。",
-      "resolved_at": "2026-07-26"
-    },
-    {
-      "id": "RES-005",
-      "story": "US-AWK-003",
-      "title": "情绪卡片本地化",
-      "original_note": "Task 2.12: 情绪卡片文案为英文占位（Phase 3 本地化）",
-      "resolution": "融入 Phase 3 任务 3.8（跨语言翻译层）范围。",
-      "resolved_at": "2026-07-26"
-    },
-    {
-      "id": "RES-006",
-      "story": "US-FBK-001, US-FBK-003",
-      "title": "👍/👎 反馈按钮 + Bad Case 标记 + 反馈记录页",
-      "original_note": "Task 2.13: AC-1/AC-3/AC-4 (UI) → 🔮 Phase 3",
-      "resolution": "融入 Phase 3 任务 3.2（SearchView 反馈按钮）+ 3.4（Settings 反馈记录管理）。",
-      "resolved_at": "2026-07-26"
-    }
+    { "id": "RES-001", "story": "US-RET-004", "resolution": "融入 Phase 3 任务 3.2。FTS5 预过滤/人物/地理过滤 UI。", "resolved_at": "2026-07-26" },
+    { "id": "RES-002", "story": "US-RET-006", "resolution": "融入 Phase 3 任务 3.2。低置信度降级横幅 + 反馈按钮。", "resolved_at": "2026-07-26" },
+    { "id": "RES-003", "story": "US-SRC-012", "resolution": "融入 Phase 3 任务 3.4 + 3.5。同步设置 UI 控制。", "resolved_at": "2026-07-26" },
+    { "id": "RES-004", "story": "US-AWK-001", "resolution": "融入 Phase 3 任务 3.1 + 3.12。GeoFilter 阈值 UI。", "resolved_at": "2026-07-26" },
+    { "id": "RES-005", "story": "US-AWK-003", "resolution": "融入 Phase 3 任务 3.8。情绪卡片本地化。", "resolved_at": "2026-07-26" },
+    { "id": "RES-006", "story": "US-FBK-001, US-FBK-003", "resolution": "融入 Phase 3 任务 3.2 + 3.4。反馈 UI。", "resolved_at": "2026-07-26" }
   ],
 
-  "phase_2_unresolved": [
-    {
-      "id": "P2U-001",
-      "story": "US-RET-001",
-      "title": "Cross-Encoder 重排 + Recall@10 Golden Dataset",
-      "original_note": "Task 2.6: RET-001 AC-2/5 (Cross-Encoder/Recall@10) 留待 Phase 3 Golden Dataset",
-      "status": "pending_in_phase_3",
-      "notes": "非 UI 任务。Phase 3 中 SearchPipeline 需接入 Cross-Encoder 模型并构建 Golden Dataset。当前 Phase 3 任务未显式覆盖——建议在 task-status.json 的 3.2 notes 中标注，或转为独立的 Phase 4 Phase 2 遗留任务。"
-    }
-  ]
+  "phase_integration_scan_rules": {
+    "description": "每次 Phase 集成测试时，Agent 必须扫描本文件：",
+    "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
+    "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
+    "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳"
+  }
 }

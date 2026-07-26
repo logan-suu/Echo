@@ -45,6 +45,7 @@ agent: build
 
 ### 最近更新
 - `last_updated` 时间戳
+- `deferred-items.json` 延期任务：[N] 条（执行 `/test-phase-echo` 时会自动扫描是否已可解决）
 
 ### Phase 3 UI 运行状态（额外步骤，仅当 current_phase == 3）
 - 如果 `.ui-automation/state.json` 存在，读取并报告：run ID、自动化阶段、阶段进度、blocker、建议下一步动作
