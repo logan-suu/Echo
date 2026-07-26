@@ -1,7 +1,7 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.15  
-**生效日期**：2026-07-12  
+**版本**：v5.18  
+**生效日期**：2026-07-25  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -1277,6 +1277,79 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 
 ---
 
+## 17. Phase 3 UI 协作规约
+
+> **路由文档**：`docs/ui/README.md` — 告诉 Agent 针对 Phase 3 UI 任务读取哪份文档，**无需重读 bootstrap 全文**。
+> **物化日期**：2026-07-25
+
+### 17.1 设计配置
+
+Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩展 `apple-native` 基础。不再执行多视觉方向探索。
+
+| 属性 | 值 |
+|------|-----|
+| Profile ID | `echo-memory-canvas` |
+| Base | `apple-native`（系统组件、SF Symbols、系统字体、semantic colors、平台自适应、完整可访问性） |
+| 批准状态 | 用户已批准（记录于 `docs/ui/echo-memory-canvas-style.md`） |
+| 灵感来源 | Pinterest 仅启发 Discovery surfaces 的内容组织密度，**不是**产品依赖、品牌关系或复制 UI 的许可 |
+
+### 17.2 三类 Surface Family
+
+所有 UI 任务必须声明 `surfaceFamily`，并按责任选择布局：
+
+| Family | 布局 | Masonry | 适用场景 |
+|--------|------|:---:|------|
+| **Discovery** | Adaptive masonry 或卡片（条件启用） | ✅ 条件触发 | Home、Search、collection browsing |
+| **Focus** | 沉浸式单列 + grouped metadata | ❌ 禁止 | Memory detail、media viewing、translation |
+| **Task** | Form、List、Sheet、Alert、Menu、Toolbar | ❌ 禁止 | Edit、settings、permissions、background tasks、errors、recovery |
+
+### 17.3 受保护资产
+
+**Core 层绝对只读**：`Echo/Core/Actors/`、`Echo/Core/Pipelines/`、`Echo/Core/Models/`、`Echo/Core/Services/`、数据库 schema、迁移、隐私声明、签名、entitlements、CI 门禁、模型文件。
+
+UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。适配器负责线程隔离、状态映射和 UI 事件转发，不复制业务规则，不保存第二份领域真相。
+
+### 17.4 Phase 3 UI 专用命令
+
+| 命令 | 用途 | 存在 |
+|------|------|:---:|
+| `/ui-bootstrap-build-echo <task-id>` | Phase 3 UI 实现入口（完整流水线 → Live Sim Review） | ✅ 已物化 |
+| `/ui-status-echo` | 只读双状态查询 | ✅ 已物化 |
+| `/ui-retry-echo <task-id>` | 受限阶段重试 | ✅ 已物化 |
+
+**现有命令适配**：`/init-session-echo`（UI 分支：只读初始化不选任务）、`/next-task-echo`（UI handoff：只建立 `selected` checkpoint）。
+
+**禁止**：`/do-task-echo` 对 Phase 3 UI 任务无效。Phase 3 UI 任务必须通过 `/ui-bootstrap-build-echo` 执行。
+
+### 17.5 推荐三命令序列
+
+```
+/init-session-echo → /next-task-echo → /ui-bootstrap-build-echo <task-id>
+```
+
+跳过前两步时可直接调用 `/ui-bootstrap-build-echo <ready-task-id>`（direct fallback）。
+
+### 17.6 关键禁止项
+
+- ❌ **禁止自动 commit/push/PR**：Git 交付必须由用户明确调用适配后的 `/commit-pr-echo` 触发
+- ❌ **禁止生成 screenshot/video**：视觉审批只通过 Live Simulator Review
+- ❌ **禁止在 Focus/Task surfaces 使用 masonry**
+- ❌ **禁止修改 Core、数据模型、迁移、签名或 acceptance policy**
+- ❌ **禁止复制 Pinterest 品牌、文案、控件或 trade dress**
+- ❌ **禁止在一个任务中重新提出多套视觉方向**
+
+### 17.7 停止条件（立即 `stopped`）
+
+以下任一情况立即停止，不消耗重试预算：
+- 修改 Core、数据模型、数据库迁移或保护配置
+- 需要猜测领域规则或绕过现有 Core 接口
+- 需要生产签名、发布凭据、真实用户数据
+- 契约/方向/验收策略存在未批准变化
+- Simulator 重复所有者或控制冲突
+- Artifact 包含凭据、PII
+
+---
+
 **版本历史**：
 
 | 版本 | 日期       | 变更内容                                                     | 变更人    |
@@ -1303,3 +1376,4 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 | v5.15 | 2026-07-12 | 新增 §15.5「外部 AI 审查工具评论审核」规则：CodeRabbit 等外部工具评论不代表真理，Agent 必须逐条审核，仅对 🟢 有效缺陷进行修复，🟡 过度/🔴 误报驳回并记录理由。同步更新 `pr-review-echo` 命令新增「第四步：CodeRabbit 评论审核」并重新编号后续步骤。 | AI 架构师 |
 | v5.16 | 2026-07-13 | Task 2.14 集成测试实战发现并行测试导致 SQLite 状态污染。§9.4 新增「串行执行」行，要求所有 `xcodebuild test` 必须加 `-parallel-testing-enabled NO`。同步更新 `test-unit-echo`、`test-phase-echo`、`test-integration-echo` 三个命令及 README.md 测试章节。 | AI 架构师 |
 | v5.17 | 2026-07-13 | 强化 §12.6 阶段集成测试累积回归要求：集成测试 PR 提交前必须验证「当前阶段及所有之前阶段」的全部单元测试 + 集成测试（而非仅当前阶段）。同步更新 `test-phase-echo` 质量门禁描述。 | AI 架构师 |
+| v5.18 | 2026-07-25 | Phase 3 UI Bootstrap 物化：新增 §17 Phase 3 UI 协作规约（`echo-memory-canvas` 设计配置、三类 surface family、受保护资产、UI 专用命令、停止条件）。新增 `docs/ui/` 6 文件、`UIAutomation/` 4 目录、`.ui-automation/state.schema.json`。适配 `init-session-echo`（UI 分支）、`next-task-echo`（UI handoff）。新增 `ui-bootstrap-build-echo`、`ui-status-echo`、`ui-retry-echo` 三个命令。 | AI 架构师 |
