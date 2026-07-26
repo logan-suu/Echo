@@ -7,8 +7,8 @@
     {
       "id": 1,
       "name": "基础设施搭建",
-          "status": "done",
-"last_updated": "2026-07-08T17:00:00Z",
+      "status": "done",
+      "last_updated": "2026-07-08T17:00:00Z",
       "integration_test": "passed",
       "integration_test_file": "EchoTests/Phase1/Phase1IntegrationTests.swift",
       "integration_test_cases": 52,
@@ -49,7 +49,9 @@
             "docs/02-architecture/技术选型文档.md",
             "docs/02-architecture/架构设计文档.md"
           ],
-          "dependencies": ["1.1"],
+          "dependencies": [
+            "1.1"
+          ],
           "test_file": "EchoTests/Phase1/VectorStoreActorTests.swift",
           "notes": "使用 ProximaKit 1.7.0 替代 LanceDB Mobile（LanceDB 无官方 Swift SDK）。纯 Swift HNSW + 余弦相似度，零依赖，Actor 原生，21 个单元测试全部通过。",
           "pr": "https://github.com/logan-suu/Echo/pull/3"
@@ -65,7 +67,9 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
-          "dependencies": ["1.1"],
+          "dependencies": [
+            "1.1"
+          ],
           "test_file": "EchoTests/Phase1/SQLiteActorTests.swift"
         },
         {
@@ -94,7 +98,9 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md"
           ],
-          "dependencies": ["1.5"],
+          "dependencies": [
+            "1.5"
+          ],
           "test_file": "EchoTests/Phase1/ModelLoaderActorTests.swift",
           "pr": "https://github.com/logan-suu/Echo/pull/6",
           "notes": "20 个单元测试全部通过，覆盖 US-RES-004 全部 8 条 AC。实现 ModelLoaderActor 管理 6 个本地模型的加载、状态追踪、手动重试（无自动重试）、审计错误类型。Core ML .mlmodelc 通过 MLModel.load 加载，GGUF 验证文件可读性。遵循 Actor 隔离契约、仅 Bundle 本地加载、禁止网络下载。"
@@ -110,7 +116,9 @@
           "documents_required": [
             "AGENTS.md"
           ],
-          "dependencies": ["1.1"],
+          "dependencies": [
+            "1.1"
+          ],
           "test_file": null
         },
         {
@@ -123,7 +131,9 @@
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
-          "dependencies": ["1.2"],
+          "dependencies": [
+            "1.2"
+          ],
           "test_file": "EchoTests/Phase1/PrivacyActorTests.swift",
           "pr": "https://github.com/logan-suu/Echo/pull/9",
           "notes": "创建 PrivacyActor.swift (Stub) + 11 个单元测试全部通过。Stub 实现 validate(operation:traceID:sourceTypes:) 基于 UserPolicy.authorizedSourceTypes 做授权检查，返回 PrivacyCheckpoint(.allowed/.denied)。包含 PrivacyOperation 枚举、PrivacyDecision 枚举、PrivacyCheckpoint 结构体、UserPolicy 结构体。完整授权逻辑与审计日志写入留待 Task 2.1 实现。测试文件位于 EchoTests/ 目录（Xcode 测试目标），Tests/UnitTests/ 目录预留为未来 SPM 测试目标。"
@@ -139,7 +149,16 @@
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
-          "dependencies": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8"],
+          "dependencies": [
+            "1.1",
+            "1.2",
+            "1.3",
+            "1.4",
+            "1.5",
+            "1.6",
+            "1.7",
+            "1.8"
+          ],
           "test_file": "EchoTests/Phase1/Phase1IntegrationTests.swift",
           "notes": "52 个集成测试全部通过。覆盖 DatabaseManager + 6 个 Actor 的跨模块联调：数据库表结构、ExcludedAssets 增删查恢复、Feedback 记录与阈值过滤、Progress 持久化、PendingOps 重试、VectorStore 摄入检索持久化、Privacy 授权拒绝、跨 Actor 全链路。"
         }
@@ -166,7 +185,9 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md"
           ],
-          "dependencies": ["1.4"],
+          "dependencies": [
+            "1.4"
+          ],
           "test_file": "EchoTests/Phase2/PrivacyActorTests.swift"
         },
         {
@@ -182,7 +203,9 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md"
           ],
-          "dependencies": ["1.4"],
+          "dependencies": [
+            "1.4"
+          ],
           "test_file": "EchoTests/Phase2/ExcludedAssetsActorTests.swift"
         },
         {
@@ -198,7 +221,10 @@
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/02-architecture/架构设计文档.md"
           ],
-          "dependencies": ["2.1", "1.3"],
+          "dependencies": [
+            "2.1",
+            "1.3"
+          ],
           "test_file": "EchoTests/Phase2/IngestPipelineImageTests.swift"
         },
         {
@@ -213,7 +239,10 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["2.3", "1.6"],
+          "dependencies": [
+            "2.3",
+            "1.6"
+          ],
           "test_file": "EchoTests/Phase2/IngestPipelineVideoTests.swift"
         },
         {
@@ -228,7 +257,9 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/双语言实现说明文档.md"
           ],
-          "dependencies": ["2.3"],
+          "dependencies": [
+            "2.3"
+          ],
           "test_file": "EchoTests/Phase2/2.5_IngestPipelineTextTests.swift"
         },
         {
@@ -245,7 +276,9 @@
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/03-implementation/双语言实现说明文档.md"
           ],
-          "dependencies": ["2.3"],
+          "dependencies": [
+            "2.3"
+          ],
           "test_file": "EchoTests/Phase2/SearchPipelineTests.swift"
         },
         {
@@ -259,7 +292,9 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["1.4"],
+          "dependencies": [
+            "1.4"
+          ],
           "test_file": "EchoTests/Phase2/FeedbackActorTests.swift",
           "notes": "19 单元测试全部通过。AC-1~7 全覆盖。recordFeedback/reset/revoke 新增 traceID 参数 (默认空串向后兼容)，rawInsert() 供测试注入历史日期。PR review 修复: policyVersion 硬编码1→getPolicy().policyVersion (1e47b0e)。AC-7 decayFactor 可自 createdAt 计算，等待 schema migration 加专用列。",
           "pr": "https://github.com/logan-suu/Echo/pull/19"
@@ -274,7 +309,10 @@
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["2.6", "2.7"],
+          "dependencies": [
+            "2.6",
+            "2.7"
+          ],
           "test_file": "EchoTests/Phase2/SearchWithFeedbackTests.swift",
           "notes": "12 单元测试全部通过。AC-1~3 全覆盖。SearchPipeline 新增 FeedbackActor 依赖注入（默认 .shared），在检索流程中插入 computeBatchAdjustments() 调用，按 finalScore = cosineSimilarity + adjustment 重排结果。feedbackAdjustment 字段从保留字段变为实际填充。PR review 修复 (bb87231): 移除冗余 clamp（FeedbackActor 已 clamp），try? → do/catch 显式错误降级。",
           "pr": "https://github.com/logan-suu/Echo/pull/20"
@@ -283,17 +321,19 @@
           "id": "2.9",
           "title": "跨语言低置信度降级（US-RET-006）",
           "story": "US-RET-006",
-            "status": "done",
-            "last_updated": "2026-07-12T15:25:00Z",
-            "merged_at": "2026-07-12T15:25:00Z",
-            "documents_required": [
-                "docs/01-spec/用户故事与验收标准规格书.md",
-                "docs/03-implementation/双语言实现说明文档.md"
-            ],
-            "dependencies": ["2.6"],
-            "test_file": "EchoTests/Phase2/LowConfidenceFallbackTests.swift",
-            "pr": "https://github.com/logan-suu/Echo/pull/21",
-            "notes": "9 单元测试全部通过。AC-1 ✅ (alignmentScore<0.6→lowConfidence+fallbackReason), AC-3 ✅ (结果不被过滤), AC-5 ✅ (审计记录 alignmentScore/fallbackReason/lowConfidenceCount/fallbackReasons)。AC-2/AC-4 为展示层 UI 实现（Phase 3 SearchView/SearchViewModel）。alignmentScore 实际值由 Phase 3 Cross-Encoder 填充，当前始终为 nil → lowConfidence=false。标记逻辑已完备，Phase 3 接入后自动生效。PR review fix (58bf0bc): 审计 JSON 新增 fallbackReasons 字段。"
+          "status": "done",
+          "last_updated": "2026-07-12T15:25:00Z",
+          "merged_at": "2026-07-12T15:25:00Z",
+          "documents_required": [
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/03-implementation/双语言实现说明文档.md"
+          ],
+          "dependencies": [
+            "2.6"
+          ],
+          "test_file": "EchoTests/Phase2/LowConfidenceFallbackTests.swift",
+          "pr": "https://github.com/logan-suu/Echo/pull/21",
+          "notes": "9 单元测试全部通过。AC-1 ✅ (alignmentScore<0.6→lowConfidence+fallbackReason), AC-3 ✅ (结果不被过滤), AC-5 ✅ (审计记录 alignmentScore/fallbackReason/lowConfidenceCount/fallbackReasons)。AC-2/AC-4 为展示层 UI 实现（Phase 3 SearchView/SearchViewModel）。alignmentScore 实际值由 Phase 3 Cross-Encoder 填充，当前始终为 nil → lowConfidence=false。标记逻辑已完备，Phase 3 接入后自动生效。PR review fix (58bf0bc): 审计 JSON 新增 fallbackReasons 字段。"
         },
         {
           "id": "2.10",
@@ -308,7 +348,10 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["2.3", "2.2"],
+          "dependencies": [
+            "2.3",
+            "2.2"
+          ],
           "test_file": "EchoTests/Phase2/SyncPipelineTests.swift"
         },
         {
@@ -322,7 +365,9 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["2.6"],
+          "dependencies": [
+            "2.6"
+          ],
           "test_file": "EchoTests/Phase2/AwakeningGeoTests.swift",
           "notes": "14 单元测试全部通过。AC-1/2/4/5/6 ✅。AC-3 🔮 Phase 3（filterByThreshold 余弦≥0.7 过滤已实现，但上游 GeoFilter 为 no-op，当前以语义搜索过渡）。GeofenceStateStore 基于 UserDefaults（Phase 3 建议迁移至 SQLite）。PR review 修复：writeAwakeningAudit 移除冗余 validate()，接收已有 checkpoint.policyVersion。",
           "pr": "https://github.com/logan-suu/Echo/pull/23"
@@ -332,7 +377,7 @@
           "title": "AwakeningPipeline：情绪唤醒（US-AWK-003）",
           "story": "US-AWK-003",
           "status": "done",
-  "last_updated": "2026-07-12T19:15:00Z",
+          "last_updated": "2026-07-12T19:15:00Z",
           "merged_at": "2026-07-12T18:55:00Z",
           "pr": "https://github.com/logan-suu/Echo/pull/24",
           "notes": "22 单元测试全部通过。AC-1~5 全覆盖。HealthKitProvider + SentimentProvider 协议/stub 模式（Phase 3 集成真实 HealthKit/Core ML 情感模型）。防抖机制：actor 隔离 Task + 30s 延迟合并。情绪卡片文案为英文占位（Phase 3 本地化）。PR review 修复 (fb0c06f): Swap: SwiftLint implicit_optional_initialization ×2 → 0, Search 错误追加 L1 3次重试+指数退避+耗尽审计, emotionCardCopy 添加 Phase 3 i18n 注释。",
@@ -340,7 +385,10 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["2.6", "1.2"],
+          "dependencies": [
+            "2.6",
+            "1.2"
+          ],
           "test_file": "EchoTests/Phase2/AwakeningEmotionTests.swift"
         },
         {
@@ -355,7 +403,9 @@
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
-          "dependencies": ["2.7"],
+          "dependencies": [
+            "2.7"
+          ],
           "test_file": "EchoTests/Phase2/FeedbackPipelineTests.swift"
         },
         {
@@ -371,7 +421,21 @@
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/02-architecture/架构设计文档.md"
           ],
-          "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7", "2.8", "2.9", "2.10", "2.11", "2.12", "2.13"],
+          "dependencies": [
+            "2.1",
+            "2.2",
+            "2.3",
+            "2.4",
+            "2.5",
+            "2.6",
+            "2.7",
+            "2.8",
+            "2.9",
+            "2.10",
+            "2.11",
+            "2.12",
+            "2.13"
+          ],
           "test_file": "EchoTests/Phase2/Phase2IntegrationTests.swift"
         }
       ]
@@ -402,20 +466,6 @@
           "notes": "✅ 完成 (2026-07-26)。更新 EchoApp.swift 使用 AppRootView（TabView + NavigationStack × 3），创建 AppViewModel (@MainActor @Observable)，3 个 stub 视图（Home/Search/Settings），10 个单元测试全部通过。BUILD SUCCEEDED。未修改 Core 文件。PR review 修复 (ca34477): 移除冗余 .environment(appViewModel) 注入 + ErrorLevel L1-L4 文档注释。"
         },
         {
-          "id": "3.11",
-          "title": "引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载",
-          "story": "US-PRV-008, US-SRC-001, US-SYN-001",
-          "status": "ready",
-          "last_updated": "2026-07-26T23:00:00Z",
-          "documents_required": [
-            "docs/01-spec/用户故事与验收标准规格书.md",
-            "docs/ui/echo-memory-canvas-style.md"
-          ],
-          "dependencies": ["3.0", "1.6"],
-          "test_file": "EchoTests/Phase3/OnboardingTests.swift",
-          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。P0 阻塞——App 无法正常启动。覆盖：US-PRV-008（PIPL 隐私摘要+同意/拒绝）、US-SRC-001 AC-6（首次授权提示）、US-SYN-001 AC-2（语言选择）、首次模型加载进度。"
-        },
-        {
           "id": "3.1",
           "title": "主视图 HomeView + HomeViewModel + 唤醒卡片展示 + 离线模式指示器",
           "story": "US-AWK-001, US-AWK-002, US-AWK-003, US-AWK-005, US-RES-001",
@@ -426,7 +476,10 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/ui/echo-memory-canvas-style.md"
           ],
-          "dependencies": ["3.0", "2.11"],
+          "dependencies": [
+            "2.11",
+            "3.0"
+          ],
           "test_file": "EchoTests/Phase3/HomeViewModelTests.swift",
           "notes": "📝 范围扩展（2026-07-26 审计）。原有：卡片列表+今日回忆。新增：唤醒卡片展示(AWK-001/002/003/005)、离线模式指示器(RES-001 AC-3)。依赖新增 3.0。"
         },
@@ -440,7 +493,10 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/echo-memory-canvas-style.md"
           ],
-          "dependencies": ["3.0", "2.6"],
+          "dependencies": [
+            "2.6",
+            "3.1"
+          ],
           "test_file": "EchoTests/Phase3/SearchViewModelTests.swift",
           "notes": "📝 范围扩展（2026-07-26 审计）。原有：查询输入+结果展示。新增：👍/👎反馈按钮(FBK-001)、Bad Case标记(FBK-003)、低置信度横幅(RET-006)、手动扫描结果页(SRC-005)、变更检测结果页(SRC-013)。依赖新增 3.0。"
         },
@@ -455,7 +511,10 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/echo-memory-canvas-style.md"
           ],
-          "dependencies": ["3.0", "2.3", "3.1"],
+          "dependencies": [
+            "2.3",
+            "3.2"
+          ],
           "test_file": "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
           "notes": "📝 范围扩展（2026-07-26 审计）。原有：编辑功能(AWK-007)。新增：L4 冲突解决 UI、创作生成预览(SYN-003/004)、记录感受功能、翻译切换(DIS-002)、删除确认弹窗(PRV-004)。依赖新增 3.0。"
         },
@@ -469,7 +528,12 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/ui/echo-memory-canvas-style.md"
           ],
-          "dependencies": ["3.0", "2.2", "1.4", "1.6"],
+          "dependencies": [
+            "2.2",
+            "1.4",
+            "1.6",
+            "3.3"
+          ],
           "test_file": "EchoTests/Phase3/SettingsViewModelTests.swift",
           "notes": "📝 范围大幅扩展（2026-07-26 审计）。原有：数据源开关+排除项管理+缓存清理。新增：审计日志查看器(PRV-002)、审计日志导出(PRV-003)、模型状态页(RES-004)、反馈记录管理页(FBK-002)、索引统计(SRC-009)、迁移指引(SET-004)、冷却期管理(PRV-005)、数据概览。依赖新增 3.0+1.6。"
         },
@@ -482,7 +546,10 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md"
           ],
-          "dependencies": ["3.4", "2.10"],
+          "dependencies": [
+            "2.10",
+            "3.4"
+          ],
           "test_file": "EchoTests/Phase3/BackgroundTaskPanelTests.swift"
         },
         {
@@ -496,7 +563,11 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/echo-memory-canvas-style.md"
           ],
-          "dependencies": ["3.0", "2.1", "2.7"],
+          "dependencies": [
+            "2.1",
+            "2.7",
+            "3.5"
+          ],
           "test_file": "EchoTests/Phase3/ErrorHandlerUITests.swift",
           "notes": "📝 范围扩展（2026-07-26 审计）。原有：L1~L4 错误 UI。新增：空态/加载态 String Catalog(DIS-003)、低电量/过热降级横幅(RES-002/003)、模型降级横幅(RES-004)、冷却期提醒(PRV-005)。依赖新增 3.0。"
         },
@@ -508,7 +579,10 @@
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
-          "dependencies": ["3.5", "1.4"],
+          "dependencies": [
+            "1.4",
+            "3.6"
+          ],
           "test_file": "EchoTests/Phase3/ProgressActorTests.swift"
         },
         {
@@ -519,7 +593,9 @@
           "documents_required": [
             "docs/03-implementation/双语言实现说明文档.md"
           ],
-          "dependencies": ["3.1", "3.2"],
+          "dependencies": [
+            "3.7"
+          ],
           "test_file": "EchoTests/Phase3/TranslationServiceTests.swift",
           "notes": "📝 关联故事更新：明确覆盖 US-DIS-002（翻译切换 UI）。"
         },
@@ -531,9 +607,42 @@
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7", "3.8"],
+          "dependencies": [
+            "3.8"
+          ],
           "test_file": "EchoTests/Phase3/EndToEndFlowTests.swift",
           "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。"
+        },
+        {
+          "id": "3.10",
+          "title": "Phase 3 集成测试：UI 与 Pipeline 联调验证",
+          "story": null,
+          "status": "backlog",
+          "documents_required": [
+            "docs/02-architecture/数据流全链路技术说明文档.md"
+          ],
+          "dependencies": [
+            "3.9"
+          ],
+          "test_file": "EchoTests/Phase3/Phase3IntegrationTests.swift",
+          "notes": "📝 依赖更新（2026-07-26）。新增对 3.0、3.11、3.12 的依赖。"
+        },
+        {
+          "id": "3.11",
+          "title": "引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载",
+          "story": "US-PRV-008, US-SRC-001, US-SYN-001",
+          "status": "ready",
+          "last_updated": "2026-07-26T23:00:00Z",
+          "documents_required": [
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/ui/echo-memory-canvas-style.md"
+          ],
+          "dependencies": [
+            "1.6",
+            "3.10"
+          ],
+          "test_file": "EchoTests/Phase3/OnboardingTests.swift",
+          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。P0 阻塞——App 无法正常启动。覆盖：US-PRV-008（PIPL 隐私摘要+同意/拒绝）、US-SRC-001 AC-6（首次授权提示）、US-SYN-001 AC-2（语言选择）、首次模型加载进度。"
         },
         {
           "id": "3.12",
@@ -546,21 +655,13 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/echo-memory-canvas-style.md"
           ],
-          "dependencies": ["3.0", "2.11", "2.12"],
+          "dependencies": [
+            "2.11",
+            "2.12",
+            "3.11"
+          ],
           "test_file": "EchoTests/Phase3/AwakeningDeliveryTests.swift",
           "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。UNUserNotificationCenter 设置、本地通知投递、通知点击→深层链接、位置/HealthKit 权限弹窗、地理围栏开关/管理页、情绪唤醒开关。覆盖 AWK-001/002/003 的投递层 UI。"
-        },
-        {
-          "id": "3.10",
-          "title": "Phase 3 集成测试：UI 与 Pipeline 联调验证",
-          "story": null,
-          "status": "backlog",
-          "documents_required": [
-            "docs/02-architecture/数据流全链路技术说明文档.md"
-          ],
-          "dependencies": ["3.0", "3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "3.11", "3.12"],
-          "test_file": "EchoTests/Phase3/Phase3IntegrationTests.swift",
-          "notes": "📝 依赖更新（2026-07-26）。新增对 3.0、3.11、3.12 的依赖。"
         }
       ]
     },
@@ -580,7 +681,9 @@
             "docs/03-implementation/双语言实现说明文档.md",
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
-          "dependencies": ["2.6"],
+          "dependencies": [
+            "2.6"
+          ],
           "test_file": "EchoTests/Phase4/CrossLingualTests.swift"
         },
         {
@@ -591,7 +694,9 @@
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["3.9"],
+          "dependencies": [
+            "3.9"
+          ],
           "test_file": "EchoTests/Phase4/AllPipelinesTests.swift"
         },
         {
@@ -602,7 +707,9 @@
           "documents_required": [
             "docs/02-architecture/技术选型文档.md"
           ],
-          "dependencies": ["3.9"],
+          "dependencies": [
+            "3.9"
+          ],
           "test_file": "EchoTests/Phase4/BenchmarkTests.swift"
         },
         {
@@ -614,7 +721,9 @@
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
-          "dependencies": ["2.11"],
+          "dependencies": [
+            "2.11"
+          ],
           "test_file": "EchoTests/Phase4/DegradationTests.swift"
         },
         {
@@ -626,7 +735,9 @@
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
-          "dependencies": ["1.6"],
+          "dependencies": [
+            "1.6"
+          ],
           "test_file": "EchoTests/Phase4/ModelLoaderRetryTests.swift"
         },
         {
@@ -638,7 +749,9 @@
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
-          "dependencies": ["2.2"],
+          "dependencies": [
+            "2.2"
+          ],
           "test_file": "EchoTests/Phase4/ExcludedAssetsBoundaryTests.swift"
         },
         {
@@ -650,7 +763,9 @@
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md"
           ],
-          "dependencies": ["2.7"],
+          "dependencies": [
+            "2.7"
+          ],
           "test_file": "EchoTests/Phase4/FeedbackRankingAccuracyTests.swift"
         },
         {
@@ -662,7 +777,9 @@
             "docs/",
             "AGENTS.md"
           ],
-          "dependencies": ["3.9"],
+          "dependencies": [
+            "3.9"
+          ],
           "test_file": null
         },
         {
@@ -671,7 +788,9 @@
           "story": null,
           "status": "backlog",
           "documents_required": [],
-          "dependencies": ["4.2"],
+          "dependencies": [
+            "4.2"
+          ],
           "test_file": null
         },
         {
@@ -680,7 +799,9 @@
           "story": null,
           "status": "backlog",
           "documents_required": [],
-          "dependencies": ["4.9"],
+          "dependencies": [
+            "4.9"
+          ],
           "test_file": null
         },
         {
@@ -691,7 +812,18 @@
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
-          "dependencies": ["4.1", "4.2", "4.3", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "4.10"],
+          "dependencies": [
+            "4.1",
+            "4.2",
+            "4.3",
+            "4.4",
+            "4.5",
+            "4.6",
+            "4.7",
+            "4.8",
+            "4.9",
+            "4.10"
+          ],
           "test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift"
         }
       ]
@@ -754,7 +886,12 @@
           "story": null,
           "status": "backlog",
           "documents_required": [],
-          "dependencies": ["5.1", "5.2", "5.3", "5.4"],
+          "dependencies": [
+            "5.1",
+            "5.2",
+            "5.3",
+            "5.4"
+          ],
           "test_file": null
         }
       ]
