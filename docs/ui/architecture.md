@@ -25,13 +25,37 @@
 
 ## 2. 单向数据流
 
+### 2.1 完整路径
 ```
-Core/Database → 只读输出 → @MainActor @Observable Adapter
-→ UI State (typed) → SwiftUI View
-→ User Action → Adapter Intent → 已有 Core 接口
+Core/Actor → 只读值类型输出 → @MainActor @Observable Adapter
+→ UI State (typed enum) → SwiftUI View
+→ User Action → Adapter Intent 方法 → Core Pipeline 接口
+→ 结果回调 → Adapter 状态更新 → View 重新渲染
 ```
 
-**约束**：
+### 2.2 错误传播路径
+```
+Core throws (L1-L4) → Adapter do/catch → 映射规则：
+  L1 → 静默重试 3 次（1s/2s/4s），失败升级 L2
+  L2 → state = .error(L2)，View 显示 Toast + 重试按钮
+  L3 → state = .error(L3)，View 显示全屏引导页
+  L4 → state = .error(L4)，View 显示 Banner + 冲突入口
+```
+
+### 2.3 加载态路径
+```
+User Action → Adapter state = .loading → View ProgressView/skeleton
+→ await Core → 成功: .completed / 失败: .error
+```
+
+### 2.4 取消传播路径
+```
+View .onDisappear → Adapter task?.cancel()
+→ Core Task.checkCancellation() → CancellationError
+→ Adapter state = .cancelled
+```
+
+### 2.5 约束
 - View 不直接写数据库
 - Adapter 不保存独立领域模型
 - Core 不依赖 SwiftUI
@@ -54,13 +78,29 @@ Core/Database → 只读输出 → @MainActor @Observable Adapter
 
 ## 4. 受保护内容（只读）
 
-1. Core 领域逻辑和公共语义
+### 4.1 受保护路径
+
+| 路径 | 内容 | 原因 |
+|------|------|------|
+| `Echo/EchoApp.swift` | `@main` 入口点 | App 生命周期 |
+| `Echo/App/` | AppDelegate（BGTask） | 系统回调 |
+| `Echo/Core/Actors/` | 所有 Actor | 可变状态封装 |
+| `Echo/Core/Pipelines/` | 所有 Pipeline | 业务规则 |
+| `Echo/Core/Models/` | 领域模型 | 数据结构契约 |
+| `Echo/Core/Services/` | 向量存储、模型加载、Embedder、ASR | 持久化、推理封装 |
+| `Echo/Resources/Models/` | Core ML 模型包 | 不可损毁 |
+
+### 4.2 抽象受保护内容
+
+1. Core 领域逻辑和公共语义（所有 `Echo/Core/` 子目录）
 2. 数据模型、数据库 schema、迁移和持久化规则
 3. `DatabaseManager` 的打开、事务和生命周期规则
 4. 隐私声明、签名、entitlements、发布配置和 secrets
 5. CI 安全门禁、SwiftLint 基线和 acceptance policy
 6. Live Simulator 审批规则和 acceptance policy
 7. 模型文件、模型下载或打包逻辑、ProximaKit 集成边界
+
+> UI 层**不得**：导入 Core Actor 可变方法以外的内部符号、直接访问 SQLite/ProximaKit、修改 Core 目录下任何文件。
 
 ---
 
@@ -73,3 +113,80 @@ Core/Database → 只读输出 → @MainActor @Observable Adapter
 5. UI contract、UI 层测试和 artifact 收集配置
 
 > 任何允许内容一旦需要改变受保护语义，就停止自动生成并升级为独立工程决策。
+
+---
+
+## 6. ViewModel 契约
+
+> **上游权威**：AGENTS.md §8.1（ViewModel 强制规范）
+
+### 6.1 标注要求
+- 所有 ViewModel **必须标注 `@MainActor`**
+- **必须使用 `@Observable` 宏**，禁止手动 `objectWillChange.send()`
+
+### 6.2 状态枚举
+```swift
+enum State {
+  case idle          // 初始
+  case loading       // 加载中
+  case completed(T)  // 成功
+  case error(ErrorLevel)  // L1-L4 错误
+  case cancelled     // 取消
+}
+```
+状态流转：`idle→loading→completed/error/cancelled`，禁止 `idle→completed` 直接跳转。
+
+### 6.3 action 方法规则
+- 每个 action 方法**第一行必须设置 `state = .loading`**
+- 副作用仅通过 action 方法触发，禁止在 computed property 中触发
+
+### 6.4 值类型持有
+- ViewModel 只能持有值类型副本（Sendable）
+- 不可变 Actor 引用（`let`）是合法的
+- 禁止持有数据库引用
+
+### 6.5 进度订阅
+- 使用 `Task` 或 `.task` 修饰符，禁止 `Task.detached`
+
+---
+
+## 7. 适配器契约
+
+### 7.1 职责
+| 职责 | 说明 |
+|------|------|
+| 线程隔离 | Core Actor → `@MainActor` 状态 |
+| 状态映射 | Core 值类型 → UI State |
+| 错误映射 | L1-L4 → Toast/Banner/全屏/冲突 |
+| Intent 转发 | User Action → Core `await` 调用 |
+| 生命周期 | 管理 Task，View 消失时 cancel |
+
+### 7.2 错误映射模式
+| Core | UI | 用户操作 |
+|------|----|---------|
+| L1 瞬态 | 静默重试，不显示 UI | 无 |
+| L2 可恢复 | Toast + 重试按钮 | 点击重试 |
+| L3 阻断 | 全屏引导页 | 按引导操作 |
+| L4 数据冲突 | Banner + 冲突入口 | 手动解决 |
+
+### 7.3 禁止清单
+- ❌ 保存第二份领域真相
+- ❌ 复制业务规则
+- ❌ 持有数据库引用
+- ❌ 在 computed property 中触发 Core 调用
+- ❌ `Task.detached`
+
+---
+
+## 8. Surface Family 架构映射
+
+> **上游权威**：`echo-memory-canvas-style.md` §3
+
+| 属性 | Discovery | Focus | Task |
+|------|-----------|-------|------|
+| 适用场景 | Home/Search | Memory detail/translation | Settings/errors/permissions |
+| 布局 | masonry（条件）| 单列+metadata | Form/List/Sheet/Alert |
+| Masonry | ✅ 条件触发 | ❌ 禁止 | ❌ 禁止 |
+| 参考章节 | style §3.1, §5, §6 | style §3.2, §7.1 | style §3.3, §7.2 |
+
+每个 Surface View 头部必须声明 family 归属。交叉引用：`echo-memory-canvas-style.md`。

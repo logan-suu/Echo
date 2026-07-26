@@ -21,10 +21,17 @@
 | 可访问性 | 自动 audit、稳定 ID、关键标签 | audit、语义证据 + 人工记录 |
 | 视觉 | Live Sim Review（变更 surface） | 结构化检查，不保存媒体 |
 | 安全 | artifact secret/PII 扫描 | 依赖、权限、telemetry 复核 |
+| Masonry | 受影响 surface 的列数验证 + 回退检查 | 全部 Discovery surface 的 masonry 行为（启用/回退/列数/Dynamic Type 响应） |
+| Surface Family | 受影响 surface 的 family 规则验证（禁止 Focus/Task 使用 masonry） | 全部 surface 的 family 规则全量验证 |
 
 ---
 
 ## 2. 测试策略
+
+> **String Catalog 验证**（所有测试层级的通用前置条件）：
+> - PR 门禁：所有 `zh-Hans` + `en-US` 键均有值，无缺失翻译
+> - 运行时校验：`String(localized:)` 不应 fallback 到开发语言
+> - 术语表覆盖率 ≥ 90%（基于 `UIAutomation/Fixtures/` 术语 Golden Dataset 校验）
 
 ### 2.1 契约测试
 - 校验 schema 版本、必需字段、未知字段策略
@@ -55,6 +62,21 @@
 - 自动化使用 accessibility tree、元素存在性、点击区域、文本截断审计
 - 自动 accessibility audit 不能替代 VoiceOver/Voice Control/Switch Control 专项检查
 - 最终视觉判断只通过 **Live Simulator Review**（bootstrap 规范 §11.4）
+
+### 2.6 权限流程测试（Permission Flow Testing）
+- 系统权限对话框拒绝路径覆盖（相册、麦克风、语音、通知等）
+- 权限变更后的 UI 更新验证（从 Settings 返回后的状态刷新）
+- XCUITest 使用 `addUIInterruptionMonitor` 处理系统弹窗
+- 覆盖场景：首次拒绝 → 降级 UI / 空状态引导 / 设置引导入口
+
+### 2.7 多分支旅程测试（Multi-branch Journey Testing）
+- 每个 Journey 的分支路径（同意/拒绝、成功/失败、有数据/无数据）均需覆盖
+- 禁止仅覆盖 Happy Path；分支覆盖度是 Journey 测试的必过门禁
+
+### 2.8 跨 Surface 旅程测试（Cross-Surface Journey Testing）
+- Home → Search → Detail → 返回的完整路径（跨 Discovery → Focus 边界）
+- 通知点击 → 深层链接到具体记忆详情
+- 验证 NavigationStack 返回栈完整性
 
 ---
 
@@ -92,6 +114,7 @@
 - `.ui-automation/state.json` schema
 - 适配后的 init/next 命令
 - 新增 ui-bootstrap-build/status/retry 命令
+- **String Catalog 完整性扫描**：所有 `zh-Hans` + `en-US` 键均有值，术语表覆盖率 ≥ 90%
 - 每批结构变更后的 build 原始日志
 
 ### 试点 DoD
@@ -102,6 +125,7 @@
 - Adapter/行为/XCUITest/accessibility 证据
 - Live Simulator Review 上下文（surfaceId/stateId/fixtureId 匹配）
 - **不生成持久化视觉媒体**
+- **权限拒绝路径测试通过**：试点 surface 关联的所有系统权限，拒绝路径均已通过 XCUITest
 
 ### 后续切片 DoD
 - 受影响 readiness/hash 复检

@@ -271,3 +271,202 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 | Discovery/Focus/Task 三类映射 | 用户 | 2026-07-25 | bootstrap 规范 §7.2 |
 
 > 若要改变 profile、Apple 原生基础或三类 surface 映射，必须修订本文和 `docs/ui/echo-memory-canvas-style.md` 并重新获得用户批准。
+
+---
+
+## 10. 空态与加载态（Empty & Loading States）
+
+### 10.1 空态规则
+
+#### 10.1.1 Discovery — 无记忆时的品牌欢迎页
+
+**Surface Family**: `discovery`
+
+- 当系统尚未摄入任何记忆时，HomeView 展示品牌欢迎页而非空白列表
+- 页面构成：顶部 Echo logo + `.largeTitle` 标题 + `.body` 说明 + determinate `ProgressView`
+- 文案（String Catalog）：zh-Hans `"Echo 正在扫描你的记忆…"` / en-US `"Echo is scanning your memories…"`
+- 扫描完成后自动切换至正常内容视图
+
+#### 10.1.2 Focus — 数据加载失败空态
+
+**Surface Family**: `focus`
+
+- 居中布局：SF Symbol `tray` + `"无法加载记忆"` + `"请稍后重试"` + 重试按钮
+- 不阻塞导航：用户仍可返回上一级
+
+#### 10.1.3 Task — 列表为空说明
+
+**Surface Family**: `task`
+
+- 系统 List/Form 标准空态，居中对齐 SF Symbol + 说明文案
+- 不展示品牌元素或动画
+
+### 10.2 加载态规则
+
+- 通用：系统 `ProgressView()`（indeterminate），`.tint(Color.accentColor)`
+- 确定进度：`ProgressView(value:total:)` + 数值文本
+
+#### 10.2.1 骨架屏（Skeleton Screen）
+
+**Surface Family**: `discovery`
+
+- 使用系统 `.redacted(reason: .placeholder)` 实现
+- 卡片数量：iPhone 4-6 张 / iPad 8-12 张
+- **明确禁止**：自定义 shimmer 动画、第三方 skeleton 库
+
+#### 10.2.2 Reduce Motion 适配
+
+- 移除骨架屏渐变、保留数值更新但移除动画曲线
+
+---
+
+## 11. Toast、Banner 与通知栏
+
+### 11.1 通知层级总览
+
+| 类型 | 样式 | 位置 | 持续方式 |
+|------|------|------|----------|
+| L1 瞬态 | Toast | 底部居中 | 2秒自动消失 |
+| L2 可恢复 | Banner | 顶部横条 | 手动关闭 |
+| L3/L4 阻断 | 全屏页 | 全屏 | 用户操作后关闭 |
+| 降级横幅 | Banner | 顶部横条 | 条件解除后自动消失 |
+
+### 11.2 L1 Toast
+
+- 浅色圆角胶囊，底部安全区域内居中
+- 可选 SF Symbol + 单行文案
+- 无操作按钮，从底部滑入/滑出
+
+### 11.3 L2 Banner
+
+- 顶部安全区域下方横条，左侧 SF Symbol + 文案 + 右侧"重试"按钮
+- 手动关闭，不自动消失
+
+### 11.4 降级横幅
+
+- 顶部 Banner，黄色/橙色色调
+- 低电量→`battery.25`，过热→`thermometer.high`，模型降级→`exclamationmark.triangle`
+- 条件解除后自动淡出
+
+### 11.5 冷却期提醒（PRV-005）
+
+- L2 Banner 样式，每 3 小时最多显示一次
+- 仅提供"关闭"按钮
+
+---
+
+## 12. 全屏错误与恢复页面
+
+### 12.1 L3 阻断错误
+
+- 全屏 `fullScreenCover`，禁止 dismissing
+- 大 SF Symbol + 标题 + 双语说明 + "前往设置"/"重试加载模型"按钮
+
+### 12.2 L4 数据冲突
+
+- 全屏 `fullScreenCover`
+- 双栏对比视图（本地版本 vs 外部版本），冲突字段黄色高亮
+- "保留本地"/"保留外部"/"手动合并"三个操作按钮
+
+---
+
+## 13. 后台任务面板（Background Task Panel）
+
+**Surface Family**: `task`
+
+### 13.1 展示方式
+- 底部 Sheet（`.medium` detent，可拖拽至 `.large`）
+- iPad：侧边栏形式，320pt
+
+### 13.2 任务列表项
+- SF Symbol 图标 + 任务名称 + determinate 进度条 + 已处理/总数 + 状态标签
+- 操作：暂停（`pause.circle`）、取消（`xmark.circle`）
+
+### 13.3 自动隐藏
+- 无活跃任务时延迟 1.5 秒自动关闭
+- 空态：居中 `"没有正在进行的任务"`
+
+---
+
+## 14. 筛选与搜索 UI 模式
+
+**Surface Family**: `discovery`
+
+### 14.1 搜索栏
+- 系统 `.searchable` 修饰符，300ms debounce
+- 搜索作用域：全部/照片/视频/备忘录/语音
+
+### 14.2 筛选控件
+- 时间范围：系统 `DatePicker`（compact 模式）
+- 内容类型：水平滚动 SF Symbol 标签（photo/video/note.text/waveform），多选
+- 地点：搜索建议列表 + 可选 MapKit 缩略图
+
+### 14.3 低置信度横幅（US-RET-006）
+- 搜索结果顶部半透明横幅，`info.circle` + "以下结果相关性较低"（双语）
+
+### 14.4 反馈按钮
+- 每个搜索结果卡片右下角 👍/👎 迷你按钮
+- 选中态 `Color.accentColor`，点击有缩放动画
+
+### 14.5 Bad Case 标记
+- 长按卡片 → contextMenu "标记问题"
+
+---
+
+## 15. 引导流程（Onboarding Flow）
+
+**Surface Family**: `task`
+
+### 15.1 展示方式
+- 全屏 `.fullScreenCover`，分步 `TabView` 页面
+
+### 15.2 Step 1 欢迎页
+- Echo logo + `"Echo · 回响"` + `"你的记忆，触手可及"` + "开始"按钮
+
+### 15.3 Step 2 PIPL 隐私同意
+- 可滚动隐私政策摘要 + "同意并继续"（accentColor 填充）/ "不同意"（次要样式）
+
+### 15.4 Step 3 权限序列
+- 照片→通知→位置→健康，每步过渡页 + 系统权限对话框
+- 拒绝后显示"前往设置"按钮
+
+### 15.5 Step 4 语言选择
+- 系统 Picker，zh-Hans / en-US
+
+### 15.6 Step 5 等待扫描
+- Determinate 进度条 + `"正在扫描你的记忆…"`
+
+---
+
+## 16. 离线与连接状态指示器
+
+### 16.1 离线模式指示器（US-RES-001 AC-3）
+- 顶部 Banner，浅灰背景，`wifi.slash` + "离线模式 — 仅显示已缓存的记忆"
+
+### 16.2 首次启动无网络
+- 引导流程完全离线可用，本地 Core ML 模型无需联网
+
+### 16.3 iCloud 同步状态
+- 设置页 trailing 位置，`icloud.fill`/`icloud`/`icloud.slash` 状态指示
+
+---
+
+## 17. 内容卡片增强规则
+
+### 17.1 Pinterest 启发的内容组织密度
+
+> **重要声明**：仅受 Pinterest 内容组织密度启发，**绝不复制**其品牌、颜色、字体、导航或控件。
+
+- 两列自适应瀑布流（条件满足 §6.1 时）
+- iPhone 每屏 4-6 张 / iPad 8-12 张
+- 大图卡片与文字卡片交错排列形成扫描韵律
+
+### 17.2 卡片交互
+- 长按：contextMenu（查看详情/标记问题/分享/移出 Echo）
+- 左滑："移出 Echo"（destructive），右滑："收藏"（非 destructive）
+- 点击：进入 Focus surface
+
+### 17.3 卡片 Accessibility
+- VoiceOver label：`"[类型]，[内容描述]，[时间]，[位置]"`
+- Magic Tap = 查看详情
+- 每个卡片是单一 `accessibilityElement`
