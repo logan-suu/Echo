@@ -67,6 +67,7 @@
 - CI workflow（`.github/workflows/ci.yml`）或 SwiftLint（`.swiftlint.yml`）修改
 - 上次 readiness_check 通过后超过 30 天
 - `task-status.json` 中 Phase 3 任务的 `dependencies` 发生变化
+- `deferred-items.json` 中 Phase 3 相关条目发生变化（新增延期 / 移回 / 已解决）
 
 复检时只验证受影响的类别，不重做全部五类门禁。hash 未变的门禁结果可复用。
 

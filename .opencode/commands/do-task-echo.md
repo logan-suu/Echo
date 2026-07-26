@@ -11,7 +11,7 @@ agent: build
 请按 Echo 项目 AGENTS.md 的任务执行流程规范（§12.2 和 §12.3）执行：
 
 ### 第一步：定位目标任务
-1. 读取 `docs/05-planning/task-status.json`。
+1. 读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json`。
 2. **如果用户指定了任务 ID**（如 `do-task-echo 2.3`），锁定该任务。
 3. **如果用户未指定**：
    - 输出：“请指定要执行的任务 ID，如 `do-task-echo 2.3`。”

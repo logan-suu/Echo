@@ -13,6 +13,7 @@ agent: build
 ### 第一步：读取失败状态
 
 1. 读取 `docs/05-planning/task-status.json`
+2. 读取 `docs/05-planning/deferred-items.json`，确认目标任务未被标记为延期
 2. 读取 `.ui-automation/state.json`
 3. 验证：
    - 任务仍为 `in_progress`

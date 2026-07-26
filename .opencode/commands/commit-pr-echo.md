@@ -30,8 +30,8 @@ agent: build
 3. **检查水印**：确认核心文件（Actor/Pipeline）头部包含“出生证明”水印（§12.5）。
 
 ### 第二步：更新任务状态
-1. 将 `docs/05-planning/task-status.json` 中当前任务的 `status` 更新为 `review`。
-2. 记录当前时间戳。
+1. 将 `docs/05-planning/task-status.json` 中当前任务的 `status` 更新为 `review`，记录当前时间戳。
+2. 检查 `docs/05-planning/deferred-items.json`：如果本次 PR 涉及解封某个延期任务（如环境就绪、依赖完成），将其移至 `resolved_deferred` 数组并更新 `resolved_at`。
 
 ### 第三步：Git 提交
 1. **分支命名**：`{type}/{description}-US-XXX`（如 `feature/search-pipeline-US-RET-001`）。

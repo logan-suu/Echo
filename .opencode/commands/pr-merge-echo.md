@@ -68,7 +68,8 @@ agent: build
       - 将任务的 `status` 更新为 `done`。
       - 记录 `merged_at` 时间戳。
       - 更新 `last_updated` 时间戳。
-      - **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。
+      - 同步检查 `docs/05-planning/deferred-items.json`，确认是否有延期任务被本次合并解决（如对应的依赖已全部完成），若有则移至 `resolved_deferred` 并更新 `last_checked_at`。
+- **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。
    - **最后** `git add` → `git commit` → `git push origin dev-1.0`
    - ⚠️ **禁止在 feature 分支上更新 task-status.json**，必须切到 dev-1.0 操作。
 3. 输出任务完成摘要：

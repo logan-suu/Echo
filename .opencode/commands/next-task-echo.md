@@ -19,7 +19,7 @@ agent: build
 
 ### 第一步：定位任务
 
-1. 读取 `docs/05-planning/task-status.json`
+1. 读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json`
 2. **跨阶段阻断检查（AGENTS.md §12.6）**：
    - 获取 `current_phase`（如 2）。
    - 如果 `current_phase > 1`，找到阶段 `current_phase - 1` 的最后一个任务（该阶段的集成测试任务，如 Phase 1→1.9）。

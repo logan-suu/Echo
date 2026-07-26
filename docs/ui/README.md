@@ -51,7 +51,7 @@
 
 冲突时按以下顺序，前者高于后者：
 1. 用户当前明确指令 + 仓库根 `AGENTS.md` + 受保护政策
-2. `docs/05-planning/task-status.json`（项目 phase、任务生命周期唯一权威）
+2. `docs/05-planning/task-status.json`（项目 phase、任务生命周期唯一权威）；`docs/05-planning/deferred-items.json`（延期任务追踪，与 task-status.json 同级维护）
 3. `UIAutomation/Contracts` 与 `UIAutomation/Policies`（UI 机器契约）
 4. 本目录下的拆分设计文档
 5. 原始 bootstrap 规范（仅首次初始化输入，物化后不再是运行权威）

@@ -32,6 +32,7 @@
 | **产品创新工具**       | `docs/04-ai-native/产品创新工具全景指南.md`            | 前沿创新工具介绍及融入 Echo 的方案         |
 | **开发计划**           | `docs/05-planning/开发计划安排文档.md`                 | 里程碑、时间线及资源安排                   |
 | **任务状态**           | `docs/05-planning/task-status.json`                    | 每个任务的执行状态、依赖关系、测试文件映射 |
+| **延期任务**           | `docs/05-planning/deferred-items.json`                 | 延期到后续 Phase 的未解决任务追踪          |
 
 ### 0.2 任务类型 → 文档快速索引（Agent 必读）
 
@@ -58,10 +59,11 @@
 | **创新工具集成**          | `docs/04-ai-native/产品创新工具全景指南.md`            | 对应工具章节                                       |
 | **查阅开发计划/任务**     | `docs/05-planning/开发计划安排文档.md`                 | 里程碑、时间线                                     |
 |                           | `docs/05-planning/task-status.json`                    | 当前任务状态、依赖关系                             |
+|                           | `docs/05-planning/deferred-items.json`                 | 延期任务追踪                                       |
 
 ### 0.3 Agent 文档读取规范
 
-1. **启动时**：Agent 自动加载本文件（`AGENTS.md`），并**必须**读取 `docs/INDEX.md` 以建立全局文档认知，同时读取 `docs/05-planning/task-status.json` 以确认当前任务状态。
+1. **启动时**：Agent 自动加载本文件（`AGENTS.md`），并**必须**读取 `docs/INDEX.md` 以建立全局文档认知，同时读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json` 以确认当前任务状态与延期任务。
 2. **执行任务时**：根据 §0.2 的映射表确定需要读取的文档和章节，使用 `read_file` 工具的 `offset` 和 `limit` 参数精准读取。
 3. **引用原文**：在回复中必须**逐字粘贴**相关 AC 原文或架构约束原文。
 4. **禁止推断**：严禁使用“根据常规做法，我认为应该...”之类的推断。如果文档描述模糊，Agent 必须停止编码并向人类提出澄清问题。
@@ -892,7 +894,7 @@ flowchart TD
 
 ### 12.1 任务状态管理
 
-所有任务状态记录在 `docs/05-planning/task-status.json` 中，包含以下状态流转：
+所有任务状态记录在 `docs/05-planning/task-status.json` 中；延期任务追踪记录在 `docs/05-planning/deferred-items.json` 中。任务状态包含以下流转：
 
 ```mermaid
 stateDiagram-v2

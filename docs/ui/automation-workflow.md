@@ -117,7 +117,7 @@ selected → repo_discovery → materialize_structure → readiness_check
 
 ## 7. 任务账本桥接
 
-- `docs/05-planning/task-status.json` 是项目 phase、任务生命周期唯一权威
+- `docs/05-planning/task-status.json` 是项目 phase、任务生命周期唯一权威；`docs/05-planning/deferred-items.json` 是延期任务追踪的伴侣文件
 - `.ui-automation/state.json` 只保存单次 UI 运行状态，通过 `task_id` 外键关联
 - 一个 task 同时只能有一个活动 UI run
 - 两者不一致时停止，不以运行状态修正项目账本

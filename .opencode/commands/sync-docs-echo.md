@@ -12,7 +12,7 @@ agent: build
    - 记录决策摘要。
    - 定位该决策涉及的所有文档。
 2. **如果用户未提供具体内容**：
-   - 读取 `docs/05-planning/task-status.json` 中最近的 `documentation_conflicts` 记录。
+   - 读取 `docs/05-planning/task-status.json` 中最近的 `documentation_conflicts` 记录，以及 `docs/05-planning/deferred-items.json`。
    - 找到最新的一条待处理的冲突/决策记录。
    - 输出：“检测到待同步的决策：[决策摘要]。”
 3. **自动扫描关联文档**：
@@ -40,9 +40,10 @@ agent: build
 
 ### 第三步：记录决策
 1. 更新 `docs/05-planning/task-status.json`：
-   - 在 `documentation_conflicts` 数组中记录该决策。
-   - 状态标记为 `resolved`。
-   - 记录决策时间、决策人和方案编号。
+    - 在 `documentation_conflicts` 数组中记录该决策。
+    - 状态标记为 `resolved`。
+    - 记录决策时间、决策人和方案编号。
+2. 如果决策涉及延期任务，同步更新 `docs/05-planning/deferred-items.json`（如移至 `resolved_deferred` 或更新 `last_checked_at`）。
 
 ### 第四步：输出变更摘要
 1. 列出所有修改的文件：

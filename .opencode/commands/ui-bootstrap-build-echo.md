@@ -13,7 +13,7 @@ agent: build
 
 ## 第一步：验证起点 & 建立运行上下文
 
-1. 读取 `docs/05-planning/task-status.json` 和 `.ui-automation/state.json`（若存在）。
+1. 读取 `docs/05-planning/task-status.json`、`docs/05-planning/deferred-items.json` 和 `.ui-automation/state.json`（若存在）。
 2. 验证任务合法性：
    - `current_phase == 3`
    - 任务属于 Phase 3
@@ -35,7 +35,8 @@ agent: build
 6. 读取以下文件建立完整上下文：
    - 根目录 `AGENTS.md`
    - `docs/INDEX.md`
-   - `docs/05-planning/task-status.json`
+    - `docs/05-planning/task-status.json`
+    - `docs/05-planning/deferred-items.json`
    - `docs/ui/README.md`、`docs/ui/echo-memory-canvas-style.md`
    - `.opencode/commands/` 目录下全部命令
    - `.swiftlint.yml`

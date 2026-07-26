@@ -12,7 +12,7 @@ agent: build
 
 ### 第一步：读取双状态
 
-1. 读取 `docs/05-planning/task-status.json`（项目账本 — 唯一权威）
+1. 读取 `docs/05-planning/task-status.json`（项目账本 — 唯一权威）和 `docs/05-planning/deferred-items.json`（延期任务追踪）
 2. 读取 `.ui-automation/state.json`（若存在 — 单次运行状态）
 
 ---
