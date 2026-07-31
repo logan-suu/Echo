@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-26T16:16:20Z",
+  "last_updated": "2026-07-31T16:30:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -920,6 +920,27 @@
         "AGENTS.md §12.1: approved 状态 '谁可以变更' 从 '人类' 改为 'Agent 自动 (CI)'",
         "AI Native 手册 §1: 人机协同门禁示例从 'PR 要求人类 reviewer' 改为 'PR 合并需人类手动执行'",
         "AI Native 手册 §4.3: 代码审查场景描述更新，反映 CI 自动批准机制"
+      ]
+    },
+    {
+      "id": "DEC-RA-20260731-001",
+      "date": "2026-07-31T16:30:00Z",
+      "title": "架构数据模型落地：分代索引底座（修复计划 Phase R-A）",
+      "description": "依据《Echo 端侧模型选型与升级调研报告（2026）》决策 1（先改架构，不先换模型）实现：新增 Memory/Representation 规范实体、ModelManifest 模型身份登记、IndexGeneration 分代索引、ActiveRouteSet 原子路由。DatabaseManager v3 schema 新增 6 张表。PR #31 交付，435 tests 通过。",
+      "impacts": [
+        "VectorStoreActor 升级为每代一个实例的多实例架构（GenerationRegistryActor 持有字典）",
+        "现有单一索引迁移为 legacy-512-v1 generation，标记 384d→512d 补零的已知不对齐风险",
+        "模型升级走新 generation + ActiveRouteSet 原子切换，禁止混代服务",
+        "R-3 模型升级（E5 384d 独立索引/SigLIP2/Whisper）依赖本底座"
+      ],
+      "files": [
+        "Echo/Core/Models/CanonicalMemory.swift",
+        "Echo/Core/Models/ModelManifest.swift",
+        "Echo/Core/Models/IndexGeneration.swift",
+        "Echo/Core/Models/ActiveRouteSet.swift",
+        "Echo/Core/Actors/ModelManifestActor.swift",
+        "Echo/Core/Actors/GenerationRegistryActor.swift",
+        "Echo/Core/Actors/DatabaseManager.swift"
       ]
     }
   ]

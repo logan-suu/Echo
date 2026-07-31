@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.20  
+**版本**：v5.21  
 **生效日期**：2026-07-26  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -118,7 +118,7 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 | UI 框架    | SwiftUI + `@Observable` (iOS 18 Observation) | 最低 iOS 18.0                       |
 | 并发模型   | Swift Concurrency (Actor, Task, AsyncStream) | 禁止 GCD/Combine                    |
 | 状态管理   | `@Observable` ViewModel                      | 禁止手动 `objectWillChange.send()`  |
-| 向量数据库 | ProximaKit 1.7 (HNSW)                        | 通过 VectorStoreActor 封装          |
+| 向量数据库 | ProximaKit 1.7 (HNSW)                        | 通过 VectorStoreActor 封装；分代索引每代一个实例，由 GenerationRegistryActor 管理 |
 | 关系数据库 | SQLite3 (系统内置，通过 DatabaseManager actor 集中管理) | 表结构见规格书附录 |
 | 推理引擎   | Core ML (主力) + Whisper.cpp (ASR 专用)      | Core ML 模型随 App 打包             |
 | 模型格式   | Core ML (.mlmodelc) + GGUF (Whisper)         | 禁止运行时转换                      |
@@ -406,12 +406,15 @@ TaskQueue 契约:
 
 | 存储类型                   | 用途                    | 封装 Actor            |
 | -------------------------- | ----------------------- | --------------------- |
-| ProximaKit HNSW (via VectorStoreActor) | 多维度向量存储（文本 384d / 图像 512d） | `VectorStoreActor`    |
+| ProximaKit HNSW (via VectorStoreActor) | 多维度向量存储（文本 384d / 图像 512d，每代一个实例） | `VectorStoreActor` / `GenerationRegistryActor` |
 | SQLite - ExcludedAssets    | 用户排除的资产 ID       | `ExcludedAssetsActor` |
 | SQLite - FeedbackStore     | 点赞/点踩/Bad Case 反馈 | `FeedbackActor`       |
 | SQLite - TaskProgress      | 断点续传进度            | `ProgressActor`       |
 | SQLite - PendingOperations | L2 错误待重试队列       | `PendingOpsActor`     |
 | SQLite - AuditLog          | 隐私审计日志            | `PrivacyActor`        |
+| SQLite - ModelManifest     | 模型身份与许可登记      | `ModelManifestActor`  |
+| SQLite - IndexGeneration / IndexBuildItem | 分代索引管理与逐项构建 | `GenerationRegistryActor` |
+| SQLite - ActiveRouteSet    | 原子服务路由            | `GenerationRegistryActor` |
 
 ### 5.2 ExcludedAssets 契约（核心）
 
@@ -700,7 +703,9 @@ Echo/
 │   │   ├── FeedbackActor.swift
 │   │   ├── ProgressActor.swift
 │   │   ├── PendingOpsActor.swift
-│   │   └── TaskQueueActor.swift
+│   │   ├── TaskQueueActor.swift
+│   │   ├── ModelManifestActor.swift
+│   │   └── GenerationRegistryActor.swift
 │   ├── Pipelines/
 │   │   ├── SearchPipeline.swift
 │   │   ├── IngestPipeline.swift
@@ -709,6 +714,10 @@ Echo/
 │   │   └── FeedbackPipeline.swift
 │   ├── Models/
 │   │   ├── Memory.swift
+│   │   ├── CanonicalMemory.swift (Memory/Representation 规范实体)
+│   │   ├── ModelManifest.swift
+│   │   ├── IndexGeneration.swift
+│   │   ├── ActiveRouteSet.swift
 │   │   ├── UserPolicy.swift
 │   │   └── ErrorEnums.swift
 │   ├── Services/
@@ -1418,3 +1427,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.18 | 2026-07-25 | Phase 3 UI Bootstrap 物化：新增 §17 Phase 3 UI 协作规约（`echo-memory-canvas` 设计配置、三类 surface family、受保护资产、UI 专用命令、停止条件）。新增 `docs/ui/` 6 文件、`UIAutomation/` 4 目录、`.ui-automation/state.schema.json`。适配 `init-session-echo`（UI 分支）、`next-task-echo`（UI handoff）。新增 `ui-bootstrap-build-echo`、`ui-status-echo`、`ui-retry-echo` 三个命令。 | AI 架构师 |
 | v5.19 | 2026-07-26 | Phase 3 任务重构（审计后）：新增 3.0（App Shell）、3.11（引导流程）、3.12（唤醒投递）三个任务；扩展 3.1/3.2/3.3/3.4/3.6/3.9 范围以覆盖审计发现的缺失故事（PRV-002/003/008、SRC-005/013、SYN-003/004、DIS-002/003、FBK-001/002/003）。所有受影响的 `ready` 任务回退 `backlog`（新增 3.0 依赖）。AWK-004/006 延后 Phase 4。 | AI 架构师 |
 | v5.20 | 2026-07-26 | External content English-only mandate: all PR titles/descriptions/comments, commit messages, branch names, code comments in diffs, and custom command templates enforcing PR body/review report generation must be in English. Project documentation (`docs/*.md`) exempt. Added §3.5 External Content Language rule. Converted §3.3 PR template, §3.4 pre-commit checklist, §11.3 self-check list, and §13.3 AC coverage table from Chinese to English. | AI 架构师 |
+| v5.21 | 2026-07-31 | 分代索引架构落地（Phase R-A）：§2.2 技术栈表向量数据库补充「分代索引每代一个实例，由 GenerationRegistryActor 管理」；§5.1 存储层次表新增 ModelManifest/IndexGeneration/ActiveRouteSet 三行；§10.1 目录结构补充 ModelManifestActor/GenerationRegistryActor 及 CanonicalMemory/ModelManifest/IndexGeneration/ActiveRouteSet 模型文件。 | AI 架构师 |
