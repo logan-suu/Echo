@@ -64,39 +64,45 @@ jobs:
       - name: Static Analysis (R-007)
         run: |
           echo "::group::Checking for @unchecked Sendable"
-          if grep -rq "@unchecked.*Sendable" \
+          UNCHECKED_VIOLATIONS=$(grep -r "@unchecked.*Sendable" \
             --include="*.swift" \
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            Echo/App/ Echo/Core/ Echo/UI/; then
+            Echo/App/ Echo/Core/ Echo/UI/ | grep -vE '(//|///|/\*).*@unchecked' || true)
+          if [ -n "$UNCHECKED_VIOLATIONS" ]; then
             echo "::error::@unchecked Sendable found — violates AGENTS.md R-007"
+            echo "$UNCHECKED_VIOLATIONS"
             exit 1
           fi
           echo "✅ No @unchecked Sendable found"
           echo "::endgroup::"
 
           echo "::group::Checking for nonisolated(unsafe)"
-          if grep -rq "nonisolated(unsafe)" \
+          NONISOLATED_VIOLATIONS=$(grep -r "nonisolated(unsafe)" \
             --include="*.swift" \
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            Echo/App/ Echo/Core/ Echo/UI/; then
+            Echo/App/ Echo/Core/ Echo/UI/ | grep -vE '(//|///|/\*).*nonisolated' || true)
+          if [ -n "$NONISOLATED_VIOLATIONS" ]; then
             echo "::error::nonisolated(unsafe) found — violates AGENTS.md R-007"
+            echo "$NONISOLATED_VIOLATIONS"
             exit 1
           fi
           echo "✅ No nonisolated(unsafe) found"
           echo "::endgroup::"
 
           echo "::group::Checking for Combine imports"
-          if grep -rq "^import Combine" \
+          COMBINE_VIOLATIONS=$(grep -r "^import Combine" \
             --include="*.swift" \
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            Echo/App/ Echo/Core/ Echo/UI/; then
+            Echo/App/ Echo/Core/ Echo/UI/ | grep -vE '(//|///|/\*).*import Combine' || true)
+          if [ -n "$COMBINE_VIOLATIONS" ]; then
             echo "::error::Combine import found — violates AGENTS.md R-007"
+            echo "$COMBINE_VIOLATIONS"
             exit 1
           fi
           echo "✅ No Combine imports found"
