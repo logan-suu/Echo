@@ -80,8 +80,9 @@
 | 组件                   | 定义                                                         | 文档参考               |
 | ---------------------- | ------------------------------------------------------------ | ---------------------- |
 | **Cognitive Pipeline** | 无状态处理节点（Search/Ingest/Sync/Awakening/Feedback）      | `架构设计文档.md` §2.1 |
-| **Actor**              | 可变状态封装（Privacy/ExcludedAssets/Feedback/Progress/PendingOps/TaskQueue） | `架构设计文档.md` §2.2 |
+| **Actor**              | 可变状态封装（Privacy/ExcludedAssets/Feedback/Progress/PendingOps/TaskQueue/ModelManifest/GenerationRegistry） | `架构设计文档.md` §2.2 |
 | **ViewModel**          | `@Observable` + `@MainActor` 驱动 UI                         | `架构设计文档.md` §2.3 |
+| **分代索引**           | Memory/Representation/ModelManifest/IndexGeneration/ActiveRouteSet 六表 + 每代独立 VectorStoreActor | `架构设计文档.md` §4.4 |
 | **PrivacyCheckpoint**  | 强制隐私校验，所有 Pipeline 入口必须调用                     | `架构设计文档.md` §7.1 |
 | **统一错误矩阵**       | L1~L4 分级，L2 仅手动重试                                    | `架构设计文档.md` §5   |
 | **TaskProgress**       | SQLite 表存储断点续传进度                                    | `架构设计文档.md` §6.1 |

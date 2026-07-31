@@ -58,10 +58,12 @@ flowchart TB
         EA["ExcludedAssetsActor"]
         FA["FeedbackActor"]
         TQ["TaskQueueActor"]
+        MA["ModelManifestActor"]
+        GR["GenerationRegistryActor"]
     end
 
     subgraph Storage["💾 Local Storage"]
-        VectorStoreActor[("ProximaKit\nHNSW")]
+        VectorStoreActor[("ProximaKit\nHNSW (per-generation)")]
         SQLite[("SQLite")]
     end
 
@@ -97,7 +99,9 @@ Echo/
 │   │   ├── FeedbackActor.swift
 │   │   ├── ProgressActor.swift
 │   │   ├── PendingOpsActor.swift
-│   │   └── TaskQueueActor.swift
+│   │   ├── TaskQueueActor.swift
+│   │   ├── ModelManifestActor.swift
+│   │   └── GenerationRegistryActor.swift
 │   ├── Pipelines/              # Cognitive Pipeline
 │   │   ├── SearchPipeline.swift
 │   │   ├── IngestPipeline.swift
