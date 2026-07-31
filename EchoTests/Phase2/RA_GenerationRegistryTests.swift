@@ -35,7 +35,7 @@ struct GenerationRegistryTests {
             indexType: "text_dense",
             manifestId: "e5-small-v1"
         )
-        try await sut.registerGeneration(gen, dimension: 384)
+        try await sut.registerGeneration(gen)
 
         let loaded = try await sut.loadGeneration("text_dense/e5-v1")
         #expect(loaded != nil)
@@ -49,12 +49,10 @@ struct GenerationRegistryTests {
     @Test("registerGeneration is idempotent for same generationId")
     func test_register_idempotent() async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g1", indexType: "text_dense"),
-            dimension: 384
+            IndexGeneration(generationId: "g1", indexType: "text_dense")
         )
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g1", indexType: "text_dense"),
-            dimension: 384
+            IndexGeneration(generationId: "g1", indexType: "text_dense")
         )
         #expect(try await sut.loadGenerations().count == 1)
     }
@@ -62,8 +60,7 @@ struct GenerationRegistryTests {
     @Test("setGenerationState transitions building → ready → active")
     func test_setState_transitions() async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g-state", indexType: "text_dense"),
-            dimension: 384
+            IndexGeneration(generationId: "g-state", indexType: "text_dense")
         )
         try await sut.setGenerationState("g-state", state: .ready, counts: 42, validationDigest: "digest-1")
         let ready = try await sut.loadGeneration("g-state")
@@ -74,6 +71,34 @@ struct GenerationRegistryTests {
         try await sut.setGenerationState("g-state", state: .active)
         let active = try await sut.loadGeneration("g-state")
         #expect(active?.state == .active)
+    }
+
+    @Test("setGenerationState rejects illegal transition building → retired")
+    func test_setState_rejects_illegal_transition() async throws {
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "g-illegal", indexType: "text_dense")
+        )
+        do {
+            try await sut.setGenerationState("g-illegal", state: .retired)
+            #expect(Bool(false), "Expected illegalStateTransition")
+        } catch let error as Echo.GenerationError {
+            if case .illegalStateTransition(let from, let to) = error {
+                #expect(from == .building)
+                #expect(to == .retired)
+            } else {
+                #expect(Bool(false), "Wrong error: \(error)")
+            }
+        }
+    }
+
+    @Test("isLegalTransition allows building → ready, rejects building → retired")
+    func test_isLegalTransition_table() {
+        #expect(GenerationState.ready.isLegalTransition(from: .building))
+        #expect(GenerationState.active.isLegalTransition(from: .ready))
+        #expect(GenerationState.retired.isLegalTransition(from: .active))
+        #expect(!GenerationState.retired.isLegalTransition(from: .building))
+        #expect(!GenerationState.building.isLegalTransition(from: .active))
+        #expect(!GenerationState.active.isLegalTransition(from: .retired))
     }
 
     @Test("upsertBuildItem and updateBuildItem track build progress")
@@ -128,9 +153,9 @@ struct ActiveRouteSetTests {
 
     private func seedActiveGeneration(_ id: String = "text_dense/e5-v1") async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: id, indexType: "text_dense"),
-            dimension: 384
+            IndexGeneration(generationId: id, indexType: "text_dense")
         )
+        try await sut.setGenerationState(id, state: .ready)
         try await sut.setGenerationState(id, state: .active)
     }
 
@@ -167,8 +192,7 @@ struct ActiveRouteSetTests {
     @Test("publishRoute throws when generation is still building")
     func test_publish_building_generation_throws() async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "building-gen", indexType: "text_dense"),
-            dimension: 384
+            IndexGeneration(generationId: "building-gen", indexType: "text_dense")
         )
         let route = ActiveRouteSet(textGeneration: "building-gen")
         do {
@@ -188,6 +212,64 @@ struct ActiveRouteSetTests {
 
         let invalid = ActiveRouteSet(textGeneration: "missing-gen")
         #expect(try await sut.validateRoute(invalid) == false)
+    }
+
+    @Test("validateRoute rejects manifest dimension mismatch (W-1)")
+    func test_validateRoute_dimension_mismatch() async throws {
+        // Register generation with dimension 384 (E5)
+        try await sut.registerGeneration(
+            IndexGeneration(
+                generationId: "text_dense/e5-v2",
+                indexType: "text_dense",
+                manifestId: "e5-small-v1",
+                dimension: 384
+            )
+        )
+        try await sut.setGenerationState("text_dense/e5-v2", state: .ready)
+        try await sut.setGenerationState("text_dense/e5-v2", state: .active)
+
+        // Register manifest with mismatched dimension 512
+        try await manifestActor.register(
+            ModelManifest(
+                modelId: "e5-small-v1",
+                revision: "rev",
+                artifactHash: "hash",
+                licenseId: "license",
+                runtime: .coreML,
+                dimension: 512
+            )
+        )
+
+        let route = ActiveRouteSet(textGeneration: "text_dense/e5-v2")
+        #expect(try await sut.validateRoute(route) == false)
+    }
+
+    @Test("validateRoute accepts matching manifest dimension")
+    func test_validateRoute_dimension_match() async throws {
+        try await sut.registerGeneration(
+            IndexGeneration(
+                generationId: "text_dense/e5-v3",
+                indexType: "text_dense",
+                manifestId: "e5-small-v1",
+                dimension: 384
+            )
+        )
+        try await sut.setGenerationState("text_dense/e5-v3", state: .ready)
+        try await sut.setGenerationState("text_dense/e5-v3", state: .active)
+
+        try await manifestActor.register(
+            ModelManifest(
+                modelId: "e5-small-v1",
+                revision: "rev",
+                artifactHash: "hash",
+                licenseId: "license",
+                runtime: .coreML,
+                dimension: 384
+            )
+        )
+
+        let route = ActiveRouteSet(textGeneration: "text_dense/e5-v3")
+        #expect(try await sut.validateRoute(route) == true)
     }
 
     @Test("fallbackRoute returns nil when no active generation exists")

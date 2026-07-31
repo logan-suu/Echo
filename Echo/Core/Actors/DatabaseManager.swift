@@ -198,15 +198,19 @@ public actor DatabaseManager {
                 generationId TEXT PRIMARY KEY NOT NULL,
                 indexType TEXT NOT NULL,
                 manifestId TEXT,
+                dimension INTEGER NOT NULL DEFAULT 512,
                 state TEXT NOT NULL DEFAULT 'building',
                 counts INTEGER NOT NULL DEFAULT 0,
                 validationDigest TEXT
             )
             """)
+        // v3.1 schema migration: add dimension column to IndexGeneration
+        // (existing DBs from initial R-A delivery lack this column)
+        try? execute(sql: "ALTER TABLE IndexGeneration ADD COLUMN dimension INTEGER NOT NULL DEFAULT 512")
         // 逐项构建与恢复 (R-A.3)
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS IndexBuildItem (
-                generationId TEXT NOT NULL,
+                generationId TEXT NOT NULL REFERENCES IndexGeneration(generationId) ON DELETE CASCADE,
                 representationId TEXT NOT NULL,
                 state TEXT NOT NULL DEFAULT 'pending',
                 error TEXT,

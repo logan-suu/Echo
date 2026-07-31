@@ -24,6 +24,26 @@ public enum GenerationState: String, Sendable, Codable, Equatable {
     case active
     /// 已退役（保留观察期，不服务）
     case retired
+
+    /// 合法状态迁移表（W-3 状态机校验）。
+    ///
+    /// 仅允许正向迁移：building → ready → active → retired。
+    /// retired 为终态，不可回退。
+    private static nonisolated let validTransitions: [GenerationState: Set<GenerationState>] = [
+        .building: [.ready],
+        .ready: [.active, .building],
+        .active: [.retired, .ready],
+        .retired: [],
+    ]
+
+    /// 校验从 `from` 迁移到 `self` 是否合法。
+    ///
+    /// - Returns: `true` 若迁移合法；`false` 若非法（如 building → retired 直接跳转）。
+    public nonisolated func isLegalTransition(from: GenerationState) -> Bool {
+        // retired 为终态，禁止任何进入 retired 之外的迁移（retired → retired 幂等）
+        if self == from { return true }
+        return Self.validTransitions[from]?.contains(self) ?? false
+    }
 }
 
 // MARK: - IndexGeneration
@@ -41,6 +61,8 @@ public struct IndexGeneration: Sendable, Codable, Equatable {
     public nonisolated let indexType: String
     /// 关联的 ModelManifest.modelId（nil 表示词法等非模型索引）
     public nonisolated let manifestId: String?
+    /// 向量维度（该分代 HNSW 的维度，用于 manifest 维度匹配校验）
+    public nonisolated let dimension: Int
     /// 当前状态
     public nonisolated let state: GenerationState
     /// 已索引条目数
@@ -52,6 +74,7 @@ public struct IndexGeneration: Sendable, Codable, Equatable {
         generationId: String,
         indexType: String,
         manifestId: String? = nil,
+        dimension: Int = 512,
         state: GenerationState = .building,
         counts: Int = 0,
         validationDigest: String? = nil
@@ -59,6 +82,7 @@ public struct IndexGeneration: Sendable, Codable, Equatable {
         self.generationId = generationId
         self.indexType = indexType
         self.manifestId = manifestId
+        self.dimension = dimension
         self.state = state
         self.counts = counts
         self.validationDigest = validationDigest

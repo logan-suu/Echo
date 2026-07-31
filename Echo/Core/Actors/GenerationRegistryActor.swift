@@ -24,7 +24,9 @@ import Foundation
 /// ## 设计决策
 /// - 每个 generation 一个独立 VectorStoreActor（独立 HNSW 文件）
 /// - `legacy-512-v1` 迁移：注册时将现有单一索引登记为该 generation，标记已知不对齐风险
-/// - ActiveRouteSet 切换在单一 SQLite 事务内完成（通过 executeWrite 单条 UPDATE）
+/// - ActiveRouteSet 发布：先逐项校验（generation 存在 + 非 building + 维度匹配），再单条
+///   INSERT OR REPLACE 原子写入。校验与写入之间存在 await 挂起点，非严格事务（W-2 已记录）；
+///   如需强事务需扩展 DatabaseManager 提供 executeTransaction。
 public actor GenerationRegistryActor {
 
     // MARK: - Singleton
@@ -47,23 +49,25 @@ public actor GenerationRegistryActor {
 
     /// 注册一个分代（幂等：已存在则忽略）。
     ///
-    /// - Parameter generation: 分代元数据
-    /// - Parameter dimension: 该分代的向量维度（用于创建 VectorStoreActor 实例）
-    public func registerGeneration(_ generation: IndexGeneration, dimension: Int) async throws {
-        // Ensure the in-memory instance exists for this generation
+    /// - Parameter generation: 分代元数据（含 dimension）
+    public func registerGeneration(_ generation: IndexGeneration) async throws {
+        // W-6: 内存实例生命周期 — App 重启后 storeInstances 为空。
+        // 若该 generation 已有持久化 .pxkt 文件，应改用 VectorStoreActor.load(from:)
+        // 恢复而非重建空索引。磁盘路径约定与恢复逻辑在 Phase R-3 分代持久化落地时实现。
         if storeInstances[generation.generationId] == nil {
-            storeInstances[generation.generationId] = VectorStoreActor(dimension: dimension)
+            storeInstances[generation.generationId] = VectorStoreActor(dimension: generation.dimension)
         }
         _ = try await db.executeWrite(
             sql: """
             INSERT OR IGNORE INTO IndexGeneration (
-                generationId, indexType, manifestId, state, counts, validationDigest
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                generationId, indexType, manifestId, dimension, state, counts, validationDigest
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             bindings: [
                 .text(generation.generationId),
                 .text(generation.indexType),
                 generation.manifestId.map(DBBinding.text) ?? .null,
+                .int(Int64(generation.dimension)),
                 .text(generation.state.rawValue),
                 .int(Int64(generation.counts)),
                 generation.validationDigest.map(DBBinding.text) ?? .null,
@@ -71,7 +75,9 @@ public actor GenerationRegistryActor {
         )
     }
 
-    /// 更新分代状态（building → ready → active → retired）。
+    /// 更新分代状态（building → ready → active → retired，遵循状态机校验）。
+    ///
+    /// - Throws: `GenerationError.illegalStateTransition` 若迁移非法（如 building → retired 直接跳转）
     @discardableResult
     public func setGenerationState(
         _ generationId: String,
@@ -79,6 +85,15 @@ public actor GenerationRegistryActor {
         counts: Int? = nil,
         validationDigest: String? = nil
     ) async throws -> Bool {
+        // W-3: 状态机校验 — 读取当前状态并拒绝非法迁移
+        if let current = try await loadGeneration(generationId) {
+            guard state.isLegalTransition(from: current.state) else {
+                throw GenerationError.illegalStateTransition(
+                    from: current.state,
+                    to: state
+                )
+            }
+        }
         var setClauses = ["state = ?"]
         var bindings: [DBBinding] = [.text(state.rawValue)]
         if let counts {
@@ -242,7 +257,7 @@ public actor GenerationRegistryActor {
         return rows.first.flatMap { Self.rowToRoute($0) }
     }
 
-    /// 校验路由的有效性（generation 存在、state 非 building、manifest 匹配）。
+    /// 校验路由的有效性（generation 存在、state 非 building、manifest 维度匹配）。
     /// - Returns: `true` 若路由有效；`false` 若任一验证失败（调用方应回退）
     public func validateRoute(_ route: ActiveRouteSet) async throws -> Bool {
         for generationId in route.allGenerationIDs {
@@ -252,10 +267,12 @@ public actor GenerationRegistryActor {
             if generation.state == .building {
                 return false
             }
-            if let manifestId = generation.manifestId,
-               let manifest = try await ModelManifestActor.shared.load(modelId: manifestId) {
-                // Manifest dimension must match the generation's index dimension
-                if manifest.dimension <= 0 {
+            // W-1: manifest 维度必须与分代索引维度一致（不一致会导致查询向量错位）
+            if let manifestId = generation.manifestId {
+                guard let manifest = try await ModelManifestActor.shared.load(modelId: manifestId) else {
+                    return false
+                }
+                if manifest.dimension != generation.dimension {
                     return false
                 }
             }
@@ -263,9 +280,10 @@ public actor GenerationRegistryActor {
         return true
     }
 
-    /// 回退到最近一个完整可验证的路由。
+    /// 重建 text-only 降级路由（当前路由无效时）。
     ///
-    /// 若当前路由无效，查找状态为 active 的 generation 重建回退路由；
+    /// 查找状态为 active 的 text_dense generation 重建最小路由；
+    /// 丢失 ocr/vision/lexical 通道（降级语义，非完整历史路由回退）。
     /// 若都不可用返回 nil。
     public func fallbackRoute() async throws -> ActiveRouteSet? {
         let generations = try await loadGenerations()
@@ -293,6 +311,7 @@ public actor GenerationRegistryActor {
             generationId: generationId,
             indexType: indexType,
             manifestId: row["manifestId"]?.stringValue,
+            dimension: Int(row["dimension"]?.intValue ?? 512),
             state: state,
             counts: Int(row["counts"]?.intValue ?? 0),
             validationDigest: row["validationDigest"]?.stringValue
@@ -335,9 +354,9 @@ extension ActiveRouteSet {
     /// 路由引用的全部分代 ID（去重，text 必填）。
     nonisolated var allGenerationIDs: [String] {
         var ids = [textGeneration]
-        if let ocrGeneration { ids.append(ocrGeneration) }
-        if let visionGeneration { ids.append(visionGeneration) }
-        if let lexicalGeneration { ids.append(lexicalGeneration) }
+        if let ocrGeneration, ocrGeneration != textGeneration { ids.append(ocrGeneration) }
+        if let visionGeneration, visionGeneration != textGeneration { ids.append(visionGeneration) }
+        if let lexicalGeneration, lexicalGeneration != textGeneration { ids.append(lexicalGeneration) }
         return ids
     }
 }
@@ -348,11 +367,15 @@ extension ActiveRouteSet {
 public enum GenerationError: Error, LocalizedError, Sendable {
     /// 路由验证失败（generation 缺失或仍在构建）
     case routeValidationFailed(reason: String)
+    /// 非法状态迁移（违反 building → ready → active → retired 状态机）
+    case illegalStateTransition(from: GenerationState, to: GenerationState)
 
     public var errorDescription: String? {
         switch self {
         case .routeValidationFailed(let reason):
             return "Route validation failed: \(reason)"
+        case .illegalStateTransition(let from, let to):
+            return "Illegal generation state transition: \(from.rawValue) → \(to.rawValue)"
         }
     }
 }
