@@ -103,6 +103,10 @@ struct GenerationRegistryTests {
 
     @Test("upsertBuildItem and updateBuildItem track build progress")
     func test_buildItem_lifecycle() async throws {
+        // Register parent generation first (FK constraint on IndexBuildItem.generationId)
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "g-build", indexType: "text_dense")
+        )
         let item = IndexBuildItem(
             generationId: "g-build",
             representationId: "rep-1"
@@ -122,6 +126,10 @@ struct GenerationRegistryTests {
 
     @Test("updateBuildItem retry increments retryCount")
     func test_buildItem_retry() async throws {
+        // Register parent generation first (FK constraint)
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "g-retry", indexType: "text_dense")
+        )
         try await sut.upsertBuildItem(IndexBuildItem(generationId: "g-retry", representationId: "r1"))
         try await sut.updateBuildItem(
             generationId: "g-retry",
