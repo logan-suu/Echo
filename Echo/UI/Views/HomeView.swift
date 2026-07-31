@@ -456,6 +456,7 @@ struct AwakeningCardView: View {
 
 // MARK: - Preview Helpers
 
+@MainActor
 private func makePreviewViewModel(cards: [(String, String)], isOffline: Bool = false) -> HomeViewModel {
     let vm = HomeViewModel()
     for (triggerType, region) in cards {
