@@ -153,6 +153,79 @@ public actor DatabaseManager {
                 updatedAt REAL NOT NULL
             )
             """)
+        // ── v3 schema migration: ModelManifest / IndexGeneration / ActiveRouteSet (R-A) ──
+        // 规范 Memory 表 (R-A.1): canonical facts source
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS Memory (
+                memoryId TEXT PRIMARY KEY NOT NULL,
+                sourceLocator TEXT NOT NULL,
+                canonicalText TEXT,
+                sourceType TEXT NOT NULL,
+                createdAt REAL NOT NULL,
+                updatedAt REAL NOT NULL,
+                recoverability TEXT NOT NULL DEFAULT 'full'
+            )
+            """)
+        // 一个记忆的多种表示 (R-A.1): modality-specific representations
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS Representation (
+                representationId TEXT PRIMARY KEY NOT NULL,
+                memoryId TEXT NOT NULL REFERENCES Memory(memoryId) ON DELETE CASCADE,
+                modality TEXT NOT NULL,
+                preprocessVersion TEXT NOT NULL,
+                contentHash TEXT NOT NULL
+            )
+            """)
+        // 模型身份与许可登记 (R-A.2)
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS ModelManifest (
+                modelId TEXT PRIMARY KEY NOT NULL,
+                revision TEXT NOT NULL,
+                artifactHash TEXT NOT NULL,
+                licenseId TEXT NOT NULL,
+                runtime TEXT NOT NULL,
+                tokenizer TEXT,
+                promptTemplate TEXT,
+                pooling TEXT NOT NULL DEFAULT 'none',
+                normalization TEXT NOT NULL DEFAULT 'none',
+                dimension INTEGER NOT NULL,
+                quantization TEXT
+            )
+            """)
+        // 分代索引管理 (R-A.3): single model space per generation
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS IndexGeneration (
+                generationId TEXT PRIMARY KEY NOT NULL,
+                indexType TEXT NOT NULL,
+                manifestId TEXT,
+                state TEXT NOT NULL DEFAULT 'building',
+                counts INTEGER NOT NULL DEFAULT 0,
+                validationDigest TEXT
+            )
+            """)
+        // 逐项构建与恢复 (R-A.3)
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS IndexBuildItem (
+                generationId TEXT NOT NULL,
+                representationId TEXT NOT NULL,
+                state TEXT NOT NULL DEFAULT 'pending',
+                error TEXT,
+                retryCount INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (generationId, representationId)
+            )
+            """)
+        // 原子服务路由 (R-A.4): single active route row
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS ActiveRouteSet (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                textGeneration TEXT NOT NULL,
+                ocrGeneration TEXT,
+                visionGeneration TEXT,
+                lexicalGeneration TEXT,
+                version INTEGER NOT NULL DEFAULT 1,
+                updatedAt REAL NOT NULL
+            )
+            """)
     }
 
     // MARK: - Generic SQL Execution

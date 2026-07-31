@@ -18,6 +18,7 @@ public enum DatabaseError: Error, LocalizedError, Sendable {
     case writeFailed(operation: String, underlying: Error)
     case readFailed(operation: String, underlying: Error)
     case notFound(id: String)
+    case rowMappingFailed
 
     public var errorDescription: String? {
         switch self {
@@ -31,6 +32,8 @@ public enum DatabaseError: Error, LocalizedError, Sendable {
             return "Read operation '\(op)' failed: \(error.localizedDescription)"
         case .notFound(let id):
             return "Record not found: \(id)"
+        case .rowMappingFailed:
+            return "Failed to map SQLite row to domain model"
         }
     }
 }
