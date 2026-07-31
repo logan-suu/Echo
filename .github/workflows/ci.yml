@@ -63,13 +63,21 @@ jobs:
       # (EchoTests/.* | EchoUITests/.* are excluded there).
       - name: Static Analysis (R-007)
         run: |
+          SCAN_DIRS="Echo/App/ Echo/Core/ Echo/UI/"
+          for dir in Echo/App Echo/Core Echo/UI; do
+            if [ ! -d "$dir" ]; then
+              echo "::error::R-007 scan directory missing: $dir"
+              exit 1
+            fi
+          done
+
           echo "::group::Checking for @unchecked Sendable"
           UNCHECKED_VIOLATIONS=$(grep -r "@unchecked.*Sendable" \
             --include="*.swift" \
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            Echo/App/ Echo/Core/ Echo/UI/ | grep -vE '(//|///|/\*).*@unchecked' || true)
+            $SCAN_DIRS | grep -vE '(//|///|/\*).*@unchecked' || true)
           if [ -n "$UNCHECKED_VIOLATIONS" ]; then
             echo "::error::@unchecked Sendable found — violates AGENTS.md R-007"
             echo "$UNCHECKED_VIOLATIONS"
@@ -84,7 +92,7 @@ jobs:
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            Echo/App/ Echo/Core/ Echo/UI/ | grep -vE '(//|///|/\*).*nonisolated' || true)
+            $SCAN_DIRS | grep -vE '(//|///|/\*).*nonisolated' || true)
           if [ -n "$NONISOLATED_VIOLATIONS" ]; then
             echo "::error::nonisolated(unsafe) found — violates AGENTS.md R-007"
             echo "$NONISOLATED_VIOLATIONS"
@@ -99,7 +107,7 @@ jobs:
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            Echo/App/ Echo/Core/ Echo/UI/ | grep -vE '(//|///|/\*).*import Combine' || true)
+            $SCAN_DIRS | grep -vE '(//|///|/\*).*import Combine' || true)
           if [ -n "$COMBINE_VIOLATIONS" ]; then
             echo "::error::Combine import found — violates AGENTS.md R-007"
             echo "$COMBINE_VIOLATIONS"
