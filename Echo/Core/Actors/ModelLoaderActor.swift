@@ -15,7 +15,7 @@
 // ==========================================
 
 import Foundation
-import CoreML
+@preconcurrency import CoreML
 import UIKit
 
 // MARK: - Model Loader Actor
