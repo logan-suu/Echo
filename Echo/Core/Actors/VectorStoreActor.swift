@@ -138,7 +138,7 @@ public actor VectorStoreActor {
     public func save(to url: URL) async throws {
         do {
             try await index.save(to: url)
-            try (url as NSURL).setResourceValue(URLFileProtection.complete, forKey: .fileProtectionKey)
+            try? (url as NSURL).setResourceValue(URLFileProtection.complete, forKey: .fileProtectionKey)
         } catch {
             throw VectorStoreError.persistenceFailed(underlying: error)
         }

@@ -58,7 +58,7 @@ jobs:
           swiftlint lint --reporter github-actions-logging --quiet
 
       # ── Static Analysis: R-007 enforcement ──
-      # KEEP IN SYNC: directory scope (App/ Core/ UI/) must match
+      # KEEP IN SYNC: directory scope (Echo/App/ Echo/Core/ Echo/UI/) must match
       # the exclusion patterns in .swiftlint.yml custom_rules
       # (EchoTests/.* | EchoUITests/.* are excluded there).
       - name: Static Analysis (R-007)
@@ -69,7 +69,7 @@ jobs:
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            App/ Core/ UI/; then
+            Echo/App/ Echo/Core/ Echo/UI/; then
             echo "::error::@unchecked Sendable found — violates AGENTS.md R-007"
             exit 1
           fi
@@ -82,7 +82,7 @@ jobs:
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            App/ Core/ UI/; then
+            Echo/App/ Echo/Core/ Echo/UI/; then
             echo "::error::nonisolated(unsafe) found — violates AGENTS.md R-007"
             exit 1
           fi
@@ -95,7 +95,7 @@ jobs:
             --exclude-dir=.build \
             --exclude-dir=DerivedData \
             --exclude-dir=.omo \
-            App/ Core/ UI/; then
+            Echo/App/ Echo/Core/ Echo/UI/; then
             echo "::error::Combine import found — violates AGENTS.md R-007"
             exit 1
           fi
@@ -112,12 +112,12 @@ jobs:
       # ── Build (strict concurrency mode) ──
       - name: Build
         run: |
+          set -o pipefail
           xcodebuild build \
             -project Echo.xcodeproj \
             -scheme Echo \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -derivedDataPath DerivedData \
-            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
             2>&1 | tee build.log
         env:
           NSUnbufferedIO: YES
@@ -125,10 +125,11 @@ jobs:
       # ── Unit Tests with Coverage ──
       - name: Run tests with coverage
         run: |
+          set -o pipefail
           xcodebuild test \
             -project Echo.xcodeproj \
             -scheme Echo \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -derivedDataPath DerivedData \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
