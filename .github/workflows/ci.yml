@@ -147,6 +147,7 @@ jobs:
             -derivedDataPath DerivedData \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
+            -parallel-testing-enabled NO \
             2>&1 | tee test.log
         env:
           NSUnbufferedIO: YES
