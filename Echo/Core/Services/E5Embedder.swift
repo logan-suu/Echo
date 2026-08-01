@@ -12,7 +12,7 @@
 // ==========================================
 
 import Foundation
-import CoreML
+@preconcurrency import CoreML
 
 // MARK: - Embedding Context
 

@@ -796,7 +796,7 @@ public actor SearchPipeline {
         var items: [SearchResultItem] = []
         for id in fusedIds {
             // Look up metadata from the text_dense channel results
-            if let annResult = channelResults.first(where: { $0.channel == "text_dense" })?.rankedIds.firstIndex(of: id) {
+            if channelResults.first(where: { $0.channel == "text_dense" })?.rankedIds.contains(id) == true {
                 // Re-search to get full metadata (simplified; production would cache)
                 let results = await vectorStore.search(query: queryVector, k: 1)
                 if let result = results.first, result.id == id {

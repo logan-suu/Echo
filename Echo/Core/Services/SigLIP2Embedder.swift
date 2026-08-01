@@ -11,7 +11,7 @@
 // ==========================================
 
 import Foundation
-import CoreML
+@preconcurrency import CoreML
 import UIKit
 
 // MARK: - SigLIP2 Embedder
