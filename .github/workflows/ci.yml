@@ -116,6 +116,49 @@ jobs:
           echo "✅ No Combine imports found"
           echo "::endgroup::"
 
+      # ── Static Analysis: R-2.2b PrivacyCheckpoint coverage ──
+      # Every Pipeline file must contain at least one privacyActor.validate()
+      # call (R-006). Pipelines inject PrivacyActor (default .shared) as an
+      # instance property, so the pattern is `privacyActor.validate(`.
+      # Per-file check avoids false positives from helper methods that are
+      # not entry points (fetch/get/audit helpers legitimately lack checkpoints).
+      - name: Static Analysis (PrivacyCheckpoint R-006)
+        run: |
+          echo "::group::PrivacyCheckpoint coverage"
+          FAILED=0
+          for f in Echo/Core/Pipelines/*.swift; do
+            COUNT=$(grep -c "privacyActor.validate(" "$f" 2>/dev/null || echo 0)
+            if [ "$COUNT" -eq 0 ]; then
+              echo "::error::$f has no privacyActor.validate() call — violates R-006"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
+          echo "✅ All Pipeline files contain PrivacyCheckpoint"
+          echo "::endgroup::"
+
+      # ── Static Analysis: R-2.2c network request prohibition ──
+      # R-001/R-005: no network requests in production code. Scan for URLSession
+      # usage outside allowed system API contexts.
+      - name: Static Analysis (No Network Requests R-001/R-005)
+        run: |
+          echo "::group::Network request scan"
+          NET_VIOLATIONS=$(grep -rn "URLSession\|dataTask\|uploadTask\|downloadTask\|NSURLConnection" \
+            --include="*.swift" \
+            --exclude-dir=.build \
+            --exclude-dir=DerivedData \
+            --exclude-dir=.omo \
+            Echo/App/ Echo/Core/ Echo/UI/ 2>/dev/null | grep -vE '^\s*[^:]+:\d+:\s*(//|///|/\*)' || true)
+          if [ -n "$NET_VIOLATIONS" ]; then
+            echo "::error::Network request code found — violates R-001/R-005"
+            echo "$NET_VIOLATIONS"
+            exit 1
+          fi
+          echo "✅ No network request code found"
+          echo "::endgroup::"
+
       # ── Resolve SPM dependencies ──
       - name: Resolve package dependencies
         run: |
@@ -153,18 +196,41 @@ jobs:
         env:
           NSUnbufferedIO: YES
 
-      # ── Coverage Report ──
-      - name: Generate coverage report
+      # ── Coverage Gate (R-2.2a): enforce 95% threshold ──
+      - name: Coverage Gate (≥95%)
         if: always()
         run: |
           set +e
-          if [ -d "TestResults.xcresult" ]; then
-            echo "::group::Coverage Report"
-            xcrun xccov view --report TestResults.xcresult 2>/dev/null || echo "(Coverage report unavailable)"
-            echo "::endgroup::"
-          else
-            echo "::warning::TestResults.xcresult not found — coverage report skipped"
+          if [ ! -d "TestResults.xcresult" ]; then
+            echo "::error::TestResults.xcresult not found — coverage gate cannot pass"
+            exit 1
           fi
+          echo "::group::Coverage Report"
+          xcrun xccov view --report --json TestResults.xcresult > coverage.json 2>/dev/null
+          if [ ! -s coverage.json ]; then
+            echo "::error::Coverage report generation failed"
+            echo "::endgroup::"
+            exit 1
+          fi
+          COVERAGE_PCT=$(grep -o '"lineCoverage": [0-9.]*' coverage.json | grep -o '[0-9.]*$' | head -1)
+          if [ -z "$COVERAGE_PCT" ]; then
+            echo "::error::Could not extract lineCoverage from coverage report"
+            echo "::endgroup::"
+            exit 1
+          fi
+          # lineCoverage is 0~1 fraction; multiply by 100 for percentage
+          COVERAGE_INT=$(awk "BEGIN{printf \"%.0f\", $COVERAGE_PCT * 100}")
+          echo "Line coverage: ${COVERAGE_INT}%"
+          if [ "$COVERAGE_INT" -lt 95 ]; then
+            echo "::error::Coverage ${COVERAGE_INT}% below required 95%"
+            exit 1
+          fi
+          echo "✅ Coverage ${COVERAGE_INT}% ≥ 95%"
+          echo "::endgroup::"
+          # Keep the human-readable report too
+          echo "::group::Coverage Detail"
+          xcrun xccov view --report TestResults.xcresult 2>/dev/null || true
+          echo "::endgroup::"
 
       # ── Upload test results ──
       - name: Upload test results

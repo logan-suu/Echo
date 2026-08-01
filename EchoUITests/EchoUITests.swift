@@ -4,6 +4,11 @@
 //
 //  Created by LoganSu on 6/22/26.
 //
+//  ⚠️ Template-only (R-2.2d): These are Xcode-generated placeholder UI tests
+//  with no assertions. Full UI automation (Phase 3, echo-memory-canvas) uses
+//  XCUITest with real assertions — see docs/ui/automation-workflow.md.
+//  These template tests do NOT count toward the CI quality gate.
+//
 
 import XCTest
 
