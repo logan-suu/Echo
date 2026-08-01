@@ -47,7 +47,15 @@ agent: build
 
 5. **对话线程**：
    - 检查 PR 中是否有未解决的对话线程。
-   - 如果有，列出未解决线程，提示“请先解决所有对话后再合并。”
+   - 如果有，列出未解决线程，提示"请先解决所有对话后再合并。"
+
+6. **PR Review 延后项检查（AGENTS.md §15.5 规则 3）**：
+   - 读取 `docs/05-planning/deferred-items.json` 的 `deferred_from_pr_review` 数组。
+   - 筛选 `pr` 字段等于当前 PR 编号的条目。
+   - 若存在延后项，输出清单（ID、标题、延后目标条件），并提示：
+     "ℹ️ 本 PR 有 N 项审查发现被延后（已记录于 deferred-items.json）。合并后将在 Phase 集成测试时扫描追踪。"
+   - 若存在延后项但**未记录**到 deferred-items.json（即 PR 描述中标注 🔮/deferred 但无对应 DEF- 条目），**阻断**并提示：
+     "⛔ 存在未记录的延后项。请先执行 pr-review-echo 第八步将延后项写入 deferred-items.json，再合并。"
 
 ### 第三步：生成合并建议
 1. **所有检查通过**：

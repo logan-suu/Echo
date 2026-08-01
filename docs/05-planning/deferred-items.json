@@ -1,9 +1,8 @@
 {
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
-  "_version": "1.1.0",
-  "_last_updated": "2026-07-26T18:30:00Z",
-
+  "_version": "1.2.0",
+  "_last_updated": "2026-08-01T12:30:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -30,7 +29,6 @@
       "deferred_at": "2026-07-26"
     }
   ],
-
   "moved_back_to_phase_3": [
     {
       "id": "MOV-001",
@@ -49,20 +47,91 @@
       "moved_at": "2026-07-26"
     }
   ],
-
   "resolved_deferred": [
-    { "id": "RES-001", "story": "US-RET-004", "resolution": "融入 Phase 3 任务 3.2。FTS5 预过滤/人物/地理过滤 UI。", "resolved_at": "2026-07-26" },
-    { "id": "RES-002", "story": "US-RET-006", "resolution": "融入 Phase 3 任务 3.2。低置信度降级横幅 + 反馈按钮。", "resolved_at": "2026-07-26" },
-    { "id": "RES-003", "story": "US-SRC-012", "resolution": "融入 Phase 3 任务 3.4 + 3.5。同步设置 UI 控制。", "resolved_at": "2026-07-26" },
-    { "id": "RES-004", "story": "US-AWK-001", "resolution": "融入 Phase 3 任务 3.1 + 3.12。GeoFilter 阈值 UI。", "resolved_at": "2026-07-26" },
-    { "id": "RES-005", "story": "US-AWK-003", "resolution": "融入 Phase 3 任务 3.8。情绪卡片本地化。", "resolved_at": "2026-07-26" },
-    { "id": "RES-006", "story": "US-FBK-001, US-FBK-003", "resolution": "融入 Phase 3 任务 3.2 + 3.4。反馈 UI。", "resolved_at": "2026-07-26" }
+    {
+      "id": "RES-001",
+      "story": "US-RET-004",
+      "resolution": "融入 Phase 3 任务 3.2。FTS5 预过滤/人物/地理过滤 UI。",
+      "resolved_at": "2026-07-26"
+    },
+    {
+      "id": "RES-002",
+      "story": "US-RET-006",
+      "resolution": "融入 Phase 3 任务 3.2。低置信度降级横幅 + 反馈按钮。",
+      "resolved_at": "2026-07-26"
+    },
+    {
+      "id": "RES-003",
+      "story": "US-SRC-012",
+      "resolution": "融入 Phase 3 任务 3.4 + 3.5。同步设置 UI 控制。",
+      "resolved_at": "2026-07-26"
+    },
+    {
+      "id": "RES-004",
+      "story": "US-AWK-001",
+      "resolution": "融入 Phase 3 任务 3.1 + 3.12。GeoFilter 阈值 UI。",
+      "resolved_at": "2026-07-26"
+    },
+    {
+      "id": "RES-005",
+      "story": "US-AWK-003",
+      "resolution": "融入 Phase 3 任务 3.8。情绪卡片本地化。",
+      "resolved_at": "2026-07-26"
+    },
+    {
+      "id": "RES-006",
+      "story": "US-FBK-001, US-FBK-003",
+      "resolution": "融入 Phase 3 任务 3.2 + 3.4。反馈 UI。",
+      "resolved_at": "2026-07-26"
+    }
   ],
-
   "phase_integration_scan_rules": {
     "description": "每次 Phase 集成测试时，Agent 必须扫描本文件：",
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
-    "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳"
-  }
+    "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
+    "check_pr_review_deferred": "逐条检查 deferred_from_pr_review 数组——对应 PR 是否已合并？defer_to 条件是否已满足（如工件已接入）？若已解决则移至 resolved_deferred。"
+  },
+  "deferred_from_pr_review": [
+    {
+      "id": "DEF-R3-001",
+      "pr": 34,
+      "title": "RRF 元数据回填逻辑重写（按 ID 取元数据，替代 top-1 重查）",
+      "severity": "🟡",
+      "location": "SearchPipeline.swift:~801 (searchMultiChannel)",
+      "reason": "当前为死代码（无调用方）。vectorStore.search(k:1) 返回 top-1 近邻而非指定 ID 文档，融合 ID 被静默丢弃。接入前必须重写为按 ID 点查或缓存元数据。",
+      "defer_to": "R-3 通道集成时（R-3.2/R-3.5/R-3.6 接入后）",
+      "deferred_at": "2026-08-01"
+    },
+    {
+      "id": "DEF-R3-002",
+      "pr": 34,
+      "title": "text_dense 通道错误处理区分 timeout 与 L3 阻断",
+      "severity": "🟡",
+      "location": "SearchPipeline.swift:~778 (searchMultiChannel catch)",
+      "reason": "当前 catch {} 捕获所有错误，可能掩盖 L3 阻断错误（如模型损坏）。应区分 timeout（跳过通道）与其他错误（记录审计 + 上报）。",
+      "defer_to": "R-3 通道集成时",
+      "deferred_at": "2026-08-01"
+    },
+    {
+      "id": "DEF-R3-003",
+      "pr": 34,
+      "title": "ModelLoaderActor 状态跟踪重构（embedder 加载后回报状态）",
+      "severity": "🟡",
+      "location": "ModelLoaderActor.swift (getModelBundleURL / modelStates)",
+      "reason": "embedder 通过 getModelBundleURL 自行加载 MLModel 后，ModelLoaderActor 的 modelStates 仍报 .notLoaded，导致 AC-5/AC-7 降级 UI 与审计失真。需设计 embedder→ModelLoaderActor 状态回报机制。",
+      "defer_to": "R-3 模型文件就绪后（E5/SigLIP2/Whisper 接入时）",
+      "deferred_at": "2026-08-01"
+    },
+    {
+      "id": "DEF-R3-004",
+      "pr": 34,
+      "title": "Scaffold 潜在缺陷修复（SigLIP2 orientation / Whisper PCM 格式 / reader.status）",
+      "severity": "🟡",
+      "location": "SigLIP2Embedder.swift:95,153 / WhisperASREngine.swift:92,116",
+      "reason": "SigLIP2: preprocess 忽略 UIImage.imageOrientation + 强制拉伸破坏宽高比 + 未设 bitmap 字节序。Whisper: AVLinearPCMBitDepthKey:16 + IsFloatKey:true 不匹配（应改 32-bit float）+ 不校验 reader.status==.completed。均为 scaffold 代码，接入真实工件前必须修复。",
+      "defer_to": "R-3 工件接入时（Core ML 转换 / whisper.cpp 集成）",
+      "deferred_at": "2026-08-01"
+    }
+  ]
 }
