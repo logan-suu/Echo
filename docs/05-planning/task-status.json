@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T10:30:00Z",
+  "last_updated": "2026-08-01T11:00:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -832,6 +832,24 @@
             "4.10"
           ],
           "test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift"
+        },
+        {
+          "id": "4.12",
+          "title": "R-3.9 挑战者：PP-OCRv6 备选 OCR 路线",
+          "story": null,
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/PPOCRv6ChallengeTests.swift",
+          "notes": "R-3.9 挑战者赛道。对照 Apple Vision OCR，评估中文场景增益"
+        },
+        {
+          "id": "4.13",
+          "title": "R-3.9 挑战者：Echo 自有蒸馏双语重排器训练管线",
+          "story": null,
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/BilingualRerankerTests.swift",
+          "notes": "R-3.9 挑战者赛道。训练样本全部自有或已授权，固定 shape Core ML 转换，12-24 候选重排 P95 达标"
         }
       ]
     },
