@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.21  
+**版本**：v5.22  
 **生效日期**：2026-07-26  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -1269,6 +1269,7 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
 > **核心规则**：
 > 1. 任何针对 PR Review 反馈（`pr-review-echo` 或人类 Reviewer）的修复提交，**必须**在推送后自动刷新 PR 描述中的 AC 覆盖对照表。
 > 2. **外部 AI 审查工具（CodeRabbit 等）的评论不代表真理。** Agent **必须逐条审核**每条 comment 的有效性，仅对确实指出真实缺陷的评论进行修复。禁止无脑采纳。
+> 3. **PR Review 中决定延后的缺陷（🟡 警告项中未修复者）必须记录到 `docs/05-planning/deferred-items.json` 的 `deferred_from_pr_review` 数组。** 禁止"口头延后"——任何未在本次 PR 修复的审查发现都必须有书面追踪条目，含 ID、PR 编号、位置、延后原因、延后目标条件。每次 Phase 集成测试时必须扫描此数组（§12.6）。
 
 **CodeRabbit 评论审核标准**：
 - 🟢 **有效**：指出真实缺陷（绕过校验、竞态条件、静默丢弃错误等），有具体代码引用和影响说明 → **采纳并修复**
@@ -1288,6 +1289,7 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
    - 标记本次修复变更了哪些 AC 状态
 3. 同步更新 `docs/05-planning/task-status.json` 中对应任务的 `notes` 字段
 4. 同步更新核心实现文件头部的 AC 覆盖注释（`// AC 覆盖:` 行）
+5. **延后项追踪**：将所有决定延后修复的 🟡 警告项写入 `docs/05-planning/deferred-items.json` 的 `deferred_from_pr_review` 数组，每条含：`id`（DEF-{PR}-{序号}）、`pr`、`title`、`severity`、`location`、`reason`、`defer_to`（延后目标条件）、`deferred_at`
 
 **自动化边界**：
 - ✅ Agent 自动执行：`gh pr edit`、`task-status.json` notes 更新、文件头注释更新
@@ -1428,3 +1430,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.19 | 2026-07-26 | Phase 3 任务重构（审计后）：新增 3.0（App Shell）、3.11（引导流程）、3.12（唤醒投递）三个任务；扩展 3.1/3.2/3.3/3.4/3.6/3.9 范围以覆盖审计发现的缺失故事（PRV-002/003/008、SRC-005/013、SYN-003/004、DIS-002/003、FBK-001/002/003）。所有受影响的 `ready` 任务回退 `backlog`（新增 3.0 依赖）。AWK-004/006 延后 Phase 4。 | AI 架构师 |
 | v5.20 | 2026-07-26 | External content English-only mandate: all PR titles/descriptions/comments, commit messages, branch names, code comments in diffs, and custom command templates enforcing PR body/review report generation must be in English. Project documentation (`docs/*.md`) exempt. Added §3.5 External Content Language rule. Converted §3.3 PR template, §3.4 pre-commit checklist, §11.3 self-check list, and §13.3 AC coverage table from Chinese to English. | AI 架构师 |
 | v5.21 | 2026-07-31 | 分代索引架构落地（Phase R-A）：§2.2 技术栈表向量数据库补充「分代索引每代一个实例，由 GenerationRegistryActor 管理」；§5.1 存储层次表新增 ModelManifest/IndexGeneration/ActiveRouteSet 三行；§10.1 目录结构补充 ModelManifestActor/GenerationRegistryActor 及 CanonicalMemory/ModelManifest/IndexGeneration/ActiveRouteSet 模型文件。 | AI 架构师 |
+| v5.22 | 2026-08-01 | PR Review 延后项追踪规范：§15.5 新增核心规则 3（PR Review 延后缺陷必须记录到 deferred-items.json 的 deferred_from_pr_review 数组）+ 执行流程第 5 步（延后项追踪格式）。同步更新 pr-review-echo（新增第八步）、commit-pr-echo（新增延后项检查）、pr-merge-echo（合并前扫描 deferred_from_pr_review）三个自定义命令。 | AI 架构师 |

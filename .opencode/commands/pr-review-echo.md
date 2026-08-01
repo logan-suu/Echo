@@ -77,3 +77,25 @@ After the Agent fixes defects per the review report and pushes, **must** perform
 3. Sync update `docs/05-planning/task-status.json` `notes` field for the corresponding task
 4. Sync update core implementation file header AC coverage comment (`// AC 覆盖:` line)
 5. Note in fix commit body: "Addresses PR review feedback: [list of fixed defects]"
+
+### Step 8: Record Deferred Items (AGENTS.md §15.5 Rule 3)
+> **强制**：任何决定延后修复的 🟡 警告项**必须**写入 `docs/05-planning/deferred-items.json`。禁止"口头延后"。
+
+对于审查报告中**未在本次 PR 修复**的 🟡 警告项，逐条写入 `deferred-items.json` 的 `deferred_from_pr_review` 数组：
+
+```json
+{
+  "id": "DEF-{PR编号}-{序号}",
+  "pr": {PR编号},
+  "title": "{缺陷简述}",
+  "severity": "🟡",
+  "location": "{文件:行号}",
+  "reason": "{延后原因}",
+  "defer_to": "{延后目标条件，如：工件接入时 / Phase R-4}",
+  "deferred_at": "{YYYY-MM-DD}"
+}
+```
+
+同时更新 `phase_integration_scan_rules.check_pr_review_deferred` 扫描规则（若尚未存在）。
+
+**验证**：写入后执行 `python3 -c "import json; json.load(open('docs/05-planning/deferred-items.json'))"` 确认 JSON 有效。

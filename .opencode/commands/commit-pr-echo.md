@@ -78,6 +78,10 @@ agent: build
    - 且本次提交为 PR Review 修复提交（commit body 中包含 "PR review" / "Addresses review" 等关键词）
    - 则自动执行 `gh pr edit [PR编号] --body "[更新的 PR 描述]"`，刷新 AC 覆盖对照表
    - 同时更新 `task-status.json` notes + 核心文件头部 AC 覆盖注释
-2. 输出 PR 链接。
-3. 提醒用户：“请执行 `pr-review-echo` 进行 AI 预审，或等待人类 Reviewer 批准。”
-4. **可选**：检查 GitHub Actions 是否已触发（通过 API 查询），如果未触发，提醒用户检查配置。
+2. **延后项检查（AGENTS.md §15.5 规则 3）**：
+   - 如果本次提交是 PR Review 修复提交，检查是否有 🟡 警告项被决定延后
+   - 若有延后项，确认其已写入 `docs/05-planning/deferred-items.json` 的 `deferred_from_pr_review` 数组
+   - 若未写入，**阻断**并提示："⛔ 存在未记录的延后项。请先将延后的 🟡 警告项写入 deferred-items.json（格式见 §15.5 执行流程第 5 步），再提交。"
+3. 输出 PR 链接。
+4. 提醒用户："请执行 `pr-review-echo` 进行 AI 预审，或等待人类 Reviewer 批准。"
+5. **可选**：检查 GitHub Actions 是否已触发（通过 API 查询），如果未触发，提醒用户检查配置。

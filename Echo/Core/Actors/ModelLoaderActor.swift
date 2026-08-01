@@ -38,6 +38,10 @@ import UIKit
 /// - 手动重试成功 → `.modelLoadRetrySuccess`
 public actor ModelLoaderActor {
 
+    // MARK: - Singleton
+
+    public static let shared = ModelLoaderActor()
+
     // MARK: - Model Types (AC-1: fixed set, AC-6: no switching)
 
     /// Echo 内置的所有模型类型。
@@ -267,6 +271,12 @@ public actor ModelLoaderActor {
         modelStates[modelType]?.isLoaded ?? false
     }
 
+    /// R-3.4: 获取模型的 Bundle URL（Sendable，可跨 Actor 传递）。
+    /// Embedder/ASR 用此 URL 自行加载 MLModel（MLModel 非 Sendable，不能跨 Actor 返回）。
+    public func getModelBundleURL(_ modelType: ModelType) -> URL? {
+        modelType.bundleURL
+    }
+
     /// 获取所有模型的整体状态摘要（AC-5, AC-7）。
     public var overallStatus: OverallStatus {
         let states = modelStates
@@ -318,10 +328,12 @@ public actor ModelLoaderActor {
         do {
             switch modelType.fileExtension {
             case "mlmodelc":
-                // Core ML compiled model — load into memory
+                // Core ML compiled model — verify loadable (R-3.4: embedders load
+                // MLModel themselves via getModelBundleURL; MLModel is not Sendable)
                 _ = try await MLModel.load(contentsOf: bundleURL, configuration: MLModelConfiguration())
             case "gguf":
-                // GGUF model — verify file readability (actual Whisper initialization in Phase 2)
+                // GGUF model — verify file readability (R-3.3: whisper.cpp loads
+                // the GGUF file itself via getModelBundleURL)
                 guard FileManager.default.isReadableFile(atPath: bundleURL.path) else {
                     throw NSError(
                         domain: "ModelLoaderActor",
