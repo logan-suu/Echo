@@ -42,6 +42,28 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
+      # ── Cache model assets (R-4.3) ──
+      # Key on prepare_models.sh + checksums manifest so the cache invalidates
+      # whenever the model list or pinned revisions change.
+      - name: Cache model assets
+        uses: actions/cache@v4
+        with:
+          path: Echo/Resources/Models
+          key: ${{ runner.os }}-models-${{ hashFiles('Scripts/prepare_models.sh', 'Scripts/model_checksums.sha256') }}
+          restore-keys: |
+            ${{ runner.os }}-models-
+
+      # ── Prepare model assets (R-4.3) ──
+      # Downloads models on cache miss and verifies SHA256. continue-on-error:
+      # the HF mirror may be unreachable from GitHub runners and models are
+      # runtime-loaded (build compiles without them). ModelBundleTests stays
+      # skipped until model delivery is proven reliable in CI.
+      - name: Prepare model assets
+        continue-on-error: true
+        run: |
+          pip install --quiet huggingface_hub || true
+          bash Scripts/prepare_models.sh || echo "::warning::Model preparation failed — build proceeds without models (ModelBundleTests skipped)"
+
       # ── Install SwiftLint ──
       - name: Install SwiftLint
         run: brew install swiftlint
