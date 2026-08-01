@@ -216,8 +216,33 @@
             "approved_at": {"type": "string", "format": "date-time"},
             "simulator_uri": {"type": "string"}
           }
+        },
+        "completed_steps": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "files_created": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "files_modified": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "test_results": {
+          "type": "object",
+          "properties": {
+            "unit_tests_passed": {"type": "integer"},
+            "build": {"type": "string"},
+            "unverified": {"type": "boolean"}
+          }
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time"
         }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }

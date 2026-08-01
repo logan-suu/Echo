@@ -127,8 +127,9 @@ jobs:
           echo "::group::PrivacyCheckpoint coverage"
           FAILED=0
           for f in Echo/Core/Pipelines/*.swift; do
-            COUNT=$(grep -c "privacyActor.validate(" "$f" 2>/dev/null || echo 0)
-            if [ "$COUNT" -eq 0 ]; then
+            # grep -q: exit 0 on match, 1 on no match — avoids grep -c's
+            # "0 with exit 1" + `|| echo 0` producing "0\n0" double-line bug
+            if ! grep -q "privacyActor.validate(" "$f" 2>/dev/null; then
               echo "::error::$f has no privacyActor.validate() call — violates R-006"
               FAILED=1
             fi
@@ -212,20 +213,17 @@ jobs:
             echo "::endgroup::"
             exit 1
           fi
-          COVERAGE_PCT=$(grep -o '"lineCoverage": [0-9.]*' coverage.json | grep -o '[0-9.]*$' | head -1)
-          if [ -z "$COVERAGE_PCT" ]; then
-            echo "::error::Could not extract lineCoverage from coverage report"
-            echo "::endgroup::"
-            exit 1
-          fi
-          # lineCoverage is 0~1 fraction; multiply by 100 for percentage
-          COVERAGE_INT=$(awk "BEGIN{printf \"%.0f\", $COVERAGE_PCT * 100}")
-          echo "Line coverage: ${COVERAGE_INT}%"
+          # Extract Echo.app (main production target) lineCoverage via python —
+          # grep on JSON arrays is unreliable (match repetition limits, cross-
+          # target matches). Aggregate/top-level lineCoverage includes test code,
+          # so the production gate uses the Echo.app target value.
+          COVERAGE_INT=$(python3 -c 'import json; d=json.load(open("coverage.json")); t=next((x for x in d.get("targets",[]) if x.get("name")=="Echo.app"), None); print(int(round((t.get("lineCoverage",0) if t else 0)*100)))')
+          echo "Echo.app line coverage: ${COVERAGE_INT}%"
           if [ "$COVERAGE_INT" -lt 95 ]; then
-            echo "::error::Coverage ${COVERAGE_INT}% below required 95%"
+            echo "::error::Echo.app coverage ${COVERAGE_INT}% below required 95%"
             exit 1
           fi
-          echo "✅ Coverage ${COVERAGE_INT}% ≥ 95%"
+          echo "✅ Echo.app coverage ${COVERAGE_INT}% ≥ 95%"
           echo "::endgroup::"
           # Keep the human-readable report too
           echo "::group::Coverage Detail"

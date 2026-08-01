@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T09:00:00Z",
+  "last_updated": "2026-08-01T10:00:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -111,7 +111,6 @@
           "story": null,
           "status": "review",
           "last_updated": "2026-07-05T09:00:00Z",
-          "merged_at": "2026-07-05T09:00:00Z",
           "pr": "https://github.com/logan-suu/Echo/pull/8",
           "documents_required": [
             "AGENTS.md"
@@ -120,7 +119,7 @@
             "1.1"
           ],
           "test_file": null,
-          "notes": "(2026-08-01 账本修复 R-2.1c: 审计发现 CI 存在 destination 错误、pipefail 缺失、R-007 扫描空目录。已由 PR #30 修复，待合并确认)"
+          "notes": "(2026-08-01 账本修复 R-2.1c: 审计发现 CI 存在 destination 错误、pipefail 缺失、R-007 扫描空目录。已由 PR #30 修复，待合并确认)\n(reopened_for: PR #30 CI 修复 — 2026-08-01 审计后置为 review，历史合并时间已清理)"
         },
         {
           "id": "1.8",
