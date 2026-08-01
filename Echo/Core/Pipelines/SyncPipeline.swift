@@ -4,7 +4,7 @@
 //            docs/02-architecture/架构设计文档.md §3.2 (SyncPipeline 时序图)
 //            docs/02-architecture/数据流全链路技术说明文档.md §4 (变更同步数据流)
 // 任务: 2.10 - SyncPipeline：相册变更监听 + 增量替换
-// AC 覆盖: US-SRC-012 AC-1 (变更检测: detectNoteChanges, detectCalendarChanges),
+// AC 覆盖: US-SRC-012 AC-1 (变更检测: photo 自动同步 — R-5.2 移除 note/calendar 自动扫描),
 //          AC-2 (哈希跳过: >100KB + availableMem<300MB + totalMem≤2GB — W1 fixed),
 //          AC-3 (自动同步开关: isAutoSyncEnabled — Phase 3 UI),
 //          AC-4 (增量替换: sync() delete+reingest, 不写ExcludedAssets),
@@ -104,11 +104,13 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
 
 // MARK: - Change Source
 
-/// 数据源类型（AC-1: 相册/备忘录/日历）
+/// 自动同步数据源类型（R-5.2 决策 2026-08-01）。
+///
+/// 仅 `.photo` 支持自动同步（PhotoKit 全量读取）。
+/// 备忘录/语音备忘录通过 Share Extension 显式分享摄入（ingestText/ingestVoice），
+/// 不参与自动同步——iOS 公开 API 无法自动读取系统备忘录/日历（R-5.2 路径 A）。
 public enum ChangeSource: String, Sendable, Codable, Equatable {
     case photo
-    case note
-    case calendar
 }
 
 // MARK: - Change Type
@@ -444,96 +446,6 @@ public actor SyncPipeline {
         // 此方法为文档化入口，实际 observer 实现在 SyncViewModel 层（Phase 3）。
     }
 
-    /// 检测备忘录变更（AC-1: lastUsedDate + 哈希对比）
-    ///
-    /// 检查策略（AC-2）：
-    /// - 先检查 `lastUsedDate` 是否变化
-    /// - 若变化且内容 ≤100KB 且设备可用内存 ≥300MB 且总内存 >2GB：全量哈希对比
-    /// - 否则使用"修改时间戳 + 文件大小"组合判断跳过哈希，标记 `.hasHashSkipped`
-    ///
-    /// - Parameter noteURLs: 待检查的备忘录文件 URL 列表
-    /// - Returns: 实际发生变更的 ChangeEvent 列表
-    public nonisolated func detectNoteChanges(
-        noteURLs: [(url: URL, lastUsedDate: Date, fileSize: Int64)]
-    ) -> [ChangeEvent] {
-        var shouldSkipHash = false
-
-        // AC-2: Check constraints at sync start (once)
-        for note in noteURLs {
-            if note.fileSize > 100_000 {  // >100KB
-                shouldSkipHash = true
-                break
-            }
-        }
-        if !shouldSkipHash {
-            // AC-2: Check available memory <300MB
-            let availableMemory = os_proc_available_memory()
-            if availableMemory < 314_572_800 {  // <300MB
-                shouldSkipHash = true
-            }
-        }
-        if !shouldSkipHash {
-            // Check total physical memory (rough estimate via ProcessInfo)
-            let physicalMemory = ProcessInfo.processInfo.physicalMemory
-            if physicalMemory <= 2_147_483_648 {  // ≤2GB total
-                shouldSkipHash = true
-            }
-        }
-
-        var changes: [ChangeEvent] = []
-        for note in noteURLs {
-            let assetId = note.url.lastPathComponent
-            if shouldSkipHash {
-                // AC-2: Hash skipped — mark with hashSkipped flag
-                changes.append(ChangeEvent(
-                    assetId: assetId,
-                    source: .note,
-                    changeType: .modified,
-                    hashSkipped: true
-                ))
-            } else {
-                // Full hash comparison path
-                changes.append(ChangeEvent(
-                    assetId: assetId,
-                    source: .note,
-                    changeType: .modified,
-                    newContentHash: "hash-\(assetId)"
-                ))
-            }
-        }
-        return changes
-    }
-
-    /// 检测日历变更（AC-1: lastModified 时间戳对比）
-    ///
-    /// EKEventStoreChangedNotification 作为辅助加速刷新，
-    /// 主检测逻辑在 App 前台通过对比 EKCalendarItem.lastModifiedDate 完成。
-    public nonisolated func detectCalendarChanges(
-        lastKnownModifiedDates: [String: Date],
-        currentModifiedDates: [String: Date]
-    ) -> [ChangeEvent] {
-        var changes: [ChangeEvent] = []
-        for (eventId, newDate) in currentModifiedDates {
-            if let oldDate = lastKnownModifiedDates[eventId], oldDate >= newDate {
-                continue  // no change
-            }
-            changes.append(ChangeEvent(
-                assetId: eventId,
-                source: .calendar,
-                changeType: .modified
-            ))
-        }
-        // Detect removed events
-        for eventId in lastKnownModifiedDates.keys where currentModifiedDates[eventId] == nil {
-            changes.append(ChangeEvent(
-                assetId: eventId,
-                source: .calendar,
-                changeType: .removed
-            ))
-        }
-        return changes
-    }
-
     // MARK: - Auto-sync Toggle (AC-3, AC-8)
 
     /// 用户是否启用了后台自动同步（AC-3: 默认开启）
@@ -579,12 +491,10 @@ public actor SyncPipeline {
     ///
     /// - AC-4: 生成新嵌入用于重新摄入
     private func generateEmbedding(for change: ChangeEvent) async throws -> [Float] {
+        // 仅 photo 自动同步（R-5.2）：备忘录/语音备忘录走 Share 摄入，不经同步
         switch change.source {
         case .photo:
             return try await embedder.embedImage(assetId: change.assetId)
-        case .note, .calendar:
-            // Notes/calendar content is text-based
-            return try await embedder.embedText("sync:\(change.assetId)")
         }
     }
 }

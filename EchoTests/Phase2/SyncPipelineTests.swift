@@ -113,7 +113,7 @@ struct SyncPipelineTests {
 
         // Execute sync
         let traceID = UUID().uuidString
-        let change = makeChangeEvent(assetId: assetId, source: .note)
+        let change = makeChangeEvent(assetId: assetId, source: .photo)
         let result = try await sut.sync(changes: [change], traceID: traceID)
 
         // Verify: old memory deleted (count should be back to original + 1 for the new one)
@@ -202,7 +202,7 @@ struct SyncPipelineTests {
         // W1 修复后: sync 在删除旧记忆窗口期自动加锁（AC-6），完成后释放。
         // 测试通过 sync 修改该记忆，验证: (1) sync 期间记忆被锁 (2) 完成后锁释放。
         await stubEmbedder.setNextEmbedding(Array(repeating: Float(4.0), count: 512))
-        let change = makeChangeEvent(assetId: assetId, source: .note)
+        let change = makeChangeEvent(assetId: assetId, source: .photo)
         _ = try await sut.sync(changes: [change], traceID: UUID().uuidString)
 
         // sync 完成后: 删除窗口期的锁应已释放
@@ -222,7 +222,7 @@ struct SyncPipelineTests {
         // Execute sync
         await stubEmbedder.setNextEmbedding(Array(repeating: Float(5.0), count: 512))
         let traceID = UUID().uuidString
-        let change = makeChangeEvent(assetId: assetId, source: .note)
+        let change = makeChangeEvent(assetId: assetId, source: .photo)
         _ = try await sut.sync(changes: [change], traceID: traceID)
 
         // Verify: audit log entry exists with correct fields
@@ -232,7 +232,7 @@ struct SyncPipelineTests {
         )
         #expect(rows.count == 1, "AC-9: 应写入 .dataSourceChangeSynced 审计记录")
         #expect(rows[0]["eventType"]?.stringValue == "dataSourceChangeSynced")
-        #expect(rows[0]["sourceType"]?.stringValue?.contains("note") ?? false, "AC-9: sourceType 应包含 note")
+        #expect(rows[0]["sourceType"]?.stringValue?.contains("photo") ?? false, "AC-9: sourceType 应包含 photo（R-5.2 仅 photo 自动同步）")
         #expect(rows[0]["sourceType"]?.stringValue?.contains("replaced=") ?? false, "AC-9: sourceType 应包含 replaced 计数")
         #expect(rows[0]["affectedCount"]?.intValue == 1)
     }
@@ -277,7 +277,7 @@ struct SyncPipelineTests {
         #expect(await vectorStore.liveCount == originalCount + 5)
 
         // Create changes for all 5
-        let changes = assetIds.map { makeChangeEvent(assetId: $0, source: .note) }
+        let changes = assetIds.map { makeChangeEvent(assetId: $0, source: .photo) }
 
         // Execute batch sync
         await stubEmbedder.setNextEmbedding(Array(repeating: Float(7.0), count: 512))
@@ -336,7 +336,7 @@ struct SyncPipelineTests {
         }
 
         await stubEmbedder.setNextEmbedding(Array(repeating: Float(8.0), count: 512))
-        let changes = assetIds.map { makeChangeEvent(assetId: $0, source: .note) }
+        let changes = assetIds.map { makeChangeEvent(assetId: $0, source: .photo) }
         let traceID = UUID().uuidString
         _ = try await sut.sync(changes: changes, traceID: traceID)
 
@@ -357,9 +357,9 @@ struct SyncPipelineTests {
         }
 
         let changes = [
-            makeChangeEvent(assetId: "\(baseId)-1", source: .note),
-            makeChangeEvent(assetId: "NONEXIST-\(UUID().uuidString.prefix(4))", source: .note),
-            makeChangeEvent(assetId: "\(baseId)-2", source: .note),
+            makeChangeEvent(assetId: "\(baseId)-1", source: .photo),
+            makeChangeEvent(assetId: "NONEXIST-\(UUID().uuidString.prefix(4))", source: .photo),
+            makeChangeEvent(assetId: "\(baseId)-2", source: .photo),
         ]
 
         await stubEmbedder.setNextEmbedding(Array(repeating: Float(9.0), count: 512))
