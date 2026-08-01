@@ -11,8 +11,8 @@
 // ==========================================
 
 import Foundation
-import Vision
-import UIKit
+@preconcurrency import Vision
+@preconcurrency import UIKit
 
 // MARK: - OCR Engine Protocol
 
