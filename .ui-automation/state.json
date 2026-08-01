@@ -1,13 +1,12 @@
 {
   "schemaVersion": "1.1.0",
-  "task_id": "3.3",
-  "runId": "b980dd5d-19f1-47e9-8752-05026c613951",
+  "task_id": "3.4",
+  "runId": "3.4-bootstrap",
   "repositoryRoot": "/Users/logansu/Documents/Dev/SwiftProjects/Echo",
-  "sourceRevision": "1e407c770a6df48a46b4b6acaded769413ba39c0",
+  "sourceRevision": "c31d80e347f02fd635ce962df7dfade5be3fe15c",
   "sourceDirty": true,
-  "automation_phase": "accepted",
-  "automation_phase_status": "completed",
-  "last_successful_command": "UI review APPROVED by user (2026-08-02). All iterations complete: multi-type fixtures, Search→Detail navigation, media previews (photo/video/voice), audio playback fixes, tab-switch preservation. Full regression 553 tests / 66 suites 0 failures. Task 3.3 remains in_progress per workflow (Git delivery via /commit-pr-echo).",
+  "automation_phase": "awaiting_delivery_approval",
+  "automation_phase_status": "accepted",
   "completed_steps": [
     "repo_discovery",
     "materialize",
@@ -18,171 +17,54 @@
     "generation",
     "verification"
   ],
+  "last_updated": "2026-08-02T10:20:00+08:00",
   "design_profile": {
     "profile_id": "echo-memory-canvas",
     "profile_version": "1.0.0",
     "base_profile": "apple-native",
-    "approval_record": {
-      "approved_by": "user",
-      "approved_at": "2026-07-25",
-      "source": "docs/ui/echo-memory-canvas-style.md §9"
-    },
-    "surface_family": "focus",
-    "layout_mode": "single_column",
-    "fallback_reason": "Focus surface — masonry always disabled per §3.2/§8.1"
+    "approval_record": { "approved_by": "user", "approved_at": "2026-07-25", "source": "docs/ui/echo-memory-canvas-style.md §9" },
+    "surface_family": "task",
+    "layout_mode": "form_list"
   },
   "contracts": {
-    "surface_id": "memory-detail",
-    "state_id": "loaded",
-    "action_ids": [
-      "detail.translate",
-      "detail.edit",
-      "detail.saveEdit",
-      "detail.delete",
-      "detail.removeFromEcho",
-      "detail.deleteOriginal",
-      "detail.keepLocal",
-      "detail.keepExternal",
-      "detail.retry"
-    ],
-    "journey_id": "memory-detail-basic",
-    "fixture_ids": [
-      "memory-detail-loaded",
-      "memory-detail-translated",
-      "memory-detail-conflict",
-      "memory-detail-error"
-    ],
-    "content_hash": "memory-detail-surface-v1-contract-set"
+    "surface_id": "settings",
+    "state_ids": ["loaded", "loading", "error"],
+    "action_ids": ["settings.toggleSource", "settings.clearCache", "settings.resetFeedback", "settings.exportAudit", "settings.retry"],
+    "journey_id": "settings-basic",
+    "fixture_ids": ["settings-loaded", "settings-error"]
   },
-  "fixtures_hash": "memory-detail-loaded/translated/conflict/error/photo/voice/video-v2-media + search-multitype-v1",
-  "inventoryHash": "echo-3.3-repo-inventory-v1",
-  "migrationMapHash": "echo-3.3-noop-structure-v1",
   "simulator_owner": {
     "owner_type": "cli_xctest",
     "devices": [
-      {
-        "role": "primary",
-        "device_name": "iPhone 17 Pro",
-        "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC",
-        "runtime": "iOS 26.5"
-      },
-      {
-        "role": "minimum_version",
-        "device_name": "iPhone 16 Pro",
-        "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D",
-        "runtime": "iOS 18.2"
-      }
-    ],
-    "surface_id": "memory-detail",
-    "state_id": "loaded",
-    "fixture_id": "memory-detail-loaded"
+      { "role": "primary", "device_name": "iPhone 17 Pro", "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC", "runtime": "iOS 26.5" },
+      { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
+    ]
   },
-  "files_created": [
-    "Echo/UI/ViewModels/MemoryDetailViewModel.swift",
-    "Echo/UI/Views/MemoryDetailView.swift",
-    "Echo/UI/Views/MemoryDetailFixtureLoader.swift",
-    "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
-    "UIAutomation/Contracts/instances/memory-detail-surface.json",
-    "UIAutomation/Contracts/instances/memory-detail-state-loading.json",
-    "UIAutomation/Contracts/instances/memory-detail-state-loaded.json",
-    "UIAutomation/Contracts/instances/memory-detail-state-translated.json",
-    "UIAutomation/Contracts/instances/memory-detail-state-editing.json",
-    "UIAutomation/Contracts/instances/memory-detail-state-conflict.json",
-    "UIAutomation/Contracts/instances/memory-detail-state-error.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-translate.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-edit.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-save.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-delete.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-remove-from-echo.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-delete-original.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-keep-local.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-keep-external.json",
-    "UIAutomation/Contracts/instances/memory-detail-action-retry.json",
-    "UIAutomation/Contracts/instances/memory-detail-journey-basic.json",
-    "UIAutomation/Fixtures/memory-detail/memory-detail-loaded.json",
-    "UIAutomation/Fixtures/memory-detail/memory-detail-translated.json",
-    "UIAutomation/Fixtures/memory-detail/memory-detail-conflict.json",
-    "UIAutomation/Fixtures/memory-detail/memory-detail-error.json",
-    "UIAutomation/Fixtures/memory-detail/memory-detail-photo-loaded.json",
-    "UIAutomation/Fixtures/memory-detail/memory-detail-voice-loaded.json",
-    "UIAutomation/Fixtures/memory-detail/memory-detail-video-loaded.json",
-    "UIAutomation/Fixtures/search/search-multitype.json",
-    "UIAutomation/Contracts/instances/search-to-detail-journey.json",
-    "EchoTests/Phase3/MemoryDetailFixtureLoaderTests.swift",
-    "EchoUITests/SearchJourneyUITests.swift",
-    "UIAutomation/Artifacts/manifests/memory-detail-run-manifest.json",
-    "UIAutomation/Artifacts/summaries/memory-detail-test-summary.json",
-    "UIAutomation/Artifacts/accessibility/memory-detail-loaded-axtree.json",
-    "Echo/Resources/MediaSamples/photo-park-sunset.png",
-    "Echo/Resources/MediaSamples/video-seaside-sunset.mp4",
-    "Echo/Resources/MediaSamples/video-seaside-sunset.png",
-    "Echo/Resources/MediaSamples/voice-note-reminder.wav",
-    "EchoUITests/MemoryDetailMediaUITests.swift",
-    "UIAutomation/Artifacts/accessibility/memory-detail-voice-loaded-axtree.json"
-  ],
-  "files_modified": [
-    "Echo/UI/Views/SearchView.swift",
-    "Echo/UI/Views/MemoryDetailFixtureLoader.swift",
-    "Echo/UI/Views/SearchFixtureLoader.swift",
-    "UIAutomation/Contracts/instances/memory-detail-surface.json",
-    "UIAutomation/Contracts/instances/memory-detail-state-loaded.json",
-    "Echo/UI/ViewModels/MemoryDetailViewModel.swift",
-    "Echo/UI/ViewModels/SearchViewModel.swift",
-    "EchoTests/Phase3/SearchViewModelTests.swift",
-    "EchoUITests/SearchJourneyUITests.swift",
-    "Echo/UI/ViewModels/MemoryDetailViewModel.swift",
-    "Echo/UI/Views/MemoryDetailView.swift",
-    "Echo/UI/Views/MemoryDetailFixtureLoader.swift",
-    "EchoTests/Phase3/AudioPlayerControllerTests.swift",
-    "EchoTests/Phase3/MemoryDetailFixtureLoaderTests.swift",
-    "Echo/UI/Views/MemoryDetailView.swift",
-    "Echo/UI/Views/SearchView.swift",
-    "Echo/UI/ViewModels/MemoryDetailViewModel.swift",
-    "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
-    "EchoUITests/SearchJourneyUITests.swift",
-    "Echo/UI/Views/MemoryDetailView.swift",
-    "EchoUITests/MemoryDetailMediaUITests.swift"
-  ],
   "test_results": {
     "unit_tests_passed": 16,
-    "build": "SUCCEEDED",
-    "unverified": false
+    "full_regression": "569 tests / 67 suites, 0 failures",
+    "build": "SUCCEEDED"
   },
-  "artifacts": {
-    "manifest_path": "UIAutomation/Artifacts/manifests/memory-detail-run-manifest.json",
-    "build_log_path": "UIAutomation/Artifacts/logs/memory-detail-build.log",
-    "test_summary_path": "UIAutomation/Artifacts/summaries/memory-detail-test-summary.json",
-    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/memory-detail-loaded-axtree.json"
-  },
-  "review_notes": "Dual-device Live Sim navigation complete: iPhone 17 Pro (iOS 26.5) + iPhone 16 Pro (iOS 18.2) both on memory-detail/loaded with fixture memory-detail-loaded. iPhone 17 Pro AX via native-devtools returns empty tree (SwiftUI iOS 26.5 limitation) — confirmed detail pushed via nav bar (Back platter + centered Memory title + trailing Edit platter). iPhone 16 Pro AX tree (ax-service) shows full detail: title, Show translation toggle, grouped metadata, AI Creation + citation anchor, Remove this memory.\n(2026-08-02 review iteration 2) Multi-type fixtures added: memory-detail-photo-loaded / voice-loaded / video-loaded + search-multitype (photo+note+voice+video_frame). Search→Detail navigation wired: SearchView.openDetail(for:) resolves result.id via MemoryDetailFixtureLoader.load(memoryID:) and preloads detailViewModel; production path (no fixture match) falls back to MemoryDetailView(memoryId:) → Core in Phase 3.9. Verified on iPhone 16 Pro via Live Sim (tapped Photo/Voice/Video cards → correct detail with type label in metadata) + XCUITest test_searchToDetailNavigationJourney on iPhone 17 Pro (passed). Full regression 534 tests / 65 suites 0 failures. Known issue: returning from Detail to Search resets Search to idle (onDisappear→cancel, iOS 17+ push triggers parent onDisappear) — 3.2 delivered behavior, flagged for UX review.\n\n(2026-08-02 review iteration 3 - media previews) Deterministic media samples generated offline (Swift CoreGraphics PNG x2, AVAssetWriter MP4 4s, Python wave WAV 3s) → Echo/Resources/MediaSamples/ (folder-synchronized, bundled in app). MemoryDetailModel gains mediaAssetName + mediaKind (derived from sourceType, no second truth). MemoryDetailView renders media by kind: photo→Image, video→VideoPlayer (AVKit), voice→AudioPlayerView (AVAudioPlayer play/pause, R-001 local only). Verified on iPhone 16 Pro Live Sim: photo AX \"公园里的红裙子 photo\" image region, video AX \"Video\"+player region, voice \"Play voice memo\"→\"Pause voice memo\" toggles on tap (0:03). iPhone 17 Pro via XCUITest MemoryDetailMediaUITests (3 tests pass, XCTest AX readable). Full regression 539 tests / 65 suites 0 failures.\n\n(2026-08-02 bugfix - Search results lost after Detail return) Root cause: iOS 17+ NavigationStack push triggers parent view onDisappear → SearchViewModel.onDisappear() called cancelSearch() unconditionally → viewState = .cancelled → on return .cancelled branch calls dismissError() → .idle (search prompt, results hidden). Fix: onDisappear only cancels in-flight search (viewState == .loading → .cancelled); completed results are preserved so returning from Detail keeps result cards. Verified: iPhone 16 Pro Live Sim (4 cards persist after Photo detail return), XCUITest test_searchResultsPersistAfterDetailReturn on iPhone 17 Pro (passed). Full regression 541 tests / 65 suites 0 failures.\n\n(2026-08-02 user feedback iteration 4) 1) Audio player now reverts to Play after playback finishes: refactored AudioPlayerView to @Observable AudioPlayerController (AVAudioPlayerDelegate + 200ms polling fallback — simulator has no sound card so delegate never fires; play() return value checked). Verified iPhone 16 Pro: button flips \"Pause voice memo/Playing\" → \"Play voice memo/Stopped\" after 3s audio. 2) Details metadata now includes Location: MemoryDetailModel.location + Location row with mappin icon (US-RET-004). Fixtures: photo=西湖公园, voice=杭州东站, video=三亚湾. Verified AX \"Location, 杭州东站\". Full regression 551 tests / 66 suites 0 failures.\n\n(2026-08-02 bugfix - Detail lost / stuck loading after Tab switch) User reported: Home → Search tab switch loses result cards. Reproduced on iPhone 16 Pro: Search → tap detail → Home tab → Search tab shows stuck \"Loading memory\". Root cause (3 same-origin issues): 1) MemoryDetailViewModel.onDisappear() unconditionally cancelLoad() → .cancelled → tab return renders cancelled branch → dismissError → idle → loading state with no load call (stuck). 2) SearchView.onAppear re-injects fixture on every appear (resets browsed state). 3) MemoryDetailView same re-injection. Fixes: onDisappear preserves completed state (only cancels in-flight loading); handleFirstAppear() guards fixture injection to first appearance only (@State flag) in both SearchView and MemoryDetailView. Verified iPhone 16 Pro Live Sim: tab switch keeps detail content (not stuck), detail back keeps 4 result cards. XCUITest test_detailPreservedAfterTabSwitch + test_searchResultsPersistAfterDetailReturn pass on iPhone 17 Pro. Full regression 553 tests / 66 suites 0 failures.\n\n(2026-08-02 audio playback investigation - iOS 18 sim) User reported audio cannot play on iPhone 16 Pro (iOS 18.2). Diagnosis: host MacBook Air audio output device present, but iOS 18.2 simulator CoreAudio fails with '-66680 finding/initializing Default-InputOutput' → AVAudioPlayer.play() returns false (or returns true then immediately finishes with error). 17 Pro (iOS 26.5) plays fine. Fixes: 1) AVAudioSession .playback category + setActive in prepareIfNeeded; 2) simulated playback fallback when play() fails (drives UI state by audio duration, auto-reverts) — real devices use real playback; 3) delegate audioPlayerDidFinishPlaying(successfully:false) while isPlaying → switch to simulated playback instead of instantly reverting. VERIFIED via XCUITest on 16 Pro (accessibility tap, works where argent gesture-tap coordinate injection missed SwiftUI buttons on iOS 18.2): tap → Pause within 5s, auto-revert to Play within 6s. Same test passes on 17 Pro. Full regression 553 tests / 66 suites 0 failures. Note: argent gesture-tap coordinate tapping is unreliable on iOS 18.2 sim for SwiftUI buttons — use XCUITest for interaction verification.",
-  "xcode": {
-    "version": "26.5",
-    "build_version": "17F42",
-    "sdk": "iOS Simulator",
-    "runtime": "iPhone 17 Pro"
-  },
-  "mcpbridge": {
-    "preflight_passed": true,
-    "preflight_detail": "Reused from run 3.2 (same host Xcode 26.5, mcpbridge found). Candidate owner: cli_xctest.",
-    "selected_as_owner": false
-  },
+  "files_created": [
+    "Echo/UI/ViewModels/SettingsViewModel.swift",
+    "EchoTests/Phase3/SettingsViewModelTests.swift"
+  ],
+  "files_modified": [
+    "Echo/UI/Views/SettingsView.swift"
+  ],
   "blockers": [],
-  "last_updated": "2026-08-02T01:50:00+08:00",
-  "approval": {
-    "stage": "live_simulator_review",
-    "actor": "user",
-    "decision": "approved",
-    "approved_at": "2026-08-02T01:50:00+08:00",
-    "devices": [
-      {
-        "device_name": "iPhone 17 Pro",
-        "runtime": "iOS 26.5"
-      },
-      {
-        "device_name": "iPhone 16 Pro",
-        "runtime": "iOS 18.2"
-      }
-    ],
-    "note": "UI review passed. Task remains in_progress; Git delivery deferred to /commit-pr-echo."
+  "stage_history": [
+    { "from": "ready", "to": "repo_discovery", "transition": "direct_fallback", "at": "2026-08-02T10:00:00+08:00" },
+    { "from": "repo_discovery", "to": "verification", "transition": "auto_continue_pipeline", "at": "2026-08-02T10:20:00+08:00" },
+    { "from": "verification", "to": "awaiting_delivery_approval", "transition": "live_sim_review", "at": "2026-08-02T10:30:00+08:00" }
+  ],
+  "delivery_approval": {
+    "status": "accepted",
+    "approved_by": "user",
+    "approved_at": "2026-08-02T10:30:00+08:00",
+    "devices_reviewed": {
+      "primary": { "device_name": "iPhone 17 Pro", "runtime": "iOS 26.5" },
+      "minimum_version": { "device_name": "iPhone 16 Pro", "runtime": "iOS 18.2" }
+    }
   }
 }
