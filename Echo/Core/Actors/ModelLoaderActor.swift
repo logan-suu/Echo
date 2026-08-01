@@ -248,10 +248,6 @@ public actor ModelLoaderActor {
     /// 各模型的加载状态（Actor-isolated 可变状态）
     private var modelStates: [ModelType: ModelLoadState]
 
-    /// R-3.4: 已加载的推理实例（key 为 ModelType）。
-    /// Core ML 模型存储 MLModel 实例；GGUF 模型存储文件 URL（whisper.cpp context 在 R-3.3 接入）。
-    private var loadedModels: [ModelType: Any] = [:]
-
     // MARK: - Initialization (ACT-005: 同步初始化)
 
     /// 创建 ModelLoaderActor，所有模型初始状态为 `.notLoaded`。
@@ -273,12 +269,6 @@ public actor ModelLoaderActor {
     /// 查询指定模型是否已成功加载。
     public func isModelLoaded(_ modelType: ModelType) -> Bool {
         modelStates[modelType]?.isLoaded ?? false
-    }
-
-    /// R-3.4: 获取已加载的推理实例（Core ML 模型返回 MLModel，GGUF 返回文件 URL）。
-    /// 模型未加载时返回 nil——调用方应先确保 `loadModel()` 成功。
-    public func getModel(_ modelType: ModelType) -> Any? {
-        loadedModels[modelType]
     }
 
     /// R-3.4: 获取模型的 Bundle URL（Sendable，可跨 Actor 传递）。
@@ -338,11 +328,12 @@ public actor ModelLoaderActor {
         do {
             switch modelType.fileExtension {
             case "mlmodelc":
-                // Core ML compiled model — load into memory and store instance (R-3.4)
-                let model = try await MLModel.load(contentsOf: bundleURL, configuration: MLModelConfiguration())
-                loadedModels[modelType] = model
+                // Core ML compiled model — verify loadable (R-3.4: embedders load
+                // MLModel themselves via getModelBundleURL; MLModel is not Sendable)
+                _ = try await MLModel.load(contentsOf: bundleURL, configuration: MLModelConfiguration())
             case "gguf":
-                // GGUF model — store file URL for whisper.cpp context (R-3.3)
+                // GGUF model — verify file readability (R-3.3: whisper.cpp loads
+                // the GGUF file itself via getModelBundleURL)
                 guard FileManager.default.isReadableFile(atPath: bundleURL.path) else {
                     throw NSError(
                         domain: "ModelLoaderActor",
@@ -350,7 +341,6 @@ public actor ModelLoaderActor {
                         userInfo: [NSLocalizedDescriptionKey: "GGUF file not readable at \(bundleURL.path)"]
                     )
                 }
-                loadedModels[modelType] = bundleURL
             default:
                 throw NSError(
                     domain: "ModelLoaderActor",
