@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-01T12:30:00Z",
+  "_last_updated": "2026-08-01T13:00:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -94,7 +94,7 @@
   },
   "deferred_from_pr_review": [
     {
-      "id": "DEF-R3-001",
+      "id": "DEF-34-001",
       "pr": 34,
       "title": "RRF 元数据回填逻辑重写（按 ID 取元数据，替代 top-1 重查）",
       "severity": "🟡",
@@ -104,7 +104,7 @@
       "deferred_at": "2026-08-01"
     },
     {
-      "id": "DEF-R3-002",
+      "id": "DEF-34-002",
       "pr": 34,
       "title": "text_dense 通道错误处理区分 timeout 与 L3 阻断",
       "severity": "🟡",
@@ -114,7 +114,7 @@
       "deferred_at": "2026-08-01"
     },
     {
-      "id": "DEF-R3-003",
+      "id": "DEF-34-003",
       "pr": 34,
       "title": "ModelLoaderActor 状态跟踪重构（embedder 加载后回报状态）",
       "severity": "🟡",
@@ -124,7 +124,7 @@
       "deferred_at": "2026-08-01"
     },
     {
-      "id": "DEF-R3-004",
+      "id": "DEF-34-004",
       "pr": 34,
       "title": "Scaffold 潜在缺陷修复（SigLIP2 orientation / Whisper PCM 格式 / reader.status）",
       "severity": "🟡",
