@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "search.submit",
+  "source": "user",
+  "targetIntent": "SearchViewModel.submitQuery",
+  "expectedOutcome": "SearchPipeline.search called; state transitions loading → loaded/empty/error",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

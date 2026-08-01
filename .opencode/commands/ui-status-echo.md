@@ -63,10 +63,10 @@ agent: build
 ### Blocker（若存在）
 - [类型]：[描述]
 
-### Simulator
+### Simulator（双设备审查）
 - Owner：[mcpbridge/cli_xctest]
-- Device：[UDID]
-- Runtime：[iOS version]
+- Device 1（主审查）：[iPhone 17 Pro] [UDID] — [iOS 26.5]
+- Device 2（最低版本）：[iPhone 16 Pro] [UDID] — [iOS 18.x]
 ```
 
 ---
@@ -81,7 +81,7 @@ agent: build
 | `automation_phase: selected` | `/ui-bootstrap-build-echo <task-id>` |
 | 运行中（非阻塞阶段） | `/ui-bootstrap-build-echo <task-id>`（resume） |
 | 失败（可重试） | `/ui-retry-echo <task-id>` |
-| `awaiting_delivery_approval` | 查看 Simulator → 批准或修改 |
+| `awaiting_delivery_approval` | 查看两台 Simulator（17 Pro iOS 26 + 16 Pro iOS 18）→ 依据报告中的「UI 审查指南」（页面清单/导航路径/未实现说明）逐页审查 → 批准或修改 |
 | `accepted` | `/commit-pr-echo <task-id>`（交付） |
 | `failed`/`stopped` | 检查 blocker → 人工决策 |
 

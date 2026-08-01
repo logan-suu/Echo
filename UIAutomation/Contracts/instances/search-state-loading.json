@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loading",
+  "surfaceId": "search-results",
+  "dataConditions": {
+    "query": "非空查询已提交",
+    "results": [],
+    "isSearching": true
+  },
+  "allowedActions": ["search.clear"],
+  "expectedSemantics": {
+    "searchField": "Search your memories",
+    "loadingIndicator": "ProgressView or skeleton visible",
+    "readingOrder": ["searchField", "loadingIndicator"]
+  },
+  "version": "1.0.0"
+}

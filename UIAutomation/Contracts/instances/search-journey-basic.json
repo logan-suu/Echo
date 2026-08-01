@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "search-basic-query",
+  "steps": [
+    { "surfaceId": "search-results", "stateId": "idle", "actionId": "search.submit" },
+    { "surfaceId": "search-results", "stateId": "loading", "actionId": "search.submit" },
+    { "surfaceId": "search-results", "stateId": "loaded", "actionId": "result.like" }
+  ],
+  "preconditionFixtures": ["search-loaded"],
+  "assertions": [
+    { "type": "result_count", "expected": ">= 1" },
+    { "type": "feedback_state", "expected": "like button selected after tap" }
+  ],
+  "version": "1.0.0"
+}

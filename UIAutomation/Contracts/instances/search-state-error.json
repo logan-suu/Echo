@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "error",
+  "surfaceId": "search-results",
+  "dataConditions": {
+    "query": "测试",
+    "error": "L2 recoverable error mapped from SearchError",
+    "hasSearched": true
+  },
+  "allowedActions": ["search.submit", "error.retry"],
+  "expectedSemantics": {
+    "searchField": "Search your memories",
+    "errorState": "Search failed. Retry button present"
+  },
+  "version": "1.0.0"
+}

@@ -1,5 +1,5 @@
 ---
-description: Phase 3 UI 实现入口 — 执行 repo_discovery→materialize→readiness→pilot→contract→profile→generation→verification→Live Sim Review 完整流水线。接受推荐 handoff 或 direct ready fallback
+description: Phase 3 UI 实现入口 — 执行 repo_discovery→materialize→readiness→pilot→contract→profile→generation→verification→Live Sim Review（双设备：iPhone 17 Pro iOS 26 + iPhone 16 Pro iOS 18）完整流水线。接受推荐 handoff 或 direct ready fallback
 agent: build
 ---
 
@@ -172,37 +172,68 @@ agent: build
 
 ## 第十步：Live Simulator 交付审批（`awaiting_delivery_approval`）
 
-32. 使用唯一 simulator owner 构建、安装并启动 App。
-33. 通过确定性 fixture + launch argument 或契约声明的路径，导航到任务目标 `surfaceId/stateId`。
+> **双设备审查**：Live Simulator Review 必须**同时**在以下两台设备上进行，分别覆盖 iOS 26 与 iOS 18 两个平台：
+> - **iPhone 17 Pro（iOS 26.5）**：主审查设备（最新平台 / 主开发 runtime）
+> - **iPhone 16 Pro（iOS 18.x）**：最低支持版本审查设备（部署目标 iOS 18.0）
+>
+> 构建产物统一以 `iPhone 17 Pro` 为 destination 编译（见 AGENTS.md §9.4），同一产物安装到两台设备。两台设备均使用相同 fixture 与 launch argument，保证审查状态一致。
+
+32. **生成 UI 审查指南**（在报告前完成，依据：`.ui-automation/state.json` 的 `files_created`/`files_modified`、`UIAutomation/Contracts/`、代码中的 `🔮 Phase 3.x` / `stub` / `fixture` / `deferred` 标记）：
+   - **本次添加/修改的页面清单**：页面名称 + 变更类型（🆕 新增 / ✏️ 修改）+ 对应文件路径
+   - **导航路径**：从 App 哪个入口（Tab / 列表项 / 按钮）点击、如何到达该页面（逐条可执行步骤）
+   - **未实现功能 / 临时效果**：逐项列出 —— 哪些功能标注 `🔮` 未实现（含目标 Phase）、当前为 fixture/stub 驱动的临时数据效果、String Catalog 未迁移等已知临时状态
+33. 使用唯一 simulator owner 构建 App（destination 为 `iPhone 17 Pro`），并**同时**安装、启动到两台审查设备：
+   - iPhone 17 Pro（iOS 26.5）— 主审查设备
+   - iPhone 16 Pro（iOS 18.x）— 最低版本审查设备
+34. 在两台设备上分别通过确定性 fixture + launch argument 或契约声明的路径，导航到任务目标 `surfaceId/stateId`。
    - **不得用无法复现的临时数据库或真实用户数据**
-34. 导航完成后，**停止 tap/swipe/输入和自动修正**，保持 Simulator/App/目标界面在前台。
-35. 在对话中报告：
+35. 两台设备导航完成后，**停止 tap/swipe/输入和自动修正**，保持两台 Simulator/App/目标界面均在前台。
+36. 在对话中报告（两台设备信息并列，**必须包含审查指南三区块**）：
    ```
    ## 🖥️ Live Simulator Review
 
    **Task**：[taskID]
-   **Device**：[device name + UDID]
-   **Runtime**：[iOS version]
+   **Device 1（主审查）**：[iPhone 17 Pro] [UDID] — [iOS 26.5]
+   **Device 2（最低版本）**：[iPhone 16 Pro] [UDID] — [iOS 18.x]
    **Surface**：[surfaceId]
    **State**：[stateId]
    **Fixture**：[fixtureId]
 
+   ### 📄 本次添加/修改的页面
+   | 页面 | 变更 | 说明 | 文件 |
+   |------|:---:|------|------|
+   | [页面名] | 🆕 新增 | [一句话说明] | [路径] |
+   | [页面名] | ✏️ 修改 | [一句话说明] | [路径] |
+
+   ### 🧭 如何查看这些页面（导航路径）
+   1. 打开 Echo App → 点击底部 Tab Bar 的 **[Tab 名]**（[图标描述]）
+   2. [下一步操作]
+   3. [如需输入/交互，明确写出]（例如：点击搜索框 → 输入任意文字 → 回车）
+
+   ### 🔮 未实现功能 / 临时效果
+   | 位置/功能 | 当前效果 | 计划 |
+   |------|---------|------|
+   | [功能名] | 当前为 [fixture 示例数据 / stub 返回 / 占位] | Phase 3.x 接入 [真实实现] |
+   | [交互]（如点击结果卡片） | 无跳转 | Phase 3.x [MemoryDetailView 等] |
+   | 文案 | 硬编码英文 | Phase 3.8 String Catalog |
+
    ### 已验证
-   - [✅] Build
+   - [✅] Build（iPhone 17 Pro destination）
    - [✅] Contract validation
    - [✅] Unit tests
    - [✅] Accessibility audit
    - [✅] Surface family rules
+   - [✅] 双设备安装与导航（iOS 26 + iOS 18）
 
    ### 已知风险
    [如有]
 
    ---
-   **请直接查看 Simulator 中的界面，然后回复批准或具体修改意见。**
+   **请直接查看两台 Simulator 中的界面（iOS 26 与 iOS 18），然后回复批准或具体修改意见。**
    ```
-36. **不 commit、不 push、不创建 PR、不标记 `review` 或 `done`。**
-37. **不调用 screenshot/recording API。**
-38. 用户明确批准后 → 运行状态记录 `accepted`；项目任务**仍保持 `in_progress`**。
+37. **不 commit、不 push、不创建 PR、不标记 `review` 或 `done`。**
+38. **不调用 screenshot/recording API。**
+39. 用户明确批准后 → 运行状态记录 `accepted`；项目任务**仍保持 `in_progress`**。
 
 ---
 
@@ -224,7 +255,7 @@ agent: build
 | 猜测领域规则 | 立即 `stopped` |
 | 需生产签名、真实用户数据 | 立即 `stopped` |
 | 契约/方向/验收策略未批准变化 | 立即 `stopped` |
-| Simulator 重复所有者 | 立即 `stopped` |
+| Simulator 重复所有者（同一设备被多个 run/owner 控制；双审查设备为同一 owner 合法持有） | 立即 `stopped` |
 | Artifact 含凭据/PII | 立即 `stopped` |
 | 自动重试 2 次失败 | `failed`，保留 artifact |
 | 环境错误 | 首次健康检查+清理→重试1次；再次失败→`failed` |

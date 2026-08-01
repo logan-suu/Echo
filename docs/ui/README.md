@@ -11,7 +11,7 @@
 | 文档 | 路径 | 用途 | 何时读取 |
 |------|------|------|----------|
 | **设计风格** | `echo-memory-canvas-style.md` | 完整 Apple 原生基础、Discovery/Focus/Task 映射、共享 token、内容卡片、响应式与可访问性、禁止项 | 任何 UI 实现任务 |
-| **自动化工作流** | `automation-workflow.md` | 状态机、任务账本桥接、自动继续、唯一 simulator 所有者、重试、停止、恢复、试点评分和批准点 | 执行 `/ui-bootstrap-build-echo` 时 |
+| **自动化工作流** | `automation-workflow.md` | 状态机、任务账本桥接、自动继续、唯一 simulator 所有者（双审查设备 17 Pro + 16 Pro）、重试、停止、恢复、试点评分和批准点 | 执行 `/ui-bootstrap-build-echo` 时 |
 | **架构** | `architecture.md` | 六层职责、单向数据流、组件边界、受保护和允许内容 | 理解 UI 层与 Core 层的边界时 |
 | **测试与 Artifact** | `testing-and-artifacts.md` | PR 与 nightly 矩阵、artifact 字段、测试层级、安全、各阶段 Definition of Done | 编写测试或收集 artifact 时 |
 | **命令兼容性** | `command-compatibility.md` | 14 个现有命令 + 3 个新增命令在 Phase 3 UI 模式下的行为表 | 不确定某个命令是否可用于 Phase 3 时 |
@@ -24,7 +24,7 @@
 |------|----------|
 | Phase 3 UI 实现（3.1–3.9） | `echo-memory-canvas-style.md` + `architecture.md` |
 | UI 测试 | `testing-and-artifacts.md` |
-| UI 交付 | `automation-workflow.md`（§批准点） |
+| UI 交付 | `automation-workflow.md`（§批准点 — 含 UI 审查指南：页面清单/导航路径/未实现说明） |
 | 首次 bootstrap | `echo-readiness.md` + `automation-workflow.md` |
 
 ---

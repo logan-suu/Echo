@@ -40,7 +40,7 @@
 
 ### 2.5 Xcode 26.5 与 Bridge Preflight
 - [ ] 在 Echo 实际开发机执行 `xcodebuild -version`
-- [ ] 记录可用 SDK、Simulator runtime 和目标 device
+- [ ] 记录可用 SDK、Simulator runtime 和双审查目标 device（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.x）
 - [ ] 执行 `mcpbridge` preflight（§11.2）：
   1. 确认 Xcode 26.5 为当前 `xcode-select`
   2. `xcrun --find mcpbridge` 返回实际路径

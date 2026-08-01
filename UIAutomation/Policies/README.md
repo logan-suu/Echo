@@ -26,7 +26,7 @@
 
 ## 人工批准规则
 
-- 最终视觉审批只通过 Live Simulator Review
+- 最终视觉审批只通过双设备 Live Simulator Review（iPhone 17 Pro iOS 26 + iPhone 16 Pro iOS 18）
 - Agent 不能批准自己的输出
 - 设计配置变化需重新获得用户批准
 - Git commit/push/PR 需要用户明确调用适配后的交付命令

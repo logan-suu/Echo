@@ -15,7 +15,7 @@
 | 3 | `status-echo` | **UI 感知**：同时报告项目账本 + `.ui-automation/state.json` UI 运行状态 | 🟢 适配 | `status-echo.md` |
 | 4 | `do-task-echo` | **🔴 阻断**：Phase 3 UI 实现任务（3.1–3.9）禁止使用，重定向到 `/ui-bootstrap-build-echo`。集成测试（3.10）例外 | 🔴 阻断 | `do-task-echo.md` |
 | 5 | `retry-task-echo` | **🔴 重定向**：Phase 3 UI 任务重定向到 `/ui-retry-echo` | 🔴 重定向 | `retry-task-echo.md` |
-| 6 | `commit-pr-echo` | **交付门禁**：PR 前验证 `accepted` 审批状态（Live Sim Review 已通过），禁止 `git add -A` | 🟢 适配 | `commit-pr-echo.md` |
+| 6 | `commit-pr-echo` | **交付门禁**：PR 前验证 `accepted` 审批状态（双设备 Live Sim Review 已通过），禁止 `git add -A` | 🟢 适配 | `commit-pr-echo.md` |
 | 7 | `read-spec-echo` | **路由适配**：Phase 3 任务路由到 `docs/ui/echo-memory-canvas-style.md` + `docs/ui/architecture.md` | 🟢 适配 | `read-spec-echo.md` |
 | 8 | `pr-review-echo` | **部分适配**：读取 UI artifact 和批准记录，但不能代替 Live Sim 视觉批准或人类 merge | 🟡 部分 | `pr-review-echo.md` |
 | 9 | `explain-echo` | **不变**：只读解释，Phase 3 UI 代码同样适用 | ⚪ 不变 | `explain-echo.md` |
@@ -25,7 +25,7 @@
 | 13 | `test-integration-echo` | **不变**：全量集成测试对 Phase 3 UI 同样适用 | ⚪ 不变 | `test-integration-echo.md` |
 | 14 | `pr-merge-echo` | **不变**：人类 merge 控制不变，Phase 3 UI 任务同样适用 | ⚪ 不变 | `pr-merge-echo.md` |
 | — | — | — | — | — |
-| 15 | `ui-bootstrap-build-echo` | **Phase 3 UI 实现入口**：11 步完整流水线（discovery→materialize→readiness→pilot→contract→design→generate→verify→Live Sim Review） | 🆕 新增 | `ui-bootstrap-build-echo.md` |
+| 15 | `ui-bootstrap-build-echo` | **Phase 3 UI 实现入口**：11 步完整流水线（discovery→materialize→readiness→pilot→contract→design→generate→verify→双设备 Live Sim Review 17 Pro + 16 Pro） | 🆕 新增 | `ui-bootstrap-build-echo.md` |
 | 16 | `ui-status-echo` | **只读双状态查询**：项目账本 + UI 运行状态 + 下一合法动作 | 🆕 新增 | `ui-status-echo.md` |
 | 17 | `ui-retry-echo` | **受限阶段重试**：2 次预算、hash 失效验证、blocker 证据检查 | 🆕 新增 | `ui-retry-echo.md` |
 

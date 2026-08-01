@@ -1,0 +1,33 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "surfaceId": "search-results",
+  "surfaceFamily": "discovery",
+  "responsibility": "Render memory search query input, loading/empty/error states, result list with feedback buttons, and low-confidence banner (US-RET-001/006, US-FBK-001/003, US-SRC-005)",
+  "inputs": {
+    "query": "User search text",
+    "results": "SearchResultItem[] mapped to UI models",
+    "lowConfidence": "Bool — cross-language low confidence flag"
+  },
+  "outputs": {
+    "visibleContent": "Search result cards with title, source, time, similarity",
+    "interactionTargets": "searchField, feedbackLike, feedbackDislike, badCaseButton, retryButton",
+    "accessibilityTree": "Cards as combined accessibility elements with type/description/time"
+  },
+  "systemContainer": "NavigationStack (provided by AppRootView) + .searchable",
+  "layoutMode": "system_list",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "Accessibility Dynamic Type (.accessibility1+)",
+    "Narrow width (compact size class)",
+    "Long text exceeding summary policy"
+  ],
+  "states": [
+    "idle",
+    "loading",
+    "loaded",
+    "empty",
+    "error",
+    "lowConfidence"
+  ],
+  "version": "1.0.0"
+}

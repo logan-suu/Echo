@@ -1,28 +1,117 @@
 {
-  "schemaVersion": "1.0.0",
-  "task_id": "3.1",
-  "runId": "AF90210D-C604-4C9D-9F18-EA6405F65F91",
-  "sourceRevision": "7ac5b8f2973739c61de8c832b577e205395f2ebc",
+  "schemaVersion": "1.1.0",
+  "task_id": "3.2",
+  "runId": "9B8A2E51-C43D-4A6F-B5E2-0F17D3C9A841",
+  "repositoryRoot": "/Users/logansu/Documents/Dev/SwiftProjects/Echo",
+  "sourceRevision": "d95ea902ace1039af542c94f18af65542c49bea2",
   "sourceDirty": false,
-  "automation_phase": "ui_slice_generation",
+  "automation_phase": "accepted",
+  "automation_phase_status": "completed",
+  "last_successful_command": "live_sim_review_approved",
   "completed_steps": [
     "repo_discovery",
     "materialize",
+    "readiness_check",
+    "select_pilot",
     "contract",
     "profile",
     "generation",
     "verification"
   ],
+  "simulator_owner": {
+    "owner_type": "cli_xctest",
+    "devices": [
+      {
+        "role": "primary",
+        "device_name": "iPhone 17 Pro",
+        "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC",
+        "runtime": "iOS 26.5"
+      },
+      {
+        "role": "minimum_version",
+        "device_name": "iPhone 16 Pro",
+        "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D",
+        "runtime": "iOS 18.2"
+      }
+    ],
+    "surface_id": "search-results",
+    "state_id": "loaded",
+    "fixture_id": "search-loaded"
+  },
+  "contracts": {
+    "surface_id": "search-results",
+    "state_id": "loaded",
+    "action_ids": ["search.submit", "result.like", "result.dislike", "result.markBadCase", "error.retry"],
+    "journey_id": "search-basic-query",
+    "fixture_ids": ["search-loaded", "search-empty", "search-lowconfidence"],
+    "content_hash": "search-surface-v1-contract-set"
+  },
+  "fixtures_hash": "search-loaded/search-empty/search-lowconfidence-v1",
   "files_created": [
-    "Echo/UI/ViewModels/HomeViewModel.swift"
+    "Echo/UI/ViewModels/SearchViewModel.swift",
+    "EchoTests/Phase3/SearchViewModelTests.swift",
+    "UIAutomation/Contracts/instances/search-surface.json",
+    "UIAutomation/Contracts/instances/search-state-idle.json",
+    "UIAutomation/Contracts/instances/search-state-loading.json",
+    "UIAutomation/Contracts/instances/search-state-loaded.json",
+    "UIAutomation/Contracts/instances/search-state-empty.json",
+    "UIAutomation/Contracts/instances/search-state-error.json",
+    "UIAutomation/Contracts/instances/search-state-lowconfidence.json",
+    "UIAutomation/Contracts/instances/search-action-submit.json",
+    "UIAutomation/Contracts/instances/search-action-like.json",
+    "UIAutomation/Contracts/instances/search-action-dislike.json",
+    "UIAutomation/Contracts/instances/search-action-badcase.json",
+    "UIAutomation/Contracts/instances/search-action-retry.json",
+    "UIAutomation/Contracts/instances/search-journey-basic.json",
+    "UIAutomation/Fixtures/search/search-loaded.json",
+    "UIAutomation/Fixtures/search/search-empty.json",
+    "UIAutomation/Fixtures/search/search-lowconfidence.json"
   ],
   "files_modified": [
-    "Echo/UI/Views/HomeView.swift"
+    "Echo/UI/Views/SearchView.swift"
   ],
+  "review_notes": "Dual-device Live Sim Review (iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2) approved by user on 2026-08-01. Two fixes applied post-review: (1) submitQuery in UI-slice mode now returns stub results so fixture data persists after searching; (2) emptyState/idlePrompt centered via symmetric Spacer. Full regression: 492 tests / 62 suites, 0 failures.",
   "test_results": {
-    "unit_tests_passed": 401,
+    "unit_tests_passed": 23,
     "build": "SUCCEEDED",
-    "unverified": true
+    "unverified": false
   },
-  "last_updated": "2026-08-01T09:00:00Z"
+  "xcode": {
+    "version": "26.5",
+    "build_version": "17F42",
+    "sdk": "iOS Simulator",
+    "runtime": "iPhone 17 Pro"
+  },
+  "mcpbridge": {
+    "preflight_passed": true,
+    "preflight_detail": "Xcode 26.5 selected, mcpbridge found at Xcode developer usr/bin. Baseline clean build succeeded with 0 warnings. Candidate owner: cli_xctest (simulator interaction via Argent/simctl for Live Sim Review).",
+    "selected_as_owner": false
+  },
+  "design_profile": {
+    "profile_id": "echo-memory-canvas",
+    "profile_version": "1.0.0",
+    "base_profile": "apple-native",
+    "approval_record": {
+      "approved_by": "user",
+      "approved_at": "2026-07-25",
+      "source": "Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范 §7"
+    },
+    "surface_family": "discovery",
+    "layout_mode": "system_list",
+    "fallback_reason": "Search results mix text/photo content needing reading order — §6.2 single-column/List fallback; masonry disabled"
+  },
+  "artifacts": {
+    "manifest_path": "UIAutomation/Artifacts/manifests/search-run-manifest.json",
+    "build_log_path": "UIAutomation/Artifacts/logs/search-build.log",
+    "test_summary_path": "UIAutomation/Artifacts/summaries/search-test-summary.json",
+    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/search-loaded-axtree.json"
+  },
+  "delivery_approval": {
+    "approved": true,
+    "approved_by": "user",
+    "approved_at": "2026-08-01T21:55:00+08:00",
+    "simulator_uri": "2789B5D1-D292-4144-A66B-649CE2DF32EC,F3BF1718-247D-4CB2-AAAF-F7738514B14D"
+  },
+  "blockers": [],
+  "last_updated": "2026-08-01T21:55:00+08:00"
 }

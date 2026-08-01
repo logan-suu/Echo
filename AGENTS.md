@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.22  
+**版本**：v5.23  
 **生效日期**：2026-07-26  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -658,11 +658,13 @@ PR 合并前必须通过:
 | **destination** | `'platform=iOS Simulator,name=iPhone 17 Pro'` | 用于 `xcodebuild build/test` 的 `-destination` 参数 |
 | **串行执行** | `-parallel-testing-enabled NO` | 所有 `xcodebuild test` **必须**加此参数，原因见下方 |
 | **测试文件位置** | `EchoTests/Phase{N}/[任务ID]_[功能名]Tests.swift` | 参见 §10.3 |
+| **Live Sim Review 双设备** | iPhone 17 Pro (iOS 26.5) + iPhone 16 Pro (iOS 18.x) | Phase 3 UI 视觉审批同时使用两台设备，详见下方规范 |
 
 **规范**：
 - Agent 执行 `xcodebuild test` 时，必须使用 `iPhone 17 Pro` 模拟器
 - **所有 `xcodebuild test` 必须添加 `-parallel-testing-enabled NO`，强制串行执行**。原因：Echo 使用共享 `DatabaseManager.shared`（单例 SQLite）和共享 Actor（`PrivacyActor.shared`、`FeedbackActor.shared` 等），并行测试会导致数据库状态污染与数据竞争——表现为随机 `sqlite3_step` 失败、Actor 状态不一致等 flaky 失败。串行执行确保每个测试套件获得干净初始状态。
-- 禁止使用其他设备名称（如 `iPhone 16 Pro`），避免因设备不存在导致构建失败
+- 禁止使用其他设备名称（如 `iPhone 16 Pro`）作为 **`xcodebuild build/test` 的 destination**，避免因设备不存在导致构建失败
+- **Live Simulator Review 例外（Phase 3 UI）**：视觉审批必须**同时**使用两台设备——`iPhone 17 Pro (iOS 26.5)`（主审查设备）+ `iPhone 16 Pro (iOS 18.x)`（最低支持版本审查设备，覆盖 iOS 18 部署目标）。构建仍以 `iPhone 17 Pro` 为 destination，同一产物安装到两台设备。详见 §17 与 `docs/ui/automation-workflow.md`
 - CI 环境可通过环境变量覆盖（如 `IOS_DESTINATION`），本地开发统一使用上述约定之```
 
 ### 9.5 LSP 诊断配置
@@ -1363,7 +1365,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 
 | 命令 | 用途 | 存在 |
 |------|------|:---:|
-| `/ui-bootstrap-build-echo <task-id>` | Phase 3 UI 实现入口（完整流水线 → Live Sim Review） | ✅ 已物化 |
+| `/ui-bootstrap-build-echo <task-id>` | Phase 3 UI 实现入口（完整流水线 → 双设备 Live Sim Review：17 Pro iOS 26 + 16 Pro iOS 18） | ✅ 已物化 |
 | `/ui-status-echo` | 只读双状态查询 | ✅ 已物化 |
 | `/ui-retry-echo <task-id>` | 受限阶段重试 | ✅ 已物化 |
 
@@ -1382,7 +1384,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 ### 17.7 关键禁止项
 
 - ❌ **禁止自动 commit/push/PR**：Git 交付必须由用户明确调用适配后的 `/commit-pr-echo` 触发
-- ❌ **禁止生成 screenshot/video**：视觉审批只通过 Live Simulator Review
+- ❌ **禁止生成 screenshot/video**：视觉审批只通过双设备 Live Simulator Review（iPhone 17 Pro iOS 26 + iPhone 16 Pro iOS 18）
 - ❌ **禁止在 Focus/Task surfaces 使用 masonry**
 - ❌ **禁止修改 Core、数据模型、迁移、签名或 acceptance policy**
 - ❌ **禁止复制 Pinterest 品牌、文案、控件或 trade dress**
@@ -1395,7 +1397,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 - 需要猜测领域规则或绕过现有 Core 接口
 - 需要生产签名、发布凭据、真实用户数据
 - 契约/方向/验收策略存在未批准变化
-- Simulator 重复所有者或控制冲突
+- Simulator 重复所有者或控制冲突（同一设备被多个 run/owner 控制；双审查设备 17 Pro + 16 Pro 为同一 owner 合法持有，不构成冲突）
 - Artifact 包含凭据、PII
 
 ---
@@ -1431,3 +1433,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.20 | 2026-07-26 | External content English-only mandate: all PR titles/descriptions/comments, commit messages, branch names, code comments in diffs, and custom command templates enforcing PR body/review report generation must be in English. Project documentation (`docs/*.md`) exempt. Added §3.5 External Content Language rule. Converted §3.3 PR template, §3.4 pre-commit checklist, §11.3 self-check list, and §13.3 AC coverage table from Chinese to English. | AI 架构师 |
 | v5.21 | 2026-07-31 | 分代索引架构落地（Phase R-A）：§2.2 技术栈表向量数据库补充「分代索引每代一个实例，由 GenerationRegistryActor 管理」；§5.1 存储层次表新增 ModelManifest/IndexGeneration/ActiveRouteSet 三行；§10.1 目录结构补充 ModelManifestActor/GenerationRegistryActor 及 CanonicalMemory/ModelManifest/IndexGeneration/ActiveRouteSet 模型文件。 | AI 架构师 |
 | v5.22 | 2026-08-01 | PR Review 延后项追踪规范：§15.5 新增核心规则 3（PR Review 延后缺陷必须记录到 deferred-items.json 的 deferred_from_pr_review 数组）+ 执行流程第 5 步（延后项追踪格式）。同步更新 pr-review-echo（新增第八步）、commit-pr-echo（新增延后项检查）、pr-merge-echo（合并前扫描 deferred_from_pr_review）三个自定义命令。 | AI 架构师 |
+| v5.23 | 2026-08-01 | Live Simulator Review 双设备审查：§9.4 明确视觉审批同时使用 iPhone 17 Pro (iOS 26.5) + iPhone 16 Pro (iOS 18.x)，构建仍以 17 Pro 为 destination；§17.5/§17.7/§17.8 同步双设备措辞。同步更新 docs/ui/ 五份文档、UIAutomation/Policies/simulator-ownership.json、.ui-automation/state.schema.json（simulator_owner 双设备数组，schemaVersion 1.1.0）及 ui-bootstrap-build-echo/ui-status-echo/commit-pr-echo 三个命令。 | AI 架构师 |

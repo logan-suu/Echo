@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "result.dislike",
+  "source": "user",
+  "targetIntent": "SearchViewModel.recordFeedback(dislike)",
+  "expectedOutcome": "FeedbackActor.recordFeedback called with sentiment=dislike; button enters selected state",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

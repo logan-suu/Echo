@@ -29,7 +29,7 @@ selected → repo_discovery → materialize_structure → readiness_check
 | `ui_slice_generation` | 一次生成一个可评审 UI 切片 | ui-bootstrap 自动 |
 | `verification` | 执行验证并归档证据 | ui-bootstrap 自动 |
 | `awaiting_exception_decision` | 已定义条件触发 | 异常时自动进入 |
-| `awaiting_delivery_approval` | 等待用户查看 Live Simulator | 验证通过后自动进入 |
+| `awaiting_delivery_approval` | 等待用户查看双设备 Live Simulator（17 Pro iOS 26 + 16 Pro iOS 18） | 验证通过后自动进入 |
 | `accepted` | 用户批准 | 用户明确批准后 |
 
 **终止状态**：`failed`（重试耗尽）、`stopped`（安全/范围/保护路径规则触发）
@@ -38,9 +38,16 @@ selected → repo_discovery → materialize_structure → readiness_check
 
 ## 2. 一个固定批准点 + 一个条件决策点
 
-### 固定交付批准点：Live Simulator Review
-- Agent 导航到契约 UI state → 保持 Simulator 前台 → 停止操作
-- 用户直接查看 → 明确批准或提出修改
+### 固定交付批准点：Live Simulator Review（双设备）
+- Agent 在**两台设备**上导航到契约 UI state → 保持两台 Simulator 前台 → 停止操作
+  - **iPhone 17 Pro（iOS 26.5）**：主审查设备（最新平台）
+  - **iPhone 16 Pro（iOS 18.x）**：最低支持版本审查设备（覆盖 iOS 18 部署目标）
+- **报告必须附带「UI 审查指南」三区块**（让用户无需代码知识即可审查）：
+  1. **本次添加/修改的页面清单**：页面名 + 变更类型（🆕/✏️）+ 文件路径
+  2. **导航路径**：从哪个 Tab / 入口、如何点击到达该页面的逐条步骤
+  3. **未实现功能 / 临时效果**：逐项列出 🔮 未实现功能（含目标 Phase）、fixture/stub 驱动的临时数据、String Catalog 未迁移等
+  - 提取依据：`state.json` 的 files_created/files_modified、契约文件、代码中的 `🔮 Phase 3.x` / `stub` / `fixture` 标记
+- 用户直接查看两台设备 → 明确批准或提出修改
 - **Agent 不能自行批准界面**
 - 不生成或持久化 screenshot/video
 
@@ -71,7 +78,8 @@ selected → repo_discovery → materialize_structure → readiness_check
 
 ## 4. 唯一 Simulator 所有者
 
-- 每次运行只能有一个 simulator 生命周期与交互所有者
+- 每次运行只能有一个 simulator 生命周期与交互**所有者**（owner），但同一 owner 可同时持有**两台审查设备**（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.x）
+- 双设备为 Live Simulator Review 的固定组合：主审查设备 + 最低版本审查设备；同一产物安装到两台设备，状态一致
 - 默认 fallback：CLI + XCTest（`xcodebuild`、`simctl`、`xcresulttool`）
 - Xcode 26.5 上 `mcpbridge` 通过 preflight 后可成为候选
 - 最终选择记录在 run manifest
@@ -101,7 +109,7 @@ selected → repo_discovery → materialize_structure → readiness_check
 - 需要猜测领域规则
 - 需要生产签名、发布凭据、真实用户数据
 - 契约/方向/验收策略存在未批准变化
-- Simulator 重复所有者或控制冲突
+- Simulator 重复所有者或控制冲突（同一设备被多个 run/owner 控制；双审查设备为同一 owner 合法持有，不构成冲突）
 - Artifact 包含凭据、PII
 
 ---

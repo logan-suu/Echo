@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "search-empty",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "discovery",
+  "payload": {
+    "query": "不存在的记忆",
+    "results": []
+  },
+  "controlledVariables": ["query"],
+  "version": "1.0.0"
+}

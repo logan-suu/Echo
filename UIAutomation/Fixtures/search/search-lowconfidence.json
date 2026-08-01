@@ -1,0 +1,46 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "search-lowconfidence",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "discovery",
+  "payload": {
+    "query": "summer beach memories",
+    "results": [
+      {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "assetId": "photo-en-1",
+        "sourceType": "photo",
+        "timestamp": 1723680000,
+        "originalText": null,
+        "sourceLanguage": null,
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.82,
+        "alignmentScore": 0.55,
+        "feedbackAdjustment": null,
+        "lowConfidence": true,
+        "fallbackReason": "cross_language_low_alignment",
+        "unappliedFilters": []
+      },
+      {
+        "id": "44444444-4444-4444-4444-444444444444",
+        "assetId": "note-en-2",
+        "sourceType": "note",
+        "originalText": "A note about summer plans",
+        "sourceLanguage": "en-US",
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.79,
+        "alignmentScore": 0.5,
+        "feedbackAdjustment": null,
+        "lowConfidence": true,
+        "fallbackReason": "cross_language_low_alignment",
+        "unappliedFilters": []
+      }
+    ],
+    "lowConfidence": true
+  },
+  "controlledVariables": ["timestamp", "id", "alignmentScore", "cosineSimilarity"],
+  "version": "1.0.0"
+}

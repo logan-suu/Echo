@@ -10,7 +10,7 @@
 ```
 第一层：意图与人工批准层      → 维护 echo-memory-canvas，管理批准点
 第二层：契约与场景层          → surface/state/action/journey/fixture 稳定 ID
-第三层：编排与状态机层        → 推进状态、重试、唯一 simulator 所有者
+第三层：编排与状态机层        → 推进状态、重试、唯一 simulator 所有者（双审查设备）
 第四层：UI 生成与适配层       → SwiftUI View、design token、薄 adapter
 第五层：执行与验证层          → schema 校验、build、test、accessibility audit
 第六层：证据/治理与安全层     → run manifest、审计链、批准记录
