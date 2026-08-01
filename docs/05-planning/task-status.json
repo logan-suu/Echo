@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T16:00:00Z",
+  "last_updated": "2026-08-01T15:08:14Z",
   "current_phase": 3,
   "phases": [
     {
@@ -494,8 +494,8 @@
           "id": "3.2",
           "title": "检索视图 SearchView + SearchViewModel + 反馈按钮 + 低置信度横幅 + 手动扫描结果页",
           "story": "US-RET-001, US-RET-004, US-RET-006, US-RET-008, US-FBK-001, US-FBK-003, US-SRC-005, US-SRC-013",
-          "status": "review",
-          "last_updated": "2026-08-01T16:00:00Z",
+          "status": "done",
+          "last_updated": "2026-08-01T15:08:14Z",
           "pr": {
             "url": "https://github.com/logan-suu/Echo/pull/37",
             "number": 37,
@@ -517,13 +517,14 @@
             "3.1"
           ],
           "test_file": "EchoTests/Phase3/SearchViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：查询输入+结果展示。新增：👍/👎反馈按钮(FBK-001)、Bad Case标记(FBK-003)、低置信度横幅(RET-006)、手动扫描结果页(SRC-005)、变更检测结果页(SRC-013)。依赖新增 3.0。\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-01）。492 tests / 62 suites 全量回归 0 失败。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。 | PR #37 review fixes: accessibility .contain, L1-L4 error mapping, #if DEBUG fixture hook, Preview simulateError, spec banner wording. DEF-37-001 deferred (feedback PendingOperations -> Task 3.6)."
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：查询输入+结果展示。新增：👍/👎反馈按钮(FBK-001)、Bad Case标记(FBK-003)、低置信度横幅(RET-006)、手动扫描结果页(SRC-005)、变更检测结果页(SRC-013)。依赖新增 3.0。\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-01）。492 tests / 62 suites 全量回归 0 失败。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。 | PR #37 review fixes: accessibility .contain, L1-L4 error mapping, #if DEBUG fixture hook, Preview simulateError, spec banner wording. DEF-37-001 deferred (feedback PendingOperations -> Task 3.6).\n✅ 合并完成：PR #37 merged by logan-suu at 2026-08-01T15:06:25Z (merge commit f15f29d). DEF-37-001 已追踪，待 Task 3.6 解决。",
+          "merged_at": "2026-08-01T15:06:25Z"
         },
         {
           "id": "3.3",
           "title": "记忆详情页 MemoryDetailView + ViewModel + 编辑 + 冲突解决 + 创作展示 + 翻译切换",
           "story": "US-AWK-007, US-SYN-002, US-SYN-003, US-SYN-004, US-PRV-004, US-DIS-002",
-          "status": "backlog",
+          "status": "ready",
           "last_updated": "2026-07-26T18:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
@@ -849,7 +850,7 @@
           "id": "4.12",
           "title": "R-3.9 挑战者：PP-OCRv6 备选 OCR 路线",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/PPOCRv6ChallengeTests.swift",
           "notes": "R-3.9 挑战者赛道。对照 Apple Vision OCR，评估中文场景增益"
@@ -858,7 +859,7 @@
           "id": "4.13",
           "title": "R-3.9 挑战者：Echo 自有蒸馏双语重排器训练管线",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/BilingualRerankerTests.swift",
           "notes": "R-3.9 挑战者赛道。训练样本全部自有或已授权，固定 shape Core ML 转换，12-24 候选重排 P95 达标"
@@ -867,7 +868,7 @@
           "id": "4.20",
           "title": "R-5.2 Share Extension：备忘录/语音备忘录显式分享摄入（独立 target）",
           "story": "US-SRC-001, US-SRC-002",
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/ShareExtensionTests.swift",
           "notes": "R-5.2 决策（2026-08-01 路径 A）：放弃自动扫描备忘录/语音备忘录，通过 Share Extension 用户主动分享摄入。需独立 Extension target + App Group 共享数据。"
@@ -876,7 +877,7 @@
           "id": "4.21",
           "title": "SigLIP2-B/32 Core ML 转换与视觉 generation 接入（R-5.1/R-3.2 补全）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/SigLIP2ConversionTests.swift",
           "notes": "R-5.1 决策（2026-08-01）：SigLIP2 Apache-2.0 批准为商业候选。任务：PyTorch→coremltools→.mlmodelc 转换、参考向量一致性验证（余弦>0.995）、vision_dense/siglip2-v1 generation 接入、四类门禁（法律/转换/数据集/设备）。依赖模型工件（SigLIP2 checkpoint 由 prepare_models.sh 下载）。"
@@ -885,7 +886,7 @@
           "id": "4.22",
           "title": "Whisper tiny GGUF 集成与 SBOM 生成（R-5.4/R-3.3 补全）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/WhisperTinyIntegrationTests.swift",
           "notes": "R-5.4 决策（2026-08-01）：whisper tiny（~39MB GGUF）批准。任务：whisper.cpp C interop 桥接、GGUF 加载、VAD、转写（CER/WER 阈值）、生成完整 SBOM（来源 URL/固定 revision/SHA256/许可/NOTICE/转换脚本）。依赖模型工件（whisper-small-q4_k.gguf 由 prepare_models.sh 下载）。"
@@ -894,7 +895,7 @@
           "id": "4.23",
           "title": "R-3.9 挑战者：Qwen3-Embedding-0.6B 4-bit 挑战赛（MLX Swift 实机）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/Qwen3EmbeddingChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.8 冲突未落地）。门禁：法律（Apache-2.0 SBOM）+ 质量（同集对 E5 增益）+ 设备（MLX 实机）+ 迁移。"
@@ -903,7 +904,7 @@
           "id": "4.24",
           "title": "R-3.9 挑战者：EmbeddingGemma Q4 挑战赛（gated terms 审查 + 实机评测）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/EmbeddingGemmaChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.9 冲突未落地）。门禁：法律（gated terms 下游义务）+ 质量 + 设备 + 迁移。"
@@ -912,7 +913,7 @@
           "id": "4.25",
           "title": "R-3.9 挑战者：WhisperKit runtime 对照实验",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/WhisperKitChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.11 冲突未落地）。对照 whisper.cpp 路线，评估 Core ML runtime 性能差异。"

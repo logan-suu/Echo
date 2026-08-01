@@ -161,7 +161,8 @@
       "location": "SearchViewModel.swift:314,333,351 (recordLike/recordDislike/markBadCase catch)",
       "reason": "反馈转发失败时 UI 层空 catch 静默降级（本地状态已即时更新）。正确修复需在 FeedbackPipeline（Core 受保护层）内部将 L2 错误写入 PendingOperations + 统一 Toast 重试 UI，超出 3.2 UI 切片边界。",
       "defer_to": "Task 3.6 统一错误处理 UI（L2 Toast + PendingOperations 接入）时",
-      "deferred_at": "2026-08-01"
+      "deferred_at": "2026-08-01",
+      "last_checked_at": "2026-08-01"
     }
   ]
 }
