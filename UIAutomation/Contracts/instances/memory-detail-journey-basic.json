@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "memory-detail-basic",
+  "steps": [
+    { "surfaceId": "memory-detail", "stateId": "loading", "actionId": "detail.load" },
+    { "surfaceId": "memory-detail", "stateId": "loaded", "actionId": "detail.translate" },
+    { "surfaceId": "memory-detail", "stateId": "translated", "actionId": "detail.translate" },
+    { "surfaceId": "memory-detail", "stateId": "loaded", "actionId": "detail.edit" },
+    { "surfaceId": "memory-detail", "stateId": "editing", "actionId": "detail.saveEdit" }
+  ],
+  "preconditionFixtures": ["memory-detail-loaded"],
+  "assertions": [
+    { "type": "translation_toggle", "expected": "translation appears then returns to original" },
+    { "type": "edit_save", "expected": "edited title/description reflected after save" }
+  ],
+  "version": "1.0.0"
+}

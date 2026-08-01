@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "detail.saveEdit",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.saveEdit()",
+  "expectedOutcome": "Edited memory saved locally (US-AWK-007 AC-2); re-vectorization 🔮 Phase 3.9; L4 conflict guard blocks save when syncing",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

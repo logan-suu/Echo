@@ -1,0 +1,18 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "memory-detail-error",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "memoryId": "00000000-0000-0000-0000-000000000000",
+    "loadError": {
+      "level": "L2",
+      "message": "Unable to load this memory. Please try again."
+    }
+  },
+  "controlledVariables": ["memoryId"],
+  "version": "1.0.0"
+}

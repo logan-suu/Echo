@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "detail.translate",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.toggleTranslation()",
+  "expectedOutcome": "Translation toggled between original and translated text (US-DIS-002); translation persisted to cache TTL=7d (🔮 Phase 3.8)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loading",
+  "surfaceId": "memory-detail",
+  "dataConditions": {
+    "memory": "nil — fetch in progress (300ms simulated)",
+    "viewState": "loading"
+  },
+  "allowedActions": ["detail.cancel"],
+  "expectedSemantics": {
+    "loadingIndicator": "ProgressView with label 'Loading memory'",
+    "readingOrder": ["loadingIndicator"]
+  },
+  "version": "1.0.0"
+}

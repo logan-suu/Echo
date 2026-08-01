@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "search-to-detail",
+  "steps": [
+    { "surfaceId": "search", "stateId": "completed", "actionId": "search.submit" },
+    { "surfaceId": "search", "stateId": "completed", "actionId": "search.openResult" },
+    { "surfaceId": "memory-detail", "stateId": "loaded", "actionId": "detail.load" }
+  ],
+  "preconditionFixtures": ["search-multitype"],
+  "assertions": [
+    { "type": "navigation", "expected": "tapping a search result card pushes the memory detail for the matching memoryId" },
+    { "type": "detail_content", "expected": "detail shows the memory matching result.id: note text / photo description / voice transcript / video frame description" },
+    { "type": "type_label", "expected": "metadata shows correct source type label (Photo/Note/Voice/Video)" }
+  ],
+  "version": "1.0.0"
+}

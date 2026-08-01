@@ -49,6 +49,15 @@ struct SearchView: View {
     /// 搜索框绑定文本
     @State private var searchText: String = ""
 
+    /// 当前选中的记忆 ID — 触发导航到 MemoryDetailView (Focus surface)
+    @State private var selectedMemoryID: UUID?
+
+    /// 预加载的记忆详情 ViewModel — Live Sim Review fixture 直接导航
+    @State private var detailViewModel: MemoryDetailViewModel?
+
+    /// 首次出现标记 — 控制 fixture 注入仅执行一次 (2026-08-02 回归修复)
+    @State private var hasHandledLaunchArguments = false
+
     init(viewModel: SearchViewModel = SearchViewModel()) {
         _viewModel = State(initialValue: viewModel)
     }
@@ -73,14 +82,34 @@ struct SearchView: View {
         .onSubmit(of: .search) {
             viewModel.submitQuery(searchText)
         }
+        .navigationDestination(item: $selectedMemoryID) { memoryID in
+            if let detailViewModel {
+                MemoryDetailView(viewModel: detailViewModel)
+            } else {
+                MemoryDetailView(memoryId: memoryID)
+            }
+        }
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
         .onDisappear { viewModel.onDisappear() }
-        .onAppear { handleLaunchArguments() }
+        .onAppear { handleFirstAppear() }
         .animation(.easeInOut(duration: 0.25), value: viewModel.viewState)
     }
 
     // MARK: - Launch Argument Fixture Injection
+
+    /// 首次出现时处理启动参数 fixture 注入。
+    ///
+    /// 仅首次执行 — TabView 切换 / 详情返回会再次触发 onAppear，
+    /// 重复注入会重置用户已浏览的搜索状态（回归 2026-08-02 修复）。
+    /// 生产构建（#if DEBUG 排除）无任何注入逻辑。
+    private func handleFirstAppear() {
+        guard !hasHandledLaunchArguments else { return }
+        hasHandledLaunchArguments = true
+        #if DEBUG
+        handleLaunchArguments()
+        #endif
+    }
 
     #if DEBUG
     /// 处理 XCUITest / Live Sim Review 启动参数注入确定性 fixture。
@@ -92,10 +121,40 @@ struct SearchView: View {
         let args = ProcessInfo.processInfo.arguments
         guard let idx = args.firstIndex(of: "-ui-fixture"), idx + 1 < args.count else { return }
         let fixtureID = args[idx + 1]
+
+        // 支持 `-ui-fixture memory-detail-*` 直接导航到记忆详情 (Live Sim Review)
+        if fixtureID.hasPrefix("memory-detail-") {
+            if let model = MemoryDetailFixtureLoader.load(fixtureID) {
+                let vm = MemoryDetailViewModel()
+                vm.loadPreloaded(model)
+                detailViewModel = vm
+                selectedMemoryID = model.id
+            }
+            return
+        }
+
         let items = SearchFixtureLoader.load(fixtureID)
         viewModel.loadPreloadedResults(items)
     }
     #endif
+
+    // MARK: - Navigation
+
+    /// 点击结果卡片 → 记忆详情（US-RET-001 结果展示 / 3.3 详情页）。
+    ///
+    /// UI 切片模式：按 `result.id` 匹配确定性详情 fixture（MemoryDetailFixtureLoader），
+    /// 命中则预加载详情 ViewModel；未命中走生产路径 `MemoryDetailView(memoryId:)`
+    /// （Phase 3.9 由 Core 按 memoryId 拉取）。
+    private func openDetail(for result: SearchResultModel) {
+        if let model = MemoryDetailFixtureLoader.load(memoryID: result.id) {
+            let vm = MemoryDetailViewModel()
+            vm.loadPreloaded(model)
+            detailViewModel = vm
+        } else {
+            detailViewModel = nil
+        }
+        selectedMemoryID = result.id
+    }
 
     // MARK: - Content Views
 
@@ -233,7 +292,8 @@ struct SearchView: View {
                         feedbackState: viewModel.feedbackStates[result.id] ?? .none,
                         onLike: { viewModel.recordLike(result) },
                         onDislike: { viewModel.recordDislike(result) },
-                        onMarkBadCase: { viewModel.markBadCase(result) }
+                        onMarkBadCase: { viewModel.markBadCase(result) },
+                        onOpen: { openDetail(for: result) }
                     )
                     .listRowSeparator(.visible)
                 }
@@ -357,6 +417,7 @@ struct SearchResultRow: View {
     let onLike: () -> Void
     let onDislike: () -> Void
     let onMarkBadCase: () -> Void
+    let onOpen: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -425,7 +486,7 @@ struct SearchResultRow: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            // 🔮 Phase 3.3+: Navigate to MemoryDetailView with result.id
+            onOpen()
         }
     }
 }

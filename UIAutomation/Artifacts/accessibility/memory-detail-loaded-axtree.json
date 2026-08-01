@@ -1,0 +1,35 @@
+{
+  "runId": "b980dd5d-19f1-47e9-8752-05026c613951",
+  "task_id": "3.3",
+  "surfaceId": "memory-detail",
+  "stateId": "loaded",
+  "fixtureId": "memory-detail-loaded",
+  "device": "iPhone 16 Pro (iOS 18.2) — minimum_version review device",
+  "source": "ax-service",
+  "capturedAt": "2026-08-01T23:52:00+08:00",
+  "tree": [
+    "AXButton Back (0.000, 0.064)",
+    "AXButton Edit (0.878, 0.064)",
+    "AXGroup Memory (0.419, 0.078)",
+    "AXStaticText 昨晚的公园散步 (0.040, 0.133) — title",
+    "AXButton Show translation / value=Original shown (0.040, 0.177) — US-DIS-002 toggle",
+    "AXStaticText 昨晚在公园遇到一只橘猫… (0.040, 0.227) — original text",
+    "AXGroup Memory details: Note, 2024年8月12日, zh-Hans (0.040, 0.298) — grouped metadata",
+    "AXStaticText Source, Note",
+    "AXStaticText Date, 2024年8月12日",
+    "AXStaticText Language, zh-Hans",
+    "AXStaticText Tags, 公园, 橘猫",
+    "AXStaticText AI Creation (0.075, 0.522) — US-SYN-003",
+    "AXStaticText A letter to future self… (0.075, 0.556) — creation preview",
+    "AXButton Source memory citation (0.075, 0.641) — US-SYN-002 anchor",
+    "AXButton Remove this memory (0.040, 0.713) — US-PRV-004 entry",
+    "AXGroup Tab Bar — Home / Search / Settings"
+  ],
+  "validation": {
+    "surfaceFamily": "focus",
+    "masonry": false,
+    "singleColumn": true,
+    "groupedMetadata": true
+  },
+  "visualMediaCaptured": false
+}

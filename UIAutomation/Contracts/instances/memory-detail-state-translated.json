@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "translated",
+  "surfaceId": "memory-detail",
+  "dataConditions": {
+    "memory": "Text memory (zh-Hans), preferredLanguage = en-US",
+    "translationVisible": true,
+    "translatedText": "English translation from fixture"
+  },
+  "allowedActions": ["detail.translate", "detail.edit", "detail.delete"],
+  "expectedSemantics": {
+    "translationToggle": "Show original",
+    "translatedBody": "Translated text with original below",
+    "languageLabel": "English"
+  },
+  "version": "1.0.0"
+}

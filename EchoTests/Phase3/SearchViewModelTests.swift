@@ -392,6 +392,35 @@ struct SearchViewModelTests {
         #expect(vm.viewState == .cancelled)
     }
 
+    // MARK: - Regression: Search → Detail → back preserves results (2026-08-02)
+
+    @Test("onDisappear preserves completed results (returning from detail keeps cards)")
+    func test_onDisappear_preservesCompletedResults() {
+        let vm = SearchViewModel()
+        let items = SearchFixtureLoader.load("search-multitype")
+        vm.loadPreloadedResults(items)
+        #expect(vm.viewState == .completed)
+        #expect(vm.results.count == 4)
+
+        // iOS 17+ push detail triggers parent onDisappear — results must survive
+        vm.onDisappear()
+
+        #expect(vm.viewState == .completed, "Completed results must survive onDisappear")
+        #expect(vm.results.count == 4, "Result cards must remain visible after returning")
+    }
+
+    @Test("onDisappear cancels in-flight search but preserves previously loaded results")
+    func test_onDisappear_loadingCancelsButKeepsStub() {
+        let vm = SearchViewModel()
+        let items = SearchFixtureLoader.load("search-multitype")
+        vm.loadPreloadedResults(items)
+        vm.submitQuery("新查询")
+        #expect(vm.viewState == .loading)
+
+        vm.onDisappear()
+        #expect(vm.viewState == .cancelled)
+    }
+
     @Test("simulateError sets error state without side effects")
     func test_simulateError_setsState() {
         let vm = SearchViewModel()

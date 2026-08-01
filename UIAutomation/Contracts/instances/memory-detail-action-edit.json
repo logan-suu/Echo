@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "detail.edit",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.presentEditSheet()",
+  "expectedOutcome": "Edit sheet presented with title/description/tags/timestamp fields (US-AWK-007 AC-1)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "editing",
+  "surfaceId": "memory-detail",
+  "dataConditions": {
+    "memory": "Loaded memory, edit sheet presented",
+    "editing": true
+  },
+  "allowedActions": ["detail.saveEdit", "detail.cancelEdit"],
+  "expectedSemantics": {
+    "editForm": "Title, description, custom tags, timestamp fields",
+    "saveButton": "Save",
+    "cancelButton": "Cancel"
+  },
+  "version": "1.0.0"
+}

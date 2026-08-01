@@ -1,0 +1,27 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "memory-detail-conflict",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "memoryId": "55555555-5555-5555-5555-555555555555",
+    "assetId": "note-zh-5",
+    "sourceType": "note",
+    "title": "出差记录",
+    "originalText": "今天去杭州出差。",
+    "sourceLanguage": "zh-Hans",
+    "preferredLanguage": "en-US",
+    "timestamp": 1723507200,
+    "tags": [],
+    "conflict": {
+      "flagged": true,
+      "localDraft": "今天去杭州出差，傍晚去了西湖。",
+      "externalVersion": "今天去杭州出差，客户改期到下周。"
+    }
+  },
+  "controlledVariables": ["timestamp", "memoryId"],
+  "version": "1.0.0"
+}

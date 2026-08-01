@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T15:08:14Z",
+  "last_updated": "2026-08-01T17:59:12Z",
   "current_phase": 3,
   "phases": [
     {
@@ -524,8 +524,8 @@
           "id": "3.3",
           "title": "记忆详情页 MemoryDetailView + ViewModel + 编辑 + 冲突解决 + 创作展示 + 翻译切换",
           "story": "US-AWK-007, US-SYN-002, US-SYN-003, US-SYN-004, US-PRV-004, US-DIS-002",
-          "status": "ready",
-          "last_updated": "2026-07-26T18:00:00Z",
+          "status": "review",
+          "last_updated": "2026-08-01T17:59:12Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
@@ -536,7 +536,13 @@
             "3.2"
           ],
           "test_file": "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：编辑功能(AWK-007)。新增：L4 冲突解决 UI、创作生成预览(SYN-003/004)、记录感受功能、翻译切换(DIS-002)、删除确认弹窗(PRV-004)。依赖新增 3.0。"
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：编辑功能(AWK-007)。新增：L4 冲突解决 UI、创作生成预览(SYN-003/004)、记录感受功能、翻译切换(DIS-002)、删除确认弹窗(PRV-004)。依赖新增 3.0。",
+          "pr": {
+            "number": null,
+            "url": null,
+            "branch": "feature/memory-detail-view-US-AWK-007",
+            "created_at": null
+          }
         },
         {
           "id": "3.4",

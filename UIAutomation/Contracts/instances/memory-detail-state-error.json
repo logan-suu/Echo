@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "error",
+  "surfaceId": "memory-detail",
+  "dataConditions": {
+    "memory": "nil — load failed",
+    "viewState": "error(L2|L3)"
+  },
+  "allowedActions": ["detail.retry", "detail.back"],
+  "expectedSemantics": {
+    "errorTitle": "Unable to load memory",
+    "retryButton": "Retry (L2 only)",
+    "backNavigation": "Navigation back remains available"
+  },
+  "version": "1.0.0"
+}
