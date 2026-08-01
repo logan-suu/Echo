@@ -517,7 +517,7 @@
             "3.1"
           ],
           "test_file": "EchoTests/Phase3/SearchViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：查询输入+结果展示。新增：👍/👎反馈按钮(FBK-001)、Bad Case标记(FBK-003)、低置信度横幅(RET-006)、手动扫描结果页(SRC-005)、变更检测结果页(SRC-013)。依赖新增 3.0。\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-01）。492 tests / 62 suites 全量回归 0 失败。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。"
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：查询输入+结果展示。新增：👍/👎反馈按钮(FBK-001)、Bad Case标记(FBK-003)、低置信度横幅(RET-006)、手动扫描结果页(SRC-005)、变更检测结果页(SRC-013)。依赖新增 3.0。\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-01）。492 tests / 62 suites 全量回归 0 失败。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。 | PR #37 review fixes: accessibility .contain, L1-L4 error mapping, #if DEBUG fixture hook, Preview simulateError, spec banner wording. DEF-37-001 deferred (feedback PendingOperations -> Task 3.6)."
         },
         {
           "id": "3.3",

@@ -6,8 +6,9 @@
 //            docs/ui/echo-memory-canvas-style.md §14 (筛选与搜索 UI 模式), §6.2 (List 回退)
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.2 - SearchView + SearchViewModel + Feedback + Low-confidence banner + Scan results
-// AC 覆盖: US-RET-001 AC-3 ✅ (结果展示), US-RET-006 AC-2/AC-4 ✅ (低置信度横幅),
-//          US-FBK-001 AC-1 ✅ (👍/👎 按钮), US-FBK-003 AC-1 ✅ (Bad Case 标记)
+// AC 覆盖: US-RET-001 AC-3 ✅ (结果展示, 字段映射) / 🔮 (pipeline 标记 Phase 3.9),
+//          US-RET-006 AC-1/AC-2/AC-4 ✅ (低置信度横幅 + 规格文案), US-FBK-001 AC-1 ✅ (👍/👎),
+//          US-FBK-003 AC-1 ✅ (Bad Case 标记), L1~L4 错误映射 ✅ (mapError, PR #37 review fix)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
