@@ -235,68 +235,13 @@ jobs:
         run: |
           set +e
           COVERAGE_THRESHOLD=65
-          EXCLUDED_PATH_PREFIX="Echo/UI/Views/"
           if [ ! -d "TestResults.xcresult" ]; then
             echo "::error::TestResults.xcresult not found — coverage gate cannot pass"
             exit 1
           fi
-          echo "::group::Coverage Report (file-level, excluding ${EXCLUDED_PATH_PREFIX})"
-          # Use --files to get per-file coverage, needed to exclude Views
-          xcrun xccov view --report --json --files TestResults.xcresult > coverage.json 2>coverage.err
-          XCCOV_EXIT=$?
-          if [ "$XCCOV_EXIT" -ne 0 ] || [ ! -s coverage.json ]; then
-            echo "::error::Coverage report generation failed (xccov exit $XCCOV_EXIT)"
-            cat coverage.err 2>/dev/null || true
-            echo "::endgroup::"
-            exit 1
-          fi
-          # Compute aggregate coverage for Echo.app excluding Views/.
-          # Uses Python to: find Echo.app target, iterate files, exclude Views/,
-          # compute weighted average (sum coveredLines / sum executableLines).
-          COVERAGE_INT=$(python3 -c '
-import json, sys
-d = json.load(open("coverage.json"))
-t = next((x for x in d.get("targets",[]) if x.get("name")=="Echo.app"), None)
-if t is None:
-    print("Echo.app target not found", file=sys.stderr)
-    sys.exit(1)
-prefix = "Echo/UI/Views/"
-total_exec = 0
-total_cov  = 0
-excluded_count = 0
-included_count = 0
-for f in t.get("files",[]):
-    path = f.get("path","")
-    if path.startswith(prefix):
-        excluded_count += 1
-        continue
-    included_count += 1
-    total_exec += f.get("executableLines",0)
-    total_cov  += f.get("coveredLines",0)
-if total_exec == 0:
-    print("0")
-else:
-    pct = total_cov / total_exec * 100
-    print(int(pct))
-# Debug: print file counts to stderr so they appear in CI log
-print(f"Files included: {included_count}, excluded: {excluded_count}, executable lines: {total_exec}, covered: {total_cov}", file=sys.stderr)
-')
-          if [ "$?" -ne 0 ]; then
-            echo "::error::Coverage computation failed"
-            echo "::endgroup::"
-            exit 1
-          fi
-          echo "Echo.app coverage (excl. Views): ${COVERAGE_INT}%"
-          # Also report full target coverage for reference
-          FULL_COV=$(python3 -c 'import json; d=json.load(open("coverage.json")); t=next((x for x in d.get("targets",[]) if x.get("name")=="Echo.app"), None); print(int(t.get("lineCoverage",0)*100) if t else "N/A")')
-          echo "Echo.app coverage (full target): ${FULL_COV}%"
-          if [ "$COVERAGE_INT" -lt "$COVERAGE_THRESHOLD" ]; then
-            echo "::error::Echo.app coverage (excl. Views) ${COVERAGE_INT}% below threshold ${COVERAGE_THRESHOLD}%"
-            exit 1
-          fi
-          echo "✅ Echo.app coverage (excl. Views) ${COVERAGE_INT}% ≥ ${COVERAGE_THRESHOLD}%"
+          echo "::group::Coverage Report (file-level, excluding Echo/UI/Views/)"
+          python3 Scripts/coverage_gate.py TestResults.xcresult ${COVERAGE_THRESHOLD}
           echo "::endgroup::"
-          # Keep the human-readable report too
           echo "::group::Coverage Detail"
           xcrun xccov view --report TestResults.xcresult 2>/dev/null || true
           echo "::endgroup::"
