@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T15:00:00Z",
+  "last_updated": "2026-08-01T16:00:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -859,6 +859,51 @@
           "dependencies": [],
           "test_file": "EchoTests/Phase4/ShareExtensionTests.swift",
           "notes": "R-5.2 决策（2026-08-01 路径 A）：放弃自动扫描备忘录/语音备忘录，通过 Share Extension 用户主动分享摄入。需独立 Extension target + App Group 共享数据。"
+        },
+        {
+          "id": "4.21",
+          "title": "SigLIP2-B/32 Core ML 转换与视觉 generation 接入（R-5.1/R-3.2 补全）",
+          "story": null,
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/SigLIP2ConversionTests.swift",
+          "notes": "R-5.1 决策（2026-08-01）：SigLIP2 Apache-2.0 批准为商业候选。任务：PyTorch→coremltools→.mlmodelc 转换、参考向量一致性验证（余弦>0.995）、vision_dense/siglip2-v1 generation 接入、四类门禁（法律/转换/数据集/设备）。依赖模型工件（SigLIP2 checkpoint 由 prepare_models.sh 下载）。"
+        },
+        {
+          "id": "4.22",
+          "title": "Whisper tiny GGUF 集成与 SBOM 生成（R-5.4/R-3.3 补全）",
+          "story": null,
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/WhisperTinyIntegrationTests.swift",
+          "notes": "R-5.4 决策（2026-08-01）：whisper tiny（~39MB GGUF）批准。任务：whisper.cpp C interop 桥接、GGUF 加载、VAD、转写（CER/WER 阈值）、生成完整 SBOM（来源 URL/固定 revision/SHA256/许可/NOTICE/转换脚本）。依赖模型工件（whisper-small-q4_k.gguf 由 prepare_models.sh 下载）。"
+        },
+        {
+          "id": "4.23",
+          "title": "R-3.9 挑战者：Qwen3-Embedding-0.6B 4-bit 挑战赛（MLX Swift 实机）",
+          "story": null,
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/Qwen3EmbeddingChallengeTests.swift",
+          "notes": "R-3.9 挑战者（补建，原 4.8 冲突未落地）。门禁：法律（Apache-2.0 SBOM）+ 质量（同集对 E5 增益）+ 设备（MLX 实机）+ 迁移。"
+        },
+        {
+          "id": "4.24",
+          "title": "R-3.9 挑战者：EmbeddingGemma Q4 挑战赛（gated terms 审查 + 实机评测）",
+          "story": null,
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/EmbeddingGemmaChallengeTests.swift",
+          "notes": "R-3.9 挑战者（补建，原 4.9 冲突未落地）。门禁：法律（gated terms 下游义务）+ 质量 + 设备 + 迁移。"
+        },
+        {
+          "id": "4.25",
+          "title": "R-3.9 挑战者：WhisperKit runtime 对照实验",
+          "story": null,
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/WhisperKitChallengeTests.swift",
+          "notes": "R-3.9 挑战者（补建，原 4.11 冲突未落地）。对照 whisper.cpp 路线，评估 Core ML runtime 性能差异。"
         }
       ]
     },
