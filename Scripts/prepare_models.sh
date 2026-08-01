@@ -1,27 +1,28 @@
 #!/usr/bin/env bash
 # ==========================================
-# Echo · 回响 — 模型准备脚本 (v6.0)
+# Echo — Model Preparation Script (v6.0)
 #
-# 用途：下载 Echo 所需的端侧模型到 Echo/Resources/Models/，
-#       固定 revision + SHA256 校验，确保可复现交付（R-4.1/R-4.2）。
+# Purpose: download Echo's on-device models into Echo/Resources/Models/,
+#          with pinned revisions + SHA256 verification for reproducible
+#          delivery (R-4.1/R-4.2).
 #
-# 模型清单（v6.0，调研报告决策 1~4 后路线，2026-08-01）：
-#   1. multilingual-e5-small           — Core ML, 224MB  (文本嵌入，工程暂定)
-#   2. Whisper small GGUF (Q4_K)       — GGUF, ~244MB    (ASR，替代 SenseVoice)
-#   3. SigLIP2-B/32 checkpoint         — PyTorch, ~1.5GB (视觉，替代 MobileCLIP，转换源)
+# Model manifest (v6.0, route per research report decisions 1-4, 2026-08-01):
+#   1. multilingual-e5-small           — Core ML, 224MB  (text embedding, engineering tentative)
+#   2. Whisper small GGUF (Q4_K)       — GGUF, ~244MB    (ASR, replaces SenseVoice)
+#   3. SigLIP2-B/32 checkpoint         — PyTorch, ~1.5GB (vision, replaces MobileCLIP, conversion source)
 #
-# 已移除（许可阻断/保守排除）：
-#   - MobileCLIP-B LT  — 公共权重禁止商业使用（调研报告决策 4 淘汰）
-#   - SenseVoice Small — FunASR 自定义条款，保守短名单排除
+# Removed (license blocked / conservative exclusion):
+#   - MobileCLIP-B LT  — public weights prohibit commercial use (decision 4 retired)
+#   - SenseVoice Small — FunASR custom terms, conservative shortlist exclusion
 #
-# 依赖：huggingface_hub（pip install huggingface_hub）
+# Dependency: huggingface_hub (pip install huggingface_hub)
 #
-# 用法：
-#   bash Scripts/prepare_models.sh                  # 下载 + 校验
-#   bash Scripts/prepare_models.sh --generate-checksums  # 下载 + 生成校验清单
-#   bash Scripts/prepare_models.sh --verify-only    # 仅校验已存在文件
+# Usage:
+#   bash Scripts/prepare_models.sh                       # download + verify
+#   bash Scripts/prepare_models.sh --generate-checksums  # download + generate checksum manifest
+#   bash Scripts/prepare_models.sh --verify-only         # verify existing files only
 #
-# 参考：
+# References:
 #   docs/02-architecture/技术选型文档.md
 #   docs/decisions/ADR-004-model-migration-2025.md
 #   Echo dev-1.0 缺陷修复计划.md Phase R-4
@@ -43,7 +44,7 @@ log_info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 
-# R-4.1: 失败即返回非零（替代旧的 `|| log_error` 静默吞错）
+# R-4.1: fail-fast — propagate non-zero (replaces the old silent `|| log_error`)
 die() { log_error "$*"; return 1; }
 
 MODE="download"
@@ -57,10 +58,10 @@ esac
 mkdir -p "$MODELS_DIR"
 
 # ==========================================
-# SHA256 校验工具（R-4.2）
+# SHA256 verification utilities (R-4.2)
 # ==========================================
 
-# 计算文件的 SHA256（跨平台：shasum / sha256sum）
+# Compute a file's SHA256 (cross-platform: shasum / sha256sum)
 compute_sha256() {
     local file="$1"
     if command -v shasum >/dev/null 2>&1; then
@@ -73,14 +74,21 @@ compute_sha256() {
     fi
 }
 
-# 从校验清单读取期望的 SHA256（格式：<sha256>  <filename>）
+# Escape regex metacharacters so a filename matches literally in grep -E (#2).
+escape_regex() {
+    printf '%s' "$1" | sed 's/[.[\*^$()+?{|\\]/\\&/g'
+}
+
+# Read the expected SHA256 from the manifest (format: <sha256>  <filename>)
 expected_sha256() {
     local filename="$1"
     [ -f "$CHECKSUMS_FILE" ] || return 1
-    grep -E "^[a-f0-9]{64}[[:space:]]+$filename\$" "$CHECKSUMS_FILE" | cut -d' ' -f1 | head -1
+    local escaped
+    escaped="$(escape_regex "$filename")"
+    grep -E "^[a-f0-9]{64}[[:space:]]+$escaped\$" "$CHECKSUMS_FILE" | cut -d' ' -f1 | head -1
 }
 
-# 校验文件 SHA256。generate 模式写入清单，download/verify 模式比对。
+# Verify a file's SHA256. generate mode writes the manifest; download/verify mode compares.
 verify_or_record() {
     local file="$1"
     local filename
@@ -92,9 +100,11 @@ verify_or_record() {
     actual="$(compute_sha256 "$file")" || return 1
 
     if [ "$MODE" = "generate" ]; then
-        # 写入/更新清单（移除旧条目后追加）
+        # Write/update the manifest (drop any stale entry, then append)
+        local escaped
+        escaped="$(escape_regex "$filename")"
         if [ -f "$CHECKSUMS_FILE" ]; then
-            grep -vE "[[:space:]]$filename\$" "$CHECKSUMS_FILE" > "$CHECKSUMS_FILE.tmp" || true
+            grep -vE "[[:space:]]$escaped\$" "$CHECKSUMS_FILE" > "$CHECKSUMS_FILE.tmp" || true
             mv "$CHECKSUMS_FILE.tmp" "$CHECKSUMS_FILE"
         fi
         echo "$actual  $filename" >> "$CHECKSUMS_FILE"
@@ -102,7 +112,7 @@ verify_or_record() {
         return 0
     fi
 
-    # download / verify 模式：比对期望值
+    # download / verify mode: compare against the expected value
     local expected
     expected="$(expected_sha256 "$filename")" || true
     if [ -z "$expected" ]; then
@@ -123,7 +133,7 @@ verify_or_record() {
 # ==========================================
 # 1. multilingual-e5-small (Text Embedding)
 # Source: tamikisg/multilingual-e5-small-coreml
-# 384-dim, 100+ languages. 工程暂定（法律待审）。
+# 384-dim, 100+ languages. Engineering tentative (legal review pending).
 # ==========================================
 E5_REPO="tamikisg/multilingual-e5-small-coreml"
 E5_REVISION="main"  # TODO (R-4.2): pin to immutable commit hash for reproducibility
@@ -167,7 +177,8 @@ sys.exit(0 if found else 1)
 # ==========================================
 # 2. Whisper small GGUF (ASR)
 # Source: ggml-org/whisper.cpp (whisper GGUF models)
-# 替代 SenseVoice（保守短名单排除）。法律状态：工件链需分别审查。
+# Replaces SenseVoice (conservative shortlist exclusion).
+# Legal status: each artifact in the chain requires separate review.
 # ==========================================
 WHISPER_GGUF_URL="https://hf-mirror.com/ggml-org/whisper.cpp/resolve/main/ggml-small-q4_k.bin"
 WHISPER_GGUF_FILE="whisper-small-q4_k.gguf"
@@ -185,7 +196,7 @@ download_whisper() {
     [ "$MODE" = "verify" ] && { log_error "Missing: $gguf"; return 1; }
 
     log_info "  Downloading Whisper GGUF Q4_K ..."
-    # R-4.1: curl 失败即返回非零（-f 使 HTTP 错误退出非零）
+    # R-4.1: curl -f makes HTTP errors exit non-zero (fail-fast)
     curl -fsSL -o "$gguf" "$WHISPER_GGUF_URL" \
         -H "User-Agent: curl/8.0.0" || { log_error "Whisper GGUF download failed"; return 1; }
 
@@ -195,7 +206,7 @@ download_whisper() {
 # ==========================================
 # 3. SigLIP2-B/32 checkpoint (Vision, conversion source)
 # Source: google/siglip2-base-patch32-256 (Apache-2.0)
-# 替代 MobileCLIP（许可阻断）。需自转换 Core ML（R-3.2）。
+# Replaces MobileCLIP (license blocked). Requires Core ML self-conversion (R-3.2).
 # ==========================================
 SIGLIP2_REPO="google/siglip2-base-patch32-256"
 SIGLIP2_REVISION="main"  # TODO (R-4.2): pin to immutable commit hash
@@ -230,7 +241,7 @@ sys.exit(0 if os.path.exists(os.path.join(dst, 'model.safetensors')) else 1)
 }
 
 # ==========================================
-# Main — R-4.1: && 链接，任一失败即中止
+# Main — R-4.1: && chaining, abort on any failure
 # ==========================================
 main() {
     echo ""
@@ -239,7 +250,7 @@ main() {
     log_info "Target: $MODELS_DIR"
     echo ""
 
-    # R-4.1: && 链接，任一下载/校验失败即中止并退出非零
+    # R-4.1: && chaining — abort with non-zero exit on any download/verify failure
     if ! { download_e5 && echo "" && download_whisper && echo "" && download_siglip2; }; then
         log_error "Model preparation failed (mode: $MODE)"
         exit 1

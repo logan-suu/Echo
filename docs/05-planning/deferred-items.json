@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-01T13:00:00Z",
+  "_last_updated": "2026-08-01T14:00:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -131,6 +131,16 @@
       "location": "SigLIP2Embedder.swift:95,153 / WhisperASREngine.swift:92,116",
       "reason": "SigLIP2: preprocess 忽略 UIImage.imageOrientation + 强制拉伸破坏宽高比 + 未设 bitmap 字节序。Whisper: AVLinearPCMBitDepthKey:16 + IsFloatKey:true 不匹配（应改 32-bit float）+ 不校验 reader.status==.completed。均为 scaffold 代码，接入真实工件前必须修复。",
       "defer_to": "R-3 工件接入时（Core ML 转换 / whisper.cpp 集成）",
+      "deferred_at": "2026-08-01"
+    },
+    {
+      "id": "DEF-35-001",
+      "pr": 35,
+      "title": "模型下载 revision 未固定为不可变 commit hash（E5_REVISION/SIGLIP2_REVISION = main）",
+      "severity": "🟡",
+      "location": "Scripts/prepare_models.sh:129,201",
+      "reason": "E5_REVISION 和 SIGLIP2_REVISION 当前为可变 ref 'main'。完全可复现需固定为不可变 commit hash。R-4 范围内以 TODO 标记接受，SHA256 校验已提供完整性保障。",
+      "defer_to": "模型工件正式接入时（确定稳定 revision 后固定）",
       "deferred_at": "2026-08-01"
     }
   ]
