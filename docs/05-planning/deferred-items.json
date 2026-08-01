@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-01T14:00:00Z",
+  "_last_updated": "2026-08-01T15:00:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -141,6 +141,16 @@
       "location": "Scripts/prepare_models.sh:129,201",
       "reason": "E5_REVISION 和 SIGLIP2_REVISION 当前为可变 ref 'main'。完全可复现需固定为不可变 commit hash。R-4 范围内以 TODO 标记接受，SHA256 校验已提供完整性保障。",
       "defer_to": "模型工件正式接入时（确定稳定 revision 后固定）",
+      "deferred_at": "2026-08-01"
+    },
+    {
+      "id": "DEF-35-002",
+      "pr": 35,
+      "title": "人物识别与相册人物同步（US-SRC-006）— v1.0 移除（PHAsset 无 People 身份标签）",
+      "severity": "🔴",
+      "location": "docs/01-spec/用户故事与验收标准规格书.md US-SRC-006",
+      "reason": "R-5.3 决策（2026-08-01）：PHAsset 公开 API 不提供 People 身份标签（调研报告 §20.4），自动人物同步无法在 iOS 公开 API 能力内实现。人物身份需独立 opt-in + 隐私/法律批准管线（不在本轮推荐栈内）。US-SRC-006 从 v1.0 移除。",
+      "defer_to": "独立 opt-in 人物身份管线获批后（v1.x）",
       "deferred_at": "2026-08-01"
     }
   ]

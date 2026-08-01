@@ -469,15 +469,16 @@ struct SearchPipelineTests {
 
     @Test("SearchFilter with multiple dimensions")
     func test_searchFilter_multipleDimensions() {
+        // personIds dimension removed (R-5.3: US-SRC-006 deferred to v1.x)
         let filter = SearchFilter(
             timeRange: Date()...Date(),
             tags: ["vacation"],
-            personIds: ["p1"]
+            geoRadius: GeoFilter(latitude: 31.2, longitude: 121.5, radiusKm: 10)
         )
         #expect(filter.isEmpty == false)
         #expect(filter.activeDimensions.contains("time"))
         #expect(filter.activeDimensions.contains("tags"))
-        #expect(filter.activeDimensions.contains("person"))
+        #expect(filter.activeDimensions.contains("geo"))
     }
 
     // MARK: - SearchResultItem properties

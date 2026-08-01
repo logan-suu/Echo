@@ -340,27 +340,13 @@ struct Phase2IntegrationTests {
             try await db.execute(sql: "DELETE FROM AuditLog")
             try await db.execute(sql: "DELETE FROM ExcludedAssets")
             try await db.execute(sql: "DELETE FROM TaskProgress")
-            try await PrivacyActor.shared.updatePolicy(UserPolicy(preferredLanguage: "zh-Hans", authorizedSourceTypes: ["photo", "note", "voice", "calendar", "text"], policyVersion: 1))
+            try await PrivacyActor.shared.updatePolicy(UserPolicy(preferredLanguage: "zh-Hans", authorizedSourceTypes: ["photo", "note", "voice", "text"], policyVersion: 1))
             await stubEmbedder.setNextError(nil)
             syncPipeline = SyncPipeline(embedder: stubEmbedder, privacyActor: PrivacyActor.shared, vectorStore: vectorStore, excludedAssets: ExcludedAssetsActor.shared, progressActor: ProgressActor.shared)
         }
 
-        @Test("detectNoteChanges hashSkipped for large files")
-        func test_detectNoteChangesHashSkipped() {
-            let changes = syncPipeline.detectNoteChanges(noteURLs: [(URL(fileURLWithPath: "/tmp/large.txt"), Date(), 200_000)])
-            #expect(!changes.isEmpty && changes[0].hashSkipped)
-        }
-
-        @Test("detectCalendarChanges detects modified and removed")
-        func test_detectCalendarChanges() {
-            let changes = syncPipeline.detectCalendarChanges(
-                lastKnownModifiedDates: ["e1": Date(timeIntervalSince1970: 1000), "e2": Date(timeIntervalSince1970: 2000)],
-                currentModifiedDates: ["e1": Date(timeIntervalSince1970: 3000)]
-            )
-            #expect(changes.count == 2)
-            #expect(changes.contains { $0.assetId == "e1" && $0.changeType == .modified })
-            #expect(changes.contains { $0.assetId == "e2" && $0.changeType == .removed })
-        }
+        // R-5.2: detectNoteChanges/detectCalendarChanges removed (auto-scan of
+        // Notes/Calendar unsupported by iOS public API — Notes/Voice via Share Extension)
     }
 
     // MARK: - Suite 6: Awakening Pipeline Integration

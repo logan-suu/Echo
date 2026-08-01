@@ -142,7 +142,7 @@ struct SyncAtomicityTests {
 
         let change = ChangeEvent(
             assetId: assetId,
-            source: .note,
+            source: .photo,
             changeType: .modified,
             newContentHash: "new-hash"
         )
@@ -168,7 +168,7 @@ struct SyncAtomicityTests {
 
         let change = ChangeEvent(
             assetId: assetId,
-            source: .note,
+            source: .photo,
             changeType: .modified,
             newContentHash: "new-hash"
         )
@@ -195,7 +195,7 @@ struct SyncAtomicityTests {
         await stubEmbedder.setNextEmbedding(Array(repeating: 2.0, count: 512))
         let change = ChangeEvent(
             assetId: assetId,
-            source: .note,
+            source: .photo,
             changeType: .modified,
             newContentHash: "new-hash"
         )
@@ -363,7 +363,7 @@ struct SyncCancellationTests {
         let metadata = try memory.encodeMetadata()
         try await vectorStore.ingest(vector: memory.embedding, id: memory.id, metadata: metadata)
 
-        let change = ChangeEvent(assetId: assetId, source: .note, changeType: .modified, newContentHash: "h")
+        let change = ChangeEvent(assetId: assetId, source: .photo, changeType: .modified, newContentHash: "h")
 
         // 在已取消的 Task 中调用 sync → 第一轮迭代即抛 .cancelled
         let cancelledTask = Task<SyncResult, Error> {

@@ -8,7 +8,7 @@
 #
 # Model manifest (v6.0, route per research report decisions 1-4, 2026-08-01):
 #   1. multilingual-e5-small           — Core ML, 224MB  (text embedding, engineering tentative)
-#   2. Whisper small GGUF (Q4_K)       — GGUF, ~244MB    (ASR, replaces SenseVoice)
+#   2. Whisper tiny GGUF (Q5_1)        — GGUF, ~39MB     (ASR, R-5.4 approved; small = challenger)
 #   3. SigLIP2-B/32 checkpoint         — PyTorch, ~1.5GB (vision, replaces MobileCLIP, conversion source)
 #
 # Removed (license blocked / conservative exclusion):
@@ -175,16 +175,18 @@ sys.exit(0 if found else 1)
 }
 
 # ==========================================
-# 2. Whisper small GGUF (ASR)
+# 2. Whisper tiny GGUF (ASR, R-5.4)
 # Source: ggml-org/whisper.cpp (whisper GGUF models)
 # Replaces SenseVoice (conservative shortlist exclusion).
 # Legal status: each artifact in the chain requires separate review.
 # ==========================================
-WHISPER_GGUF_URL="https://hf-mirror.com/ggml-org/whisper.cpp/resolve/main/ggml-small-q4_k.bin"
-WHISPER_GGUF_FILE="whisper-small-q4_k.gguf"
+# R-5.4 (2026-08-01): whisper tiny approved (~39MB GGUF). small stays as
+# challenger for later evaluation. Model artifact must match the decision.
+WHISPER_GGUF_URL="https://hf-mirror.com/ggml-org/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin"
+WHISPER_GGUF_FILE="whisper-tiny-q5_1.gguf"
 
 download_whisper() {
-    log_info "Step 2/3: Whisper small GGUF Q4_K (ASR, ~244MB)"
+    log_info "Step 2/3: Whisper tiny GGUF Q5_1 (ASR, ~39MB)"
 
     local gguf="$MODELS_DIR/$WHISPER_GGUF_FILE"
     if [ -f "$gguf" ] && [ "$MODE" != "generate" ]; then
@@ -195,7 +197,7 @@ download_whisper() {
 
     [ "$MODE" = "verify" ] && { log_error "Missing: $gguf"; return 1; }
 
-    log_info "  Downloading Whisper GGUF Q4_K ..."
+    log_info "  Downloading Whisper tiny GGUF Q5_1 ..."
     # R-4.1: curl -f makes HTTP errors exit non-zero (fail-fast)
     curl -fsSL -o "$gguf" "$WHISPER_GGUF_URL" \
         -H "User-Agent: curl/8.0.0" || { log_error "Whisper GGUF download failed"; return 1; }

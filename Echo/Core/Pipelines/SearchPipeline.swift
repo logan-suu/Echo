@@ -93,8 +93,9 @@ public enum SearchError: Error, LocalizedError, Sendable, Equatable {
 
 /// 多维元数据过滤器（US-RET-004 AC-1）。
 ///
-/// 支持时间范围、标签、地理半径、人物 ID 过滤。
+/// 支持时间范围、标签、地理半径过滤。
 /// 所有字段可选 — nil 表示不过滤该维度。
+/// 人物 ID 过滤已移除（R-5.3：US-SRC-006 v1.0 延后，PHAsset 无 People 身份标签）。
 public struct SearchFilter: Sendable, Equatable {
     /// 时间范围过滤（闭区间）
     public nonisolated let timeRange: ClosedRange<Date>?
@@ -102,24 +103,20 @@ public struct SearchFilter: Sendable, Equatable {
     public nonisolated let tags: [String]?
     /// 地理半径过滤
     public nonisolated let geoRadius: GeoFilter?
-    /// 人物 ID 列表（US-SRC-006）
-    public nonisolated let personIds: [String]?
 
     public nonisolated init(
         timeRange: ClosedRange<Date>? = nil,
         tags: [String]? = nil,
-        geoRadius: GeoFilter? = nil,
-        personIds: [String]? = nil
+        geoRadius: GeoFilter? = nil
     ) {
         self.timeRange = timeRange
         self.tags = tags
         self.geoRadius = geoRadius
-        self.personIds = personIds
     }
 
     /// 是否有任何活跃的过滤维度
     public nonisolated var isEmpty: Bool {
-        timeRange == nil && tags == nil && geoRadius == nil && personIds == nil
+        timeRange == nil && tags == nil && geoRadius == nil
     }
 
     /// 活跃的过滤维度名称列表（用于审计）
@@ -128,7 +125,6 @@ public struct SearchFilter: Sendable, Equatable {
         if timeRange != nil { dims.append("time") }
         if tags != nil { dims.append("tags") }
         if geoRadius != nil { dims.append("geo") }
-        if personIds != nil { dims.append("person") }
         return dims
     }
 }
@@ -182,7 +178,7 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
     public nonisolated let lowConfidence: Bool
     /// 低置信度原因（US-RET-006 AC-1/AC-5: fallbackReason）
     public nonisolated let fallbackReason: String?
-    /// 未生效的过滤器（R-1.7）— 调用方传入但当前实现为 no-op 的过滤维度（如 tags/geoRadius/personIds）
+    /// 未生效的过滤器（R-1.7）— 调用方传入但当前实现为 no-op 的过滤维度（如 tags/geoRadius）
     public nonisolated let unappliedFilters: [String]
 
     public nonisolated init(
@@ -236,7 +232,7 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
 /// ```
 /// search(query) → PrivacyActor.validate() → Embedder.embedText(query)
 ///     → VectorStoreActor.search(queryVector, k=100)
-///     → post-filter metadata (time/tags/geo/person)
+///     → post-filter metadata (time/tags/geo)
 ///     → detect languages (query, source)
 ///     → mark crossLanguageMatch
 ///     → FeedbackActor.computeBatchAdjustments() [US-FBK-002]
@@ -645,7 +641,7 @@ public actor SearchPipeline {
     /// 流程: ANN 检索 → 解码元数据 → 应用过滤条件 → 取 top-K。
     ///
     /// - Returns: `(filtered, unapplied)` — `unapplied` 列出调用方传入但当前实现
-    ///   为 no-op 的过滤维度（如 tags/geoRadius/personIds），让调用方得知过滤未生效。
+    ///   为 no-op 的过滤维度（如 tags/geoRadius），让调用方得知过滤未生效。
     private nonisolated func applyFilter(
         _ items: [SearchResultItem],
         filter: SearchFilter
@@ -668,11 +664,6 @@ public actor SearchPipeline {
         // Geo filter — NOT YET IMPLEMENTED (R-1.7)
         if filter.geoRadius != nil {
             unapplied.append("geoRadius")
-        }
-
-        // Person filter — NOT YET IMPLEMENTED (R-1.7)
-        if filter.personIds != nil {
-            unapplied.append("personIds")
         }
 
         return (filtered, unapplied)
