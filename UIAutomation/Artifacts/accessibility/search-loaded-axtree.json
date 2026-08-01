@@ -1,0 +1,43 @@
+{
+  "runId": "9B8A2E51-C43D-4A6F-B5E2-0F17D3C9A841",
+  "surfaceId": "search-results",
+  "stateId": "loaded",
+  "fixtureId": "search-loaded",
+  "device": "iPhone 17 Pro (2789B5D1-D292-4144-A66B-649CE2DF32EC)",
+  "runtime": "iOS 26.5",
+  "capturedAt": "2026-08-01T21:10:00Z",
+  "elements": [
+    { "role": "Group", "label": "Search (navigation title)", "frame": [0.040, 0.137, 0.278, 0.047] },
+    { "role": "SearchField", "label": "Search your memories", "frame": [0.040, 0.193, 0.920, 0.050] },
+    { "role": "StaticText", "label": "Results", "frame": [0.080, 0.279, 0.147, 0.023] },
+    { "role": "StaticText", "label": "2 (result count)", "frame": [0.898, 0.280, 0.022, 0.021] },
+    {
+      "role": "Button", "label": "Photo, a photo memory, Aug 13, 2024",
+      "id": "result-like-11111111-1111-1111-1111-111111111111-result-dislike-11111111-1111-1111-1111-111111111111",
+      "frame": [0.040, 0.360, 0.920, 0.125]
+    },
+    { "role": "StaticText", "label": "Photo", "frame": [0.080, 0.382, 0.083, 0.016] },
+    { "role": "StaticText", "label": "Aug 13, 2024", "frame": [0.734, 0.382, 0.187, 0.016] },
+    { "role": "StaticText", "label": "A photo memory", "frame": [0.080, 0.408, 0.315, 0.023] },
+    { "role": "Button", "label": "Like this result", "value": "Not selected", "id": "result-like-11111111-1111-1111-1111-111111111111", "frame": [0.796, 0.441, 0.042, 0.021] },
+    { "role": "Button", "label": "Dislike this result", "value": "Not selected", "id": "result-dislike-11111111-1111-1111-1111-111111111111", "frame": [0.875, 0.441, 0.042, 0.021] },
+    { "role": "StaticText", "label": "91% match", "frame": [0.084, 0.444, 0.221, 0.016] },
+    {
+      "role": "Button", "label": "note, 昨晚在公园遇到一只橘猫，很亲人, Aug 12, 2024",
+      "id": "result-like-22222222-2222-2222-2222-222222222222-result-dislike-22222222-2222-2222-2222-222222222222",
+      "frame": [0.040, 0.485, 0.920, 0.125]
+    },
+    { "role": "StaticText", "label": "note", "frame": [0.080, 0.507, 0.063, 0.016] },
+    { "role": "StaticText", "label": "Aug 12, 2024", "frame": [0.735, 0.507, 0.186, 0.016] },
+    { "role": "StaticText", "label": "昨晚在公园遇到一只橘猫，很亲人", "frame": [0.080, 0.532, 0.629, 0.023] },
+    { "role": "Button", "label": "Like this result", "value": "Not selected", "id": "result-like-22222222-2222-2222-2222-222222222222", "frame": [0.796, 0.566, 0.042, 0.021] },
+    { "role": "Button", "label": "Dislike this result", "value": "Not selected", "id": "result-dislike-22222222-2222-2222-2222-222222222222", "frame": [0.875, 0.566, 0.042, 0.021] },
+    { "role": "StaticText", "label": "87% match", "frame": [0.084, 0.568, 0.225, 0.016] }
+  ],
+  "tabBar": [
+    { "role": "Button", "label": "Home", "id": "house.fill" },
+    { "role": "Button", "label": "Search", "id": "magnifyingglass", "selected": true },
+    { "role": "Button", "label": "Settings", "id": "gearshape.fill" }
+  ],
+  "notes": "Loaded state with search-loaded fixture: 2 results (photo 91% + note 87%). Feedback buttons present with stable accessibility identifiers and Selected/Not-selected values. Search field + Results header + result count present. No low-confidence banner (fixture has no lowConfidence=true)."
+}

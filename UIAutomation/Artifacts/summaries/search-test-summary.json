@@ -1,0 +1,37 @@
+{
+  "runId": "9B8A2E51-C43D-4A6F-B5E2-0F17D3C9A841",
+  "task_id": "3.2",
+  "summary": "Search surface UI slice: SearchView + SearchViewModel + SearchFixtureLoader. All verification gates passed.",
+  "suites": [
+    {
+      "suite": "SearchViewModelTests",
+      "count": 21,
+      "failures": 0,
+      "coverage": {
+        "US-RET-001 AC-3": "Result display, summary fallback, empty state",
+        "US-RET-006 AC-2/AC-4": "Low-confidence flag, fallback reason preservation",
+        "US-FBK-001 AC-1": "Like/dislike feedback state",
+        "US-FBK-003 AC-1": "Bad Case marking"
+      }
+    },
+    {
+      "suite": "Phase3 suites (AppShell + HomeViewModel)",
+      "count": 15,
+      "failures": 0
+    },
+    {
+      "suite": "Full regression (all phases)",
+      "count": 488,
+      "failures": 0
+    }
+  ],
+  "contractValidation": {
+    "schemasValidated": ["surface-v1", "state-v1", "action-v1", "journey-v1", "fixture-v1"],
+    "crossReferences": "surface states ↔ state files, journey fixture refs resolved",
+    "fixtureDecoding": "Deterministic JSON fixtures valid; Swift SearchFixtureLoader mirrors them"
+  },
+  "build": "SUCCEEDED (0 warnings)",
+  "lint": "0 violations on new files (1 codebase-consistent required_deinit warning, matches HomeViewModel precedent)",
+  "surfaceFamilyCheck": "Discovery / system_list / masonry disabled per §6.2 fallback (mixed text+photo content)",
+  "visualMediaCaptured": false
+}

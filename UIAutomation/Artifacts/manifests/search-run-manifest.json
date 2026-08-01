@@ -1,0 +1,35 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/state/v1",
+  "runId": "9B8A2E51-C43D-4A6F-B5E2-0F17D3C9A841",
+  "actor": "opencode-agent",
+  "task_id": "3.2",
+  "surfaceId": "search-results",
+  "stateId": "loaded",
+  "fixtureId": "search-loaded",
+  "journeyId": "search-basic-query",
+  "commitSha": "d95ea902ace1039af542c94f18af65542c49bea2",
+  "sourceDirty": false,
+  "xcode": { "version": "26.5", "build_version": "17F42", "sdk": "iOS Simulator", "runtime": "iPhone 17 Pro" },
+  "simulatorOwner": "cli_xctest",
+  "timestamp": "2026-08-01T21:05:00Z",
+  "build": { "result": "SUCCEEDED", "warnings": 0 },
+  "testResults": {
+    "searchViewModelTests": { "count": 21, "failures": 0, "status": "passed" },
+    "phase3Suites": { "count": 36, "failures": 0, "status": "passed" },
+    "fullRegression": { "count": 488, "suites": 61, "failures": 0, "status": "passed" }
+  },
+  "contractValidation": { "status": "passed", "detail": "All surface/state/action/journey/fixture schemas valid, cross-references resolved, all 6 declared states implemented" },
+  "surfaceFamily": { "declared": "discovery", "layoutMode": "system_list", "masonryEnabled": false, "fallback": "Mixed text/photo content needing reading order (§6.2)" },
+  "accessibilityAudit": {
+    "searchField": "Search your memories (system .searchable)",
+    "resultCards": "Combined elements with type/description/time labels",
+    "stableIDs": ["search-results-list", "search-retry-button", "result-like-*", "result-dislike-*", "result-badcase-*"],
+    "feedbackButtons": "accessibilityLabel + accessibilityValue (Selected/Not selected)"
+  },
+  "visualMediaCaptured": false,
+  "artifacts": {
+    "buildLog": "UIAutomation/Artifacts/logs/search-build.log",
+    "testSummary": "UIAutomation/Artifacts/summaries/search-test-summary.json",
+    "accessibilityTree": "UIAutomation/Artifacts/accessibility/search-loaded-axtree.json"
+  }
+}

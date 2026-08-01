@@ -15,8 +15,8 @@ agent: build
    - 如果未通过，**阻断**并输出：
      ```
      ⛔ Phase 3 UI 任务尚未通过 Live Simulator 视觉审批。
-     请先执行 /ui-bootstrap-build-echo [任务ID] 完成验证与 Simulator Review，
-     获得用户明确批准后再提交。
+     请先执行 /ui-bootstrap-build-echo [任务ID] 完成验证与双设备 Simulator Review
+     （iPhone 17 Pro iOS 26 + iPhone 16 Pro iOS 18），获得用户明确批准后再提交。
      ```
 1. **Git 状态检查**：
    - 执行 `git status`，确认有变更可提交。

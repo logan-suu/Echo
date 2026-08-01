@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "empty",
+  "surfaceId": "search-results",
+  "dataConditions": {
+    "query": "不存在的记忆",
+    "results": [],
+    "hasSearched": true
+  },
+  "allowedActions": ["search.submit", "search.clear"],
+  "expectedSemantics": {
+    "searchField": "Search your memories",
+    "emptyState": "No memories found for your query"
+  },
+  "version": "1.0.0"
+}

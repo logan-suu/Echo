@@ -5,8 +5,14 @@
   "description": "Simulator lifecycle and interaction ownership rules for Phase 3 UI automation",
 
   "single_owner_rule": {
-    "description": "One run = one simulator lifecycle and interaction owner. All other tools disabled or restricted to read-only no-simulator tasks.",
-    "max_owners_per_run": 1
+    "description": "One run = one simulator lifecycle and interaction owner. The single owner may hold BOTH review devices (iPhone 17 Pro iOS 26.5 primary + iPhone 16 Pro iOS 18.x minimum-version). All other tools disabled or restricted to read-only no-simulator tasks.",
+    "max_owners_per_run": 1,
+    "review_devices": {
+      "count": 2,
+      "primary": "iPhone 17 Pro (iOS 26.5)",
+      "minimum_version": "iPhone 16 Pro (iOS 18.x)",
+      "note": "Same build artifact installed on both devices; identical fixture and launch argument for consistent review state."
+    }
   },
 
   "owner_candidates": [
@@ -40,13 +46,14 @@
       "no_simulator_server_port_conflicts",
       "no_xctest_session_overlap"
     ],
+    "note": "Dual review devices (17 Pro + 16 Pro) held by the SAME owner are legitimate and do NOT constitute a conflict. Conflict = same device controlled by multiple runs/owners.",
     "on_conflict": "stopped"
   },
 
   "lifecycle_rules": {
-    "boot": "one_simulator_per_run",
-    "install": "reinstall_app_on_each_run",
-    "launch": "launch_app_after_install",
+    "boot": "two_review_simulators_per_run (17 Pro iOS 26.5 + 16 Pro iOS 18.x)",
+    "install": "reinstall_app_on_each_run (same artifact on both devices)",
+    "launch": "launch_app_after_install (both devices)",
     "terminate": "terminate_on_run_completion_or_stop",
     "cleanup": "remove_app_on_session_end"
   }

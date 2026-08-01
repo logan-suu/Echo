@@ -1,0 +1,148 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -project Echo.xcodeproj -scheme Echo -destination "platform=iOS Simulator,name=iPhone 17 Pro" -derivedDataPath /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  ProximaKit: https://github.com/vivekptnk/ProximaKit.git @ 1.7.0
+
+2026-08-01 21:08:23.757 xcodebuild[44993:66760901] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (3 targets)
+    Target 'Echo' in project 'Echo'
+        ➜ Explicit dependency on target 'ProximaKit' in project 'ProximaKit'
+    Target 'ProximaKit' in project 'ProximaKit'
+        ➜ Explicit dependency on target 'ProximaKit' in project 'ProximaKit'
+    Target 'ProximaKit' in project 'ProximaKit' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /usr/bin/what -q /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image --dry-run yes --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_image-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text --dry-run yes --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_text-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small --dry-run yes --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MultilingualE5Small-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+Build description signature: 3076c55e3e15a68ad4cec190b3b692a4
+Build description path: /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/XCBuildData/3076c55e3e15a68ad4cec190b3b692a4.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+WriteAuxiliaryFile /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.LinkFileList (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.LinkFileList
+
+WriteAuxiliaryFile /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList
+
+ProcessProductPackaging "" /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Entitlements:
+    
+    {
+    "application-identifier" = "UJ876FXT32.com.echo.Echo";
+}
+    
+    builtin-productPackagingUtility -entitlements -format xml -o /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent
+
+ProcessProductPackagingDER /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent.der (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/derq query -f xml -i /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent -o /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent.der --raw
+
+Ld /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib normal (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios18.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator -F/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator -filelist /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.LinkFileList -install_name @rpath/Echo.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/PackageFrameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -Xlinker -dependency_info -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_dependency_info.dat -fobjc-link-runtime -fprofile-instr-generate -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftmodule @/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-linker-args.resp -Wl,-no_warn_duplicate_libraries -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -Xlinker -no_adhoc_codesign -o /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib -Xlinker -add_ast_path -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule @/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-linker-args.resp
+
+ProcessInfoPlistFile /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/empty-Echo.plist (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-infoPlistUtility /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/empty-Echo.plist -producttype com.apple.product-type.application -genpkginfo /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_image-CoreMLPartialInfo.plist -additionalcontentfile /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_text-CoreMLPartialInfo.plist -additionalcontentfile /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MultilingualE5Small-CoreMLPartialInfo.plist -additionalcontentfile /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist -o /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist
+
+ConstructStubExecutorLinkFileList /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-ExecutorLinkFileList-normal-arm64.txt (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    construct-stub-executor-link-file-list /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'Echo' from project 'Echo')
+
+Ld /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo normal (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios18.0-simulator -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator -F/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/PackageFrameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-ExecutorLinkFileList-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent.der /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib -Xlinker -no_adhoc_codesign -o /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo
+
+CopySwiftLibs /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib --scan-folder /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Frameworks --scan-folder /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/PlugIns --scan-folder /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/SystemExtensions --scan-folder /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ExtractAppIntentsMetadata (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name Echo --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F42 --platform-family iOS --deployment-target 18.0 --bundle-identifier com.echo.Echo --output /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app --target-triple arm64-apple-ios18.0-simulator --binary-file /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo --dependency-file /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_dependency_info.dat --stringsdata-file /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftFileList --metadata-file-list /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList --static-metadata-file-list /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyStaticMetadataFileList --swift-const-vals-list /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-08-01 21:08:25.197 appintentsmetadataprocessor[45993:66762035] Starting appintentsmetadataprocessor export
+2026-08-01 21:08:25.201 appintentsmetadataprocessor[45993:66762035] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+AppIntentsSSUTraining (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist --temp-dir-path /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/ssu --bundle-id com.echo.Echo --product-path /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app --extracted-metadata-path /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Metadata.appintents --metadata-file-list /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList --source-file /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist --archive-ssu-assets
+2026-08-01 21:08:25.219 appintentsnltrainingprocessor[45994:66762036] Parsing options for appintentsnltrainingprocessor
+2026-08-01 21:08:25.220 appintentsnltrainingprocessor[45994:66762036] Starting AppIntents SSU YAML Generation
+2026-08-01 21:08:25.221 appintentsnltrainingprocessor[45994:66762036] No AppShortcuts found - Skipping.
+
+CodeSign /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib
+
+CodeSign /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/__preview.dylib (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/__preview.dylib
+/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/__preview.dylib: replacing existing signature
+
+CodeSign /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app
+
+Validate /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-validationUtility /var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app -shallow-bundle -infoplist-subpath Info.plist
+
+note: Removed stale file '/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/Frameworks'
+
+note: Removed stale file '/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/opencode/EchoDD/Build/Products/Debug-iphonesimulator/Echo.app/PlugIns'
+
+** BUILD SUCCEEDED **
+

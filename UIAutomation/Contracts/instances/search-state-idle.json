@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "idle",
+  "surfaceId": "search-results",
+  "dataConditions": {
+    "query": "",
+    "results": [],
+    "hasSearched": false
+  },
+  "allowedActions": ["search.submit", "search.clear"],
+  "expectedSemantics": {
+    "searchField": "Search your memories",
+    "readingOrder": ["searchField", "promptText"]
+  },
+  "version": "1.0.0"
+}

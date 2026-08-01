@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loaded",
+  "surfaceId": "search-results",
+  "dataConditions": {
+    "query": "猫",
+    "results": ">= 1 result mapped from fixture search-loaded.json",
+    "hasSearched": true
+  },
+  "allowedActions": ["search.submit", "search.clear", "result.like", "result.dislike", "result.markBadCase"],
+  "expectedSemantics": {
+    "searchField": "Search your memories",
+    "resultCards": "[type], [description], [time], [location]",
+    "readingOrder": ["searchField", "resultCard_0", "resultCard_1"]
+  },
+  "version": "1.0.0"
+}

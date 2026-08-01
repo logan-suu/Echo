@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "lowConfidence",
+  "surfaceId": "search-results",
+  "dataConditions": {
+    "query": "cross language query",
+    "results": ">= 1 result with lowConfidence=true",
+    "hasSearched": true
+  },
+  "allowedActions": ["search.submit", "search.clear", "result.like", "result.dislike"],
+  "expectedSemantics": {
+    "searchField": "Search your memories",
+    "banner": "Some results have lower relevance",
+    "resultCards": "include low-confidence semantic marker"
+  },
+  "version": "1.0.0"
+}

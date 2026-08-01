@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "error.retry",
+  "source": "user",
+  "targetIntent": "SearchViewModel.retry",
+  "expectedOutcome": "Repeat search with last query; state transitions error → loading → loaded/empty",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

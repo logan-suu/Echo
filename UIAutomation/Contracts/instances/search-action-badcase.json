@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "result.markBadCase",
+  "source": "user",
+  "targetIntent": "SearchViewModel.markBadCase",
+  "expectedOutcome": "FeedbackActor.recordFeedback called with isBadCase=true (US-FBK-003)",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

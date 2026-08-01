@@ -12,14 +12,14 @@
 | Build | 受影响 target clean build | 全量支持配置 build |
 | State | canonical loaded + 变更相关 | loading/loaded/empty/error/modal |
 | Journey | 受影响关键路径 smoke | 全量关键 journey |
-| Device | 一个固定主流 simulator | 小屏、标准屏、iPad |
+| Device | 双固定 simulator：iPhone 17 Pro (iOS 26.5) + iPhone 16 Pro (iOS 18.x) | 小屏、标准屏、iPad |
 | Theme | 变更相关 | light + dark |
 | Dynamic Type | default + 1 accessibility size | default、中间档、最大支持档 |
 | Locale | 默认 | long Latin、CJK、RTL 或伪本地化 |
 | Contrast | 默认 | increased contrast |
 | Motion | 变更相关 | Reduce Motion 开/关 |
 | 可访问性 | 自动 audit、稳定 ID、关键标签 | audit、语义证据 + 人工记录 |
-| 视觉 | Live Sim Review（变更 surface） | 结构化检查，不保存媒体 |
+| 视觉 | 双设备 Live Sim Review（变更 surface） | 结构化检查，不保存媒体 |
 | 安全 | artifact secret/PII 扫描 | 依赖、权限、telemetry 复核 |
 | Masonry | 受影响 surface 的列数验证 + 回退检查 | 全部 Discovery surface 的 masonry 行为（启用/回退/列数/Dynamic Type 响应） |
 | Surface Family | 受影响 surface 的 family 规则验证（禁止 Focus/Task 使用 masonry） | 全部 surface 的 family 规则全量验证 |
@@ -61,7 +61,7 @@
 - 不生成 reference/actual/diff，不维护图像 baseline
 - 自动化使用 accessibility tree、元素存在性、点击区域、文本截断审计
 - 自动 accessibility audit 不能替代 VoiceOver/Voice Control/Switch Control 专项检查
-- 最终视觉判断只通过 **Live Simulator Review**（bootstrap 规范 §11.4）
+- 最终视觉判断只通过 **Live Simulator Review（双设备）**（bootstrap 规范 §11.4）：iPhone 17 Pro (iOS 26.5) 主审查 + iPhone 16 Pro (iOS 18.x) 最低版本审查
 
 ### 2.6 权限流程测试（Permission Flow Testing）
 - 系统权限对话框拒绝路径覆盖（相册、麦克风、语音、通知等）
@@ -85,8 +85,8 @@
 每次运行必须生成 manifest，记录：
 1. run ID、actor、时间、commit SHA 和 dirty flag
 2. 契约版本/hash、fixture ID/hash、acceptance policy hash
-3. Xcode、SDK、runtime、设备、架构、locale、timezone、主题
-4. simulator 所有者、工具版本和配置摘要
+3. Xcode、SDK、runtime、设备（双审查设备 17 Pro + 16 Pro 的 UDID/runtime）、架构、locale、timezone、主题
+4. simulator 所有者（唯一 owner）、工具版本和配置摘要
 5. surface/state/journey/test ID
 6. build/test/audit/视觉结果
 7. raw build log、结构化测试摘要、accessibility tree、`.xcresult`、crash report、manifest hash
@@ -123,7 +123,8 @@
 - Fixture 完整性验证（覆盖契约声明的所有 state）
 - SwiftUI View + 薄 adapter + 具名 Previews
 - Adapter/行为/XCUITest/accessibility 证据
-- Live Simulator Review 上下文（surfaceId/stateId/fixtureId 匹配）
+- Live Simulator Review 上下文（双设备 17 Pro iOS 26 + 16 Pro iOS 18，surfaceId/stateId/fixtureId 匹配）
+- **UI 审查指南**（报告必需）：本次添加/修改页面清单（🆕/✏️ + 文件路径）+ 导航路径（如何点击到达）+ 未实现功能/临时效果（🔮 Phase 标记、fixture/stub 数据、String Catalog 未迁移）
 - **不生成持久化视觉媒体**
 - **权限拒绝路径测试通过**：试点 surface 关联的所有系统权限，拒绝路径均已通过 XCUITest
 
@@ -131,4 +132,4 @@
 - 受影响 readiness/hash 复检
 - 一个边界清楚的 UI 切片
 - 必要测试 + 受影响验证矩阵
-- Simulator 导航到目标 state 并保持前台
+- 两台 Simulator（17 Pro iOS 26 + 16 Pro iOS 18）导航到目标 state 并保持前台

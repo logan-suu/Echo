@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "result.like",
+  "source": "user",
+  "targetIntent": "SearchViewModel.recordFeedback(like)",
+  "expectedOutcome": "FeedbackActor.recordFeedback called with sentiment=like; button enters selected state",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

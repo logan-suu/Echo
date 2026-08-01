@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T12:40:00Z",
+  "last_updated": "2026-08-01T16:00:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -494,8 +494,14 @@
           "id": "3.2",
           "title": "检索视图 SearchView + SearchViewModel + 反馈按钮 + 低置信度横幅 + 手动扫描结果页",
           "story": "US-RET-001, US-RET-004, US-RET-006, US-RET-008, US-FBK-001, US-FBK-003, US-SRC-005, US-SRC-013",
-          "status": "ready",
-          "last_updated": "2026-07-26T23:00:00Z",
+          "status": "review",
+          "last_updated": "2026-08-01T16:00:00Z",
+          "ui_run": {
+            "runId": "3.2-bootstrap",
+            "automation_phase": "accepted",
+            "started_at": "2026-08-01",
+            "delivery_approved_at": "2026-08-01T21:55:00+08:00"
+          },
           "documents_required": [
             "docs/02-architecture/架构设计文档.md",
             "docs/ui/echo-memory-canvas-style.md"
@@ -505,7 +511,7 @@
             "3.1"
           ],
           "test_file": "EchoTests/Phase3/SearchViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：查询输入+结果展示。新增：👍/👎反馈按钮(FBK-001)、Bad Case标记(FBK-003)、低置信度横幅(RET-006)、手动扫描结果页(SRC-005)、变更检测结果页(SRC-013)。依赖新增 3.0。"
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：查询输入+结果展示。新增：👍/👎反馈按钮(FBK-001)、Bad Case标记(FBK-003)、低置信度横幅(RET-006)、手动扫描结果页(SRC-005)、变更检测结果页(SRC-013)。依赖新增 3.0。\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-01）。492 tests / 62 suites 全量回归 0 失败。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。"
         },
         {
           "id": "3.3",
