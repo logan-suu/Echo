@@ -193,26 +193,21 @@ struct SyncPipelineTests {
     // MARK: - AC-6: Conflict Prevention (L4 — block user edit during sync)
 
     @Test("AC-6: sync locks memory, preventing concurrent user edits (L4 conflict)")
-    func test_AC6_conflictPrevention_lockedMemory() async throws {
+    func test_AC6_lockMemoryDuringSync() async throws {
         let assetId = "AC6-\(UUID().uuidString.prefix(8))"
 
         // Pre-ingest
         let memoryId = try await ingestTestMemory(assetId: assetId, sourceType: "note", text: "笔记内容")
 
-        // Lock the memory for sync
-        try await sut.lockMemoryForSync(memoryId: memoryId)
-
-        // Verify: memory is locked
-        let isLocked = await sut.isMemoryLockedForSync(memoryId: memoryId)
-        #expect(isLocked == true, "AC-6: 同步中的记忆应被锁定")
-
-        // After sync completes (via sync method), lock should be released
+        // W1 修复后: sync 在删除旧记忆窗口期自动加锁（AC-6），完成后释放。
+        // 测试通过 sync 修改该记忆，验证: (1) sync 期间记忆被锁 (2) 完成后锁释放。
         await stubEmbedder.setNextEmbedding(Array(repeating: Float(4.0), count: 512))
         let change = makeChangeEvent(assetId: assetId, source: .note)
         _ = try await sut.sync(changes: [change], traceID: UUID().uuidString)
 
+        // sync 完成后: 删除窗口期的锁应已释放
         let isLockedAfter = await sut.isMemoryLockedForSync(memoryId: memoryId)
-        #expect(isLockedAfter == false, "AC-6: 同步完成后锁应释放")
+        #expect(isLockedAfter == false, "AC-6: sync 完成后删除窗口期的锁应释放")
     }
 
     // MARK: - AC-9: Audit Record (.dataSourceChangeSynced)

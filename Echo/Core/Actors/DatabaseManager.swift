@@ -299,22 +299,34 @@ public actor DatabaseManager {
         }
         var rows: [[String: DBValue]] = []
         let columnCount = sqlite3_column_count(prepared)
-        while sqlite3_step(prepared) == SQLITE_ROW {
-            var row: [String: DBValue] = [:]
-            for i in 0..<columnCount {
-                let name = String(cString: sqlite3_column_name(prepared, i))
-                switch sqlite3_column_type(prepared, i) {
-                case SQLITE_INTEGER: row[name] = .int(sqlite3_column_int64(prepared, i))
-                case SQLITE_FLOAT: row[name] = .double(sqlite3_column_double(prepared, i))
-                case SQLITE_TEXT: row[name] = .text(String(cString: sqlite3_column_text(prepared, i)))
-                case SQLITE_BLOB:
-                    if let bytes = sqlite3_column_blob(prepared, i) {
-                        row[name] = .blob(Data(bytes: bytes, count: Int(sqlite3_column_bytes(prepared, i))))
-                    } else { row[name] = .null }
-                default: row[name] = .null
+        while true {
+            let stepResult = sqlite3_step(prepared)
+            if stepResult == SQLITE_ROW {
+                var row: [String: DBValue] = [:]
+                for i in 0..<columnCount {
+                    let name = String(cString: sqlite3_column_name(prepared, i))
+                    switch sqlite3_column_type(prepared, i) {
+                    case SQLITE_INTEGER: row[name] = .int(sqlite3_column_int64(prepared, i))
+                    case SQLITE_FLOAT: row[name] = .double(sqlite3_column_double(prepared, i))
+                    case SQLITE_TEXT: row[name] = .text(String(cString: sqlite3_column_text(prepared, i)))
+                    case SQLITE_BLOB:
+                        if let bytes = sqlite3_column_blob(prepared, i) {
+                            row[name] = .blob(Data(bytes: bytes, count: Int(sqlite3_column_bytes(prepared, i))))
+                        } else { row[name] = .null }
+                    default: row[name] = .null
+                    }
                 }
+                rows.append(row)
+            } else if stepResult == SQLITE_DONE {
+                break
+            } else {
+                // R-1.4: 查询循环中遇到错误码（非 ROW 非 DONE）→ 抛出而非静默返回部分结果
+                let msg = String(cString: sqlite3_errmsg(db))
+                throw DatabaseError.readFailed(
+                    operation: "step",
+                    underlying: NSError(domain: "sqlite3", code: Int(stepResult), userInfo: [NSLocalizedDescriptionKey: msg])
+                )
             }
-            rows.append(row)
         }
         return rows
     }
