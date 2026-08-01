@@ -240,6 +240,8 @@ final class MemoryDetailViewModel {
     var isEditing: Bool = false
     /// 删除确认弹窗是否呈现 (US-PRV-004)
     var showDeleteConfirmation: Bool = false
+    /// 记忆已被移除标记 — 删除后显示移除成功空态 (US-PRV-004, PR #38 review fix)
+    private(set) var hasRemovedMemory = false
 
     // MARK: - Edit Form State (US-AWK-007 AC-1)
 
@@ -374,7 +376,8 @@ final class MemoryDetailViewModel {
         showDeleteConfirmation = false
         // 🔮 Phase 3.9+: 调用 ExcludedAssetsActor 写入 + 事务性清除记忆副本
         // 当前 UI 切片仅完成交互语义，展示已移除状态
-        viewState = .completed
+        hasRemovedMemory = true
+        viewState = .idle
         memory = nil
     }
 
@@ -384,7 +387,8 @@ final class MemoryDetailViewModel {
     func deleteOriginal() {
         showDeleteConfirmation = false
         // 🔮 Phase 3.9+: 调用系统删除 API + 级联清除
-        viewState = .completed
+        hasRemovedMemory = true
+        viewState = .idle
         memory = nil
     }
 
@@ -411,7 +415,7 @@ final class MemoryDetailViewModel {
 
     /// 重试加载 (L2 恢复路径)。
     func retry() {
-        guard let current = memory else {
+        guard memory != nil else {
             if let stub = stubMemory {
                 loadPreloaded(stub)
             } else {
@@ -419,7 +423,6 @@ final class MemoryDetailViewModel {
             }
             return
         }
-        _ = current
         viewState = .completed
     }
 

@@ -154,7 +154,15 @@ struct MemoryDetailView: View {
     @ViewBuilder
     private var contentView: some View {
         switch viewModel.viewState {
-        case .idle, .loading:
+        case .idle:
+            // 删除后（idle + memory nil）→ 移除成功空态；初始 idle 无此状态
+            if viewModel.memory == nil && viewModel.hasRemovedMemory {
+                removedState
+            } else {
+                loadingState
+            }
+
+        case .loading:
             loadingState
 
         case .completed:
@@ -233,6 +241,34 @@ struct MemoryDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Unable to load memory. Please try again later.")
+    }
+
+    // MARK: - Removed State (US-PRV-004, PR #38 review fix)
+
+    /// 删除成功空态 — 记忆已移除确认（区别于加载失败空态）。
+    private var removedState: some View {
+        VStack(spacing: 12) {
+            Spacer()
+
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 44))
+                .foregroundStyle(Color.green)
+                .accessibilityHidden(true)
+
+            Text("Memory removed")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.primary)
+
+            Text("This memory has been removed from Echo.")
+                .font(.body)
+                .foregroundStyle(Color.secondary)
+
+            Spacer().frame(height: 80)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Memory removed from Echo")
     }
 
     // MARK: - Detail Content (Focus single-column + grouped metadata)
@@ -672,6 +708,9 @@ struct AudioPlayerView: View {
 ///
 /// 播放完毕 (`audioPlayerDidFinishPlaying`) 自动将 `isPlaying` 翻转为 false，
 /// 使 UI 播放按钮恢复为 play 状态（用户反馈 2026-08-02）。
+/// `@MainActor` 使 Task 闭包捕获 self 在 Swift 6 strict-concurrency 下合法
+/// （CI Xcode 16.4 toolchain 报 sending 数据竞争，2026-08-02 PR #38 修复）。
+@MainActor
 @Observable
 final class AudioPlayerController: NSObject, AVAudioPlayerDelegate {
     /// 是否正在播放（驱动 UI 按钮状态）

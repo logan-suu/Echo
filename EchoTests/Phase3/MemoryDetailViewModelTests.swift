@@ -184,22 +184,26 @@ struct MemoryDetailViewModelTests {
         #expect(vm.showDeleteConfirmation == true)
     }
 
-    @Test("US-PRV-004 AC-2: removeFromEcho dismisses dialog and clears memory (🔮 ExcludedAssets write)")
+    @Test("US-PRV-004 AC-2: removeFromEcho dismisses dialog, clears memory, flags removed (🔮 ExcludedAssets write)")
     func removeFromEchoDismisses() {
         let vm = makeLoadedVM()
         vm.presentDeleteConfirmation()
         vm.removeFromEcho()
         #expect(vm.showDeleteConfirmation == false)
         #expect(vm.memory == nil)
+        #expect(vm.hasRemovedMemory == true)
+        #expect(vm.viewState == .idle)
     }
 
-    @Test("US-PRV-004 AC-3: deleteOriginal dismisses dialog and clears memory (no ExcludedAssets write)")
+    @Test("US-PRV-004 AC-3: deleteOriginal dismisses dialog, clears memory, flags removed (no ExcludedAssets write)")
     func deleteOriginalDismisses() {
         let vm = makeLoadedVM()
         vm.presentDeleteConfirmation()
         vm.deleteOriginal()
         #expect(vm.showDeleteConfirmation == false)
         #expect(vm.memory == nil)
+        #expect(vm.hasRemovedMemory == true)
+        #expect(vm.viewState == .idle)
     }
 
     // MARK: - Error / Retry

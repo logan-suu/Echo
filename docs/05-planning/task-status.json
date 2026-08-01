@@ -536,7 +536,7 @@
             "3.2"
           ],
           "test_file": "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：编辑功能(AWK-007)。新增：L4 冲突解决 UI、创作生成预览(SYN-003/004)、记录感受功能、翻译切换(DIS-002)、删除确认弹窗(PRV-004)。依赖新增 3.0。\n(2026-08-02) Portrait-only fix: INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone → UIInterfaceOrientationPortrait (17 Pro simulator was rotating to landscape when window widened; spec has no orientation requirement). Commit 2ee1051 pushed to PR #38.",
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：编辑功能(AWK-007)。新增：L4 冲突解决 UI、创作生成预览(SYN-003/004)、记录感受功能、翻译切换(DIS-002)、删除确认弹窗(PRV-004)。依赖新增 3.0。\n(2026-08-02) Portrait-only fix: INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone → UIInterfaceOrientationPortrait (17 Pro simulator was rotating to landscape when window widened; spec has no orientation requirement). Commit 2ee1051 pushed to PR #38.\n(2026-08-02 PR #38 review) Fixed CI blocker: @MainActor on AudioPlayerController (Swift 6 strict-concurrency sending errors on CI Xcode 16.4 toolchain). WARN fixes: removed-state UI after delete (hasRemovedMemory + removedState view), retry() dead code, SwiftLint unused_optional_binding. Deferred DEF-38-001 (originalTimestamp) / DEF-38-002 (userLocked) to Phase 3.9 in deferred-items.json. PR description AC table refreshed with 🔮 legend.",
           "pr": {
             "number": 38,
             "url": "https://github.com/logan-suu/Echo/pull/38",
