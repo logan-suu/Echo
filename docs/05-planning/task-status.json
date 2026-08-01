@@ -496,6 +496,12 @@
           "story": "US-RET-001, US-RET-004, US-RET-006, US-RET-008, US-FBK-001, US-FBK-003, US-SRC-005, US-SRC-013",
           "status": "review",
           "last_updated": "2026-08-01T16:00:00Z",
+          "pr": {
+            "url": "https://github.com/logan-suu/Echo/pull/37",
+            "number": 37,
+            "branch": "feature/search-view-US-RET-001",
+            "created_at": "2026-08-01T22:10:00Z"
+          },
           "ui_run": {
             "runId": "3.2-bootstrap",
             "automation_phase": "accepted",
