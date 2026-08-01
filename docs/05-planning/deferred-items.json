@@ -193,6 +193,36 @@
       "reason": "Phase 3 UI 切片新增声明式 SwiftUI 代码难以单元测试，Echo.app 覆盖率从 PR #33 时的 75.8% 降至 ~68%，低于 70% 临时阈值。经用户确认下调至 65%。原注释承诺的 'Phase R-4 恢复 95%' 不成立（R 任务实为 Phase 4 的 4.12+，尚未开始）。",
       "defer_to": "Phase 4 质量保障阶段恢复 AGENTS.md §9.3 的 95% 阈值（覆盖测试扩充后）",
       "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-39-1",
+      "pr": 39,
+      "title": "ErrorLevel L1/L3/L4 unused — only L2 mapped",
+      "severity": "🟡",
+      "location": "SettingsViewModel.swift:97-103",
+      "reason": "Fixture-based ViewModel has no transient/blocking error sources yet",
+      "defer_to": "Phase 4 Core Actor integration",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-39-2",
+      "pr": 39,
+      "title": "exportAuditLog() never resets showExportInProgress flag",
+      "severity": "🟡",
+      "location": "SettingsViewModel.swift:156-158",
+      "reason": "Export stub — will be fixed when PrivacyActor integration lands",
+      "defer_to": "Phase 4 PrivacyActor adapter integration",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-39-3",
+      "pr": 39,
+      "title": "confirmClearCache/confirmResetFeedback missing .loading state on first line",
+      "severity": "🟡",
+      "location": "SettingsViewModel.swift:140,152",
+      "reason": "loadSettings() internally sets .loading; standalone .loading would cause double-transition",
+      "defer_to": "Refactor when real cache/feedback persistence is added",
+      "deferred_at": "2026-08-02"
     }
   ]
 }
