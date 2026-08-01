@@ -232,7 +232,7 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
 /// ```
 /// search(query) → PrivacyActor.validate() → Embedder.embedText(query)
 ///     → VectorStoreActor.search(queryVector, k=100)
-///     → post-filter metadata (time/tags/geo/person)
+///     → post-filter metadata (time/tags/geo)
 ///     → detect languages (query, source)
 ///     → mark crossLanguageMatch
 ///     → FeedbackActor.computeBatchAdjustments() [US-FBK-002]

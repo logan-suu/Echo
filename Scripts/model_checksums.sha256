@@ -15,5 +15,5 @@
 #
 # Expected entries (filename must match prepare_models.sh exactly):
 #   Manifest.json              (multilingual-e5-small mlpackage manifest)
-#   whisper-small-q4_k.gguf    (Whisper ASR GGUF)
+#   whisper-tiny-q5_1.gguf     (Whisper ASR GGUF, R-5.4 tiny)
 #   model.safetensors          (SigLIP2-B/32 checkpoint)
