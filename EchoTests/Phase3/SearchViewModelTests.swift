@@ -364,4 +364,47 @@ struct SearchViewModelTests {
             return
         }
     }
+
+    // MARK: - Additional coverage (PR #37 review)
+
+    @Test("accessibilityLabel combines type, text and date")
+    func test_accessibilityLabel_combinesFields() {
+        let item = makeResultItem(sourceType: "note", originalText: "hello", timestamp: 1723507200)
+        let model = SearchResultModel(from: item)
+        #expect(model.accessibilityLabel.contains("note"))
+        #expect(model.accessibilityLabel.contains("hello"))
+        #expect(!model.accessibilityLabel.isEmpty)
+    }
+
+    @Test("accessibilityLabel falls back to type description for media")
+    func test_accessibilityLabel_mediaFallback() {
+        let model = SearchResultModel(from: makeResultItem(sourceType: "photo", originalText: nil))
+        #expect(model.accessibilityLabel.contains("photo"))
+        #expect(model.accessibilityLabel.contains("photo memory"))
+    }
+
+    @Test("onDisappear cancels active search")
+    func test_onDisappear_cancelsSearch() {
+        let vm = SearchViewModel()
+        vm.submitQuery("猫")
+        #expect(vm.viewState == .loading)
+        vm.onDisappear()
+        #expect(vm.viewState == .cancelled)
+    }
+
+    @Test("simulateError sets error state without side effects")
+    func test_simulateError_setsState() {
+        let vm = SearchViewModel()
+        vm.simulateError(.l3Blocking(message: "blocked"))
+        guard case .error(let level) = vm.viewState else {
+            Issue.record("Expected .error state, got \(vm.viewState)")
+            return
+        }
+        guard case .l3Blocking = level else {
+            Issue.record("Expected .l3Blocking, got \(level)")
+            return
+        }
+        #expect(vm.results.isEmpty)
+        #expect(vm.hasSearched == false)
+    }
 }
