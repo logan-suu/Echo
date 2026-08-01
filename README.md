@@ -85,7 +85,7 @@ flowchart TB
 | 并发模型   | Swift Concurrency (Actor, Task, AsyncStream) |
 | 向量数据库 | ProximaKit 1.7 (HNSW)                        |
 | 关系数据库 | SQLite3 (系统内置)                          |
-| 推理引擎   | Core ML (主力) + SenseVoice.cpp (ASR)      |
+| 推理引擎   | Core ML (主力) + whisper.cpp (ASR)         |
 
 ---
 

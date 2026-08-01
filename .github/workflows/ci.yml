@@ -61,7 +61,7 @@ jobs:
       - name: Prepare model assets
         continue-on-error: true
         run: |
-          pip install --quiet huggingface_hub || true
+          pip install --quiet 'huggingface_hub==0.24.0' || true
           bash Scripts/prepare_models.sh || echo "::warning::Model preparation failed — build proceeds without models (ModelBundleTests skipped)"
 
       # ── Install SwiftLint ──
