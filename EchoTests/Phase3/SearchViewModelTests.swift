@@ -323,4 +323,45 @@ struct SearchViewModelTests {
         vm.loadPreloadedResults([makeResultItem(timestamp: 1723507200)])
         #expect(!vm.results[0].dateDescription.isEmpty)
     }
+
+    // MARK: - Error level mapping (AGENTS.md §4.4)
+
+    @Test("L3 SearchError maps to l3Blocking (no retry)")
+    func test_errorLevel_L3_mapsToBlocking() {
+        let state = SearchViewModel.mapError(SearchError.embeddingFailed(underlying: NSError(domain: "test", code: 1)))
+        guard case .error(let level) = state else {
+            Issue.record("Expected .error state, got \(state)")
+            return
+        }
+        guard case .l3Blocking = level else {
+            Issue.record("L3 error must map to .l3Blocking, got \(level)")
+            return
+        }
+    }
+
+    @Test("L2 SearchError maps to l2Recoverable (retry shown)")
+    func test_errorLevel_L2_mapsToRecoverable() {
+        let state = SearchViewModel.mapError(SearchError.privacyDenied(sourceTypes: ["photo"]))
+        guard case .error(let level) = state else {
+            Issue.record("Expected .error state, got \(state)")
+            return
+        }
+        guard case .l2Recoverable = level else {
+            Issue.record("L2 error must map to .l2Recoverable, got \(level)")
+            return
+        }
+    }
+
+    @Test("Non-SearchError falls back to l2Recoverable")
+    func test_errorLevel_unknownErrorFallsBack() {
+        let state = SearchViewModel.mapError(NSError(domain: "unknown", code: -1))
+        guard case .error(let level) = state else {
+            Issue.record("Expected .error state, got \(state)")
+            return
+        }
+        guard case .l2Recoverable = level else {
+            Issue.record("Unknown error must fall back to .l2Recoverable, got \(level)")
+            return
+        }
+    }
 }

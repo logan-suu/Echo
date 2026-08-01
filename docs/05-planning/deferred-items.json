@@ -152,6 +152,16 @@
       "reason": "R-5.3 决策（2026-08-01）：PHAsset 公开 API 不提供 People 身份标签（调研报告 §20.4），自动人物同步无法在 iOS 公开 API 能力内实现。人物身份需独立 opt-in + 隐私/法律批准管线（不在本轮推荐栈内）。US-SRC-006 从 v1.0 移除。",
       "defer_to": "独立 opt-in 人物身份管线获批后（v1.x）",
       "deferred_at": "2026-08-01"
+    },
+    {
+      "id": "DEF-37-001",
+      "pr": 37,
+      "title": "反馈写入失败静默降级，未写入 PendingOperations（L2 契约）",
+      "severity": "🟡",
+      "location": "SearchViewModel.swift:314,333,351 (recordLike/recordDislike/markBadCase catch)",
+      "reason": "反馈转发失败时 UI 层空 catch 静默降级（本地状态已即时更新）。正确修复需在 FeedbackPipeline（Core 受保护层）内部将 L2 错误写入 PendingOperations + 统一 Toast 重试 UI，超出 3.2 UI 切片边界。",
+      "defer_to": "Task 3.6 统一错误处理 UI（L2 Toast + PendingOperations 接入）时",
+      "deferred_at": "2026-08-01"
     }
   ]
 }

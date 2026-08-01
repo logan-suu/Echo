@@ -82,11 +82,12 @@ struct SearchView: View {
 
     // MARK: - Launch Argument Fixture Injection
 
+    #if DEBUG
     /// 处理 XCUITest / Live Sim Review 启动参数注入确定性 fixture。
     ///
     /// 支持 `-ui-fixture search-loaded|search-empty|search-lowconfidence`，
     /// 通过 SearchFixtureLoader 加载确定性数据到 loaded 状态。
-    /// 仅用于自动化；生产启动无此参数则忽略。
+    /// 仅用于自动化；生产构建（#if DEBUG 排除）无此钩子。
     private func handleLaunchArguments() {
         let args = ProcessInfo.processInfo.arguments
         guard let idx = args.firstIndex(of: "-ui-fixture"), idx + 1 < args.count else { return }
@@ -94,6 +95,7 @@ struct SearchView: View {
         let items = SearchFixtureLoader.load(fixtureID)
         viewModel.loadPreloadedResults(items)
     }
+    #endif
 
     // MARK: - Content Views
 
@@ -251,10 +253,10 @@ struct SearchView: View {
                 .font(.footnote)
                 .foregroundStyle(Color.secondary)
 
-            Text("Some results have lower relevance")
+            Text("Some results have lower relevance. Try refining your keywords or phrasing.")
                 .font(.footnote)
                 .foregroundStyle(Color.secondary)
-                .lineLimit(1)
+                .lineLimit(2)
 
             Spacer()
         }
@@ -412,8 +414,7 @@ struct SearchResultRow: View {
             }
         }
         .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(result.accessibilityLabel)
+        .accessibilityElement(children: .contain)
         .contextMenu {
             Button {
                 onMarkBadCase()
@@ -525,7 +526,7 @@ private func makeSearchViewModel(state: SearchState) -> SearchViewModel {
         ])
 
     case .error:
-        vm.dismissError()
+        vm.simulateError(.l2Recoverable(message: "Search failed. Please try again."))
     }
 
     return vm

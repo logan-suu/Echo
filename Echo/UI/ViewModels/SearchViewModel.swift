@@ -260,10 +260,25 @@ final class SearchViewModel {
                     self.viewState = .cancelled
                     return
                 }
-                self.viewState = .error(.l2Recoverable(
-                    message: "Search failed. Please try again."
-                ))
+                self.viewState = Self.mapError(error)
             }
+        }
+    }
+
+    /// 将 SearchPipeline 抛出的错误按 L1~L4 等级映射到 UI 状态（AGENTS.md §4.4）。
+    ///
+    /// - L1 瞬态: Pipeline 内部已完成指数退避重试（3 次），此处不重复重试
+    /// - L2 可恢复: `.l2Recoverable` → Toast + 重试按钮
+    /// - L3 阻断: `.l3Blocking` → 全屏引导页（不再显示无意义的重试）
+    static func mapError(_ error: Error) -> ViewState {
+        guard let searchError = error as? SearchError else {
+            return .error(.l2Recoverable(message: error.localizedDescription))
+        }
+        switch searchError.errorLevel {
+        case 3:
+            return .error(.l3Blocking(message: searchError.errorDescription ?? "Unable to continue"))
+        default:
+            return .error(.l2Recoverable(message: searchError.errorDescription ?? "Search failed. Please try again."))
         }
     }
 
@@ -364,6 +379,14 @@ final class SearchViewModel {
     func dismissError() {
         viewState = .idle
     }
+
+    #if DEBUG
+    /// 仅 Preview/调试使用 — 直接构造错误状态，不触发任何副作用。
+    /// 生产路径的错误由 submitQuery 的 catch 自然产生，不调用此方法。
+    func simulateError(_ level: ErrorLevel) {
+        viewState = .error(level)
+    }
+    #endif
 
     // MARK: - Lifecycle
 
