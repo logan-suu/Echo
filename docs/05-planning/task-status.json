@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-07-31T16:30:00Z",
+  "last_updated": "2026-08-01T09:00:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -109,7 +109,7 @@
           "id": "1.7",
           "title": "搭建 CI（GitHub Actions）：SwiftLint, 单元测试, 覆盖率",
           "story": null,
-          "status": "done",
+          "status": "review",
           "last_updated": "2026-07-05T09:00:00Z",
           "merged_at": "2026-07-05T09:00:00Z",
           "pr": "https://github.com/logan-suu/Echo/pull/8",
@@ -119,7 +119,8 @@
           "dependencies": [
             "1.1"
           ],
-          "test_file": null
+          "test_file": null,
+          "notes": "(2026-08-01 账本修复 R-2.1c: 审计发现 CI 存在 destination 错误、pipefail 缺失、R-007 扫描空目录。已由 PR #30 修复，待合并确认)"
         },
         {
           "id": "1.8",
@@ -443,8 +444,8 @@
     {
       "id": 3,
       "name": "UI 与集成",
-      "status": "not_started",
-      "last_updated": "2026-07-26T18:00:00Z",
+      "status": "in_progress",
+      "last_updated": "2026-08-01T09:00:00Z",
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase3/Phase3IntegrationTests.swift",
       "tasks": [
@@ -463,7 +464,7 @@
           "dependencies": [],
           "test_file": "EchoTests/Phase3/AppShellTests.swift",
           "pr": "https://github.com/logan-suu/Echo/pull/28",
-          "notes": "✅ 完成 (2026-07-26)。更新 EchoApp.swift 使用 AppRootView（TabView + NavigationStack × 3），创建 AppViewModel (@MainActor @Observable)，3 个 stub 视图（Home/Search/Settings），10 个单元测试全部通过。BUILD SUCCEEDED。未修改 Core 文件。PR review 修复 (ca34477): 移除冗余 .environment(appViewModel) 注入 + ErrorLevel L1-L4 文档注释。"
+          "notes": "✅ 完成 (2026-07-26)。更新 EchoApp.swift 使用 AppRootView（TabView + NavigationStack × 3），创建 AppViewModel (@MainActor @Observable)，3 个 stub 视图（Home/Search/Settings），10 个单元测试全部通过。BUILD SUCCEEDED。未修改 Core 文件。PR review 修复 (ca34477): 移除冗余 .environment(appViewModel) 注入 + ErrorLevel L1-L4 文档注释。\n(2026-08-01 审计 R-2.1d: DI injection 为骨架，Core 初始化（SQLite/向量索引/模型运行时）留待 3.11 引导流程)"
         },
         {
           "id": "3.1",
@@ -529,7 +530,7 @@
           "id": "3.4",
           "title": "设置页面 SettingsView + ViewModel（数据源开关、排除项管理、审计日志、模型状态、反馈记录、索引统计、迁移指引、设备迁移冲突UI）",
           "story": "US-SRC-004, US-SRC-007, US-SRC-008, US-SRC-009, US-PRV-002, US-PRV-003, US-RES-004, US-SET-001, US-SET-002, US-SET-003, US-SET-004, US-FBK-002, US-PRV-005",
-          "status": "ready",
+          "status": "backlog",
           "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
@@ -542,7 +543,7 @@
             "3.3"
           ],
           "test_file": "EchoTests/Phase3/SettingsViewModelTests.swift",
-          "notes": "📝 范围大幅扩展（2026-07-26 审计）。原有：数据源开关+排除项管理+缓存清理。新增：审计日志查看器(PRV-002)、审计日志导出(PRV-003)、模型状态页(RES-004)、反馈记录管理页(FBK-002)、索引统计(SRC-009)、迁移指引(SET-004)、冷却期管理(PRV-005)、数据概览。依赖新增 3.0+1.6。"
+          "notes": "📝 范围大幅扩展（2026-07-26 审计）。原有：数据源开关+排除项管理+缓存清理。新增：审计日志查看器(PRV-002)、审计日志导出(PRV-003)、模型状态页(RES-004)、反馈记录管理页(FBK-002)、索引统计(SRC-009)、迁移指引(SET-004)、冷却期管理(PRV-005)、数据概览。依赖新增 3.0+1.6。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)"
         },
         {
           "id": "3.5",
@@ -563,7 +564,7 @@
           "id": "3.6",
           "title": "统一错误处理 UI（L1~L4）+ 空态/加载态 + 降级横幅 + 冷却期提醒",
           "story": "US-DIS-003, US-RES-002, US-RES-003, US-RES-004, US-SYN-008, US-PRV-005",
-          "status": "ready",
+          "status": "backlog",
           "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
@@ -576,7 +577,7 @@
             "3.5"
           ],
           "test_file": "EchoTests/Phase3/ErrorHandlerUITests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：L1~L4 错误 UI。新增：空态/加载态 String Catalog(DIS-003)、低电量/过热降级横幅(RES-002/003)、模型降级横幅(RES-004)、冷却期提醒(PRV-005)。依赖新增 3.0。"
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：L1~L4 错误 UI。新增：空态/加载态 String Catalog(DIS-003)、低电量/过热降级横幅(RES-002/003)、模型降级横幅(RES-004)、冷却期提醒(PRV-005)。依赖新增 3.0。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)"
         },
         {
           "id": "3.7",
@@ -638,7 +639,7 @@
           "id": "3.11",
           "title": "引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载",
           "story": "US-PRV-008, US-SRC-001, US-SYN-001",
-          "status": "ready",
+          "status": "backlog",
           "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
@@ -649,13 +650,13 @@
             "3.10"
           ],
           "test_file": "EchoTests/Phase3/OnboardingTests.swift",
-          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。P0 阻塞——App 无法正常启动。覆盖：US-PRV-008（PIPL 隐私摘要+同意/拒绝）、US-SRC-001 AC-6（首次授权提示）、US-SYN-001 AC-2（语言选择）、首次模型加载进度。"
+          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。P0 阻塞——App 无法正常启动。覆盖：US-PRV-008（PIPL 隐私摘要+同意/拒绝）、US-SRC-001 AC-6（首次授权提示）、US-SYN-001 AC-2（语言选择）、首次模型加载进度。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)"
         },
         {
           "id": "3.12",
           "title": "唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置",
           "story": "US-AWK-001, US-AWK-002, US-AWK-003",
-          "status": "ready",
+          "status": "backlog",
           "last_updated": "2026-07-26T23:00:00Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
@@ -668,7 +669,7 @@
             "3.11"
           ],
           "test_file": "EchoTests/Phase3/AwakeningDeliveryTests.swift",
-          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。UNUserNotificationCenter 设置、本地通知投递、通知点击→深层链接、位置/HealthKit 权限弹窗、地理围栏开关/管理页、情绪唤醒开关。覆盖 AWK-001/002/003 的投递层 UI。"
+          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。UNUserNotificationCenter 设置、本地通知投递、通知点击→深层链接、位置/HealthKit 权限弹窗、地理围栏开关/管理页、情绪唤醒开关。覆盖 AWK-001/002/003 的投递层 UI。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)"
         }
       ]
     },
