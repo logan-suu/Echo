@@ -5,6 +5,8 @@
   "_created_by": "Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范 §9.4",
   "_version": "1.0.0",
 
+  "$ref": "#/$defs/RunState",
+
   "$defs": {
     "RunState": {
       "title": "RunState",
