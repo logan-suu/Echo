@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T10:00:00Z",
+  "last_updated": "2026-08-01T10:30:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -109,7 +109,7 @@
           "id": "1.7",
           "title": "搭建 CI（GitHub Actions）：SwiftLint, 单元测试, 覆盖率",
           "story": null,
-          "status": "review",
+          "status": "done",
           "last_updated": "2026-07-05T09:00:00Z",
           "pr": "https://github.com/logan-suu/Echo/pull/8",
           "documents_required": [
@@ -119,7 +119,7 @@
             "1.1"
           ],
           "test_file": null,
-          "notes": "(2026-08-01 账本修复 R-2.1c: 审计发现 CI 存在 destination 错误、pipefail 缺失、R-007 扫描空目录。已由 PR #30 修复，待合并确认)\n(reopened_for: PR #30 CI 修复 — 2026-08-01 审计后置为 review，历史合并时间已清理)"
+          "notes": "(2026-08-01 账本修复 R-2.1c: 审计发现 CI 存在 destination 错误、pipefail 缺失、R-007 扫描空目录。已由 PR #30 修复，待合并确认)\n(reopened_for: PR #30 CI 修复 — 2026-08-01 审计后置为 review，历史合并时间已清理)\n(2026-08-01 R-2.1c 修正: CI 缺陷已由 PR #30 修复并合并，1.7 恢复 done。原 review 标记曾引发 1.9 依赖矛盾 — CodeRabbit 指出)"
         },
         {
           "id": "1.8",
@@ -160,7 +160,7 @@
             "1.8"
           ],
           "test_file": "EchoTests/Phase1/Phase1IntegrationTests.swift",
-          "notes": "52 个集成测试全部通过。覆盖 DatabaseManager + 6 个 Actor 的跨模块联调：数据库表结构、ExcludedAssets 增删查恢复、Feedback 记录与阈值过滤、Progress 持久化、PendingOps 重试、VectorStore 摄入检索持久化、Privacy 授权拒绝、跨 Actor 全链路。"
+          "notes": "52 个集成测试全部通过。覆盖 DatabaseManager + 6 个 Actor 的跨模块联调：数据库表结构、ExcludedAssets 增删查恢复、Feedback 记录与阈值过滤、Progress 持久化、PendingOps 重试、VectorStore 摄入检索持久化、Privacy 授权拒绝、跨 Actor 全链路。\n(2026-08-01 审计: 依赖 1.7 的 CI 修复已完成，Phase 1 集成测试有效性不受影响)"
         }
       ]
     },
