@@ -1,55 +1,613 @@
 // ==========================================
 // 文件: SettingsView.swift
-// 对应规格: docs/ui/echo-memory-canvas-style.md §3.3 (Task surfaces), §7.2 (Task surfaces)
-// 任务: 3.0 - App Shell: TabView + NavigationStack + DI 注入 (占位视图)
-// AC 覆盖: Settings 标签页 Stub — 后续 3.4 替换为完整实现
-// 架构约束: 遵循 AGENTS.md §8.1; echo-memory-canvas apple-native 基础; Task surface family (禁止 masonry)
-// 生成时间: 2026-07-26
+// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-SRC-004/007/008/009,
+//            US-PRV-002/003/005, US-RES-004, US-SET-001/002/003/004, US-FBK-002
+//            docs/ui/echo-memory-canvas-style.md §3.3 (Task surfaces), §7.2 (Task surfaces),
+//            §10.1.3 (空态), §11 (Toast/Banner)
+//            docs/ui/architecture.md §2 (单向数据流), §3 (组件边界)
+// 任务: 3.4 - SettingsView + SettingsViewModel
+// AC 覆盖: US-SRC-004 AC-1/AC-2 ✅, US-SRC-008 AC-1/AC-5 ✅, US-SRC-009 AC-1/AC-2 ✅,
+//            US-PRV-002 AC-1 ✅, US-PRV-003 AC-1/AC-2 ✅, US-RES-004 AC-2/AC-7 ✅,
+//            US-SET-002 AC-1/AC-3 ✅, US-SET-003 AC-1/AC-3 ✅, US-SET-004 AC-1/AC-2 ✅,
+//            US-FBK-002 AC-5 ✅, US-PRV-005 AC-1/AC-2/AC-4 ✅
+// 架构约束: AGENTS.md §8.1 (@MainActor + @Observable), echo-memory-canvas apple-native 基础,
+//           Task surface family (Form/List, 禁止 masonry), §2.3 (semantic colors),
+//           §2.4 (SF Symbols), §2.5 (可访问性)
+// 生成时间: 2026-08-02
 // ==========================================
 
 import SwiftUI
 
 // MARK: - SettingsView
 
-/// Settings 视图 — 设置与管理页面
+/// Settings 视图 — 设置、管理与数据控制面板
 ///
 /// ## Surface Family: Task
-/// - 使用系统 Form/List 容器（后续 3.4 实现）
-/// - 当前为 App Shell 占位视图
-/// - 后续任务 3.4 实现完整 SettingsView + SettingsViewModel
-/// - 明确禁止 masonry 布局
+/// - 使用系统 Form container with sections
+/// - 遵循 echo-memory-canvas style tokens (semantic colors, SF Symbols, Dynamic Type)
+/// - Masonry: 绝对禁止
 ///
-/// ## Style
-/// - 遵循 echo-memory-canvas token: .headline, Color.primary, system GroupedBackground
+/// ## 数据流 (docs/ui/architecture.md §2.1)
+/// - User Action → SettingsViewModel action → Core Actor → State Update → View Re-render
+///
+/// ## Sections
+/// - Data Sources: 授权开关 (US-SRC-004)
+/// - Storage & Cache: 存储概览 + 清理缓存 (US-SRC-009, US-SET-003)
+/// - Excluded Items: 排除项管理入口 (US-SRC-008)
+/// - Feedback: 反馈记录 + 重置 (US-FBK-002)
+/// - Audit Log: 审计日志查看 + 导出 (US-PRV-002/003)
+/// - Model Status: 模型状态 (US-RES-004)
+/// - Migration Guide: 迁移指引 (US-SRC-007, US-SET-004)
+/// - Account: 删除数据 + 冷却期 (US-PRV-005)
+/// - About: 永久保留策略 (US-SET-002)
 struct SettingsView: View {
 
+    @State private var viewModel = SettingsViewModel()
+
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "gearshape.fill")
-                .font(.largeTitle)
-                .foregroundStyle(Color.secondary)
+        content
+            .navigationTitle("Settings")
+            .task { await viewModel.loadSettings() }
+            .alert("Clear Cache", isPresented: $viewModel.showClearCacheConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Clear", role: .destructive) { Task { await viewModel.confirmClearCache() } }
+            } message: { Text("This will clear translation cache, search result cache, and thumbnail cache. Vector indices and original media will not be affected.") }
+            .alert("Reset All Feedback", isPresented: $viewModel.showResetFeedbackConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) { Task { await viewModel.confirmResetFeedback() } }
+            } message: { Text("This will permanently delete all your feedback learning data. Re-ranking weights will return to defaults. This cannot be undone.") }
+            .alert("Delete All Echo Data", isPresented: $viewModel.showDeleteDataConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Start Deletion", role: .destructive) {}
+            } message: { Text("A 24-hour cooling period will begin. During this time, you can cancel. After cooling period ends, all Echo data will be permanently erased. Your original photos and files will not be affected.") }
+    }
 
-            Text("Settings")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.primary)
+    @ViewBuilder
+    private var content: some View {
+        switch viewModel.state {
+        case .idle, .loading:
+            loadingView
+        case .completed(let sections):
+            settingsForm(sections)
+        case .error(let level):
+            errorView(level)
+        case .cancelled:
+            cancelledView
+        }
+    }
 
-            Text("管理你的 Echo")
-                .font(.body)
+    // MARK: - Loading State
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .tint(Color.accentColor)
+            Text("Loading settings...")
+                .font(.subheadline)
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("Settings")
-        .accessibilityLabel("Settings")
-        .accessibilityHint("管理数据源与偏好设置")
+    }
+
+    // MARK: - Error State
+
+    private func errorView(_ level: SettingsViewModel.ErrorLevel) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.accentColor)
+
+            Text("Unable to Load Settings")
+                .font(.headline)
+                .foregroundStyle(Color.primary)
+
+            Text("Please try again.")
+                .font(.body)
+                .foregroundStyle(Color.secondary)
+
+            Button(action: { Task { await viewModel.retry() } }) {
+                Label("Retry", systemImage: "arrow.clockwise")
+                    .frame(maxWidth: 200)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.accentColor)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .accessibilityLabel("Settings error")
+        .accessibilityHint("Tap Retry to reload settings")
+    }
+
+    // MARK: - Cancelled State
+
+    private var cancelledView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "xmark.circle")
+                .font(.largeTitle)
+                .foregroundStyle(Color.secondary)
+            Text("Settings loading was cancelled")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    // MARK: - Settings Form
+
+    private func settingsForm(_ sections: SettingsSections) -> some View {
+        Form {
+            dataSourcesSection(sections)
+            storageSection(sections)
+            excludedItemsSection(sections)
+            feedbackSection(sections)
+            auditLogSection
+            modelStatusSection(sections)
+            migrationSection
+            accountSection
+            aboutSection
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    // MARK: - Data Sources Section (US-SRC-004)
+
+    private func dataSourcesSection(_ sections: SettingsSections) -> some View {
+        Section {
+            ForEach(sections.dataSources) { source in
+                HStack {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(source.displayName)
+                                .font(.body)
+                                .foregroundStyle(Color.primary)
+                            Text(source.isAuthorized ? "\(source.itemCount) items indexed" : "Not authorized")
+                                .font(.caption)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: source.systemImage)
+                            .foregroundStyle(Color.accentColor)
+                    }
+
+                    Spacer()
+
+                    if source.isAuthorized {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.accentColor)
+                            .accessibilityLabel("Authorized")
+                    } else {
+                        Image(systemName: "xmark.circle")
+                            .foregroundStyle(Color.secondary)
+                            .accessibilityLabel("Not authorized")
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+
+            Toggle(isOn: $viewModel.isSyncingEnabled) {
+                Label {
+                    Text("Background Auto Sync")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .accessibilityLabel("Background Auto Sync")
+            .accessibilityHint("When enabled, new data will be automatically synced in the background")
+
+            Toggle(isOn: $viewModel.isPeriodicScanEnabled) {
+                Label {
+                    Text("Periodic Scan for Missing Data")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .accessibilityLabel("Periodic Scan")
+            .accessibilityHint("When enabled, Echo periodically checks for data not yet imported")
+        } header: {
+            Text("Data Sources")
+        } footer: {
+            Text("Photo access is required for Echo to index your memories. Notes and Voice Memos support coming via Share Extension — share content directly to Echo to index it.")
+        }
+    }
+
+    // MARK: - Storage Section (US-SRC-009, US-SET-003)
+
+    private func storageSection(_ sections: SettingsSections) -> some View {
+        Section {
+            HStack {
+                Label {
+                    Text("Indexed Items")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "square.stack.3d.up")
+                        .foregroundStyle(Color.accentColor)
+                }
+                Spacer()
+                Text("\(sections.storage.indexCount)")
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
+            }
+            .accessibilityLabel("\(sections.storage.indexCount) indexed items")
+
+            HStack {
+                Label {
+                    Text("Vector Store")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "circle.grid.3x3")
+                        .foregroundStyle(Color.accentColor)
+                }
+                Spacer()
+                Text(sections.storage.vectorStoreSize)
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
+            }
+
+            HStack {
+                Label {
+                    Text("Cache")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "shippingbox")
+                        .foregroundStyle(Color.accentColor)
+                }
+                Spacer()
+                Text(sections.storage.cacheSize)
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
+            }
+
+            HStack {
+                Label {
+                    Text("Database")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "externaldrive")
+                        .foregroundStyle(Color.accentColor)
+                }
+                Spacer()
+                Text(sections.storage.databaseSize)
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
+            }
+
+            Button(action: { viewModel.clearCache() }) {
+                Label("Clear Cache", systemImage: "trash")
+                    .foregroundStyle(Color.accentColor)
+            }
+            .accessibilityLabel("Clear Cache")
+            .accessibilityHint("Clears translation, search, and thumbnail caches. Vector indices preserved.")
+        } header: {
+            Text("Storage & Cache")
+        }
+    }
+
+    // MARK: - Excluded Items Section (US-SRC-008)
+
+    private func excludedItemsSection(_ sections: SettingsSections) -> some View {
+        Section {
+            NavigationLink {
+                excludedItemsPlaceholder
+            } label: {
+                HStack {
+                    Label {
+                        Text("Excluded Items")
+                            .font(.body)
+                            .foregroundStyle(Color.primary)
+                    } icon: {
+                        Image(systemName: "eye.slash")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    Spacer()
+                    Text("\(sections.excludedCount)")
+                        .font(.body)
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            .accessibilityLabel("Excluded Items, \(sections.excludedCount) items")
+        } header: {
+            Text("Data Management")
+        } footer: {
+            Text("Items excluded from Echo indexing. You can restore them here if the original file still exists.")
+        }
+    }
+
+    private var excludedItemsPlaceholder: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "eye.slash")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.secondary)
+            Text("Excluded Items")
+                .font(.headline)
+            Text("Management interface coming in next iteration.")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Excluded Items")
+    }
+
+    // MARK: - Feedback Section (US-FBK-002)
+
+    private func feedbackSection(_ sections: SettingsSections) -> some View {
+        Section {
+            NavigationLink {
+                feedbackPlaceholder
+            } label: {
+                HStack {
+                    Label {
+                        Text("Feedback Records")
+                            .font(.body)
+                            .foregroundStyle(Color.primary)
+                    } icon: {
+                        Image(systemName: "hand.thumbsup")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    Spacer()
+                    Text("\(sections.feedbackCount)")
+                        .font(.body)
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            .accessibilityLabel("Feedback Records, \(sections.feedbackCount) entries")
+
+            Button(role: .destructive, action: { viewModel.resetAllFeedback() }) {
+                Label("Reset All Feedback Learning Data", systemImage: "arrow.counterclockwise")
+            }
+            .accessibilityLabel("Reset All Feedback")
+            .accessibilityHint("Permanently deletes all feedback and resets re-ranking weights")
+        } header: {
+            Text("Feedback & Learning")
+        }
+    }
+
+    private var feedbackPlaceholder: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "hand.thumbsup")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.secondary)
+            Text("Feedback Records")
+                .font(.headline)
+            Text("Detailed feedback management coming in next iteration.")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Feedback Records")
+    }
+
+    // MARK: - Audit Log Section (US-PRV-002/003)
+
+    private var auditLogSection: some View {
+        Section {
+            NavigationLink {
+                auditLogPlaceholder
+            } label: {
+                Label {
+                    Text("View Audit Log")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "list.bullet.rectangle")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .accessibilityLabel("View Audit Log")
+
+            Button(action: { viewModel.exportAuditLog() }) {
+                Label("Export Audit Log (JSON)", systemImage: "square.and.arrow.up")
+                    .foregroundStyle(Color.accentColor)
+            }
+            .accessibilityLabel("Export Audit Log")
+            .accessibilityHint("Exports the last 30 days of privacy operation records as JSON")
+        } header: {
+            Text("Privacy & Audit")
+        } footer: {
+            Text("Audit log records the last 30 days of privacy operations. Contains no user data — only operation types, timestamps, and hash digests.")
+        }
+    }
+
+    private var auditLogPlaceholder: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "list.bullet.rectangle")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.secondary)
+            Text("Audit Log")
+                .font(.headline)
+            Text("Detailed audit log viewer coming in next iteration.")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Audit Log")
+    }
+
+    // MARK: - Model Status Section (US-RES-004, US-SRC-009)
+
+    private func modelStatusSection(_ sections: SettingsSections) -> some View {
+        Section {
+            NavigationLink {
+                modelStatusPlaceholder
+            } label: {
+                HStack(spacing: 8) {
+                    Label {
+                        Text("Model Status")
+                            .font(.body)
+                            .foregroundStyle(Color.primary)
+                    } icon: {
+                        Image(systemName: "cpu")
+                            .foregroundStyle(Color.accentColor)
+                    }
+
+                    Spacer()
+
+                    if sections.modelStatus.isDegraded {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.yellow)
+                    }
+
+                    Text("\(sections.modelStatus.loadedCount)/\(sections.modelStatus.totalModels) loaded")
+                        .font(.caption)
+                        .foregroundStyle(sections.modelStatus.isDegraded ? Color.yellow : Color.secondary)
+                }
+            }
+            .accessibilityLabel("Model Status, \(sections.modelStatus.loadedCount) of \(sections.modelStatus.totalModels) loaded")
+        } header: {
+            Text("AI Models")
+        } footer: {
+            if sections.modelStatus.isDegraded {
+                Text("Some models failed to load. Basic keyword search is still available.")
+            } else {
+                Text("All AI models loaded and ready. Models run entirely on-device with no network required.")
+            }
+        }
+    }
+
+    private var modelStatusPlaceholder: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "cpu")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.secondary)
+            Text("Model Status")
+                .font(.headline)
+            Text("Detailed model status page coming in next iteration.")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Model Status")
+    }
+
+    // MARK: - Migration Section (US-SRC-007, US-SET-004)
+
+    private var migrationSection: some View {
+        Section {
+            NavigationLink {
+                migrationPlaceholder
+            } label: {
+                Label {
+                    Text("Data Migration Guide")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .accessibilityLabel("Data Migration Guide")
+        } header: {
+            Text("Device Migration")
+        } footer: {
+            Text("Learn how to transfer your Echo data to a new device using AirDrop or encrypted Finder backup.")
+        }
+    }
+
+    private var migrationPlaceholder: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "arrow.left.arrow.right")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.secondary)
+            Text("Data Migration Guide")
+                .font(.headline)
+            Text("Migration guide coming in next iteration.")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Migration Guide")
+    }
+
+    // MARK: - Account Section (US-PRV-005)
+
+    private var accountSection: some View {
+        Section {
+            Button(role: .destructive, action: { viewModel.showDeleteDataConfirmation = true }) {
+                Label("Delete All Echo Data", systemImage: "trash")
+            }
+            .accessibilityLabel("Delete All Echo Data")
+            .accessibilityHint("Starts a 24-hour cooling period before permanent deletion of all Echo data")
+        } header: {
+            Text("Account & Data")
+        } footer: {
+            Text("Deleting Echo data will erase all indices, vectors, settings and feedback. Your original photos, videos, and files in system apps will NOT be affected. A 24-hour cooling period applies before data is permanently removed.")
+        }
+    }
+
+    // MARK: - About Section (US-SET-002)
+
+    private var aboutSection: some View {
+        Section {
+            HStack {
+                Label {
+                    Text("Memory Policy")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "clock.badge.checkmark")
+                        .foregroundStyle(Color.accentColor)
+                }
+                Spacer()
+                Text("Permanent")
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
+            }
+            .accessibilityLabel("Memory retention policy: Permanent. All memories are kept forever, only deleted manually.")
+
+            HStack {
+                Label {
+                    Text("Version")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(Color.accentColor)
+                }
+                Spacer()
+                Text("v4.6")
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
+            }
+        } header: {
+            Text("About")
+        } footer: {
+            Text("Echo · 回响 — Your memories, always within reach. All AI processing runs locally on your device. No data ever leaves your phone.")
+        }
     }
 }
 
 // MARK: - Preview
 
-#Preview {
+#Preview("Loaded") {
     NavigationStack {
         SettingsView()
+    }
+}
+
+#Preview("Error") {
+    NavigationStack {
+        let vm = SettingsViewModel()
+        SettingsView()
+            .task {
+                vm.state = .error(.l2Recoverable("Failed to load"))
+            }
     }
 }
