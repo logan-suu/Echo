@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T16:00:00Z",
+  "last_updated": "2026-08-01T12:40:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -1033,6 +1033,28 @@
         "Echo/Core/Actors/DatabaseManager.swift",
         "Echo/Core/Actors/VectorStoreActor.swift",
         "EchoTests/Phase2/RA_DataCorrectnessTests.swift"
+      ]
+    },
+    {
+      "id": "DEC-R5-20260801-001",
+      "date": "2026-08-01T12:36:00Z",
+      "title": "外部阻断决策执行（修复计划 Phase R-5）— 全部 7 个修复阶段完成",
+      "description": "用户批准 R-5 四项决策（B-A-1-B）：SigLIP2 商业候选+转换、Photos+Share Sheet 数据源、v1.0 移除人物身份、Whisper tiny+SBOM。PR #36 落地代码调整（ChangeSource photo-only、personIds 移除）+ 文档同步。修复计划 R-0/R-A/R-1~R-5 全部完成。",
+      "impacts": [
+        "ChangeSource 移除 .note/.calendar（仅 photo 自动同步，R-5.2 路径 A）",
+        "SearchFilter.personIds 移除（R-5.3，US-SRC-006 v1.0 延后）",
+        "SigLIP2 Core ML 转换排入 Phase 4 任务 4.21",
+        "Whisper tiny 集成排入 Phase 4 任务 4.22",
+        "Share Extension 开发排入 Phase 4 任务 4.20",
+        "US-SRC-001 更新为 Share Extension 摄入契约"
+      ],
+      "files": [
+        "Echo/Core/Pipelines/SyncPipeline.swift",
+        "Echo/Core/Pipelines/SearchPipeline.swift",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/技术选型文档.md",
+        "docs/05-planning/deferred-items.json",
+        "Scripts/prepare_models.sh"
       ]
     }
   ]
