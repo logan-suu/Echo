@@ -183,6 +183,16 @@
       "reason": "AC-4 要求用户选择'保留我的编辑'后置 userLocked=true 使后续同步永久跳过该记忆。当前模型无 userLocked 字段，resolveConflict(.local) 仅置 userEdited；同步跳过逻辑属 Core SyncPipeline 行为，需 Phase 3.9 接入。",
       "defer_to": "Phase 3.9 SyncPipeline 冲突处理接入时",
       "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-38-003",
+      "pr": 38,
+      "title": "Coverage Gate 临时阈值下调 70% → 65%（Phase 3 UI 声明式代码拉低覆盖率）",
+      "severity": "🟡",
+      "location": ".github/workflows/ci.yml (Coverage Gate step)",
+      "reason": "Phase 3 UI 切片新增声明式 SwiftUI 代码难以单元测试，Echo.app 覆盖率从 PR #33 时的 75.8% 降至 ~68%，低于 70% 临时阈值。经用户确认下调至 65%。原注释承诺的 'Phase R-4 恢复 95%' 不成立（R 任务实为 Phase 4 的 4.12+，尚未开始）。",
+      "defer_to": "Phase 4 质量保障阶段恢复 AGENTS.md §9.3 的 95% 阈值（覆盖测试扩充后）",
+      "deferred_at": "2026-08-02"
     }
   ]
 }
