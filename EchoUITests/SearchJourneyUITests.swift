@@ -11,6 +11,7 @@
 import XCTest
 
 /// Search 检索页 journey 测试 — 运行时覆盖 SearchView 声明式 body（coverage gate）。
+@MainActor
 final class SearchJourneyUITests: XCTestCase {
 
     private var app: XCUIApplication!
@@ -21,7 +22,6 @@ final class SearchJourneyUITests: XCTestCase {
     }
 
     /// loaded fixture: 导航到 Search tab → 验证 2 条结果 + 反馈按钮
-    @MainActor
     func test_searchLoadedJourney() throws {
         app.launchArguments = ["-ui-fixture", "search-loaded"]
         app.launch()
@@ -46,7 +46,6 @@ final class SearchJourneyUITests: XCTestCase {
     }
 
     /// 反馈交互: 点击 👍 后状态变化（US-FBK-001 AC-1）
-    @MainActor
     func test_searchFeedbackInteraction() throws {
         app.launchArguments = ["-ui-fixture", "search-loaded"]
         app.launch()
@@ -62,7 +61,6 @@ final class SearchJourneyUITests: XCTestCase {
     }
 
     /// empty fixture: 空态文案 + 居中布局存在
-    @MainActor
     func test_searchEmptyJourney() throws {
         app.launchArguments = ["-ui-fixture", "search-empty"]
         app.launch()
