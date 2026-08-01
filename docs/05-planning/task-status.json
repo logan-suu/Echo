@@ -536,7 +536,7 @@
             "3.2"
           ],
           "test_file": "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：编辑功能(AWK-007)。新增：L4 冲突解决 UI、创作生成预览(SYN-003/004)、记录感受功能、翻译切换(DIS-002)、删除确认弹窗(PRV-004)。依赖新增 3.0。",
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：编辑功能(AWK-007)。新增：L4 冲突解决 UI、创作生成预览(SYN-003/004)、记录感受功能、翻译切换(DIS-002)、删除确认弹窗(PRV-004)。依赖新增 3.0。\n(2026-08-02) Portrait-only fix: INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone → UIInterfaceOrientationPortrait (17 Pro simulator was rotating to landscape when window widened; spec has no orientation requirement). Commit 2ee1051 pushed to PR #38.",
           "pr": {
             "number": 38,
             "url": "https://github.com/logan-suu/Echo/pull/38",
