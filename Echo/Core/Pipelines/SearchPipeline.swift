@@ -268,6 +268,22 @@ public actor SearchPipeline {
     /// 语言检测置信度阈值（低于此值标记为 mixed）
     private nonisolated let languageConfidenceThreshold: Float = 0.9
 
+    // MARK: - R-3.7: RRF Configuration
+
+    /// RRF 常数 k（默认 60，标准 RRF 参数）
+    private nonisolated static let rrfK: Double = 60.0
+
+    /// 各通道 RRF 权重（初始值，基于离线评测调整）
+    private nonisolated static let channelWeights: [String: Double] = [
+        "text_dense": 1.0,
+        "vision_dense": 0.8,
+        "ocr_text": 0.6,
+        "lexical": 0.5,
+    ]
+
+    /// 单通道搜索超时（秒）— 超时通道被跳过，不影响其他通道
+    private nonisolated static let channelTimeoutSeconds: Double = 1.5
+
     // MARK: - Initialization
 
     public init(
@@ -694,6 +710,112 @@ public actor SearchPipeline {
             do { _ = try await group.next() } catch { /* cancelled, expected */ }
             return result
         }
+    }
+
+    // MARK: - R-3.7: RRF Multi-Channel Fusion
+
+    /// 单通道搜索结果（RRF 融合输入）。
+    struct ChannelResult: Sendable {
+        let channel: String
+        let rankedIds: [UUID]
+    }
+
+    /// 加权 RRF 融合（R-3.7）。
+    ///
+    /// 公式：`score(d) = Σ w_i / (k_rrf + rank_i(d))`
+    /// - 每通道输出独立 rank（不把原始余弦/BM25/规则分直接相加）
+    /// - 权重可配置（channelWeights）
+    /// - 超时通道被跳过（降级不影响其他通道）
+    ///
+    /// - Parameters:
+    ///   - channelResults: 各通道的排序结果
+    ///   - k: 返回 top-K 结果数
+    /// - Returns: 融合后的文档 ID 列表（按 RRF 分数降序）
+    nonisolated func rrfFuse(
+        channelResults: [ChannelResult],
+        k: Int
+    ) -> [UUID] {
+        var scores: [UUID: Double] = [:]
+
+        for result in channelResults {
+            let weight = Self.channelWeights[result.channel] ?? 1.0
+            for (rank, docId) in result.rankedIds.enumerated() {
+                let rrfScore = weight / (Self.rrfK + Double(rank + 1))
+                scores[docId, default: 0] += rrfScore
+            }
+        }
+
+        return scores
+            .sorted { $0.value > $1.value }
+            .prefix(k)
+            .map(\.key)
+    }
+
+    /// 多通道搜索（R-3.7）— 并行执行各通道，RRF 融合。
+    ///
+    /// 当前活跃通道：text_dense（E5 384d ANN）。
+    /// 待接入通道：vision_dense（SigLIP2）、ocr_text（Vision OCR）、lexical（JiebaFTS5）。
+    /// 超时通道被跳过，不影响其他通道结果。
+    ///
+    /// - Parameters:
+    ///   - queryVector: 查询向量（text_dense 通道）
+    ///   - k: 返回结果数
+    /// - Returns: 融合后的 SearchResultItem 列表
+    func searchMultiChannel(
+        queryVector: [Float],
+        k: Int
+    ) async throws -> [SearchResultItem] {
+        var channelResults: [ChannelResult] = []
+
+        // Channel 1: text_dense (E5 384d ANN) — active
+        do {
+            let searchK = max(k, min(annCandidateCount, 100))
+            let annResults = try await withTimeout(seconds: Self.channelTimeoutSeconds) {
+                await self.vectorStore.search(query: queryVector, k: searchK)
+            }
+            let rankedIds = annResults.map(\.id)
+            channelResults.append(ChannelResult(channel: "text_dense", rankedIds: rankedIds))
+        } catch {
+            // text_dense channel timeout/failure — skip, continue with other channels
+        }
+
+        // Channel 2: vision_dense (SigLIP2) — scaffold, not yet active
+        // TODO (R-3.2): SigLIP2Embedder.embedImage → vision_dense generation search
+
+        // Channel 3: ocr_text (Vision OCR) — scaffold, not yet active
+        // TODO (R-3.5): VisionOCREngine → ocr_text generation search
+
+        // Channel 4: lexical (JiebaFTS5 BM25) — scaffold, not yet active
+        // TODO (R-3.6): LexicalEngine.search → lexical channel
+
+        // RRF fusion
+        let fusedIds = rrfFuse(channelResults: channelResults, k: k)
+
+        // Convert fused IDs back to SearchResultItems (preserve metadata from text_dense)
+        // For now, re-fetch from vector store for the fused set
+        var items: [SearchResultItem] = []
+        for id in fusedIds {
+            // Look up metadata from the text_dense channel results
+            if let annResult = channelResults.first(where: { $0.channel == "text_dense" })?.rankedIds.firstIndex(of: id) {
+                // Re-search to get full metadata (simplified; production would cache)
+                let results = await vectorStore.search(query: queryVector, k: 1)
+                if let result = results.first, result.id == id {
+                    let metadata = try? MemoryEntry.decodeMetadata(from: result.metadata ?? Data())
+                    items.append(SearchResultItem(
+                        id: result.id,
+                        assetId: metadata?.assetId ?? "",
+                        sourceType: metadata?.sourceType ?? "unknown",
+                        timestamp: metadata?.timestamp ?? Date().timeIntervalSince1970,
+                        originalText: metadata?.originalText,
+                        sourceLanguage: detectLanguage(from: metadata?.originalText),
+                        crossLanguageMatch: false,
+                        cosineSimilarity: 1.0 - Float(result.distance)
+                    ))
+                }
+            }
+        }
+
+        return items
     }
 
     // MARK: - Source Type Normalization
