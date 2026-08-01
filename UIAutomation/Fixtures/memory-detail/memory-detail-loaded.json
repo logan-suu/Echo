@@ -1,0 +1,29 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "memory-detail-loaded",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "memoryId": "22222222-2222-2222-2222-222222222222",
+    "assetId": "note-zh-2",
+    "sourceType": "note",
+    "title": "昨晚的公园散步",
+    "originalText": "昨晚在公园遇到一只橘猫，很亲人。它在我脚边蹭了很久，后来跟着我走了一段路。",
+    "sourceLanguage": "zh-Hans",
+    "preferredLanguage": "en-US",
+    "timestamp": 1723420800,
+    "tags": ["公园", "橘猫"],
+    "creationSnippet": {
+      "templateType": "letter",
+      "summary": "A letter to future self from your park memories",
+      "citationAnchors": [
+        { "memoryId": "22222222-2222-2222-2222-222222222222", "hasSource": true }
+      ]
+    }
+  },
+  "controlledVariables": ["timestamp", "memoryId", "translation"],
+  "version": "1.0.0"
+}

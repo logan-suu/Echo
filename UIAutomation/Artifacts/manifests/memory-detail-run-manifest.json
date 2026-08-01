@@ -1,0 +1,34 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/state/v1",
+  "runId": "b980dd5d-19f1-47e9-8752-05026c613951",
+  "actor": "opencode-agent",
+  "task_id": "3.3",
+  "surfaceId": "memory-detail",
+  "stateId": "loaded",
+  "fixtureId": "memory-detail-loaded",
+  "journeyId": "memory-detail-basic",
+  "commitSha": "1e407c770a6df48a46b4b6acaded769413ba39c0",
+  "sourceDirty": true,
+  "xcode": { "version": "26.5", "build_version": "17F42", "sdk": "iOS Simulator", "runtime": "iPhone 17 Pro" },
+  "simulatorOwner": "cli_xctest",
+  "timestamp": "2026-08-01T23:40:00+08:00",
+  "build": { "result": "SUCCEEDED", "warnings": 0 },
+  "testResults": {
+    "memoryDetailViewModelTests": { "count": 16, "failures": 0, "status": "passed" },
+    "fullRegression": { "count": 520, "suites": 63, "failures": 0, "status": "passed" }
+  },
+  "contractValidation": { "status": "passed", "detail": "All 21 memory-detail surface/state/action/journey/fixture contracts valid against v1 schemas, cross-references resolved, 6 declared states implemented" },
+  "surfaceFamily": { "declared": "focus", "layoutMode": "single_column", "masonryEnabled": false, "fallback": "Focus surface — masonry always disabled per §3.2/§8.1" },
+  "accessibilityAudit": {
+    "detailContent": "Combined accessibility elements with type/title/date labels",
+    "translationToggle": "accessibilityLabel + accessibilityValue (Translation shown / Original shown)",
+    "citationAnchors": "Separate elements with label 'Source memory citation'",
+    "stableIDs": ["memory-detail-edit-button", "memory-detail-translation-toggle", "memory-detail-delete-button", "memory-detail-retry-button", "memory-delete-remove-from-echo", "memory-delete-delete-original", "memory-conflict-keep-local", "memory-conflict-keep-external", "memory-edit-title", "memory-edit-save"]
+  },
+  "visualMediaCaptured": false,
+  "artifacts": {
+    "buildLog": "UIAutomation/Artifacts/logs/memory-detail-build.log",
+    "testSummary": "UIAutomation/Artifacts/summaries/memory-detail-test-summary.json",
+    "accessibilityTree": "UIAutomation/Artifacts/accessibility/memory-detail-loaded-axtree.json"
+  }
+}

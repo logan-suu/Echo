@@ -1,0 +1,37 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "surfaceId": "memory-detail",
+  "surfaceFamily": "focus",
+  "responsibility": "Render a single memory detail with content, grouped metadata, on-demand translation toggle (US-DIS-002), edit entry (US-AWK-007), L4 conflict resolution, deletion confirmation (US-PRV-004), and creation preview/save with citation anchors (US-SYN-002/003/004)",
+  "inputs": {
+    "memoryId": "UUID — memory identifier",
+    "memory": "MemoryDetailModel mapped from CanonicalMemory (content, sourceType, timestamp, locale, edit state, conflict state). sourceType supports photo / note / voice / video_frame / video_audio",
+    "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US)"
+  },
+  "outputs": {
+    "visibleContent": "Memory original text, translated text (toggleable), grouped metadata (source/time/location), citation anchors, edit entry. Media memories render previews from bundled deterministic samples: photo → Image, video → VideoPlayer, voice → audio player (Echo/Resources/MediaSamples/)",
+    "interactionTargets": "translateToggle, editButton, deleteButton, conflictActionButtons, saveButton, citationAnchor, retryButton, mediaPlayPause",
+    "accessibilityTree": "Content in reading order; grouped metadata; media preview with label; each citation anchor as separate element"
+  },
+  "systemContainer": "NavigationStack (pushed from Search/Home) + ScrollView + Form sheet for edit + Alert for delete confirmation",
+  "layoutMode": "single_column",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "Focus surface — masonry always disabled (echo-memory-canvas §3.2, §8.1)"
+  ],
+  "states": [
+    "loading",
+    "loaded",
+    "translated",
+    "editing",
+    "conflict",
+    "error"
+  ],
+  "loadedVariants": [
+    "memory-detail-loaded (note)",
+    "memory-detail-photo-loaded (photo, userEdited)",
+    "memory-detail-voice-loaded (voice transcript)",
+    "memory-detail-video-loaded (video_frame)"
+  ],
+  "version": "1.0.0"
+}

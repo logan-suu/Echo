@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "detail.delete",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.presentDeleteConfirmation()",
+  "expectedOutcome": "Delete confirmation alert with two options: 'Remove from Echo only' / 'Delete original file too' (US-PRV-004 AC-1)",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

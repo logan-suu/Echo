@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "detail.retry",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.retry()",
+  "expectedOutcome": "Reload memory after L2 error; view returns to loaded/error accordingly",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

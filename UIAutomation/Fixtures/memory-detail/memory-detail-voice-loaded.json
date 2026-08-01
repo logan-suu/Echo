@@ -1,0 +1,34 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "memory-detail-voice-loaded",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "memoryId": "66666666-6666-6666-6666-666666666666",
+    "assetId": "voice-zh-1",
+    "sourceType": "voice",
+    "title": "明天下午接妈妈",
+    "originalText": "帮我记得明天下午三点去高铁站接妈妈，她坐 G1234 次列车。",
+    "sourceLanguage": "zh-Hans",
+    "preferredLanguage": "en-US",
+    "timestamp": 1723593600,
+    "tags": [
+      "家人",
+      "提醒"
+    ],
+    "translationVisible": false,
+    "translatedText": null,
+    "translationConfidence": null,
+    "mediaAssetName": "voice-note-reminder",
+    "location": "杭州东站"
+  },
+  "controlledVariables": [
+    "timestamp",
+    "memoryId",
+    "translation"
+  ],
+  "version": "1.0.0"
+}

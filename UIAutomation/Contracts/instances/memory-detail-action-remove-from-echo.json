@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "detail.removeFromEcho",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.deleteMemory(preserveOriginal: true)",
+  "expectedOutcome": "Memory removed from Echo, asset written to ExcludedAssets (US-PRV-004 AC-2); 🔮 Core write Phase 3.9",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

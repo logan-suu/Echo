@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "conflict",
+  "surfaceId": "memory-detail",
+  "dataConditions": {
+    "memory": "Conflict flagged (external change detected while editing)",
+    "viewState": "error(L4)"
+  },
+  "allowedActions": ["detail.keepLocal", "detail.keepExternal", "detail.merge", "detail.dismissConflict"],
+  "expectedSemantics": {
+    "conflictBanner": "Content conflict — external source modified",
+    "localVersion": "User edit preview",
+    "externalVersion": "External new version",
+    "actionButtons": "Keep my edit / Use external version / View diff and merge"
+  },
+  "version": "1.0.0"
+}

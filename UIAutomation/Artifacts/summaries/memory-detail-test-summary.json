@@ -1,0 +1,33 @@
+{
+  "runId": "b980dd5d-19f1-47e9-8752-05026c613951",
+  "task_id": "3.3",
+  "summary": "Memory detail Focus surface UI slice: MemoryDetailView + MemoryDetailViewModel + MemoryDetailFixtureLoader. All verification gates passed.",
+  "suites": [
+    {
+      "suite": "MemoryDetailViewModelTests",
+      "count": 16,
+      "failures": 0,
+      "coverage": {
+        "US-AWK-007 AC-1": "Edit entry, form pre-fill, save persist, blank title guard",
+        "US-AWK-007 AC-2": "userEdited flag, original timestamp preserved",
+        "US-AWK-007 AC-4": "Edit blocked on conflict, resolve local/external",
+        "US-DIS-002 AC-3/AC-4": "Translation toggle visibility, low-confidence original retention",
+        "US-PRV-004 AC-1/AC-2/AC-3": "Delete confirmation dialog, remove-from-Echo, delete-original paths"
+      }
+    },
+    {
+      "suite": "Full regression (all phases)",
+      "count": 520,
+      "failures": 0
+    }
+  ],
+  "contractValidation": {
+    "schemasValidated": ["surface-v1", "state-v1", "action-v1", "journey-v1", "fixture-v1"],
+    "crossReferences": "memory-detail surface states ↔ 6 state files, journey fixture refs resolved",
+    "fixtureDecoding": "Deterministic JSON fixtures valid; Swift MemoryDetailFixtureLoader mirrors them"
+  },
+  "build": "SUCCEEDED (0 warnings)",
+  "lint": "0 violations on new files (1 codebase-consistent required_deinit warning, matches HomeViewModel/SearchViewModel precedent)",
+  "surfaceFamilyCheck": "Focus / single_column / masonry disabled per §3.2 (memory detail — 明确禁止 masonry)",
+  "visualMediaCaptured": false
+}

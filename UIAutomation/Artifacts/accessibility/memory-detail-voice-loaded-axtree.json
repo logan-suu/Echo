@@ -1,0 +1,20 @@
+{
+  "artifactType": "accessibility_tree",
+  "runId": "3.3-multitype-iteration",
+  "surfaceId": "memory-detail",
+  "stateId": "loaded",
+  "fixtureId": "memory-detail-voice-loaded",
+  "device": "iPhone 16 Pro (iOS 18.2)",
+  "capturedAt": "2026-08-02T00:34:00+08:00",
+  "source": "ax-service",
+  "highlights": [
+    "title: 明天下午接妈妈",
+    "translationToggle: Show translation (value=Original shown)",
+    "body: 帮我记得明天下午三点去高铁站接妈妈，她坐 G1234 次列车。",
+    "metadataGroup: Memory details: Voice, 2024年8月14日, zh-Hans",
+    "metadataRows: Source=Voice / Date / Language / Tags=家人, 提醒",
+    "creationPreview: AI Creation + 🔮 Preview + citation anchor",
+    "deleteButton: Remove this memory"
+  ],
+  "evidence": "Search → Detail navigation verified end-to-end: Search tab (search-multitype fixture) → tapped Voice card → this detail. Photo and Video cards verified the same way (memory-detail-photo-loaded / memory-detail-video-loaded)."
+}

@@ -391,8 +391,16 @@ final class SearchViewModel {
 
     // MARK: - Lifecycle
 
-    /// 视图消失时调用 — 取消正在进行的任务。
+    /// 视图消失时调用 — 取消进行中的任务；已完成的结果保留。
+    ///
+    /// iOS 17+ NavigationStack push 子视图会触发父视图 onDisappear，
+    /// 无条件取消会导致从详情返回时搜索结果丢失（回归 2026-08-02 修复）。
+    /// loading 状态离开 → cancelled（返回后回 idle）；completed 状态保留结果。
     func onDisappear() {
-        cancelSearch()
+        searchTask?.cancel()
+        searchTask = nil
+        if viewState == .loading {
+            viewState = .cancelled
+        }
     }
 }

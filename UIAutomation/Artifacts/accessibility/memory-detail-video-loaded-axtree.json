@@ -1,0 +1,21 @@
+{
+  "artifactType": "accessibility_tree",
+  "runId": "3.3-media-iteration",
+  "surfaceId": "memory-detail",
+  "stateId": "loaded",
+  "fixtureId": "memory-detail-video-loaded",
+  "device": "iPhone 16 Pro (iOS 18.2)",
+  "capturedAt": "2026-08-02T00:52:00+08:00",
+  "source": "ax-service",
+  "highlights": [
+    "mediaPreview: AXGroup Video (0.040, 0.133, 0.920, 0.275) — VideoPlayer region",
+    "mediaLabel: 海边日落 video",
+    "playerHint: Liftable subject available (video frame recognizable)",
+    "title: 海边日落",
+    "translationToggle: Show translation",
+    "body: 傍晚的海边，日落把天空染成橙色，海浪声很大，画面最后有小孩跑过镜头。",
+    "metadataGroup: Memory details: Video, 2024年8月15日, zh-Hans",
+    "creationPreview + citation anchor + deleteButton present"
+  ],
+  "evidence": "Media preview renders above content for video_frame memory. Photo fixture verified similarly (AXTextField '公园里的红裙子 photo' image region 0.318 height). Voice fixture verified (AXButton 'Play voice memo' → 'Pause voice memo' on tap, duration 0:03)."
+}

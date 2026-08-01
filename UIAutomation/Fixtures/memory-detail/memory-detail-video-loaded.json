@@ -1,0 +1,34 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "memory-detail-video-loaded",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "memoryId": "77777777-7777-7777-7777-777777777777",
+    "assetId": "video-zh-1",
+    "sourceType": "video_frame",
+    "title": "海边日落",
+    "originalText": "傍晚的海边，日落把天空染成橙色，海浪声很大，画面最后有小孩跑过镜头。",
+    "sourceLanguage": "zh-Hans",
+    "preferredLanguage": "en-US",
+    "timestamp": 1723680000,
+    "tags": [
+      "海边",
+      "日落"
+    ],
+    "translationVisible": false,
+    "translatedText": null,
+    "translationConfidence": null,
+    "mediaAssetName": "video-seaside-sunset",
+    "location": "三亚湾"
+  },
+  "controlledVariables": [
+    "timestamp",
+    "memoryId",
+    "translation"
+  ],
+  "version": "1.0.0"
+}

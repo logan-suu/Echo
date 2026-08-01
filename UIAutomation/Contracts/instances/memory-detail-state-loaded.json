@@ -1,0 +1,21 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loaded",
+  "surfaceId": "memory-detail",
+  "dataConditions": {
+    "memory": "Memory detail mapped from fixture: note (memory-detail-loaded) or media variants (memory-detail-photo-loaded / memory-detail-voice-loaded / memory-detail-video-loaded)",
+    "viewState": "completed",
+    "translationVisible": false
+  },
+  "allowedActions": ["detail.translate", "detail.edit", "detail.delete", "detail.exportCreation"],
+  "expectedSemantics": {
+    "title": "Memory title or type label",
+    "body": "Original text (note text / photo description / voice transcript / video frame description)",
+    "metadata": "Source type (Photo/Note/Voice/Video), date, locale",
+    "translationToggle": "Show translation (only when memory locale != preferredLanguage)",
+    "editButton": "Edit",
+    "deleteButton": "Remove memory",
+    "citationAnchors": "One accessible element per source anchor"
+  },
+  "version": "1.0.0"
+}

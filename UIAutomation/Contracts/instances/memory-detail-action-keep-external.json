@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "detail.keepExternal",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.resolveConflict(keep: .external)",
+  "expectedOutcome": "Conflict resolved adopting external new version (US-AWK-007 AC-4); 🔮 Core write Phase 3.9",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

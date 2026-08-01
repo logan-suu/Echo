@@ -1,0 +1,76 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "search-multitype",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "discovery",
+  "payload": {
+    "query": "回忆",
+    "results": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "assetId": "photo-zh-1",
+        "sourceType": "photo",
+        "timestamp": 1723507200,
+        "originalText": null,
+        "sourceLanguage": null,
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.91,
+        "alignmentScore": null,
+        "feedbackAdjustment": null,
+        "lowConfidence": false,
+        "fallbackReason": null,
+        "unappliedFilters": []
+      },
+      {
+        "id": "22222222-2222-2222-2222-222222222222",
+        "assetId": "note-zh-2",
+        "sourceType": "note",
+        "timestamp": 1723420800,
+        "originalText": "昨晚在公园遇到一只橘猫，很亲人",
+        "sourceLanguage": "zh-Hans",
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.87,
+        "alignmentScore": null,
+        "feedbackAdjustment": null,
+        "lowConfidence": false,
+        "fallbackReason": null,
+        "unappliedFilters": []
+      },
+      {
+        "id": "66666666-6666-6666-6666-666666666666",
+        "assetId": "voice-zh-1",
+        "sourceType": "voice",
+        "timestamp": 1723593600,
+        "originalText": "帮我记得明天下午三点去高铁站接妈妈",
+        "sourceLanguage": "zh-Hans",
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.84,
+        "alignmentScore": null,
+        "feedbackAdjustment": null,
+        "lowConfidence": false,
+        "fallbackReason": null,
+        "unappliedFilters": []
+      },
+      {
+        "id": "77777777-7777-7777-7777-777777777777",
+        "assetId": "video-zh-1",
+        "sourceType": "video_frame",
+        "timestamp": 1723680000,
+        "originalText": "傍晚的海边，日落把天空染成橙色",
+        "sourceLanguage": "zh-Hans",
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.82,
+        "alignmentScore": null,
+        "feedbackAdjustment": null,
+        "lowConfidence": false,
+        "fallbackReason": null,
+        "unappliedFilters": []
+      }
+    ]
+  },
+  "controlledVariables": ["timestamp", "id", "cosineSimilarity"],
+  "version": "1.0.0"
+}
