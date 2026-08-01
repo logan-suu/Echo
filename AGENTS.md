@@ -740,7 +740,7 @@ Echo/
 │       ├── HomeView.swift
 │       └── SettingsView.swift
 ├── Resources/
-│   ├── Models/ (MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small)
+│   ├── Models/ (SigLIP2 checkpoint 转换源, multilingual-e5-small, Whisper GGUF)
 │   ├── MusicOffline/ (热门歌曲 JSON)
 │   └── StringCatalog/
 ├── EchoTests/                    # 🧪 单元测试与集成测试（按阶段分文件夹）

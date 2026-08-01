@@ -121,7 +121,7 @@ Echo/
 │   ├── ViewModels/
 │   └── Views/
 ├── Resources/
-│   ├── Models/ (MobileCLIP-B LT, multilingual-e5-small, SenseVoice Small)
+│   ├── Models/ (SigLIP2 checkpoint 转换源, multilingual-e5-small, Whisper GGUF)
 │   └── StringCatalog/
 ├── EchoTests/                    # 🧪 单元测试与集成测试（按阶段分文件夹）
 │   ├── Phase1/                   # Phase 1 测试
