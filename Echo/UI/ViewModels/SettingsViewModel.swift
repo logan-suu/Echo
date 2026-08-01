@@ -10,12 +10,13 @@
 //            §10.1.3 (空态), §11 (Toast/Banner/通知栏)
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.4 - SettingsView + SettingsViewModel
-// AC 覆盖: US-SRC-004 AC-1/AC-2 ✅ (数据源开关), US-SRC-008 AC-1/AC-5/AC-6 ✅ (排除项管理入口),
-//            US-SRC-009 AC-1/AC-2 ✅ (数据概览/模型状态), US-PRV-002 AC-1 ✅ (审计日志入口),
-//            US-PRV-003 AC-1/AC-2 ✅ (审计导出), US-RES-004 AC-2/AC-7 ✅ (模型重试/降级),
+// AC 覆盖: US-SRC-004 AC-1/AC-2 ✅ (数据源开关), US-SRC-008 AC-1 ✅ / AC-5/AC-6 🔶 (排除项管理入口, sub-page deferred to 3.9),
+//            US-SRC-009 AC-1/AC-2 ✅ (数据概览/模型状态), US-PRV-002 AC-1 🔶 (审计日志入口, sub-page deferred to 3.9),
+//            US-PRV-003 AC-1 ✅ / AC-2 🔶 (审计导出, stub deferred to 3.9), US-RES-004 AC-2/AC-7 ✅ (模型重试/降级),
 //            US-SET-002 AC-1/AC-3 ✅ (永久保留), US-SET-003 AC-1/AC-3 ✅ (缓存清理/存储占用),
-//            US-SET-004 AC-1/AC-2 ✅ (迁移指引), US-FBK-002 AC-5 ✅ (清除所有反馈),
+//            US-SET-004 AC-1 ✅ / AC-2 🔶 (迁移指引, sub-page deferred to 3.9), US-FBK-002 AC-5 ✅ (清除所有反馈),
 //            US-PRV-005 AC-1/AC-2/AC-4 ✅ (冷却期 UI), L1~L4 错误映射 ✅
+// Legend: ✅ implemented | 🔶 stub/skeleton (entry point exists, detail deferred to Phase 3.9) | 🔮 planned future phase
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相)
@@ -128,7 +129,7 @@ final class SettingsViewModel {
             try await Task.sleep(nanoseconds: 500_000_000)
             await loadSettings()
         } catch {
-            state = .error(.l2Recoverable("缓存清理失败"))
+            state = .error(.l2Recoverable("Failed to clear cache"))
         }
     }
 
@@ -142,12 +143,22 @@ final class SettingsViewModel {
             try await Task.sleep(nanoseconds: 500_000_000)
             await loadSettings()
         } catch {
-            state = .error(.l2Recoverable("反馈重置失败"))
+            state = .error(.l2Recoverable("Failed to reset feedback"))
         }
     }
 
     func exportAuditLog() {
         showExportInProgress = true
+    }
+
+    func startDeleteData() async {
+        showDeleteDataConfirmation = false
+        do {
+            try await Task.sleep(nanoseconds: 500_000_000)
+            await loadSettings()
+        } catch {
+            state = .error(.l2Recoverable("Failed to start data deletion"))
+        }
     }
 
     func retry() async {

@@ -7,10 +7,13 @@
 //            §10.1.3 (空态), §11 (Toast/Banner)
 //            docs/ui/architecture.md §2 (单向数据流), §3 (组件边界)
 // 任务: 3.4 - SettingsView + SettingsViewModel
-// AC 覆盖: US-SRC-004 AC-1/AC-2 ✅, US-SRC-008 AC-1/AC-5 ✅, US-SRC-009 AC-1/AC-2 ✅,
-//            US-PRV-002 AC-1 ✅, US-PRV-003 AC-1/AC-2 ✅, US-RES-004 AC-2/AC-7 ✅,
-//            US-SET-002 AC-1/AC-3 ✅, US-SET-003 AC-1/AC-3 ✅, US-SET-004 AC-1/AC-2 ✅,
+// AC 覆盖: US-SRC-004 AC-1/AC-2 ✅, US-SRC-008 AC-1 ✅ / AC-5 🔶 (sub-page deferred to 3.9),
+//            US-SRC-009 AC-1/AC-2 ✅, US-PRV-002 AC-1 🔶 (sub-page deferred to 3.9),
+//            US-PRV-003 AC-1 ✅ / AC-2 🔶 (stub, deferred to 3.9), US-RES-004 AC-2/AC-7 ✅,
+//            US-SET-002 AC-1/AC-3 ✅, US-SET-003 AC-1/AC-3 ✅,
+//            US-SET-004 AC-1 ✅ / AC-2 🔶 (sub-page deferred to 3.9),
 //            US-FBK-002 AC-5 ✅, US-PRV-005 AC-1/AC-2/AC-4 ✅
+// Legend: ✅ implemented | 🔶 stub/skeleton (entry point exists, detail deferred) | 🔮 planned future phase
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable), echo-memory-canvas apple-native 基础,
 //           Task surface family (Form/List, 禁止 masonry), §2.3 (semantic colors),
 //           §2.4 (SF Symbols), §2.5 (可访问性)
@@ -59,7 +62,7 @@ struct SettingsView: View {
             } message: { Text("This will permanently delete all your feedback learning data. Re-ranking weights will return to defaults. This cannot be undone.") }
             .alert("Delete All Echo Data", isPresented: $viewModel.showDeleteDataConfirmation) {
                 Button("Cancel", role: .cancel) {}
-                Button("Start Deletion", role: .destructive) {}
+                Button("Start Deletion", role: .destructive) { Task { await viewModel.startDeleteData() } }
             } message: { Text("A 24-hour cooling period will begin. During this time, you can cancel. After cooling period ends, all Echo data will be permanently erased. Your original photos and files will not be affected.") }
     }
 
