@@ -562,7 +562,13 @@
             "3.3"
           ],
           "test_file": "EchoTests/Phase3/SettingsViewModelTests.swift",
-          "notes": "📝 范围大幅扩展（2026-07-26 审计）。原有：数据源开关+排除项管理+缓存清理。新增：审计日志查看器(PRV-002)、审计日志导出(PRV-003)、模型状态页(RES-004)、反馈记录管理页(FBK-002)、索引统计(SRC-009)、迁移指引(SET-004)、冷却期管理(PRV-005)、数据概览。依赖新增 3.0+1.6。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)\n(2026-08-02) UI bootstrap 3.4 started: status ready→in_progress."
+          "notes": "📝 范围大幅扩展（2026-07-26 审计）。原有：数据源开关+排除项管理+缓存清理。新增：审计日志查看器(PRV-002)、审计日志导出(PRV-003)、模型状态页(RES-004)、反馈记录管理页(FBK-002)、索引统计(SRC-009)、迁移指引(SET-004)、冷却期管理(PRV-005)、数据概览。依赖新增 3.0+1.6。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)\n(2026-08-02) UI bootstrap 3.4 started: status ready→in_progress.\n(2026-08-02) PR #39 created: SettingsViewModel (12 US stories, 22 ACs, 16 tests). i18n deferred to Phase 3.8.",
+          "pr": {
+            "number": 39,
+            "url": "https://github.com/logan-suu/Echo/pull/39",
+            "branch": "feature/settings-view-US-SRC-004",
+            "created_at": "2026-08-02T11:26:00Z"
+          }
         },
         {
           "id": "3.5",
