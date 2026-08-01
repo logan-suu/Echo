@@ -489,3 +489,45 @@ struct IngestPipelineVideoTests {
         #expect(results.count >= 4, "Expected at least 4 search results")
     }
 }
+
+// MARK: - R-1.3: Video Ingestion Rollback
+
+extension IngestPipelineVideoTests {
+
+    @Test("R-1.3: ASR failure rolls back already-written frame memories")
+    func test_R13_asrFailure_rollsBackFrames() async throws {
+        let videoAssetId = "VID-R13"
+        let frameCount = 3
+        let frameAssetIds = (0..<frameCount).map { "frame-R13-\($0)" }
+        let audioTrackId = "audio-R13"
+
+        // 帧 embedding 成功，但 ASR 抛错（模拟音频转写失败）
+        await stubEmbedder.setNextEmbedding(Array(repeating: 1.0, count: 512))
+        await stubEmbedder.setNextError(nil)
+        await stubASR.setNextError(.transcriptionFailed(reason: "injected"))
+
+        let beforeCount = await vectorStore.liveCount
+
+        do {
+            _ = try await sut.ingestVideo(
+                assetId: videoAssetId,
+                frameAssetIds: frameAssetIds,
+                audioTrackAssetId: audioTrackId,
+                traceID: UUID().uuidString
+            )
+            #expect(Bool(false), "Expected audioTranscriptionFailed")
+        } catch let error as Echo.IngestError {
+            if case .audioTranscriptionFailed = error {
+                // expected
+            } else {
+                #expect(Bool(false), "Wrong error: \(error)")
+            }
+        } catch {
+            #expect(Bool(false), "Expected IngestError, got: \(error)")
+        }
+
+        // R-1.3 核心断言：3 个已写入的帧记忆应被回滚删除
+        let afterCount = await vectorStore.liveCount
+        #expect(afterCount == beforeCount, "R-1.3: ASR 失败后帧记忆必须回滚（before=\(beforeCount), after=\(afterCount)）")
+    }
+}

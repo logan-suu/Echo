@@ -269,6 +269,25 @@ public actor SyncPipeline {
         for (index, change) in changes.enumerated() {
             // R-1.8: 取消检查 — 任务取消时优雅退出
             if Task.isCancelled {
+                // W2: 取消路径写入审计（success=false + cancelled 标记），
+                // 使部分完成的同步可审计。进度行保留（§4.5: 下次询问是否继续）。
+                let auditSource = sourceTypes.joined(separator: ",")
+                    + "|replaced=\(replacedCount)"
+                    + "|skipped=\(skippedCount)"
+                    + "|hashSkipped=\(hashSkippedCount)"
+                    + "|failed=\(failedCount)"
+                    + "|cancelled=1"
+                try? await privacyActor.writeAuditLog(
+                    eventType: .dataSourceChangeSynced,
+                    traceID: traceID,
+                    policyVersion: checkpoint.policyVersion,
+                    success: false,
+                    sourceType: auditSource,
+                    affectedCount: replacedCount,
+                    excludedWritten: false,
+                    sourceLanguage: nil,
+                    elapsedMs: Int(Date().timeIntervalSince(startTime) * 1000)
+                )
                 throw SyncError.cancelled
             }
 
@@ -312,6 +331,11 @@ public actor SyncPipeline {
                     // 与旧记忆相同，摄入后查找会把新记忆也当作旧记录误删。
                     let oldMemoryIds = try await findMemories(byAssetId: change.assetId)
 
+                    // AC-6 (W1): 删除旧记忆窗口期加锁，阻止并发用户编辑（L4 冲突保护）
+                    for memId in oldMemoryIds {
+                        lockedMemoryIds.insert(memId)
+                    }
+
                     let newEmbedding = try await generateEmbedding(for: change)
                     let newMemory = MemoryEntry(
                         assetId: change.assetId,
@@ -332,6 +356,11 @@ public actor SyncPipeline {
                     // 新记录写入成功后才删除旧记忆（AC-4, R-003: 不写 ExcludedAssets）
                     for memId in oldMemoryIds {
                         _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
+                    }
+
+                    // AC-6: 删除完成，释放锁
+                    for memId in oldMemoryIds {
+                        lockedMemoryIds.remove(memId)
                     }
 
                     replacedCount += 1

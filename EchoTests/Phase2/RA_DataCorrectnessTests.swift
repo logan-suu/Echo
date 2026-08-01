@@ -28,25 +28,46 @@ struct SQLiteQueryErrorTests {
 
     @Test("executeQuery throws on non-DONE final step code (R-1.4)")
     func test_query_stepError_throws() async throws {
-        // 注入一个 UDF 错误：创建临时表 + 注册一个会报错的函数
-        // 通过执行一个会中途出错的查询来验证错误传播
-        // 使用一个未知函数调用触发 SQLITE_ERROR
+        // W3 修复: 用触发器 + RAISE(ABORT) 构造【step 阶段】错误。
+        // 之前的 "SELECT nonexistent_function(1)" 在 prepare 阶段即失败，
+        // 未触及新增的 step-error 分支（测试在修复前也通过）。
+        try await db.execute(sql: "DROP TABLE IF EXISTS R1Test_Trigger")
+        try await db.execute(sql: "CREATE TABLE R1Test_Trigger (id INTEGER)")
+        try await db.execute(sql: """
+            CREATE TRIGGER IF NOT EXISTS R1Test_TriggerError
+            AFTER INSERT ON R1Test_Trigger
+            BEGIN
+                SELECT RAISE(ABORT, 'R1 test injected error');
+            END
+            """)
+        // 清理触发器（避免影响其他测试）
+        defer {
+            Task {
+                try? await db.execute(sql: "DROP TRIGGER IF EXISTS R1Test_TriggerError")
+                try? await db.execute(sql: "DROP TABLE IF EXISTS R1Test_Trigger")
+            }
+        }
+
+        // 插入触发错误：INSERT 的 step 会返回 SQLITE_CONSTRAINT_TRIGGER（非 DONE/ROW）
         do {
-            _ = try await db.executeQuery(
-                sql: "SELECT nonexistent_function(1)",
+            _ = try await db.executeWrite(
+                sql: "INSERT INTO R1Test_Trigger (id) VALUES (1)",
                 bindings: []
             )
-            // 若没抛错，说明错误被吞掉了（R-1.4 缺陷未修复）
-            #expect(Bool(false), "Expected readFailed error for broken query")
+            #expect(Bool(false), "Expected writeFailed for trigger error")
         } catch let error as Echo.DatabaseError {
-            if case .readFailed = error {
-                // expected — R-1.4 修复后错误正确传播
+            if case .writeFailed = error {
+                // expected — 写入路径错误传播
             } else {
                 #expect(Bool(false), "Wrong error: \(error)")
             }
         } catch {
             #expect(Bool(false), "Expected DatabaseError, got: \(error)")
         }
+
+        // 再验证查询路径：SELECT 触发器表不会报错（仅 INSERT 触发）
+        let rows = try await db.executeQuery(sql: "SELECT * FROM R1Test_Trigger", bindings: [])
+        #expect(rows.isEmpty)
     }
 
     @Test("executeQuery returns rows normally for valid query")
@@ -158,7 +179,8 @@ struct SyncAtomicityTests {
             sql: "SELECT success, sourceType FROM AuditLog WHERE eventType = 'dataSourceChangeSynced' ORDER BY timestamp DESC LIMIT 1",
             bindings: []
         )
-        #expect(rows.count == 1)
+        #expect(rows.count == 1, "R-1.2: 应存在 dataSourceChangeSynced 审计记录")
+        guard rows.count == 1 else { return }  // W5: 空结果守卫，避免 rows[0] 越界
         let success = rows[0]["success"]?.intValue
         #expect(success == 0, "R-1.2: 有失败项时 success 必须为 false")
         let sourceType = rows[0]["sourceType"]?.stringValue ?? ""
@@ -183,6 +205,10 @@ struct SyncAtomicityTests {
             sql: "SELECT success, sourceType FROM AuditLog WHERE eventType = 'dataSourceChangeSynced' ORDER BY timestamp DESC LIMIT 1",
             bindings: []
         )
+        guard rows.count == 1 else {  // W5: 空结果守卫
+            #expect(Bool(false), "R-1.2: 应存在 dataSourceChangeSynced 审计记录")
+            return
+        }
         let success = rows[0]["success"]?.intValue
         #expect(success == 1, "R-1.2: 全部成功时 success 应为 true")
     }
@@ -319,5 +345,125 @@ struct SyncCancellationTests {
         #expect(SyncError.cancelled.errorLevel == 1)
         #expect(SyncError.cancelled == .cancelled)
         #expect(SyncError.cancelled.errorDescription != nil)
+    }
+
+    @Test("R-1.8: cancelled task throws SyncError.cancelled (behavior)")
+    func test_cancelled_task_throws() async throws {
+        let assetId = "R18-\(UUID().uuidString.prefix(8))"
+        let memory = MemoryEntry(
+            assetId: assetId,
+            embedding: Array(repeating: 1.0, count: 512),
+            sourceType: "note",
+            timestamp: Date(),
+            exifMetadata: nil,
+            privacyBlurApplied: false,
+            traceID: UUID().uuidString,
+            originalText: "内容"
+        )
+        let metadata = try memory.encodeMetadata()
+        try await vectorStore.ingest(vector: memory.embedding, id: memory.id, metadata: metadata)
+
+        let change = ChangeEvent(assetId: assetId, source: .note, changeType: .modified, newContentHash: "h")
+
+        // 在已取消的 Task 中调用 sync → 第一轮迭代即抛 .cancelled
+        let cancelledTask = Task<SyncResult, Error> {
+            try await sut.sync(changes: [change], traceID: UUID().uuidString)
+        }
+        cancelledTask.cancel()
+
+        do {
+            _ = try await cancelledTask.value
+            #expect(Bool(false), "Expected SyncError.cancelled")
+        } catch let error as Echo.SyncError {
+            #expect(error == .cancelled)
+        } catch {
+            #expect(Bool(false), "Expected SyncError, got: \(error)")
+        }
+    }
+}
+
+// MARK: - R-1.6: Authorization Filtering
+
+@Suite("R-1.6 Authorization Filtering", .serialized)
+@MainActor
+struct AuthorizationFilterTests {
+
+    let db = DatabaseManager.shared
+    let privacyActor = PrivacyActor.shared
+
+    init() async throws {
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM UserPolicyStore")
+    }
+
+    private func makePipeline() -> (pipeline: SearchPipeline, store: VectorStoreActor) {
+        let store = VectorStoreActor(dimension: 512)
+        return (
+            pipeline: SearchPipeline(
+                embedder: StubEmbedder(defaultEmbedding: Array(repeating: 0.5, count: 384)),
+                privacyActor: privacyActor,
+                vectorStore: store
+            ),
+            store: store
+        )
+    }
+
+    private func ingestMemory(_ store: VectorStoreActor, sourceType: String, vector: Float) async throws {
+        let memory = MemoryEntry(
+            assetId: "asset-\(UUID().uuidString.prefix(8))",
+            embedding: Array(repeating: vector, count: 512),
+            sourceType: sourceType,
+            timestamp: Date(),
+            exifMetadata: nil,
+            privacyBlurApplied: false,
+            traceID: UUID().uuidString
+        )
+        let metadata = try memory.encodeMetadata()
+        try await store.ingest(vector: memory.embedding, id: memory.id, metadata: metadata)
+    }
+
+    @Test("R-1.6: video_frame memory searchable when video authorized (P1)")
+    func test_videoAuthorized_videoFrameSearchable() async throws {
+        try await privacyActor.updatePolicy(UserPolicy(
+            preferredLanguage: "zh-Hans",
+            authorizedSourceTypes: ["search", "video"],
+            policyVersion: 1
+        ))
+
+        let pair = makePipeline()
+        try await ingestMemory(pair.store, sourceType: "video_frame", vector: 1.0)
+
+        let results = try await pair.pipeline.search(query: "video", k: 5)
+        #expect(results.count == 1, "P1: 授权 video 后 video_frame 记忆应可搜索")
+        #expect(results[0].sourceType == "video_frame")
+    }
+
+    @Test("R-1.6: photo memory excluded when photo revoked")
+    func test_photoRevoked_photoExcluded() async throws {
+        try await privacyActor.updatePolicy(UserPolicy(
+            preferredLanguage: "zh-Hans",
+            authorizedSourceTypes: ["search", "note"],  // photo 未授权
+            policyVersion: 1
+        ))
+
+        let pair = makePipeline()
+        try await ingestMemory(pair.store, sourceType: "photo", vector: 1.0)
+        try await ingestMemory(pair.store, sourceType: "note", vector: 2.0)
+
+        let results = try await pair.pipeline.search(query: "memory", k: 5)
+        // note 记忆保留，photo 记忆被过滤
+        let photoCount = results.filter { $0.sourceType == "photo" }.count
+        #expect(photoCount == 0, "R-1.6: 撤销 photo 后 photo 记忆不得返回")
+        let noteCount = results.filter { $0.sourceType == "note" }.count
+        #expect(noteCount == 1, "R-1.6: note 记忆应保留")
+    }
+
+    @Test("normalizeSourceType maps video_frame/video_audio/text")
+    func test_normalizeSourceType() {
+        #expect(SearchPipeline.normalizeSourceType("video_frame") == "video")
+        #expect(SearchPipeline.normalizeSourceType("video_audio") == "video")
+        #expect(SearchPipeline.normalizeSourceType("text") == "note")
+        #expect(SearchPipeline.normalizeSourceType("photo") == "photo")
+        #expect(SearchPipeline.normalizeSourceType("voice") == "voice")
     }
 }

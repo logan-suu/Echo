@@ -380,8 +380,11 @@ public actor SearchPipeline {
         }
 
         // R-1.6: 按当前授权集过滤结果 — 撤销某数据源后其历史数据不得再返回。
+        // 注意：记忆 sourceType 是细粒度（video_frame/video_audio/text），授权词汇表是
+        // 粗粒度数据源（photo/note/voice/video）。过滤前必须归一化，否则视频/文本记忆
+        // 即使在授权集内也会被误过滤（P1 修复）。
         let policy = await privacyActor.getPolicy()
-        items = items.filter { policy.isAuthorized(sourceType: $0.sourceType) }
+        items = items.filter { policy.isAuthorized(sourceType: Self.normalizeSourceType($0.sourceType)) }
 
         // R-1.7: 将未生效过滤器标记到每条结果
         if !unappliedFilters.isEmpty {
@@ -690,6 +693,21 @@ public actor SearchPipeline {
             // group's implicit wait re-throw the CancellationError.
             do { _ = try await group.next() } catch { /* cancelled, expected */ }
             return result
+        }
+    }
+
+    // MARK: - Source Type Normalization
+
+    /// 将记忆细粒度 sourceType 归一化为授权词汇表的数据源类型（P1）。
+    ///
+    /// 记忆 sourceType 是细粒度：`video_frame`/`video_audio`/`text`；
+    /// 授权词汇表是粗粒度数据源：`photo`/`note`/`voice`/`video`/`calendar`。
+    /// 直接比较会导致已授权数据源的记忆被误过滤。
+    static nonisolated func normalizeSourceType(_ sourceType: String) -> String {
+        switch sourceType {
+        case "video_frame", "video_audio": return "video"
+        case "text": return "note"
+        default: return sourceType
         }
     }
 }
