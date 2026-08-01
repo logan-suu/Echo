@@ -89,7 +89,7 @@ struct SearchPipelineTests {
         // Ensure search is authorized
         try await privacyActor.updatePolicy(UserPolicy(
             preferredLanguage: "zh-Hans",
-            authorizedSourceTypes: ["search", "photo", "note", "voice"],
+            authorizedSourceTypes: ["search", "photo", "note", "voice", "text"],
             policyVersion: 1
         ))
     }
