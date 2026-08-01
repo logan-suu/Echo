@@ -182,6 +182,8 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
     public nonisolated let lowConfidence: Bool
     /// 低置信度原因（US-RET-006 AC-1/AC-5: fallbackReason）
     public nonisolated let fallbackReason: String?
+    /// 未生效的过滤器（R-1.7）— 调用方传入但当前实现为 no-op 的过滤维度（如 tags/geoRadius/personIds）
+    public nonisolated let unappliedFilters: [String]
 
     public nonisolated init(
         id: UUID,
@@ -195,7 +197,8 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
         alignmentScore: Float? = nil,
         feedbackAdjustment: Float? = nil,
         lowConfidence: Bool = false,
-        fallbackReason: String? = nil
+        fallbackReason: String? = nil,
+        unappliedFilters: [String] = []
     ) {
         self.id = id
         self.assetId = assetId
@@ -209,6 +212,7 @@ public struct SearchResultItem: Sendable, Identifiable, Equatable {
         self.feedbackAdjustment = feedbackAdjustment
         self.lowConfidence = lowConfidence
         self.fallbackReason = fallbackReason
+        self.unappliedFilters = unappliedFilters
     }
 }
 
@@ -364,12 +368,40 @@ public actor SearchPipeline {
             ))
         }
 
-        // Step 6: Apply metadata post-filter (US-RET-004 AC-1)
+        // Step 6: Apply metadata post-filter (US-RET-004 AC-1) + R-1.6/R-1.7
         // NOTE: Current implementation is ANN post-filtering.
         // True FTS5 pre-filtering (ANN search within pre-filtered candidate set)
         // requires a SQLite FTS5 metadata table — deferred to Phase 3 optimization.
+        var unappliedFilters: [String] = []
         if let f = filter, !f.isEmpty {
-            items = applyFilter(items, filter: f)
+            let result = applyFilter(items, filter: f)
+            items = result.filtered
+            unappliedFilters = result.unapplied
+        }
+
+        // R-1.6: 按当前授权集过滤结果 — 撤销某数据源后其历史数据不得再返回。
+        let policy = await privacyActor.getPolicy()
+        items = items.filter { policy.isAuthorized(sourceType: $0.sourceType) }
+
+        // R-1.7: 将未生效过滤器标记到每条结果
+        if !unappliedFilters.isEmpty {
+            for i in items.indices {
+                items[i] = SearchResultItem(
+                    id: items[i].id,
+                    assetId: items[i].assetId,
+                    sourceType: items[i].sourceType,
+                    timestamp: items[i].timestamp,
+                    originalText: items[i].originalText,
+                    sourceLanguage: items[i].sourceLanguage,
+                    crossLanguageMatch: items[i].crossLanguageMatch,
+                    cosineSimilarity: items[i].cosineSimilarity,
+                    alignmentScore: items[i].alignmentScore,
+                    feedbackAdjustment: items[i].feedbackAdjustment,
+                    lowConfidence: items[i].lowConfidence,
+                    fallbackReason: items[i].fallbackReason,
+                    unappliedFilters: unappliedFilters
+                )
+            }
         }
 
         // Step 7: Detect query language + mark crossLanguageMatch
@@ -388,7 +420,10 @@ public actor SearchPipeline {
                 ),
                 cosineSimilarity: items[i].cosineSimilarity,
                 alignmentScore: items[i].alignmentScore,
-                feedbackAdjustment: items[i].feedbackAdjustment
+                feedbackAdjustment: items[i].feedbackAdjustment,
+                lowConfidence: items[i].lowConfidence,
+                fallbackReason: items[i].fallbackReason,
+                unappliedFilters: items[i].unappliedFilters
             )
         }
 
@@ -420,7 +455,10 @@ public actor SearchPipeline {
                     crossLanguageMatch: items[i].crossLanguageMatch,
                     cosineSimilarity: items[i].cosineSimilarity,
                     alignmentScore: items[i].alignmentScore,
-                    feedbackAdjustment: Float(adj)
+                    feedbackAdjustment: Float(adj),
+                    lowConfidence: items[i].lowConfidence,
+                    fallbackReason: items[i].fallbackReason,
+                    unappliedFilters: items[i].unappliedFilters
                 )
             }
         }
@@ -574,31 +612,27 @@ public actor SearchPipeline {
                     alignmentScore: item.alignmentScore,
                     feedbackAdjustment: item.feedbackAdjustment,
                     lowConfidence: true,
-                    fallbackReason: "cross-encoder alignment score \(String(format: "%.3f", score)) below threshold 0.6"
+                    fallbackReason: "cross-encoder alignment score \(String(format: "%.3f", score)) below threshold 0.6",
+                    unappliedFilters: item.unappliedFilters
                 )
             }
             return item
         }
     }
 
-    /// 应用元数据过滤器（US-RET-004 AC-1）。
+    /// 应用元数据过滤器（US-RET-004 AC-1），返回过滤结果与未生效过滤器列表（R-1.7）。
     ///
     /// **重要**: 当前实现为 ANN 后过滤（post-filter），非规格书中的 FTS5 预过滤。
     /// 流程: ANN 检索 → 解码元数据 → 应用过滤条件 → 取 top-K。
     ///
-    /// 真正的 FTS5 预过滤（ANN 检索前通过 SQLite FTS5 缩小候选集）
-    /// 需要建立元数据表与 FTS5 索引，留待后续优化任务实现。
-    ///
-    /// 当前支持的过滤维度:
-    /// - timeRange: ✅ 时间范围过滤（基于 metadata.timestamp）
-    /// - tags: ⚠️ 保留接口，暂无实现（需元数据扩展）
-    /// - geoRadius: ⚠️ 保留接口，暂无实现（需 geohash 存储）
-    /// - personIds: ⚠️ 保留接口，暂无实现（需人物 ID 存储）
+    /// - Returns: `(filtered, unapplied)` — `unapplied` 列出调用方传入但当前实现
+    ///   为 no-op 的过滤维度（如 tags/geoRadius/personIds），让调用方得知过滤未生效。
     private nonisolated func applyFilter(
         _ items: [SearchResultItem],
         filter: SearchFilter
-    ) -> [SearchResultItem] {
+    ) -> (filtered: [SearchResultItem], unapplied: [String]) {
         var filtered = items
+        var unapplied: [String] = []
 
         // Time range filter (US-RET-004 AC-1)
         if let timeRange = filter.timeRange {
@@ -607,25 +641,22 @@ public actor SearchPipeline {
             }
         }
 
-        // Tags filter — NOT YET IMPLEMENTED
-        // TODO (Phase 3): Add tag storage in metadata + FTS5 index
-        if let _ = filter.tags {
-            // No-op: silently accepted, actual filtering requires metadata extension
+        // Tags filter — NOT YET IMPLEMENTED (R-1.7: 显式标记未生效)
+        if filter.tags != nil {
+            unapplied.append("tags")
         }
 
-        // Geo filter — NOT YET IMPLEMENTED
-        // TODO (Phase 3): Add geohash/coordinates in metadata + haversine filtering
-        if let _ = filter.geoRadius {
-            // No-op: silently accepted, actual filtering requires metadata extension
+        // Geo filter — NOT YET IMPLEMENTED (R-1.7)
+        if filter.geoRadius != nil {
+            unapplied.append("geoRadius")
         }
 
-        // Person filter — NOT YET IMPLEMENTED
-        // TODO (Phase 3): Add personId in metadata + filter by intersection
-        if let _ = filter.personIds {
-            // No-op: silently accepted, actual filtering requires metadata extension
+        // Person filter — NOT YET IMPLEMENTED (R-1.7)
+        if filter.personIds != nil {
+            unapplied.append("personIds")
         }
 
-        return filtered
+        return (filtered, unapplied)
     }
 
     /// 带超时的异步操作封装（US-RET-008 AC-1）。

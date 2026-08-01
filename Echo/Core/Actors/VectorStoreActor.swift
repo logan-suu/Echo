@@ -127,6 +127,14 @@ public actor VectorStoreActor {
         get async { await index.isEmpty }
     }
 
+    /// 精确枚举全部活跃条目（R-1.5）。
+    ///
+    /// 使用 ProximaKit 的 `liveEntries()` 精确全量枚举，替代零向量 ANN 搜索——
+    /// ANN 是近似搜索，不保证返回全部条目，用于「按 assetId 找所有记忆」会导致漏删。
+    public func allEntries() async -> [(id: UUID, metadata: Data?)] {
+        await index.liveEntries()
+    }
+
     // MARK: - Persistence
 
     /// 将当前索引持久化到文件。

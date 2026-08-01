@@ -332,97 +332,102 @@ public actor IngestPipeline {
         // Step 3: Generate shared memoryGroupId (AC-3)
         let groupId = UUID()
         var memories: [MemoryEntry] = []
-
-        // Step 4: Frame channel — each frame: embed → MemoryEntry → ingest (AC-1)
-        for frameAssetId in frameAssetIds {
-            let frameEmbedding: [Float]
-            do {
-                frameEmbedding = try await embedder.embedImage(assetId: frameAssetId)
-            } catch {
-                throw IngestError.embeddingFailed(underlying: error)
-            }
-
-            let frameMemory = MemoryEntry(
-                assetId: frameAssetId,           // AC-4: PHAsset reference
-                embedding: frameEmbedding,
-                sourceType: "video_frame",
-                timestamp: Date(),
-                exifMetadata: nil,               // AC-1: video frames don't carry EXIF
-                privacyBlurApplied: false,        // AC-1: no blurring
-                traceID: traceID,
-                memoryGroupId: groupId            // AC-3
-            )
-
-            let frameMetadata: Data
-            do {
-                frameMetadata = try frameMemory.encodeMetadata()
-            } catch {
-                throw IngestError.metadataEncodingFailed(underlying: error)
-            }
-
-            do {
-                try await vectorStore.ingest(vector: frameEmbedding, id: frameMemory.id, metadata: frameMetadata)
-            } catch {
-                throw IngestError.vectorStoreWriteFailed(underlying: error)
-            }
-
-            memories.append(frameMemory)
-        }
-
-        // Step 5: Audio channel — transcribe → embedText → MemoryEntry → ingest (AC-2)
-        let hasAudio: Bool
+        // R-1.3: 在 do 块外声明，供 Step 6 审计日志使用（hasAudio/audioTranscriptLength）
+        var hasAudio: Bool = false
         var audioTranscriptLength: Int = 0
 
-        if let audioId = audioTrackAssetId {
-            if let asr = asrEngine {
-                hasAudio = true
-
-                let transcript: String
+        // R-1.3: 帧/音频写入回滚 — Step 4+5 任一失败时清理已写入的半成品。
+        // 原实现帧逐条写入后再处理音频，ASR 或音频写入失败时已写帧永久残留。
+        do {
+            // Step 4: Frame channel — each frame: embed → MemoryEntry → ingest (AC-1)
+            for frameAssetId in frameAssetIds {
+                let frameEmbedding: [Float]
                 do {
-                    transcript = try await asr.transcribe(audioTrackAssetId: audioId)
-                } catch {
-                    throw IngestError.audioTranscriptionFailed(underlying: error)
-                }
-                audioTranscriptLength = transcript.count
-
-                let audioEmbedding: [Float]
-                do {
-                    audioEmbedding = try await embedder.embedText(transcript)
+                    frameEmbedding = try await embedder.embedImage(assetId: frameAssetId)
                 } catch {
                     throw IngestError.embeddingFailed(underlying: error)
                 }
 
-                let audioMemory = MemoryEntry(
-                    assetId: assetId,
-                    embedding: audioEmbedding,
-                    sourceType: "video_audio",
+                let frameMemory = MemoryEntry(
+                    assetId: frameAssetId,           // AC-4: PHAsset reference
+                    embedding: frameEmbedding,
+                    sourceType: "video_frame",
                     timestamp: Date(),
-                    exifMetadata: nil,
-                    privacyBlurApplied: false,
+                    exifMetadata: nil,               // AC-1: video frames don't carry EXIF
+                    privacyBlurApplied: false,        // AC-1: no blurring
                     traceID: traceID,
-                    memoryGroupId: groupId
+                    memoryGroupId: groupId            // AC-3
                 )
 
-                let audioMetadata: Data
+                let frameMetadata: Data
                 do {
-                    audioMetadata = try audioMemory.encodeMetadata()
+                    frameMetadata = try frameMemory.encodeMetadata()
                 } catch {
                     throw IngestError.metadataEncodingFailed(underlying: error)
                 }
 
                 do {
-                    try await vectorStore.ingest(vector: audioEmbedding, id: audioMemory.id, metadata: audioMetadata)
+                    try await vectorStore.ingest(vector: frameEmbedding, id: frameMemory.id, metadata: frameMetadata)
                 } catch {
                     throw IngestError.vectorStoreWriteFailed(underlying: error)
                 }
 
-                memories.append(audioMemory)
-            } else {
-                // audio track present but ASR engine not configured (SenseVoice pending)
-                hasAudio = false
+                memories.append(frameMemory)
             }
-        } else {
-            hasAudio = false
+
+            // Step 5: Audio channel — transcribe → embedText → MemoryEntry → ingest (AC-2)
+            if let audioId = audioTrackAssetId {
+                if let asr = asrEngine {
+                    hasAudio = true
+
+                    let transcript: String
+                    do {
+                        transcript = try await asr.transcribe(audioTrackAssetId: audioId)
+                    } catch {
+                        throw IngestError.audioTranscriptionFailed(underlying: error)
+                    }
+                    audioTranscriptLength = transcript.count
+
+                    let audioEmbedding: [Float]
+                    do {
+                        audioEmbedding = try await embedder.embedText(transcript)
+                    } catch {
+                        throw IngestError.embeddingFailed(underlying: error)
+                    }
+
+                    let audioMemory = MemoryEntry(
+                        assetId: assetId,
+                        embedding: audioEmbedding,
+                        sourceType: "video_audio",
+                        timestamp: Date(),
+                        exifMetadata: nil,
+                        privacyBlurApplied: false,
+                        traceID: traceID,
+                        memoryGroupId: groupId
+                    )
+
+                    let audioMetadata: Data
+                    do {
+                        audioMetadata = try audioMemory.encodeMetadata()
+                    } catch {
+                        throw IngestError.metadataEncodingFailed(underlying: error)
+                    }
+
+                    do {
+                        try await vectorStore.ingest(vector: audioEmbedding, id: audioMemory.id, metadata: audioMetadata)
+                    } catch {
+                        throw IngestError.vectorStoreWriteFailed(underlying: error)
+                    }
+
+                    memories.append(audioMemory)
+                }
+            }
+        } catch {
+            // R-1.3: 任一步骤失败 → 回滚本次已写入的帧与音频记忆，再重新抛出
+            for memory in memories {
+                _ = await vectorStore.delete(id: memory.id)
+            }
+            throw error
         }
 
         // Step 6: Audit log (AC-5: .videoIngested, frameCount, audioTranscriptLength, hasAudio)

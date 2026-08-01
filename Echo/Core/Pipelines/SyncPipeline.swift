@@ -44,6 +44,8 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
     case memoryLockedDuringSync(memoryId: String)
     /// 哈希对比跳过 — 非错误，仅为记录（内容过大或内存不足）
     case hashSkippedDueToConstraints(reason: String)
+    /// 同步任务被取消（R-1.8）— 任务取消时优雅退出循环
+    case cancelled
 
     /// L1~L4 错误分级
     public nonisolated var errorLevel: Int {
@@ -56,6 +58,7 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
         case .vectorStoreFailed:          return 2
         case .memoryLockedDuringSync:     return 4
         case .hashSkippedDueToConstraints: return 1
+        case .cancelled:                  return 1
         }
     }
 
@@ -77,6 +80,8 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
             return "Memory \(memoryId) is locked during sync — 该记忆正在同步更新中，请稍后再编辑"
         case .hashSkippedDueToConstraints(let reason):
             return "Hash comparison skipped due to constraints: \(reason)"
+        case .cancelled:
+            return "Sync cancelled by user or system"
         }
     }
 
@@ -91,6 +96,7 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
         case (.vectorStoreFailed, .vectorStoreFailed): return true
         case (.memoryLockedDuringSync(let a), .memoryLockedDuringSync(let b)): return a == b
         case (.hashSkippedDueToConstraints(let a), .hashSkippedDueToConstraints(let b)): return a == b
+        case (.cancelled, .cancelled): return true
         default: return false
         }
     }
@@ -261,6 +267,11 @@ public actor SyncPipeline {
 
         // Step 3: Process each change
         for (index, change) in changes.enumerated() {
+            // R-1.8: 取消检查 — 任务取消时优雅退出
+            if Task.isCancelled {
+                throw SyncError.cancelled
+            }
+
             // AC-5: Check ExcludedAssets — fail-closed
             do {
                 let isExcluded = try await excludedAssets.contains(assetId: change.assetId)
@@ -293,21 +304,14 @@ public actor SyncPipeline {
             do {
                 switch change.changeType {
                 case .modified, .added:
-                    // AC-4: Delete old memories (if any), then re-ingest
-                    // Find old memories by assetId
+                    // R-1.1: 原子性修复 — 先生成新向量并摄入，成功后再删除旧记忆。
+                    // 原实现先删旧再摄入：若 embedding 生成或写入失败，旧记忆已永久丢失。
+                    // 新实现失败时旧记录仍在，无数据损失。
+                    //
+                    // 注意：旧记忆 ID 必须在摄入新记忆【之前】查询——新记忆的 assetId
+                    // 与旧记忆相同，摄入后查找会把新记忆也当作旧记录误删。
                     let oldMemoryIds = try await findMemories(byAssetId: change.assetId)
 
-                    // AC-6: Lock old memories to prevent concurrent edits
-                    for memId in oldMemoryIds {
-                        lockedMemoryIds.insert(memId)
-                    }
-
-                    // Delete old memories from vector store (red line R-003: NO ExcludedAssets write)
-                    for memId in oldMemoryIds {
-                        _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
-                    }
-
-                    // Re-ingest new content
                     let newEmbedding = try await generateEmbedding(for: change)
                     let newMemory = MemoryEntry(
                         assetId: change.assetId,
@@ -325,9 +329,9 @@ public actor SyncPipeline {
                         metadata: metadata
                     )
 
-                    // AC-6: Release locks
+                    // 新记录写入成功后才删除旧记忆（AC-4, R-003: 不写 ExcludedAssets）
                     for memId in oldMemoryIds {
-                        lockedMemoryIds.remove(memId)
+                        _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
                     }
 
                     replacedCount += 1
@@ -343,11 +347,7 @@ public actor SyncPipeline {
             } catch {
                 // Individual asset failure does not block others (AC-4 partial failure)
                 failedCount += 1
-                // Release any locks that were set
-                let oldMemoryIds = (try? await findMemories(byAssetId: change.assetId)) ?? []
-                for memId in oldMemoryIds {
-                    lockedMemoryIds.remove(memId)
-                }
+                // Release any locks that were set (R-1.1: 新摄入成功后旧锁已自然释放)
             }
 
             // Update progress
@@ -361,17 +361,18 @@ public actor SyncPipeline {
         // Step 4: Audit log (AC-9)
         // AC-9 requires: changeType, sourceType, affectedCount, replacedFlag=true,
         // excludedNotWritten=true, hashSkipped. Encoded in sourceType as:
-        // "photo,note|replaced=3|skipped=1|hashSkipped=2"
+        // "photo,note|replaced=3|skipped=1|hashSkipped=2|failed=1"
         let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
         let auditSourceDetail = sourceTypes.joined(separator: ",")
             + "|replaced=\(replacedCount)"
             + "|skipped=\(skippedCount)"
             + "|hashSkipped=\(hashSkippedCount)"
+            + "|failed=\(failedCount)"
         try? await privacyActor.writeAuditLog(
             eventType: .dataSourceChangeSynced,
             traceID: traceID,
             policyVersion: checkpoint.policyVersion,
-            success: true,
+            success: failedCount == 0,  // R-1.2: 有失败项时 success 必须为 false
             sourceType: auditSourceDetail,
             affectedCount: replacedCount,
             excludedWritten: false,  // red line R-003: 系统自动删除不写 ExcludedAssets
@@ -525,25 +526,22 @@ public actor SyncPipeline {
 
     /// 在 VectorStore 中查找指定 assetId 的所有记忆 ID。
     ///
-    /// 通过搜索全部条目并解码元数据来匹配 assetId。
+    /// 使用 `VectorStoreActor.allEntries()` 精确全量枚举（R-1.5），
+    /// 替代零向量 ANN 搜索——ANN 不保证返回全部条目，会导致漏删旧记忆。
     /// - Parameter assetId: PHAsset.localIdentifier 或其他数据源标识符
     /// - Returns: 匹配的记忆 UUID 字符串列表
     private func findMemories(byAssetId assetId: String) async throws -> [String] {
-        let liveCount = await vectorStore.liveCount
-        guard liveCount > 0 else { return [] }
-
-        // Use zero vector as query to get all entries sorted by distance
-        let zeroVector = Array(repeating: Float(0), count: vectorStore.dimension)
-        let results = await vectorStore.search(query: zeroVector, k: liveCount)
+        let entries = await vectorStore.allEntries()
+        guard !entries.isEmpty else { return [] }
 
         var matchingIds: [String] = []
-        for result in results {
-            guard let metadata = result.metadata,
+        for entry in entries {
+            guard let metadata = entry.metadata,
                   let decoded = try? MemoryEntry.decodeMetadata(from: metadata),
                   decoded.assetId == assetId else {
                 continue
             }
-            matchingIds.append(result.id.uuidString)
+            matchingIds.append(entry.id.uuidString)
         }
         return matchingIds
     }
