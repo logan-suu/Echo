@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-01T11:00:00Z",
+  "last_updated": "2026-08-01T15:00:00Z",
   "current_phase": 3,
   "phases": [
     {
@@ -850,6 +850,15 @@
           "dependencies": [],
           "test_file": "EchoTests/Phase4/BilingualRerankerTests.swift",
           "notes": "R-3.9 挑战者赛道。训练样本全部自有或已授权，固定 shape Core ML 转换，12-24 候选重排 P95 达标"
+        },
+        {
+          "id": "4.20",
+          "title": "R-5.2 Share Extension：备忘录/语音备忘录显式分享摄入（独立 target）",
+          "story": "US-SRC-001, US-SRC-002",
+          "status": "backlog",
+          "dependencies": [],
+          "test_file": "EchoTests/Phase4/ShareExtensionTests.swift",
+          "notes": "R-5.2 决策（2026-08-01 路径 A）：放弃自动扫描备忘录/语音备忘录，通过 Share Extension 用户主动分享摄入。需独立 Extension target + App Group 共享数据。"
         }
       ]
     },
