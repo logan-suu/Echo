@@ -525,7 +525,7 @@
           "title": "记忆详情页 MemoryDetailView + ViewModel + 编辑 + 冲突解决 + 创作展示 + 翻译切换",
           "story": "US-AWK-007, US-SYN-002, US-SYN-003, US-SYN-004, US-PRV-004, US-DIS-002",
           "status": "done",
-          "last_updated": "2026-08-01T19:03:25Z",
+  "last_updated": "2026-08-02T20:09:17Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
@@ -549,8 +549,9 @@
           "id": "3.4",
           "title": "设置页面 SettingsView + ViewModel（数据源开关、排除项管理、审计日志、模型状态、反馈记录、索引统计、迁移指引、设备迁移冲突UI）",
           "story": "US-SRC-004, US-SRC-007, US-SRC-008, US-SRC-009, US-PRV-002, US-PRV-003, US-RES-004, US-SET-001, US-SET-002, US-SET-003, US-SET-004, US-FBK-002, US-PRV-005",
-          "status": "review",
-          "last_updated": "2026-08-02T11:25:00Z",
+          "status": "done",
+          "last_updated": "2026-08-02T20:09:17Z",
+          "merged_at": "2026-08-02T20:09:17Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/ui/echo-memory-canvas-style.md"
@@ -574,7 +575,8 @@
           "id": "3.5",
           "title": "实时后台任务面板",
           "story": "US-SYS-001",
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-08-02T20:09:17Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md"
