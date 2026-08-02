@@ -630,6 +630,12 @@
           "story": null,
           "status": "review",
           "last_updated": "2026-08-02T20:30:00+08:00",
+          "pr": {
+            "number": 42,
+            "url": "https://github.com/logan-suu/Echo/pull/42",
+            "branch": "feature/resume-progress-prompt-US-SYS-001",
+            "created_at": "2026-08-02T15:22:00Z"
+          },
           "ui_run": {
             "runId": "3.7-bootstrap",
             "automation_phase": "accepted",
