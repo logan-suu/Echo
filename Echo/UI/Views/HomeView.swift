@@ -51,6 +51,9 @@ struct HomeView: View {
     /// 后台任务面板展示开关
     @State private var isTaskPanelPresented = false
 
+    /// 降级横幅 ViewModel — Live Sim Review fixture 注入 (Task 3.6)
+    @State private var degradationViewModel = DegradationBannerViewModel()
+
     /// 首次出现标记 — 控制 fixture 注入仅执行一次
     @State private var hasHandledLaunchArguments = false
 
@@ -62,10 +65,15 @@ struct HomeView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            // Main content
-            contentView
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
+            VStack(spacing: 0) {
+                // Degradation banner (Task 3.6 — Live Sim Review fixture)
+                DegradationBannerView(viewModel: degradationViewModel)
+
+                contentView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
 
             // Offline banner (US-RES-001 AC-3)
             if viewModel.isOffline {
@@ -76,6 +84,7 @@ struct HomeView: View {
         }
         .navigationTitle("Echo · 回响")
         .navigationBarTitleDisplayMode(.large)
+        .modifier(DisableLargeTitleScroll())
         .toolbar {
             // 后台任务面板入口 (US-SYS-001 AC-1: 顶部状态栏实时显示活跃任务)
             ToolbarItem(placement: .topBarTrailing) {
@@ -132,6 +141,9 @@ struct HomeView: View {
             taskPanelViewModel.loadPreloadedTasks(items)
             taskPanelViewModel.openPanel()
             isTaskPanelPresented = true
+
+        case "degradation-low-power", "degradation-thermal", "degradation-model-degraded", "degradation-normal":
+            degradationViewModel.loadFixture(fixtureID)
 
         default:
             break
@@ -537,4 +549,33 @@ private func makePreviewViewModel(cards: [(String, String)], isOffline: Bool = f
     vm.loadAwakeningCardsPreloaded()
     if isOffline { vm.setOffline(true) }
     return vm
+}
+
+// MARK: - iOS 26 Large Title Workaround
+
+/// iOS 26 (Liquid Glass) 将 Large Title 与内容中第一个最高层 ScrollView 联动，
+/// overscroll 时标题被拉下穿过固定 Banner（iOS 18 无此行为，标题固定在导航栏）。
+/// 通过包裹一个禁用的横向 ScrollView，让 NavigationStack 将标题关联到不可滚动外层，
+/// 使标题在 iOS 26 上保持固定，与 iOS 18 行为一致。
+/// 参考: stackoverflow.com/q/79771449 (Large navigation title scrolls with ScrollView)
+/// 仅 iOS 26+ 生效；iOS 18 原样返回，不改变现有正确行为。
+private struct DisableLargeTitleScroll: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            GeometryReader { proxy in
+                ScrollView(.horizontal) {
+                    VStack(spacing: 0) {
+                        Rectangle()
+                            .frame(height: 0.5)
+                            .foregroundStyle(.clear)
+                        content
+                            .frame(width: proxy.size.width)
+                    }
+                }
+                .scrollDisabled(true)
+            }
+        } else {
+            content
+        }
+    }
 }

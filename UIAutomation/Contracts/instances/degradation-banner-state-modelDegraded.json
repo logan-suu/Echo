@@ -1,0 +1,15 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "modelDegraded",
+  "properties": {
+    "isBannerVisible": true,
+    "bannerIcon": "exclamationmark.triangle",
+    "bannerMessage": "Functional limitations due to model loading issues.",
+    "showBackgroundTaskToggle": false,
+    "backgroundTasksPaused": false,
+    "showRetryButton": true,
+    "showSettingsButton": true,
+    "bannerTint": "red"
+  }
+}

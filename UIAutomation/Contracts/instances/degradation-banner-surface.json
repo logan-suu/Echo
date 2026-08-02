@@ -1,0 +1,58 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "surfaceFamily": "task",
+  "description": "Displays non-intrusive degradation banners when device conditions (low power, thermal pressure, model load failure) require reduced functionality. Auto-dismisses when conditions normalize. Per echo-memory-canvas-style §11.4.",
+  "states": [
+    {
+      "stateId": "normal",
+      "description": "No degradation active. Banner hidden.",
+      "fixtureId": "degradation-normal"
+    },
+    {
+      "stateId": "lowPower",
+      "description": "Low power mode enabled. Banner shows battery warning + optional background task pause toggle.",
+      "fixtureId": "degradation-low-power"
+    },
+    {
+      "stateId": "thermal",
+      "description": "Device thermal state .serious or above. Banner shows temperature warning.",
+      "fixtureId": "degradation-thermal"
+    },
+    {
+      "stateId": "modelDegraded",
+      "description": "Core ML model failed to load. Banner shows model error + retry button.",
+      "fixtureId": "degradation-model-degraded"
+    }
+  ],
+  "actions": [
+    {
+      "actionId": "banner.dismiss",
+      "description": "User dismisses a banner (available for all degradation types)"
+    },
+    {
+      "actionId": "banner.retryModelLoad",
+      "description": "User taps retry on model degradation banner"
+    },
+    {
+      "actionId": "banner.toggleBackgroundTasks",
+      "description": "User toggles 'pause background tasks during low power' setting"
+    },
+    {
+      "actionId": "banner.openSettings",
+      "description": "User taps settings button to navigate to relevant settings section"
+    }
+  ],
+  "journeys": [
+    {
+      "journeyId": "degradation-lifecycle",
+      "description": "Full lifecycle: normal → lowPower → thermal → modelDegraded → normal recovery",
+      "steps": ["normal", "lowPower", "thermal", "modelDegraded", "normal"]
+    }
+  ],
+  "accessibility": {
+    "roles": ["banner", "alert"],
+    "traits": ["updatesFrequently", "startsMediaSession"],
+    "dynamicType": "supported"
+  }
+}

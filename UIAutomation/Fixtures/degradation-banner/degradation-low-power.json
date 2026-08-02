@@ -1,0 +1,16 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-low-power",
+  "surfaceId": "degradation-banner",
+  "stateId": "lowPower",
+  "degradation": {
+    "type": "lowPower",
+    "message": "Low Power Mode is enabled. Memory search precision may be reduced.",
+    "icon": "battery.25",
+    "tint": "yellow",
+    "backgroundTasksPaused": true,
+    "showToggle": true
+  },
+  "activeDegradations": ["lowPower"],
+  "canDismiss": true
+}

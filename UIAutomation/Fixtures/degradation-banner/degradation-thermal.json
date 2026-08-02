@@ -1,0 +1,16 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-thermal",
+  "surfaceId": "degradation-banner",
+  "stateId": "thermal",
+  "degradation": {
+    "type": "thermal",
+    "message": "Device temperature is high. Some features have been temporarily simplified.",
+    "icon": "thermometer.high",
+    "tint": "orange",
+    "backgroundTasksPaused": false,
+    "showToggle": false
+  },
+  "activeDegradations": ["thermal"],
+  "canDismiss": true
+}

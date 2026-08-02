@@ -600,8 +600,14 @@
           "id": "3.6",
           "title": "统一错误处理 UI（L1~L4）+ 空态/加载态 + 降级横幅 + 冷却期提醒",
           "story": "US-DIS-003, US-RES-002, US-RES-003, US-RES-004, US-SYN-008, US-PRV-005",
-          "status": "ready",
-          "last_updated": "2026-08-02T04:21:10Z",
+          "status": "review",
+          "last_updated": "2026-08-02T14:10:00+08:00",
+          "pr": {
+            "number": 41,
+            "url": "https://github.com/logan-suu/Echo/pull/41",
+            "branch": "feature/degradation-banner-US-RES-002",
+            "created_at": "2026-08-02T05:47:00Z"
+          },
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/02-architecture/架构设计文档.md",
@@ -613,7 +619,7 @@
             "3.5"
           ],
           "test_file": "EchoTests/Phase3/ErrorHandlerUITests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。原有：L1~L4 错误 UI。新增：空态/加载态 String Catalog(DIS-003)、低电量/过热降级横幅(RES-002/003)、模型降级横幅(RES-004)、冷却期提醒(PRV-005)。依赖新增 3.0。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)"
+          "notes": "📝 范围扩展（2026-07-26 审计）。原有：L1~L4 错误 UI。新增：空态/加载态 String Catalog(DIS-003)、低电量/过热降级横幅(RES-002/003)、模型降级横幅(RES-004)、冷却期提醒(PRV-005)。依赖新增 3.0。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)\n(2026-08-02) UI bootstrap 3.6 accepted: automation_phase=accepted, delivery approved at 2026-08-02T13:38:00+08:00 (dual-device Live Sim Review iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2, 3 iterations). Degradation banner slice delivered (US-RES-002/003/004 banner UI). Unit tests 22/22 passed. SwiftLint 0 new violations. Core integration (RES-002 AC-5 audit, RES-003 AC-1/4/5, RES-004 AC-1~8) deferred to Phase 3.9 + R-3/R-4. PR #41 open.\n(2026-08-02 PR review fix) R2: AC-3 (US-RES-002) 部分交付——banner 内 Toggle 已交付; 设置页 surface 开关延后至 Phase 3.9 Settings 任务。R1/R3/R4 已修复并推送 (Addresses PR review)。R5 (i18n) / R6 (DisableLargeTitleScroll) 记入 deferred-items.json。"
         },
         {
           "id": "3.7",

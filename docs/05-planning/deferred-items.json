@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-02",
+  "_last_updated": "2026-08-02T14:10:00+08:00",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -222,6 +222,26 @@
       "location": "SettingsViewModel.swift:140,152",
       "reason": "loadSettings() internally sets .loading; standalone .loading would cause double-transition",
       "defer_to": "Refactor when real cache/feedback persistence is added",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-41-1",
+      "pr": 41,
+      "title": "DegradationBanner 用户可见字符串硬编码英文（i18n 未接入）",
+      "severity": "🟡",
+      "location": "DegradationBannerViewModel.swift:39,52,65 / DegradationBannerView.swift:78,88",
+      "reason": "banner message/label 全部硬编码英文，未走 String Catalog。符合 Phase 3 UI 分期模式（Task 3.5 同模式），但需明确追踪避免丢失。",
+      "defer_to": "Phase 3.8 跨语言翻译层集成（String Catalog zh-Hans + en-US）",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-41-2",
+      "pr": 41,
+      "title": "DisableLargeTitleScroll 全布局 hack 需 Phase 3.9 复查",
+      "severity": "🟡",
+      "location": "HomeView.swift (DisableLargeTitleScroll modifier)",
+      "reason": "iOS 26 Liquid Glass Large Title 与 ScrollView 联动（overscroll 穿过 banner），用水平禁滚 ScrollView + GeometryReader 包裹内容固定标题。已 #available(iOS 26.0) 守卫并在双设备 Live Sim 通过，但有连带布局风险（offline banner overlay / Dynamic Type AX5）。",
+      "defer_to": "Phase 3.9 统一错误处理整合时复查；-degradationFixture 与 -ui-fixture 两套注入机制合并为单一机制",
       "deferred_at": "2026-08-02"
     }
   ]

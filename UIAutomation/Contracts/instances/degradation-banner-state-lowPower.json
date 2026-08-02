@@ -1,0 +1,14 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "lowPower",
+  "properties": {
+    "isBannerVisible": true,
+    "bannerIcon": "battery.25",
+    "bannerMessage": "Low Power Mode is enabled. Memory search precision may be reduced.",
+    "showBackgroundTaskToggle": true,
+    "backgroundTasksPaused": true,
+    "showRetryButton": false,
+    "bannerTint": "yellow"
+  }
+}

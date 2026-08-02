@@ -1,0 +1,14 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "thermal",
+  "properties": {
+    "isBannerVisible": true,
+    "bannerIcon": "thermometer.high",
+    "bannerMessage": "Device temperature is high. Some features have been temporarily simplified.",
+    "showBackgroundTaskToggle": false,
+    "backgroundTasksPaused": false,
+    "showRetryButton": false,
+    "bannerTint": "orange"
+  }
+}

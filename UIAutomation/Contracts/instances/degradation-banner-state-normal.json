@@ -1,0 +1,14 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "normal",
+  "properties": {
+    "isBannerVisible": false,
+    "bannerIcon": null,
+    "bannerMessage": null,
+    "showBackgroundTaskToggle": false,
+    "backgroundTasksPaused": false,
+    "showRetryButton": false,
+    "bannerTint": null
+  }
+}
