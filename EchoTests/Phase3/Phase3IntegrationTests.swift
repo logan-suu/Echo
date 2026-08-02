@@ -5,9 +5,10 @@
 //            §8 (断点续传与进度管理)
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约 — 薄适配器不保存第二份领域真相)
 // 任务: 3.10 - Phase 3 集成测试：UI 与 Pipeline 联调验证
-// 测试范围: SearchViewModel ↔ SearchPipeline + FeedbackPipeline, HomeViewModel ↔ AwakeningPipeline,
-//           BackgroundTaskViewModel ↔ ProgressActor, ResumeProgressViewModel ↔ ProgressActor,
-//           MemoryDetailViewModel ↔ TranslationService + TranslationCache 跨层联调
+// AC 覆盖: 6 suites × 21 tests — SearchPipelineUIIntegration(5) ✅, SearchFeedbackUIIntegration(4) ✅
+//          (含 W-1 修复: 重排断言验证点赞记忆升至首位), HomeAwakeningUIIntegration(2) ✅,
+//          BackgroundTaskProgressUIIntegration(3) ✅, ResumeProgressUIIntegration(3) ✅,
+//          MemoryDetailTranslationUIIntegration(4) ✅ (含 W-2 修复: 同步恢复 UserPolicy)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           §4.1 (Pipeline 契约), §4.2 (Actor 隔离), R-006 (PrivacyCheckpoint), R-008 (跨 Actor await),
 //           docs/ui/architecture.md §7.1 (适配器契约)
