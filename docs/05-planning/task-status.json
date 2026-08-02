@@ -575,8 +575,8 @@
           "id": "3.5",
           "title": "实时后台任务面板",
           "story": "US-SYS-001",
-          "status": "review",
-          "last_updated": "2026-08-02T04:10:00Z",
+          "status": "done",
+          "last_updated": "2026-08-02T04:21:10Z",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md"
@@ -591,15 +591,17 @@
             "number": 40,
             "url": "https://github.com/logan-suu/Echo/pull/40",
             "branch": "feature/background-task-panel-US-SYS-001",
-            "created_at": "2026-08-02T04:00:09Z"
+            "created_at": "2026-08-02T04:00:09Z",
+            "merged_at": "2026-08-02T04:20:14Z",
+            "merge_commit": "4c3b6f11ff11fcef4290243760c7848e9bca3713"
           }
         },
         {
           "id": "3.6",
           "title": "统一错误处理 UI（L1~L4）+ 空态/加载态 + 降级横幅 + 冷却期提醒",
           "story": "US-DIS-003, US-RES-002, US-RES-003, US-RES-004, US-SYN-008, US-PRV-005",
-          "status": "backlog",
-          "last_updated": "2026-07-26T23:00:00Z",
+          "status": "ready",
+          "last_updated": "2026-08-02T04:21:10Z",
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/02-architecture/架构设计文档.md",
