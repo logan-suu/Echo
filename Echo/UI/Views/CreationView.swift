@@ -11,6 +11,7 @@
 //          AC-4 ✅ (保存到备忘录按钮), AC-5 ✅ (Toast+链接 / L2 重试),
 //          US-SYN-004 AC-4 ✅ (分享/导出/打印), AC-5 ✅ (标题含报告周期),
 //          US-SYN-005 AC-4 ✅ (Prompt 草稿可编辑确认), AC-6 ✅ (重置为默认)
+//          PR #44 review: W-1 ✅ (移除 example.com 外链回退), W-2 ✅ (Toast accessibility .contain)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Focus 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统容器 + semantic colors + Dynamic Type
 // 生成时间: 2026-08-02
@@ -436,15 +437,15 @@ struct CreationView: View {
 
             Spacer()
 
-            if let link = viewModel.noteLink {
-                Link("Open", destination: URL(string: link) ?? URL(string: "https://example.com")!)
+            if let link = viewModel.noteLink, let url = URL(string: link) {
+                Link("Open", destination: url)
                     .font(.subheadline)
                     .accessibilityIdentifier("creation-open-note")
             }
         }
         .padding(12)
         .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(viewModel.saveToastMessage ?? "Saved to Notes")
     }
 

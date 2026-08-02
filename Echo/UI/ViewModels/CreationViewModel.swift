@@ -10,6 +10,7 @@
 //          AC-4 ✅ (保存到备忘录按钮), AC-5 ✅ (保存成功 Toast+链接 / 失败 L2 Toast+重试),
 //          US-SYN-004 AC-4 ✅ (分享/导出/打印), AC-5 ✅ (保存逻辑与 SYN-003 一致, 标题含报告周期),
 //          US-SYN-005 AC-4 ✅ (Prompt 草稿可编辑确认), AC-6 ✅ (重置为默认 Prompt)
+//          PR #44 review: W-3 ✅ (saveTask 与 generateTask 分离, 取消保存恢复 .generated)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
@@ -120,6 +121,8 @@ final class CreationViewModel {
 
     /// 当前活跃的生成 Task
     private var generateTask: Task<Void, Never>?
+    /// 当前活跃的保存 Task — 与 generateTask 分离 (PR #44 review W-3)
+    private var saveTask: Task<Void, Never>?
     /// UI 切片模式模拟创作源 — fixture 注入
     private var stubCreation: CreationModel?
 
@@ -215,7 +218,9 @@ final class CreationViewModel {
         guard viewState == .generated else { return }
         viewState = .saving
 
-        generateTask = Task { [weak self] in
+        saveTask?.cancel()
+
+        saveTask = Task { [weak self] in
             guard let self else { return }
 
             // 模拟保存延迟
@@ -328,5 +333,7 @@ final class CreationViewModel {
     func onDisappear() {
         generateTask?.cancel()
         generateTask = nil
+        saveTask?.cancel()
+        saveTask = nil
     }
 }
