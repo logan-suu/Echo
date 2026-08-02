@@ -600,8 +600,13 @@
           "id": "3.6",
           "title": "统一错误处理 UI（L1~L4）+ 空态/加载态 + 降级横幅 + 冷却期提醒",
           "story": "US-DIS-003, US-RES-002, US-RES-003, US-RES-004, US-SYN-008, US-PRV-005",
-          "status": "ready",
-          "last_updated": "2026-08-02T04:21:10Z",
+          "status": "review",
+          "last_updated": "2026-08-02T05:46:00Z",
+          "pr": {
+            "number": null,
+            "url": null,
+            "branch": "feature/degradation-banner-US-RES-002"
+          },
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/02-architecture/架构设计文档.md",

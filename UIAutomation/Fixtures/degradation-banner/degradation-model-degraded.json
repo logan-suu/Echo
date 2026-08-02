@@ -1,0 +1,18 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-model-degraded",
+  "surfaceId": "degradation-banner",
+  "stateId": "modelDegraded",
+  "degradation": {
+    "type": "modelDegraded",
+    "message": "Functional limitations due to model loading issues.",
+    "icon": "exclamationmark.triangle",
+    "tint": "red",
+    "backgroundTasksPaused": false,
+    "showToggle": false,
+    "showRetry": true,
+    "showSettings": true
+  },
+  "activeDegradations": ["modelDegraded"],
+  "canDismiss": true
+}

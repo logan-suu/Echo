@@ -1,0 +1,9 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-normal",
+  "surfaceId": "degradation-banner",
+  "stateId": "normal",
+  "degradation": null,
+  "activeDegradations": [],
+  "canDismiss": false
+}
