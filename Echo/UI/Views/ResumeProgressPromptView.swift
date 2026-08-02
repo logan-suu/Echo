@@ -8,8 +8,9 @@
 //            §11.2 (L1 Toast) / §12.1 (L3 全屏) / §10.1.3 (Task 空态)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
 // 任务: 3.7 - 断点续传集成到长任务
-// AC 覆盖: US-SYS-001 AC-3 ✅ (取消后弹窗询问 — 继续/重新开始), AC-4 ✅ (进度 X/Y 展示 + 决策映射),
+// AC 覆盖: US-SYS-001 AC-3 🔶 (取消后弹窗询问 — 继续/重新开始, UI 切片), AC-4 🔶 (进度 X/Y 展示 + 决策映射),
 //          🔮 Core 读写 (ProgressActor.save/delete + TaskQueueActor.resume, Phase 3.9)
+//          (2026-08-02 PR review W-1: error 态改真实布局槽位, 不再依赖零高 frame 溢出; W-3: 弹窗文案统一英文)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统 confirmationDialog 容器
 // 生成时间: 2026-08-02
@@ -28,10 +29,10 @@ import SwiftUI
 ///
 /// ## 状态驱动
 /// - checking: 无弹窗（检查中，短暂过渡）
-/// - prompt: 系统 confirmationDialog，展示 "已完成 X / Y，是否继续？" + 继续/重新开始
+/// - prompt: 系统 confirmationDialog，展示 "X / Y completed" + Continue/Restart
 /// - none: 无弹窗（无未完成进度，任务直接从 0 开始）
 /// - resumed / restarted: 弹窗关闭（决策已记录）
-/// - error: 内联 L2 错误 + 重试按钮
+/// - error: 内联 L2 错误 + 重试按钮（真实布局槽位，见 HomeView）
 ///
 /// ## 用法
 /// 嵌入任务启动宿主视图（如 HomeView / BackgroundTaskPanelView 等）。宿主调用
@@ -75,15 +76,16 @@ struct ResumeProgressPromptView: View {
 
     // MARK: - Content
 
+    /// 非 error 态渲染空占位 host（零布局占用，仅作 confirmationDialog 挂载锚点），
+    /// error 态渲染内联 L2 横幅（真实布局槽位, 2026-08-02 W-1）。
+    /// 空 host 为 Color.clear（无内容无溢出），横幅不再依赖零高 frame 的非裁剪溢出。
     @ViewBuilder
     private var content: some View {
-        switch viewModel.viewState {
-        case .idle, .checking, .prompt, .none, .resumed, .restarted:
+        if case .error(let level) = viewModel.viewState {
+            errorState(level)
+        } else {
             Color.clear
                 .frame(height: 0)
-
-        case .error(let level):
-            errorState(level)
         }
     }
 
@@ -134,12 +136,12 @@ struct ResumeProgressPromptView: View {
         "Resume interrupted task"
     }
 
-    /// 恢复提示正文 — 展示已完成进度 X / Y。
+    /// 恢复提示正文 — 展示已完成进度 X / Y（统一英文, 2026-08-02 W-3）。
     private var dialogMessage: String {
         guard case .prompt(let progress) = viewModel.viewState else {
             return ""
         }
-        return "检测到未完成的进度（已完成 \(progress.lastProcessedIndex) / \(progress.totalCount)），是否继续？"
+        return "An interrupted task was found with \(progress.lastProcessedIndex) of \(progress.totalCount) items completed. Continue where you left off?"
     }
 }
 

@@ -6,8 +6,10 @@
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surface — Alert/confirmationDialog),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.7 - 断点续传集成到长任务
-// AC 覆盖: US-SYS-001 AC-3 ✅ (取消后弹窗询问继续/重新开始 — UI 切片), AC-4 ✅ (继续保留进度/重新开始清除进度 — UI 切片),
+// AC 覆盖: US-SYS-001 AC-3 🔶 (取消后弹窗询问继续/重新开始 — UI 切片, Core 检测延后 Phase 3.9),
+//          AC-4 🔶 (继续保留进度/重新开始清除进度 意图映射 — UI 切片, Core 读写延后 Phase 3.9),
 //          🔮 ProgressActor/TaskQueueActor 真实读写 + 审计 (Phase 3.9 Core 集成)
+//          (2026-08-02 PR review W-2: checkDelayNanoseconds 注入; W-3: 文案统一英文; W-4: progressActor 未接线占位 DEF-42-001)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约), §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
 // 生成时间: 2026-08-02
@@ -101,7 +103,11 @@ final class ResumeProgressViewModel {
 
     /// ProgressActor 引用 — 不可变 actor 引用 (docs/ui/architecture.md §6.4)
     /// 可选注入: Phase 3.9 完整集成后通过 DI 容器注入
+    /// (2026-08-02 W-4: 当前未接线占位, 追踪 DEF-42-001)
     private let progressActor: ProgressActor?
+
+    /// 模拟检查延迟 — 测试可注入 0 以 await 真实异步转换 (2026-08-02 W-2)
+    private let checkDelayNanoseconds: UInt64
 
     /// 当前活跃的检查 Task
     private var checkTask: Task<Void, Never>?
@@ -119,10 +125,13 @@ final class ResumeProgressViewModel {
 
     /// 初始化 ResumeProgressViewModel。
     ///
-    /// - Parameter progressActor: ProgressActor 实例（可选注入）。
-    ///   Phase 3.9 完整集成后通过 DI 容器注入。
-    init(progressActor: ProgressActor? = nil) {
+    /// - Parameters:
+    ///   - progressActor: ProgressActor 实例（可选注入）。
+    ///     Phase 3.9 完整集成后通过 DI 容器注入。
+    ///   - checkDelayNanoseconds: 模拟检查延迟。测试可注入 0 以同步等待异步转换。
+    init(progressActor: ProgressActor? = nil, checkDelayNanoseconds: UInt64 = 200_000_000) {
         self.progressActor = progressActor
+        self.checkDelayNanoseconds = checkDelayNanoseconds
     }
 
     // MARK: - Actions
@@ -154,8 +163,8 @@ final class ResumeProgressViewModel {
                     throw ResumeProgressError.checkFailed
                 }
 
-                // 短暂模拟检查以展示 checking 态
-                try await Task.sleep(nanoseconds: 200_000_000)
+                // 模拟检查延迟 — 可注入 (W-2), 测试注入 0 使异步转换可 await
+                try await Task.sleep(nanoseconds: checkDelayNanoseconds)
 
                 guard !Task.isCancelled else {
                     self.viewState = .idle

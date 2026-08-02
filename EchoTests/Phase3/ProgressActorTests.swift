@@ -4,8 +4,9 @@
 //            docs/02-architecture/架构设计文档.md §6.2 (恢复流程),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.7 - 断点续传集成到长任务 单元测试
-// AC 覆盖: US-SYS-001 AC-3 ✅ (检测未完成进度 → 弹窗询问 继续/重新开始),
-//          AC-4 ✅ (继续保留进度 / 重新开始清除进度 意图映射)
+// AC 覆盖: US-SYS-001 AC-3 🔶 (检测未完成进度 → 弹窗询问 继续/重新开始, UI 切片),
+//          AC-4 🔶 (继续保留进度 / 重新开始清除进度 意图映射, UI 切片)
+//          (2026-08-02 PR review W-2: 注入 checkDelayNanoseconds=0 使异步测试 await 最终收敛状态)
 // 架构约束: AGENTS.md §8.1 (@MainActor + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约 — 不保存第二份领域真相)
 // 生成时间: 2026-08-02
@@ -35,6 +36,22 @@ struct ResumeProgressPromptTests {
         )
     }
 
+    /// 等待检查 Task 收敛到非 .checking 状态（W-2: 注入 checkDelayNanoseconds=0 后真实异步转换）。
+    private func awaitSettled(
+        _ vm: ResumeProgressViewModel,
+        timeout: Duration = .seconds(2)
+    ) async -> ResumeProgressViewModel.ViewState {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline {
+            if vm.viewState != .checking {
+                return vm.viewState
+            }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return vm.viewState
+    }
+
     // MARK: - US-SYS-001 AC-3: Pending progress detection
 
     @Test("Initial state is idle with no prompt")
@@ -45,23 +62,30 @@ struct ResumeProgressPromptTests {
     }
 
     @Test("Pending progress fixture transitions to prompt state")
-    func test_AC3_pendingTransitionsToPrompt() {
-        let vm = ResumeProgressViewModel()
+    func test_AC3_pendingTransitionsToPrompt() async {
+        let vm = ResumeProgressViewModel(checkDelayNanoseconds: 0)
         vm.loadFixture("resume-progress-pending")
 
         vm.checkForPendingProgress(taskType: .fullIndex)
-
         #expect(vm.viewState == .checking)
+
+        let settled = await awaitSettled(vm)
+        let expected = ResumeProgressFixtureLoader.load("resume-progress-pending").pendingProgress
+        #expect(settled == .prompt(expected!))
+        #expect(vm.isPromptPresented == true)
     }
 
     @Test("No pending progress fixture transitions to none state")
-    func test_AC3_noneTransitionsToNone() {
-        let vm = ResumeProgressViewModel()
+    func test_AC3_noneTransitionsToNone() async {
+        let vm = ResumeProgressViewModel(checkDelayNanoseconds: 0)
         vm.loadFixture("resume-progress-none")
 
         vm.checkForPendingProgress(taskType: .dataSourceSync)
-
         #expect(vm.viewState == .checking)
+
+        let settled = await awaitSettled(vm)
+        #expect(settled == .none)
+        #expect(vm.isPromptPresented == false)
     }
 
     @Test("Continue after prompt maps to resumed with preserved progress")
@@ -131,15 +155,21 @@ struct ResumeProgressPromptTests {
     }
 
     @Test("retry after error re-checks and recovers to prompt")
-    func test_AC4_retryAfterError() {
-        let vm = ResumeProgressViewModel()
+    func test_AC4_retryAfterError() async {
+        let vm = ResumeProgressViewModel(checkDelayNanoseconds: 0)
         vm.loadFixture("resume-progress-pending")
+        vm.checkForPendingProgress(taskType: .fullIndex)
+        _ = await awaitSettled(vm)
+
         vm.simulateCheckError()
         #expect(vm.viewState == .error(.l2Recoverable(message: "Unable to check saved progress")))
 
-        vm.checkForPendingProgress(taskType: .fullIndex)
-
+        vm.retry()
         #expect(vm.viewState == .checking)
+
+        let settled = await awaitSettled(vm)
+        let expected = ResumeProgressFixtureLoader.load("resume-progress-pending").pendingProgress
+        #expect(settled == .prompt(expected!))
     }
 
     // MARK: - Fixture Loader

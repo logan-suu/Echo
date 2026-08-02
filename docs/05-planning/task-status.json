@@ -627,7 +627,7 @@
         {
           "id": "3.7",
           "title": "断点续传集成到长任务",
-          "story": null,
+          "story": "US-SYS-001",
           "status": "review",
           "last_updated": "2026-08-02T20:30:00+08:00",
           "pr": {
@@ -642,7 +642,7 @@
             "started_at": "2026-08-02",
             "delivery_approved_at": "2026-08-02T15:18:07+08:00"
           },
-          "notes": "✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-02T15:18:07+08:00）。ResumeProgressPrompt UI 切片交付（US-SYS-001 AC-3 取消后询问 + AC-4 断点续传继续/重新开始意图映射）。单元测试 14/14 通过，全量回归 626 tests / 71 suites 0 失败，XCUITest 4/4 通过，SwiftLint 0 违规。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。Core 集成（ProgressActor/TaskQueueActor 真实读写 + 审计）延后至 Phase 3.9。",
+          "notes": "✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-02T15:18:07+08:00）。ResumeProgressPrompt UI 切片交付（US-SYS-001 AC-3 取消后询问 + AC-4 断点续传继续/重新开始意图映射）。单元测试 14/14 通过，全量回归 626 tests / 71 suites 0 失败，XCUITest 4/4 通过，SwiftLint 0 违规。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。Core 集成（ProgressActor/TaskQueueActor 真实读写 + 审计）延后至 Phase 3.9。\n(2026-08-02 PR review fix W-1~W-5) W-1 error 态改真实布局槽位（移除零高 frame）; W-2 checkDelayNanoseconds 注入使 AC-3 测试 await 最终状态（pending→prompt / none→none）; W-3 弹窗文案统一英文; W-5 story=US-SYS-001。延后项 DEF-42-001（progressActor 占位, Phase 3.9）/ DEF-42-002（i18n, Phase 3.8）记入 deferred-items.json。修复提交含 'Addresses PR review feedback: W-1, W-2, W-3, W-5'。",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],

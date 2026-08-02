@@ -12,6 +12,7 @@
 //          US-RES-001 AC-3 ✅ (离线模式标识), AWK-002 AC-3 ✅ (纪念日卡片),
 //          AWK-003 AC-4 ✅ (情绪卡片), AWK-005 AC-2 🔮 (左滑/右滑, Phase 3.3+)
 //          3.7 host: ResumeProgressPromptView + resume-progress-* fixture 注入
+//          (2026-08-02 PR review W-1: ResumeProgressPromptView 改真实布局槽位, 移除零高 frame)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Discovery 自适应卡片, 非 masonry),
 //           §10.1 (Views 目录), echo-memory-canvas apple-native 基础
 // 生成时间: 2026-07-26
@@ -74,15 +75,14 @@ struct HomeView: View {
                 // Degradation banner (Task 3.6 — Live Sim Review fixture)
                 DegradationBannerView(viewModel: degradationViewModel)
 
+                // Resume progress prompt (Task 3.7 — confirmationDialog host + inline L2 error, real layout slot)
+                ResumeProgressPromptView(viewModel: resumeProgressViewModel)
+
                 contentView
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemBackground))
-
-            // Resume progress prompt (Task 3.7 — confirmationDialog host, zero-height)
-            ResumeProgressPromptView(viewModel: resumeProgressViewModel)
-                .frame(height: 0)
 
             // Offline banner (US-RES-001 AC-3)
             if viewModel.isOffline {
