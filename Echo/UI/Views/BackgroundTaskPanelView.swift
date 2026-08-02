@@ -7,7 +7,8 @@
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
 // 任务: 3.5 - 实时后台任务面板
 // AC 覆盖: US-SYS-001 AC-1 ✅ (活跃任务列表), AC-2 ✅ (进度计数 + 百分比),
-//          AC-3 ✅ (暂停/取消交互), AC-5 ✅ (无活跃任务自动隐藏), 🔮 Core 接入 Phase 3.9
+//          AC-3 ✅ (暂停/取消交互; 暂停任务抑制自动隐藏, PR #40 W-1),
+//          AC-5 ✅ (任务列表为空时 1.5s 自动隐藏), 🔮 Core 接入 Phase 3.9
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统 Sheet + List 容器
 // 生成时间: 2026-08-02
