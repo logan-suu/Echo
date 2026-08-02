@@ -1,0 +1,18 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "background-tasks-basic",
+  "steps": [
+    { "surfaceId": "background-tasks", "stateId": "loading", "actionId": "panel.open" },
+    { "surfaceId": "background-tasks", "stateId": "loaded", "actionId": "task.pause" },
+    { "surfaceId": "background-tasks", "stateId": "loaded", "actionId": "task.cancel" },
+    { "surfaceId": "background-tasks", "stateId": "empty", "actionId": "panel.close" }
+  ],
+  "preconditionFixtures": ["background-tasks-loaded"],
+  "assertions": [
+    { "type": "task_count", "expected": ">= 1 active task listed with progress" },
+    { "type": "pause_state", "expected": "paused task shows Paused status label" },
+    { "type": "cancel_state", "expected": "cancelled task removed from list" },
+    { "type": "no_masonry", "expected": "Task surface uses List/sheet, no masonry" }
+  ],
+  "version": "1.0.0"
+}

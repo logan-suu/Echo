@@ -45,6 +45,15 @@ struct HomeView: View {
 
     private var viewModel: HomeViewModel
 
+    /// 后台任务面板 ViewModel — 由工具栏按钮展示 (US-SYS-001 AC-1 顶部状态栏入口)
+    @State private var taskPanelViewModel = BackgroundTaskViewModel()
+
+    /// 后台任务面板展示开关
+    @State private var isTaskPanelPresented = false
+
+    /// 首次出现标记 — 控制 fixture 注入仅执行一次
+    @State private var hasHandledLaunchArguments = false
+
     init(viewModel: HomeViewModel = HomeViewModel()) {
         self.viewModel = viewModel
     }
@@ -67,11 +76,68 @@ struct HomeView: View {
         }
         .navigationTitle("Echo · 回响")
         .navigationBarTitleDisplayMode(.large)
-        .onAppear { viewModel.onAppear() }
+        .toolbar {
+            // 后台任务面板入口 (US-SYS-001 AC-1: 顶部状态栏实时显示活跃任务)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    taskPanelViewModel.openPanel()
+                    isTaskPanelPresented = true
+                } label: {
+                    Image(systemName: "list.bullet.rectangle")
+                        .accessibilityHidden(true)
+                }
+                .accessibilityLabel("Background Tasks")
+                .accessibilityHint("Show active background task progress")
+                .accessibilityIdentifier("background-tasks-open")
+            }
+        }
+        .sheet(isPresented: $isTaskPanelPresented) {
+            BackgroundTaskPanelView(viewModel: taskPanelViewModel) {
+                taskPanelViewModel = BackgroundTaskViewModel()
+            }
+        }
+        .onAppear {
+            viewModel.onAppear()
+            handleFirstAppear()
+        }
         .onDisappear { viewModel.onDisappear() }
         .animation(.easeInOut(duration: 0.25), value: viewModel.viewState)
         .animation(.easeInOut(duration: 0.3), value: viewModel.isOffline)
     }
+
+    // MARK: - Launch Argument Fixture Injection
+
+    /// 首次出现时处理启动参数 fixture 注入。
+    ///
+    /// 支持 `-ui-fixture background-tasks-loaded|empty|error` — XCUITest / Live Sim Review
+    /// 确定性导航到后台任务面板。生产构建（#if DEBUG 排除）无任何注入逻辑。
+    private func handleFirstAppear() {
+        guard !hasHandledLaunchArguments else { return }
+        hasHandledLaunchArguments = true
+        #if DEBUG
+        handleLaunchArguments()
+        #endif
+    }
+
+    #if DEBUG
+    /// 处理 XCUITest / Live Sim Review 启动参数注入确定性 fixture。
+    private func handleLaunchArguments() {
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: "-ui-fixture"), idx + 1 < args.count else { return }
+        let fixtureID = args[idx + 1]
+
+        switch fixtureID {
+        case "background-tasks-loaded", "background-tasks-empty":
+            let items = BackgroundTaskFixtureLoader.load(fixtureID)
+            taskPanelViewModel.loadPreloadedTasks(items)
+            taskPanelViewModel.openPanel()
+            isTaskPanelPresented = true
+
+        default:
+            break
+        }
+    }
+    #endif
 
     // MARK: - Content Views
 

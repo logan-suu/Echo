@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "error",
+  "surfaceId": "background-tasks",
+  "dataConditions": {
+    "panelOpen": true,
+    "loadResult": "L2 recoverable failure (fixture background-tasks-error.json)",
+    "errorLevel": "l2Recoverable — Toast + retry button per AGENTS.md §4.4"
+  },
+  "allowedActions": ["panel.retry", "panel.close"],
+  "expectedSemantics": {
+    "errorMessage": "Unable to load background tasks",
+    "retryButton": "arrow.clockwise, accessibilityIdentifier background-tasks-retry",
+    "readingOrder": ["errorMessage", "retryButton"]
+  },
+  "version": "1.0.0"
+}

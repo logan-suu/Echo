@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "panel.open",
+  "source": "user",
+  "targetIntent": "BackgroundTaskViewModel.openPanel()",
+  "expectedOutcome": "Background task panel sheet is presented (.medium detent); loading state entered while tasks are fetched",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

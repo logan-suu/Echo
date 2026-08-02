@@ -1,0 +1,29 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "background-tasks-loaded",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "tasks": [
+      {
+        "taskId": "task-sync-001",
+        "taskType": "dataSourceSync",
+        "lastProcessedIndex": 32,
+        "totalCount": 128,
+        "status": "running"
+      },
+      {
+        "taskId": "task-index-001",
+        "taskType": "fullIndex",
+        "lastProcessedIndex": 100,
+        "totalCount": 500,
+        "status": "running"
+      }
+    ]
+  },
+  "controlledVariables": ["taskId", "lastProcessedIndex", "totalCount", "status"],
+  "version": "1.0.0"
+}

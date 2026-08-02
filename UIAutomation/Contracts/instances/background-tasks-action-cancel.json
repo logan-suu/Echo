@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "task.cancel",
+  "source": "user",
+  "targetIntent": "BackgroundTaskViewModel.cancelTask(taskId)",
+  "expectedOutcome": "Task fully terminated; processed progress recorded (lastProcessedIndex preserved); task removed from active list (US-SYS-001 AC-3/AC-4)",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

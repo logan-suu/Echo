@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "empty",
+  "surfaceId": "background-tasks",
+  "dataConditions": {
+    "panelOpen": true,
+    "tasks": "0 active tasks (fixture background-tasks-empty.json)",
+    "autoHide": "panel auto-dismisses after 1.5s delay (US-SYS-001 AC-5)"
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "emptyState": "Centered system List empty state: 'No active tasks' (style §13.3, §10.1.3 — no brand elements)",
+    "readingOrder": ["emptyStateText"]
+  },
+  "version": "1.0.0"
+}

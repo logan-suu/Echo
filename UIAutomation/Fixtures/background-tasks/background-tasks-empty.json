@@ -1,0 +1,14 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "background-tasks-empty",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "tasks": []
+  },
+  "controlledVariables": [],
+  "version": "1.0.0"
+}

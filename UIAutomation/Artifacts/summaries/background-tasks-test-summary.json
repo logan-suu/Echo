@@ -1,0 +1,31 @@
+{
+  "surfaceId": "background-tasks",
+  "task_id": "3.5",
+  "unitTests": {
+    "BackgroundTaskPanelTests": { "count": 21, "failures": 0, "status": "passed" }
+  },
+  "xcuitest": {
+    "BackgroundTaskPanelUITests": {
+      "test_loadedJourney": "passed",
+      "test_pauseInteraction": "passed",
+      "test_cancelInteraction": "passed",
+      "test_emptyJourney": "passed",
+      "count": 4,
+      "failures": 0,
+      "status": "passed"
+    }
+  },
+  "fullRegression": {
+    "unitTests": "588 tests / 67 suites, 0 failures",
+    "xcuitest": "4/4 background-task journeys passed"
+  },
+  "build": {
+    "result": "SUCCEEDED",
+    "destination": "iPhone 17 Pro (iOS 26.5)",
+    "cleanBuild": true
+  },
+  "swiftlint": {
+    "result": "0 violations (required_deinit warning pre-existing across all ViewModels; CI non-strict)"
+  },
+  "visualMediaCaptured": false
+}

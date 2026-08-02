@@ -1,37 +1,98 @@
 {
   "schemaVersion": "1.1.0",
-  "task_id": "3.4",
-  "runId": "3.4-bootstrap",
+  "task_id": "3.5",
+  "runId": "3.5-bootstrap",
   "repositoryRoot": "/Users/logansu/Documents/Dev/SwiftProjects/Echo",
-  "sourceRevision": "c31d80e347f02fd635ce962df7dfade5be3fe15c",
+  "sourceRevision": "d4d9c7a629ffd95d951ad3b26d9324159a839d4e",
   "sourceDirty": true,
-  "automation_phase": "awaiting_delivery_approval",
-  "automation_phase_status": "accepted",
+  "automation_phase": "accepted",
+  "automation_phase_status": "completed",
   "completed_steps": [
     "repo_discovery",
-    "materialize",
+    "materialize_structure",
     "readiness_check",
     "select_pilot",
-    "contract",
-    "profile",
-    "generation",
-    "verification"
+    "contract_drafting",
+    "design_profile_validation",
+    "ui_slice_generation",
+    "verification",
+    "awaiting_delivery_approval"
   ],
-  "last_updated": "2026-08-02T10:20:00+08:00",
+  "delivery_approval": {
+    "approved": true,
+    "approved_by": "user",
+    "approved_at": "2026-08-02T11:56:17+08:00",
+    "simulator_uri": "iPhone 17 Pro (2789B5D1-D292-4144-A66B-649CE2DF32EC, iOS 26.5) + iPhone 16 Pro (F3BF1718-247D-4CB2-AAAF-F7738514B14D, iOS 18.2)"
+  },
   "design_profile": {
     "profile_id": "echo-memory-canvas",
     "profile_version": "1.0.0",
     "base_profile": "apple-native",
     "approval_record": { "approved_by": "user", "approved_at": "2026-07-25", "source": "docs/ui/echo-memory-canvas-style.md §9" },
     "surface_family": "task",
-    "layout_mode": "form_list"
+    "layout_mode": "sheet"
   },
   "contracts": {
-    "surface_id": "settings",
-    "state_ids": ["loaded", "loading", "error"],
-    "action_ids": ["settings.toggleSource", "settings.clearCache", "settings.resetFeedback", "settings.exportAudit", "settings.retry"],
-    "journey_id": "settings-basic",
-    "fixture_ids": ["settings-loaded", "settings-error"]
+    "surface_id": "background-tasks",
+    "state_ids": ["loading", "loaded", "empty", "error"],
+    "action_ids": ["task.pause", "task.cancel", "panel.retry", "panel.open"],
+    "journey_id": "background-tasks-basic",
+    "fixture_ids": ["background-tasks-loaded", "background-tasks-empty", "background-tasks-error"]
+  },
+  "pilot_selection": {
+    "surface_id": "background-tasks",
+    "score": 23,
+    "max_score": 24,
+    "states": ["loading", "loaded", "empty", "error"],
+    "eliminated": [],
+    "rationale": "Single candidate for Task 3.5. Task family per style §13. Fixture-driven slice; live AsyncStream progress deferred to Phase 3.9."
+  },
+  "inventoryHash": "1b10157f99115cf5ada74b810a6dae6c53e06fded06fb3670c832d26c94018fc",
+  "last_updated": "2026-08-02T11:56:17+08:00",
+  "test_results": {
+    "unit_tests_passed": 21,
+    "full_regression": "588 tests / 67 suites, 0 failures",
+    "xcuitest": "5/5 background-tasks journeys passed (incl. test_doneDismissesPanel + test_cancelAllTasksShowsEmptyAndAutoHides after review fix)",
+    "build": "SUCCEEDED"
+  },
+  "artifacts": {
+    "manifest_path": "UIAutomation/Artifacts/manifests/background-tasks-run-manifest.json",
+    "build_log_path": "UIAutomation/Artifacts/logs/background-tasks-build.log",
+    "test_summary_path": "UIAutomation/Artifacts/summaries/background-tasks-test-summary.json",
+    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/background-tasks-loaded-axtree.json"
+  },
+  "files_created": [
+    "Echo/UI/ViewModels/BackgroundTaskViewModel.swift",
+    "Echo/UI/Views/BackgroundTaskPanelView.swift",
+    "Echo/UI/Views/BackgroundTaskFixtureLoader.swift",
+    "EchoTests/Phase3/BackgroundTaskPanelTests.swift",
+    "EchoUITests/BackgroundTaskPanelUITests.swift",
+    "UIAutomation/Contracts/instances/background-tasks-surface.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-loading.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-loaded.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-empty.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-error.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-open.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-pause.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-cancel.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-retry.json",
+    "UIAutomation/Contracts/instances/background-tasks-journey-basic.json",
+    "UIAutomation/Fixtures/background-tasks/background-tasks-loaded.json",
+    "UIAutomation/Fixtures/background-tasks/background-tasks-empty.json",
+    "UIAutomation/Fixtures/background-tasks/background-tasks-error.json",
+    "UIAutomation/Artifacts/accessibility/background-tasks-loaded-axtree.json",
+    "UIAutomation/Artifacts/summaries/background-tasks-test-summary.json"
+  ],
+  "files_modified": [
+    "Echo/UI/Views/HomeView.swift",
+    "Echo/UI/Views/BackgroundTaskPanelView.swift",
+    "EchoUITests/BackgroundTaskPanelUITests.swift"
+  ],
+  "xcode": { "version": "26.5", "build_version": "17F42", "sdk": "iOS Simulator", "runtime": "iPhone 17 Pro" },
+  "mcpbridge": {
+    "preflight_passed": true,
+    "preflight_detail": "xcodebuild 26.5 (17F42), xcode-select=/Applications/Xcode.app, xcrun --find mcpbridge resolved. Simulators booted: iPhone 17 Pro (2789B5D1, iOS 26.5) + iPhone 16 Pro (F3BF1718, iOS 18.2). Bridge not selected — CLI+XCTest remains owner per prior accepted runs (manifest 3.2 simulatorOwner: cli_xctest).",
+    "selected_as_owner": false
   },
   "simulator_owner": {
     "owner_type": "cli_xctest",
@@ -40,31 +101,18 @@
       { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
     ]
   },
-  "test_results": {
-    "unit_tests_passed": 16,
-    "full_regression": "569 tests / 67 suites, 0 failures",
-    "build": "SUCCEEDED"
+  "readiness_gates": {
+    "bootstrap_database": "DatabaseManager.shared open()/executeWrite/executeQuery exist; ProgressActor provides save/update/load/hasPendingProgress/delete; deterministic Preview entry via fixture injection (established pattern). PASSED",
+    "privacy_policy": "UserPolicy.authorizedSourceTypes = [photo, note, voice]; Memory.swift sourceType defaults consistent; no identifier conflict. PASSED",
+    "ci_swiftlint": "Echo.xcodeproj + scheme Echo + test targets EchoTests/EchoUITests exist; SwiftLint included dirs (App/Core/UI/EchoTests/EchoUITests) exist; CI destination iPhone 17 Pro matches. PASSED",
+    "models_proximakit": "Echo/Resources/Models/ populated (mlpackage/mlmodelc/gguf); ProximaKit 1.7 resolved via SPM. No blocking warnings for UI work. PASSED",
+    "xcode_bridge": "Xcode 26.5 (17F42); mcpbridge found; owner=cli_xctest (fallback). Bridge failure does not block UI work. PASSED"
   },
-  "files_created": [
-    "Echo/UI/ViewModels/SettingsViewModel.swift",
-    "EchoTests/Phase3/SettingsViewModelTests.swift"
-  ],
-  "files_modified": [
-    "Echo/UI/Views/SettingsView.swift"
-  ],
   "blockers": [],
   "stage_history": [
     { "from": "ready", "to": "repo_discovery", "transition": "direct_fallback", "at": "2026-08-02T10:00:00+08:00" },
-    { "from": "repo_discovery", "to": "verification", "transition": "auto_continue_pipeline", "at": "2026-08-02T10:20:00+08:00" },
-    { "from": "verification", "to": "awaiting_delivery_approval", "transition": "live_sim_review", "at": "2026-08-02T10:30:00+08:00" }
-  ],
-  "delivery_approval": {
-    "status": "accepted",
-    "approved_by": "user",
-    "approved_at": "2026-08-02T10:30:00+08:00",
-    "devices_reviewed": {
-      "primary": { "device_name": "iPhone 17 Pro", "runtime": "iOS 26.5" },
-      "minimum_version": { "device_name": "iPhone 16 Pro", "runtime": "iOS 18.2" }
-    }
-  }
+    { "from": "repo_discovery", "to": "readiness_check", "transition": "auto_continue_pipeline", "at": "2026-08-02T10:10:00+08:00" },
+    { "from": "readiness_check", "to": "awaiting_delivery_approval", "transition": "auto_continue_pipeline", "at": "2026-08-02T11:30:00+08:00" },
+    { "from": "awaiting_delivery_approval", "to": "accepted", "transition": "user_approval_after_review_fix", "at": "2026-08-02T11:56:17+08:00", "note": "Review fix: Done button + AC-5 auto-hide now dismiss the sheet via @Environment(\\.dismiss); regression covered by test_doneDismissesPanel + test_cancelAllTasksShowsEmptyAndAutoHides" }
+  ]
 }

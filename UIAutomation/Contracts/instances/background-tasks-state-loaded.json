@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loaded",
+  "surfaceId": "background-tasks",
+  "dataConditions": {
+    "panelOpen": true,
+    "tasks": ">= 1 active task mapped from fixture background-tasks-loaded.json",
+    "eachTask": "has lastProcessedIndex, totalCount, taskType, status"
+  },
+  "allowedActions": ["task.pause", "task.cancel", "panel.close"],
+  "expectedSemantics": {
+    "taskRows": "[task name], [processed]/[total] processed, [status]",
+    "progressValue": "determinate progress = processed/total as accessibility value",
+    "pauseButtons": "pause.circle SF Symbol per task",
+    "cancelButtons": "xmark.circle SF Symbol per task",
+    "readingOrder": ["taskRow_0", "taskRow_1", "taskRow_N"]
+  },
+  "version": "1.0.0"
+}
