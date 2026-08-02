@@ -1,0 +1,29 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "surfaceId": "background-tasks",
+  "surfaceFamily": "task",
+  "responsibility": "Render the real-time background task status panel: active task list with determinate progress, pause/cancel per task, empty auto-hide, and load error recovery (US-SYS-001)",
+  "inputs": {
+    "tasks": "TaskProgress[] mapped to UI models (taskId, taskType, lastProcessedIndex, totalCount)",
+    "taskStatus": "Per-task runtime status: running / paused / cancelled"
+  },
+  "outputs": {
+    "visibleContent": "Task rows with SF Symbol icon, task name, determinate ProgressView, processed/total count, status label",
+    "interactionTargets": "panelOpen, taskPause, taskCancel, retryButton",
+    "accessibilityTree": "Each task row combined with type/name/progress/status; progress as accessibility value"
+  },
+  "systemContainer": "Sheet (.medium detent, draggable to .large) or iPad sidebar 320pt",
+  "layoutMode": "sheet",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "No active tasks → auto-hide after 1.5s delay (US-SYS-001 AC-5)",
+    "Load failure → error state with retry (L2)"
+  ],
+  "states": [
+    "loading",
+    "loaded",
+    "empty",
+    "error"
+  ],
+  "version": "1.0.0"
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loading",
+  "surfaceId": "background-tasks",
+  "dataConditions": {
+    "panelOpen": true,
+    "tasks": "being fetched (fixture simulated fetch in flight)"
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "progressIndicator": "System ProgressView tinted accentColor",
+    "readingOrder": ["progressIndicator"]
+  },
+  "version": "1.0.0"
+}

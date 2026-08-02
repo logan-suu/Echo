@@ -1,0 +1,32 @@
+{
+  "surfaceId": "background-tasks",
+  "surfaceFamily": "task",
+  "stateId": "loaded",
+  "fixtureId": "background-tasks-loaded",
+  "layoutMode": "sheet",
+  "masonryEnabled": false,
+  "elements": [
+    { "identifier": "background-tasks-panel", "role": "sheet", "verified": "XCUITest test_loadedJourney" },
+    { "identifier": "background-tasks-list", "role": "collectionView", "verified": "XCUITest test_loadedJourney" },
+    { "identifier": "background-task-pause-task-sync-001", "role": "button", "label": "Pause Syncing photos", "verified": "XCUITest test_loadedJourney / test_pauseInteraction" },
+    { "identifier": "background-task-cancel-task-sync-001", "role": "button", "label": "Cancel Syncing photos", "verified": "XCUITest test_loadedJourney / test_cancelInteraction" },
+    { "identifier": "background-task-pause-task-index-001", "role": "button", "label": "Pause Building vector index", "verified": "XCUITest test_loadedJourney" },
+    { "identifier": "background-task-cancel-task-index-001", "role": "button", "label": "Cancel Building vector index", "verified": "XCUITest test_loadedJourney" },
+    { "text": "32/128 · 25%", "role": "staticText", "verified": "XCUITest test_loadedJourney" },
+    { "text": "100/500 · 20%", "role": "staticText", "verified": "XCUITest test_loadedJourney" },
+    { "text": "Running", "role": "staticText", "verified": "XCUITest test_pauseInteraction (Paused transition)" }
+  ],
+  "emptyState": {
+    "identifier": "background-tasks-empty",
+    "text": "No active tasks",
+    "verified": "XCUITest test_emptyJourney"
+  },
+  "cancelConfirmation": {
+    "button": "Cancel Task",
+    "verified": "XCUITest test_cancelInteraction"
+  },
+  "liveHierarchyEvidence": {
+    "note": "Native hierarchy capture (iPhone 17 Pro iOS 26.5) confirmed sheet presentation: UIDimmingView + UIDropShadowView at medium detent (~470pt height) with two drag grabbers + PresentationHostingController hosting the NavigationStack. SwiftUI inner AX elements are not exposed via native-devtools; accessibility contract verified via XCUITest (accessibility-tree driven, stable identifiers, no coordinates).",
+    "visualMediaCaptured": false
+  }
+}

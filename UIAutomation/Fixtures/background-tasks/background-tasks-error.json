@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "background-tasks-error",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "errorLevel": "l2Recoverable",
+    "message": "Unable to load background tasks"
+  },
+  "controlledVariables": ["message"],
+  "version": "1.0.0"
+}

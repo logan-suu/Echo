@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "task.pause",
+  "source": "user",
+  "targetIntent": "BackgroundTaskViewModel.pauseTask(taskId)",
+  "expectedOutcome": "Task enters paused state (suspended, resources not released); UI status label updates to Paused; pause button toggles to resume (US-SYS-001 AC-3)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

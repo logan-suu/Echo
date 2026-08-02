@@ -1,0 +1,64 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/state/v1",
+  "runId": "3.5-bootstrap",
+  "actor": "opencode-agent",
+  "task_id": "3.5",
+  "surfaceId": "background-tasks",
+  "stateId": "loaded",
+  "fixtureId": "background-tasks-loaded",
+  "journeyId": "background-tasks-basic",
+  "commitSha": "d4d9c7a629ffd95d951ad3b26d9324159a839d4e",
+  "sourceDirty": true,
+  "xcode": { "version": "26.5", "build_version": "17F42", "sdk": "iOS Simulator", "runtime": "iPhone 17 Pro" },
+  "simulatorOwner": "cli_xctest",
+  "timestamp": "2026-08-02T11:30:00+08:00",
+  "build": { "result": "SUCCEEDED", "warnings": 0 },
+  "testResults": {
+    "backgroundTaskPanelTests": { "count": 21, "failures": 0, "status": "passed" },
+    "backgroundTaskPanelUITests": { "count": 4, "failures": 0, "status": "passed" },
+    "fullRegression": { "count": 588, "suites": 67, "failures": 0, "status": "passed" }
+  },
+  "contractValidation": { "status": "passed", "detail": "10 contract files + 3 fixtures valid JSON; surface states [loading, loaded, empty, error] all implemented; cross-references resolved" },
+  "surfaceFamily": { "declared": "task", "layoutMode": "sheet", "masonryEnabled": false, "fallback": "Task surface — sheet + List, no masonry (echo-memory-canvas §13)" },
+  "accessibilityAudit": {
+    "panel": "background-tasks-panel",
+    "taskList": "background-tasks-list",
+    "taskRows": "background-task-row-<taskId> with type/name/progress/status label",
+    "pauseButtons": "background-task-pause-<taskId> (pause.circle / play.circle toggle)",
+    "cancelButtons": "background-task-cancel-<taskId> (xmark.circle, requires confirmation)",
+    "emptyState": "background-tasks-empty ('No active tasks')",
+    "retryButton": "background-tasks-retry",
+    "doneButton": "background-tasks-done"
+  },
+  "visualMediaCaptured": false,
+  "artifacts": {
+    "buildLog": "UIAutomation/Artifacts/logs/background-tasks-build.log",
+    "testSummary": "UIAutomation/Artifacts/summaries/background-tasks-test-summary.json",
+    "accessibilityTree": "UIAutomation/Artifacts/accessibility/background-tasks-loaded-axtree.json"
+  },
+  "files_created": [
+    "Echo/UI/ViewModels/BackgroundTaskViewModel.swift",
+    "Echo/UI/Views/BackgroundTaskPanelView.swift",
+    "Echo/UI/Views/BackgroundTaskFixtureLoader.swift",
+    "EchoTests/Phase3/BackgroundTaskPanelTests.swift",
+    "EchoUITests/BackgroundTaskPanelUITests.swift",
+    "UIAutomation/Contracts/instances/background-tasks-surface.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-loading.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-loaded.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-empty.json",
+    "UIAutomation/Contracts/instances/background-tasks-state-error.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-open.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-pause.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-cancel.json",
+    "UIAutomation/Contracts/instances/background-tasks-action-retry.json",
+    "UIAutomation/Contracts/instances/background-tasks-journey-basic.json",
+    "UIAutomation/Fixtures/background-tasks/background-tasks-loaded.json",
+    "UIAutomation/Fixtures/background-tasks/background-tasks-empty.json",
+    "UIAutomation/Fixtures/background-tasks/background-tasks-error.json",
+    "UIAutomation/Artifacts/accessibility/background-tasks-loaded-axtree.json",
+    "UIAutomation/Artifacts/summaries/background-tasks-test-summary.json"
+  ],
+  "files_modified": [
+    "Echo/UI/Views/HomeView.swift"
+  ]
+}
