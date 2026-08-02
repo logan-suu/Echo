@@ -1,0 +1,23 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "onboarding-permission-denied",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "currentStep": "permissionDenied",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": 0,
+    "deniedPermission": {
+      "id": "photos",
+      "title": "Photos",
+      "message": "Without photo access, Echo cannot index your images and videos. You can still use Echo with notes and voice memos.",
+      "openSettingsLabel": "Open Settings",
+      "skipLabel": "Continue Anyway"
+    }
+  },
+  "controlledVariables": ["currentStep", "permissionStepIndex"],
+  "version": "1.0.0"
+}

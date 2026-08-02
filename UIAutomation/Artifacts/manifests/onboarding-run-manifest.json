@@ -1,0 +1,40 @@
+{
+  "runId": "3.11-bootstrap",
+  "schemaVersion": "1.1.0",
+  "task_id": "3.11",
+  "actor": "opencode-agent",
+  "started_at": "2026-08-03T01:00:00+08:00",
+  "commit_sha": "7017272bbbd4beb8d3bd4c3a82ce8b249a0bbdbd",
+  "source_dirty": true,
+  "contract_version_hash": "949260b7e385d7c481521b3dedd353af6412f25e6d5d69871136fbadc973127b",
+  "fixture_hash": "949260b7e385d7c481521b3dedd353af6412f25e6d5d69871136fbadc973127b",
+  "acceptance_policy_hash": "not_computed",
+  "xcode": { "version": "26.5", "build_version": "17F42", "sdk": "iphonesimulator" },
+  "runtime": "iOS 26.5",
+  "simulator_owner": {
+    "owner_type": "cli_xctest",
+    "devices": [
+      { "role": "primary", "device": "iPhone 17 Pro", "udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC", "runtime": "iOS 26.5" },
+      { "role": "minimum_version", "device": "iPhone 16 Pro", "udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
+    ]
+  },
+  "surface": { "surfaceId": "onboarding", "stateIds": ["welcome", "privacyConsent", "permissions", "permissionDenied", "language", "modelLoading", "completed", "declined"] },
+  "journeys": ["onboarding-happy-path", "onboarding-privacy-declined", "onboarding-permission-denied"],
+  "results": {
+    "contract_validation": "PASSED (8 states, 10 actions, 3 journeys, 8 fixtures, schema-valid)",
+    "build": "SUCCEEDED (iPhone 17 Pro destination)",
+    "unit_tests": { "onboarding": "19/19 passed", "full_regression": "675 tests / 74 suites, 0 failures" },
+    "xcuitest": { "onboarding": "4/4 passed", "full_regression": "33 tests, 0 failures" },
+    "swiftlint": "0 violations",
+    "accessibility": "PASSED (axtree + identifier-driven XCUITest journeys)",
+    "surface_family": "task — no masonry (verified contract layoutMode=form, echo-memory-canvas §3.3)"
+  },
+  "artifacts": {
+    "build_log": "UIAutomation/Artifacts/logs/onboarding-build.log",
+    "test_summary": "UIAutomation/Artifacts/summaries/onboarding-test-summary.json",
+    "accessibility_tree": "UIAutomation/Artifacts/accessibility/onboarding-axtree.json",
+    "xcresult": "DerivedData/Logs/Test/ (retention per policy — passed xcresult may be discarded)"
+  },
+  "visualMediaCaptured": false,
+  "blockers": []
+}

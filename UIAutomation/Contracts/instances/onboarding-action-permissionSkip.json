@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.permissionSkip",
+  "source": "user",
+  "targetIntent": "onboarding.skipPermission",
+  "expectedOutcome": "permissionDenied -> next step (continue without permission)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

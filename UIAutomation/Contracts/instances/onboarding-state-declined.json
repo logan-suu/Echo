@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "declined",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "declined",
+    "privacyConsent": "declined",
+    "permissionStepIndex": null,
+    "language": null,
+    "modelLoadProgress": null
+  },
+  "allowedActions": ["onboarding.declinedClose"],
+  "expectedSemantics": {
+    "declinedMessage": "Explains Echo cannot operate without privacy consent; data is not collected",
+    "closeButton": "'Close' exits onboarding — onboarding-declined-close (app remains at declined/limited state)",
+    "withdrawNote": "Deregistration semantics (US-PRV-008 AC-5) deferred to Phase 3.9 (US-PRV-005 flow)"
+  },
+  "version": "1.0.0"
+}

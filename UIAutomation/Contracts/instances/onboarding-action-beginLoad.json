@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.beginLoad",
+  "source": "user",
+  "targetIntent": "onboarding.beginModelLoad",
+  "expectedOutcome": "language -> modelLoading step with determinate progress",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

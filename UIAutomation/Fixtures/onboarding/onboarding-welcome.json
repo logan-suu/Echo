@@ -1,0 +1,20 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "onboarding-welcome",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "currentStep": "welcome",
+    "privacyConsent": "undecided",
+    "permissionStepIndex": null,
+    "selectedLanguage": null,
+    "modelLoadProgress": null,
+    "brandTitle": "Echo · 回响",
+    "tagline": "Your memories, within reach."
+  },
+  "controlledVariables": ["currentStep", "privacyConsent"],
+  "version": "1.0.0"
+}

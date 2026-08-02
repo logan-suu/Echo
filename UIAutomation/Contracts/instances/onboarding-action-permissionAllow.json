@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.permissionAllow",
+  "source": "user",
+  "targetIntent": "onboarding.allowPermission",
+  "expectedOutcome": "advance to next permission or language step",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

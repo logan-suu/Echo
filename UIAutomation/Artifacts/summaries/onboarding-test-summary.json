@@ -1,0 +1,12 @@
+{
+  "runId": "3.11-bootstrap",
+  "surface": "onboarding",
+  "unit_tests": {"suite": "OnboardingTests", "total": 19, "passed": 19, "failed": 0},
+  "full_unit_regression": {"tests": 675, "suites": 74, "failures": 0},
+  "xcuitest": {"suite": "OnboardingUITests", "total": 4, "passed": 4, "failed": 0},
+  "full_xcuitest_regression": {"tests": 33, "failures": 0},
+  "swiftlint": {"new_violations": 0},
+  "build": "SUCCEEDED",
+  "device": "iPhone 17 Pro (iOS 26.5)",
+  "generated_at": "2026-08-03T01:50:00+08:00"
+}

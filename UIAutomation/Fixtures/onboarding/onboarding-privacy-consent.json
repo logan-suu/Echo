@@ -1,0 +1,18 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "onboarding-privacy-consent",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "currentStep": "privacyConsent",
+    "privacyConsent": "undecided",
+    "summary": "Echo processes your photos, videos, notes and voice memos locally on your device to enable searching and recall. Data is processed for the purpose of building a personal memory index. Only necessary data types are collected: media assets and transcripts you share. Data is retained until you delete it or remove it from Echo. All processing happens on-device — your data never leaves this device and is never uploaded.",
+    "agreeLabel": "Agree & Continue",
+    "declineLabel": "Decline"
+  },
+  "controlledVariables": ["currentStep", "privacyConsent"],
+  "version": "1.0.0"
+}

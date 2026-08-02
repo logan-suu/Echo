@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "language",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "language",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "complete",
+    "language": "undecided",
+    "modelLoadProgress": null
+  },
+  "allowedActions": ["onboarding.selectLanguage", "onboarding.beginLoad"],
+  "expectedSemantics": {
+    "picker": "System Picker with zh-Hans / en-US (US-SYN-001 AC-2) — onboarding-language-zh / onboarding-language-en",
+    "mappingHint": "One-time hint when source is traditional Chinese / other: mapped to zh-Hans (US-SYN-001 AC-2)",
+    "continueButton": "'Continue' enabled after language selection — onboarding-begin-load"
+  },
+  "version": "1.0.0"
+}

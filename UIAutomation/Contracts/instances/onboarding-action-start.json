@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.start",
+  "source": "user",
+  "targetIntent": "onboarding.start",
+  "expectedOutcome": "welcome -> privacyConsent step",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

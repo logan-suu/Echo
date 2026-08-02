@@ -1,0 +1,18 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "welcome",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "welcome",
+    "privacyConsent": "undecided",
+    "permissionStepIndex": null,
+    "language": null,
+    "modelLoadProgress": null
+  },
+  "allowedActions": ["onboarding.start"],
+  "expectedSemantics": {
+    "brand": "Echo logo + 'Echo · 回响' title + tagline",
+    "startButton": "'Get Started' primary action (onboarding-start)"
+  },
+  "version": "1.0.0"
+}
