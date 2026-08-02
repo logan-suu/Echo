@@ -169,7 +169,7 @@
       "pr": 38,
       "title": "US-AWK-007 AC-2 originalTimestamp 备份字段缺失",
       "severity": "🟡",
-      "location": "Echo/UI/ViewModels/MemoryDetailViewModel.swift (MemoryDetailModel)",
+      "location": "Echo/UI/Detail/MemoryDetailViewModel.swift (MemoryDetailModel)",
       "reason": "AC-2 要求保存 originalTimestamp 作为覆盖时间戳的备份。当前 UI 切片模型仅 var timestamp，无 originalTimestamp 字段；Core 元数据写入（Phase 3.9）时需补充该字段并接入数据库 schema。",
       "defer_to": "Phase 3.9 Core 写路径接入时（时间戳覆盖 + 元数据持久化）",
       "deferred_at": "2026-08-02"
@@ -179,7 +179,7 @@
       "pr": 38,
       "title": "US-AWK-007 AC-4 userLocked 语义缺失",
       "severity": "🟡",
-      "location": "Echo/UI/ViewModels/MemoryDetailViewModel.swift:resolveConflict(.local)",
+      "location": "Echo/UI/Detail/MemoryDetailViewModel.swift:resolveConflict(.local)",
       "reason": "AC-4 要求用户选择'保留我的编辑'后置 userLocked=true 使后续同步永久跳过该记忆。当前模型无 userLocked 字段，resolveConflict(.local) 仅置 userEdited；同步跳过逻辑属 Core SyncPipeline 行为，需 Phase 3.9 接入。",
       "defer_to": "Phase 3.9 SyncPipeline 冲突处理接入时",
       "deferred_at": "2026-08-02"
@@ -249,7 +249,7 @@
       "pr": 42,
       "title": "ResumeProgressViewModel.progressActor dependency is an unwired placeholder",
       "severity": "🟡",
-      "location": "Echo/UI/ViewModels/ResumeProgressViewModel.swift:277",
+      "location": "Echo/UI/ResumeProgress/ResumeProgressViewModel.swift:277",
       "reason": "DI hook for Phase 3.9 Core integration; not wired in UI slice (W-4).",
       "defer_to": "Phase 3.9 Core ProgressActor/TaskQueueActor integration",
       "deferred_at": "2026-08-02"
@@ -259,7 +259,7 @@
       "pr": 42,
       "title": "User-facing strings hardcoded (unified to English after W-3)",
       "severity": "🟡",
-      "location": "Echo/UI/Views/ResumeProgressPromptView.swift",
+      "location": "Echo/UI/ResumeProgress/ResumeProgressPromptView.swift",
       "reason": "String Catalog migration deferred for UI slices (W-3 unified dialog to English pending full migration).",
       "defer_to": "Phase 3.8 String Catalog (zh-Hans + en-US)",
       "deferred_at": "2026-08-02"
@@ -269,7 +269,7 @@
       "pr": 43,
       "title": "Translation error message + Retry/Translating strings hardcoded English (i18n)",
       "severity": "🟡",
-      "location": "Echo/UI/ViewModels/MemoryDetailViewModel.swift:415-417, Echo/UI/Views/MemoryDetailView.swift:386,401,407,423",
+      "location": "Echo/UI/Detail/MemoryDetailViewModel.swift:415-417, Echo/UI/Detail/MemoryDetailView.swift:386,401,407,423",
       "reason": "New translation surface strings ('Translation is currently unavailable. Please try again.', 'Translating…', 'Translated ·', 'Original:', 'Retry', accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
       "defer_to": "Phase 3.9 String Catalog migration (zh-Hans + en-US) — task 3.8 wrap-up / 3.9",
       "deferred_at": "2026-08-02"
@@ -279,7 +279,7 @@
       "pr": 43,
       "title": "Apple Translation real call not integrated — fixture only (US-DIS-002 AC-2)",
       "severity": "🟡",
-      "location": "Echo/UI/Services/FixtureTranslationService.swift (zhEnMap), MemoryDetailViewModel.swift requestTranslation()",
+      "location": "Echo/UI/Translation/FixtureTranslationService.swift (zhEnMap), MemoryDetailViewModel.swift requestTranslation()",
       "reason": "AC-2 requires 'cache-first, fallback Apple Translation'. Implemented cache-first + TranslationService protocol seam, but real Apple Translation Framework call deferred. FixtureTranslationService only maps 2 known strings; all others throw L2 serviceUnavailable. Real model + term-glossary JSON integration is Phase 3.9.",
       "defer_to": "Phase 3.9 Apple Translation Framework + 术语表 JSON 接入",
       "deferred_at": "2026-08-02"
@@ -289,7 +289,7 @@
       "pr": 43,
       "title": "translationCache is in-memory UI slice only, not persisted to Core (US-DIS-002 AC-5)",
       "severity": "🟡",
-      "location": "Echo/UI/Services/TranslationCache.swift (actor, in-memory storage)",
+      "location": "Echo/UI/Translation/TranslationCache.swift (actor, in-memory storage)",
       "reason": "AC-5 requires 'translationCache, TTL=7d'. Implemented display-layer in-memory actor cache (TTL=7d, clock-injectable). Core translationCache field on Memory (persisted) + write path deferred to Phase 3.9; cache does not survive app relaunch.",
       "defer_to": "Phase 3.9 Core translationCache 字段写入 + 持久化",
       "deferred_at": "2026-08-02"
@@ -299,7 +299,7 @@
       "pr": 44,
       "title": "Creation surface user-facing strings hardcoded English (i18n)",
       "severity": "🟡",
-      "location": "Echo/UI/Views/CreationView.swift, Echo/UI/ViewModels/CreationViewModel.swift, Echo/UI/Views/CreationFixtureLoader.swift (template displayName)",
+      "location": "Echo/UI/Creation/CreationView.swift, Echo/UI/Creation/CreationViewModel.swift, Echo/UI/Creation/CreationFixtureLoader.swift (template displayName)",
       "reason": "New creation surface strings ('AI Creation', 'Choose a template', 'Generate', 'Copy', 'Export PDF / Markdown', 'Share / Print', 'Save to Notes', prompt editor labels, toast/error messages, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4. Also: creation generate/save are fixture-driven — Core CreativePipeline + NoteStore write path deferred (US-SYN-003 AC-4 real save).",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4) + Core 创作 Pipeline 接入时",
       "deferred_at": "2026-08-02"
@@ -309,7 +309,7 @@
       "pr": 45,
       "title": "Onboarding surface user-facing strings hardcoded English (i18n)",
       "severity": "🟡",
-      "location": "Echo/UI/Views/OnboardingView.swift, Echo/UI/ViewModels/OnboardingViewModel.swift, Echo/UI/Views/OnboardingFixtureLoader.swift",
+      "location": "Echo/UI/Onboarding/OnboardingView.swift, Echo/UI/Onboarding/OnboardingViewModel.swift, Echo/UI/Onboarding/OnboardingFixtureLoader.swift",
       "reason": "New onboarding surface strings (welcome title/subtitle, privacy consent summary + Agree/Decline buttons, permission prompt iCloud hint + Open Settings, language picker labels, model-loading text, declined-state copy + Close button, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001 / DEF-44-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4)",
       "deferred_at": "2026-08-03"

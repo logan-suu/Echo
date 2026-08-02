@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.24  
+**版本**：v5.25  
 **生效日期**：2026-08-02  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -225,8 +225,8 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 | ----------- | -------------------- |
 | `actor`     | Core/Actors/ 目录    |
 | `pipeline`  | Core/Pipelines/ 目录 |
-| `viewmodel` | UI/ViewModels/ 目录  |
-| `view`      | UI/Views/ 目录       |
+| `viewmodel` | UI/ 功能域目录下 *ViewModel.swift（如 UI/Search/） |
+| `view`      | UI/ 功能域目录下 *View.swift 与 *FixtureLoader.swift |
 | `service`   | Core/Services/ 目录  |
 | `model`     | Core/Models/ 目录    |
 | `utils`     | Core/Utils/ 目录     |
@@ -731,16 +731,54 @@ Echo/
 │       ├── ErrorHandler.swift
 │       ├── PrivacyCheckpoint.swift
 │       └── SystemMonitor.swift
-├── UI/
-│   ├── ViewModels/
+├── UI/                          # 功能域目录（feature-based，2026-08-03 refactor）
+│   ├── AppShell/                # App 壳：TabView + NavigationStack + DI
+│   │   ├── AppRootView.swift
+│   │   ├── ContentView.swift
+│   │   └── AppViewModel.swift
+│   ├── Home/                    # 主视图（唤醒卡片 + 离线指示）
+│   │   ├── HomeView.swift
+│   │   └── HomeViewModel.swift
+│   ├── Search/                  # 检索（结果 + 反馈 + 低置信度）
+│   │   ├── SearchView.swift
 │   │   ├── SearchViewModel.swift
-│   │   ├── HomeViewModel.swift
-│   │   ├── SettingsViewModel.swift
-│   │   └── MemoryDetailViewModel.swift
-│   └── Views/
-│       ├── SearchView.swift
-│       ├── HomeView.swift
-│       └── SettingsView.swift
+│   │   └── SearchFixtureLoader.swift
+│   ├── Detail/                  # 记忆详情（编辑 + 翻译 + 冲突解决）
+│   │   ├── MemoryDetailView.swift
+│   │   ├── MemoryDetailViewModel.swift
+│   │   └── MemoryDetailFixtureLoader.swift
+│   ├── Settings/                # 设置页
+│   │   ├── SettingsView.swift
+│   │   └── SettingsViewModel.swift
+│   ├── Onboarding/              # 引导流程（PIPL + 权限 + 语言 + 模型加载）
+│   │   ├── OnboardingView.swift
+│   │   ├── OnboardingViewModel.swift
+│   │   └── OnboardingFixtureLoader.swift
+│   ├── Awakening/               # 唤醒投递（通知 + 权限 + 地理围栏设置）
+│   │   ├── AwakeningSettingsView.swift
+│   │   ├── AwakeningSettingsViewModel.swift
+│   │   └── AwakeningSettingsFixtureLoader.swift
+│   ├── BackgroundTask/          # 实时后台任务面板
+│   │   ├── BackgroundTaskPanelView.swift
+│   │   ├── BackgroundTaskViewModel.swift
+│   │   └── BackgroundTaskFixtureLoader.swift
+│   ├── Creation/                # AI 创作（生成/保存/导出）
+│   │   ├── CreationView.swift
+│   │   ├── CreationViewModel.swift
+│   │   └── CreationFixtureLoader.swift
+│   ├── Degradation/             # 降级横幅（L1~L4 错误 + 低电量/过热）
+│   │   ├── DegradationBannerView.swift
+│   │   ├── DegradationBannerViewModel.swift
+│   │   └── DegradationFixtureLoader.swift
+│   ├── ResumeProgress/          # 断点续传提示（US-SYS-001）
+│   │   ├── ResumeProgressPromptView.swift
+│   │   ├── ResumeProgressViewModel.swift
+│   │   └── ResumeProgressFixtureLoader.swift
+│   └── Translation/             # 跨语言翻译展示层
+│       ├── TranslationService.swift
+│       ├── TranslationCache.swift
+│       ├── FixtureTranslationService.swift
+│       └── TranslationFixtureLoader.swift
 ├── Resources/
 │   ├── Models/ (SigLIP2 checkpoint 转换源, multilingual-e5-small, Whisper GGUF)
 │   ├── MusicOffline/ (热门歌曲 JSON)
@@ -1435,3 +1473,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.22 | 2026-08-01 | PR Review 延后项追踪规范：§15.5 新增核心规则 3（PR Review 延后缺陷必须记录到 deferred-items.json 的 deferred_from_pr_review 数组）+ 执行流程第 5 步（延后项追踪格式）。同步更新 pr-review-echo（新增第八步）、commit-pr-echo（新增延后项检查）、pr-merge-echo（合并前扫描 deferred_from_pr_review）三个自定义命令。 | AI 架构师 |
 | v5.23 | 2026-08-01 | Live Simulator Review 双设备审查：§9.4 明确视觉审批同时使用 iPhone 17 Pro (iOS 26.5) + iPhone 16 Pro (iOS 18.x)，构建仍以 17 Pro 为 destination；§17.5/§17.7/§17.8 同步双设备措辞。同步更新 docs/ui/ 五份文档、UIAutomation/Policies/simulator-ownership.json、.ui-automation/state.schema.json（simulator_owner 双设备数组，schemaVersion 1.1.0）及 ui-bootstrap-build-echo/ui-status-echo/commit-pr-echo 三个命令。 | AI 架构师 |
 | v5.24 | 2026-08-02 | 翻译质量兜底信号修订（ADR-005）：US-DIS-002 AC-3「置信度 <0.7 保留原文」因 Apple Translation 不返回译文质量分数而不可落地，改为「源语言检测不确定（NLTagger 置信度 < 0.9，标记 .uncertain）时保留原文 + 语言标签，不提供译文」。同步修订双语言文档 §6.4/§8.1。本规约正文无直接引用 0.7 翻译置信度，无需改动 §6 契约。 | AI 架构师 |
+| v5.25 | 2026-08-03 | UI 层功能域重构：§10.1 目录结构 `UI/ViewModels/` + `UI/Views/`（按层平铺）改为 12 个功能域目录（AppShell/Home/Search/Detail/Settings/Onboarding/Awakening/BackgroundTask/Creation/Degradation/ResumeProgress/Translation），每域内 View + ViewModel + FixtureLoader 高内聚。§3.2 scope 表 `viewmodel`/`view` 描述同步。同步更新 `Scripts/coverage_gate.py`（排除规则由目录前缀 `Echo/UI/Views/` 改为文件名后缀 `*View.swift`/`*FixtureLoader.swift`，行为等价）与 ci.yml 注释。Swift 同 module 内无路径 import，Xcode PBXFileSystemSynchronizedRootGroup 自动同步文件系统，纯 git mv 无编译影响。 | AI 架构师 |

@@ -176,7 +176,7 @@ mindmap
 **具体配置**：
 
 - 在项目根目录创建 `AGENTS.md`，内容参考 Echo 避坑手册第 12 节。
-- 为每个子目录（`Core/Pipelines/`, `UI/ViewModels/`）添加更具体的规范。
+- 为每个子目录（`Core/Pipelines/`, `UI/` 各功能域目录如 `UI/Search/`）添加更具体的规范。
 - 设置 `.cursorrules` 指向 `AGENTS.md`。
 
 **示例指令**（融入自然语言注释）：
@@ -328,7 +328,7 @@ func search(query: String) async -> SearchResult {
 
 - 根目录 `AGENTS.md`：全局规则（隐私、并发、错误矩阵）。
 - `Core/Pipelines/AGENTS.md`：Pipeline 专属规则（必须纯函数、禁止 UI 导入）。
-- `UI/ViewModels/AGENTS.md`：ViewModel 规则（必须 @MainActor、无直接持久化）。
+- `UI/Search/AGENTS.md`：功能域规则（ViewModel 必须 @MainActor、无直接持久化）。
 
 **自动更新**：当架构文档或避坑手册更新时，使用 LLM 自动同步 `AGENTS.md`。Prompt：请根据以下文档差异，更新 [AGENTS.md](http://agents.md/) 中的规则编号和描述。
 
