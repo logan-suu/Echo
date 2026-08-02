@@ -1,0 +1,32 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "surfaceId": "resume-progress-prompt",
+  "surfaceFamily": "task",
+  "responsibility": "When a long-running task is (re)started and ProgressActor holds pending progress for its task type, prompt the user to continue from the saved progress or restart fresh (US-SYS-001 AC-3/AC-4; architecture doc §6.2; AGENTS.md §4.5)",
+  "inputs": {
+    "taskType": "TaskType of the task about to start",
+    "pendingProgress": "TaskProgress? loaded from ProgressActor (taskId, lastProcessedIndex, totalCount)",
+    "resumePoint": "lastProcessedIndex / totalCount shown to the user"
+  },
+  "outputs": {
+    "visibleContent": "Confirmation dialog: '检测到未完成的进度（已完成 X / Y），是否继续？' with Continue / Restart buttons",
+    "interactionTargets": "promptContinue, promptRestart, errorRetry",
+    "accessibilityTree": "Dialog title, progress text (X of Y), Continue button, Restart button"
+  },
+  "systemContainer": "Alert / confirmationDialog presented from the task-start host (e.g. BackgroundTaskPanel or Home)",
+  "layoutMode": "alert",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "No pending progress for task type -> auto-start new task, no prompt (state: none)",
+    "ProgressActor load failure -> L2 error state with retry (state: error)"
+  ],
+  "states": [
+    "checking",
+    "prompt",
+    "none",
+    "resumed",
+    "restarted",
+    "error"
+  ],
+  "version": "1.0.0"
+}

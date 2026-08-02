@@ -1,0 +1,14 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "none",
+  "surfaceId": "resume-progress-prompt",
+  "dataConditions": {
+    "pendingProgress": "nil (fixture resume-progress-none.json: no TaskProgress record for task type)",
+    "dialogVisible": false
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "dialogHidden": "No prompt; task starts fresh from index 0 (US-SYS-001 AC-4: no stale record)"
+  },
+  "version": "1.0.0"
+}

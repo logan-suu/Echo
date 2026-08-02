@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "checking",
+  "surfaceId": "resume-progress-prompt",
+  "dataConditions": {
+    "taskStarted": true,
+    "pendingProgress": "nil (query in flight via ProgressActor.hasPendingProgress(taskType:))",
+    "isChecking": true
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "dialogHidden": "No prompt shown yet; host task is starting",
+    "loadingIndicator": "Optional determinate/indeterminate progress while ProgressActor is queried"
+  },
+  "version": "1.0.0"
+}

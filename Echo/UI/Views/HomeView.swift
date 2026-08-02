@@ -7,9 +7,12 @@
 //            docs/ui/architecture.md §3 (Surface View), §8 (Discovery surface family)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 AC-4, US-AWK-005, US-RES-001 AC-3
 // 任务: 3.1 - HomeView + HomeViewModel + Awakening Cards + Offline Indicator
+//          (3.6 降级横幅 host; 3.7 断点续传恢复提示 host)
 // AC 覆盖: US-AWK-001 AC-4 ✅ (唤醒卡片 UI), US-AWK-005 AC-1 ✅ (卡片展示),
 //          US-RES-001 AC-3 ✅ (离线模式标识), AWK-002 AC-3 ✅ (纪念日卡片),
 //          AWK-003 AC-4 ✅ (情绪卡片), AWK-005 AC-2 🔮 (左滑/右滑, Phase 3.3+)
+//          3.7 host: ResumeProgressPromptView + resume-progress-* fixture 注入
+//          (2026-08-02 PR review W-1: ResumeProgressPromptView 改真实布局槽位, 移除零高 frame)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Discovery 自适应卡片, 非 masonry),
 //           §10.1 (Views 目录), echo-memory-canvas apple-native 基础
 // 生成时间: 2026-07-26
@@ -54,6 +57,9 @@ struct HomeView: View {
     /// 降级横幅 ViewModel — Live Sim Review fixture 注入 (Task 3.6)
     @State private var degradationViewModel = DegradationBannerViewModel()
 
+    /// 断点续传恢复提示 ViewModel — Live Sim Review fixture 注入 (Task 3.7)
+    @State private var resumeProgressViewModel = ResumeProgressViewModel()
+
     /// 首次出现标记 — 控制 fixture 注入仅执行一次
     @State private var hasHandledLaunchArguments = false
 
@@ -68,6 +74,9 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 // Degradation banner (Task 3.6 — Live Sim Review fixture)
                 DegradationBannerView(viewModel: degradationViewModel)
+
+                // Resume progress prompt (Task 3.7 — confirmationDialog host + inline L2 error, real layout slot)
+                ResumeProgressPromptView(viewModel: resumeProgressViewModel)
 
                 contentView
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -144,6 +153,17 @@ struct HomeView: View {
 
         case "degradation-low-power", "degradation-thermal", "degradation-model-degraded", "degradation-normal":
             degradationViewModel.loadFixture(fixtureID)
+
+        case "resume-progress-pending":
+            resumeProgressViewModel.loadFixture(fixtureID)
+            resumeProgressViewModel.checkForPendingProgress(taskType: .fullIndex)
+
+        case "resume-progress-none":
+            resumeProgressViewModel.loadFixture(fixtureID)
+            resumeProgressViewModel.checkForPendingProgress(taskType: .dataSourceSync)
+
+        case "resume-progress-error":
+            resumeProgressViewModel.simulateCheckError()
 
         default:
             break

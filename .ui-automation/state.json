@@ -1,15 +1,22 @@
 {
   "schemaVersion": "1.1.0",
-  "task_id": "3.6",
-  "runId": "3.6-bootstrap",
+  "task_id": "3.7",
+  "runId": "3.7-bootstrap",
   "repositoryRoot": "/Users/logansu/Documents/Dev/SwiftProjects/Echo",
-  "sourceRevision": "d497adf4b9890b85c82b25385714e9583fdd252d",
-  "sourceDirty": true,
+  "sourceRevision": "bc56a86669e42705f9cc2dc9df7a813d76d0ab07",
+  "sourceDirty": false,
   "automation_phase": "accepted",
   "automation_phase_status": "completed",
-  "completed_steps": ["repo_discovery", "readiness_check", "select_pilot", "design_profile_validation", "contract_drafting", "ui_slice_generation", "verification", "awaiting_delivery_approval"],
-  "last_updated": "2026-08-02T13:40:00+08:00",
-  "inventoryHash": "3b8a2c1f9d4e5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+  "contracts": {
+    "surface_id": "resume-progress-prompt",
+    "state_ids": ["checking", "prompt", "none", "resumed", "restarted", "error"],
+    "action_ids": ["task.start", "prompt.continue", "prompt.restart", "error.retry"],
+    "journey_id": "resume-progress-basic",
+    "fixture_ids": ["resume-progress-pending", "resume-progress-none", "resume-progress-error"],
+    "content_hash": "6f90e88a55fb483203cd2f8f8f2dafed739c850a4383b67b1cf785fc34f6f718"
+  },
+  "fixtures_hash": "6f90e88a55fb483203cd2f8f8f2dafed739c850a4383b67b1cf785fc34f6f718",
+  "inventoryHash": "7c3055f984a8ec939895771e35cfdc93da37aad98a5924dfbb6df6d4ff554dd1",
   "readiness_gates": {
     "bootstrap_database": "PASSED",
     "privacy_policy": "PASSED",
@@ -18,7 +25,7 @@
     "xcode_bridge": "PASSED"
   },
   "xcode": { "version": "26.5", "build_version": "17F42" },
-  "mcpbridge": { "preflight_passed": true, "selected_as_owner": false },
+  "mcpbridge": { "preflight_passed": true, "preflight_detail": "mcpbridge found at /Applications/Xcode.app/Contents/Developer/usr/bin/mcpbridge; no OpenCode bridge MCP config present; using CLI + XCTest fallback (cli_xctest)", "selected_as_owner": false },
   "simulator_owner": {
     "owner_type": "cli_xctest",
     "devices": [
@@ -26,41 +33,74 @@
       { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
     ]
   },
+  "pilot_selection": {
+    "surface_id": "resume-progress-prompt",
+    "score": 24,
+    "max_score": 24,
+    "states": ["checking", "none", "prompt", "resumed", "restarted", "error"],
+    "rationale": "Task 3.7 scope is the resume progress prompt (architecture doc §6.2: when a cancelled task is restarted, check ProgressActor for pending progress; if found, show dialog with Continue/Restart). ProgressActor exposes stable read APIs (hasPendingProgress/load). >=3 meaningful states, Task surface family (alert/dialog), no Core/signature/real-data/migration requirements. 24/24 across all 8 dimensions."
+  },
   "design_profile": {
     "profile_id": "echo-memory-canvas",
     "profile_version": "1.0.0",
     "base_profile": "apple-native",
     "approval_record": { "approved_by": "user", "approved_at": "2026-07-25", "source": "docs/ui/echo-memory-canvas-style.md §9" },
     "surface_family": "task",
-    "layout_mode": "banner",
+    "layout_mode": "alert",
     "masonry": "forbidden"
   },
-  "pilot_selection": {
-    "surface_id": "degradation-banner",
-    "score": 24,
-    "max_score": 24,
-    "states": ["lowPower", "thermal", "modelDegraded", "normal"],
-    "eliminated": ["CoolingPeriodReminder"],
-    "rationale": "DegradationBannerSystem 24/24. Tiebreak over ErrorHandlingBanner: fewer new files (single banner component vs 4 error UI forms). Task surface family per style §7.2/§11.4."
-  },
-  "blockers": [],
   "delivery_approval": {
-    "status": "accepted",
-    "reviewed_by": "user",
-    "reviewed_at": "2026-08-02T13:38:00+08:00",
-    "device_1": { "role": "primary", "device_name": "iPhone 17 Pro", "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC", "runtime": "iOS 26.5" },
-    "device_2": { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" },
-    "iterations": [
-      { "iteration": 1, "feedback": "Banner too tall on 17 Pro", "resolution": "compacted padding 12→6, single-line text, toggle frame 34x24" },
-      { "iteration": 2, "feedback": "Frosted glass covered title on 17 Pro", "resolution": "removed unmatched matchedGeometryEffect; moved banner into content flow" },
-      { "iteration": 3, "feedback": "Large title scrolls through banner on 17 Pro (iOS 26 Liquid Glass)", "resolution": "DisableLargeTitleScroll modifier, iOS 26+ only" }
-    ]
+    "approved": true,
+    "approved_by": "user",
+    "approved_at": "2026-08-02T15:18:07+08:00",
+    "simulator_uri": "simctl://2789B5D1-D292-4144-A66B-649CE2DF32EC"
   },
-  "stage_history": [
-    { "from": "ready", "to": "repo_discovery", "transition": "direct_fallback", "at": "2026-08-02T12:27:18+08:00" },
-    { "from": "repo_discovery", "to": "contract_drafting", "transition": "auto_continue_pipeline", "at": "2026-08-02T12:35:00+08:00" },
-    { "from": "contract_drafting", "to": "verification", "transition": "auto_continue_pipeline", "at": "2026-08-02T12:50:00+08:00" },
-    { "from": "verification", "to": "awaiting_delivery_approval", "transition": "auto_continue_pipeline", "at": "2026-08-02T13:05:00+08:00" },
-    { "from": "awaiting_delivery_approval", "to": "accepted", "transition": "user_approval", "at": "2026-08-02T13:38:00+08:00" }
-  ]
+  "completed_steps": ["repo_discovery", "readiness_check", "select_pilot", "contract_drafting", "design_profile_validation", "ui_slice_generation", "verification", "awaiting_delivery_approval", "accepted"],
+  "files_created": [
+    "Echo/UI/ViewModels/ResumeProgressViewModel.swift",
+    "Echo/UI/Views/ResumeProgressFixtureLoader.swift",
+    "Echo/UI/Views/ResumeProgressPromptView.swift",
+    "EchoTests/Phase3/ProgressActorTests.swift",
+    "EchoUITests/ResumeProgressPromptUITests.swift",
+    "UIAutomation/Contracts/instances/resume-progress-surface.json",
+    "UIAutomation/Contracts/instances/resume-progress-state-checking.json",
+    "UIAutomation/Contracts/instances/resume-progress-state-prompt.json",
+    "UIAutomation/Contracts/instances/resume-progress-state-none.json",
+    "UIAutomation/Contracts/instances/resume-progress-state-resumed.json",
+    "UIAutomation/Contracts/instances/resume-progress-state-restarted.json",
+    "UIAutomation/Contracts/instances/resume-progress-state-error.json",
+    "UIAutomation/Contracts/instances/resume-progress-action-continue.json",
+    "UIAutomation/Contracts/instances/resume-progress-action-restart.json",
+    "UIAutomation/Contracts/instances/resume-progress-action-retry.json",
+    "UIAutomation/Contracts/instances/resume-progress-action-start.json",
+    "UIAutomation/Contracts/instances/resume-progress-journey-basic.json",
+    "UIAutomation/Fixtures/resume-progress/resume-progress-pending.json",
+    "UIAutomation/Fixtures/resume-progress/resume-progress-none.json",
+    "UIAutomation/Fixtures/resume-progress/resume-progress-error.json",
+    "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json",
+    "UIAutomation/Artifacts/logs/resume-progress-build.log",
+    "UIAutomation/Artifacts/summaries/resume-progress-test-summary.json",
+    "UIAutomation/Artifacts/manifests/resume-progress-run-manifest.json"
+  ],
+  "files_modified": [
+    "Echo/UI/Views/HomeView.swift",
+    "docs/05-planning/task-status.json"
+  ],
+  "test_results": {
+    "unit_tests_passed": 14,
+    "build": "SUCCEEDED",
+    "full_unit_regression": "626 tests / 71 suites — 0 failures",
+    "xcuitest": "4/4 passed",
+    "full_xcuitest_regression": "23 tests — 0 failures",
+    "swiftlint": "0 violations",
+    "unverified": false
+  },
+  "artifacts": {
+    "manifest_path": "UIAutomation/Artifacts/manifests/resume-progress-run-manifest.json",
+    "build_log_path": "UIAutomation/Artifacts/logs/resume-progress-build.log",
+    "test_summary_path": "UIAutomation/Artifacts/summaries/resume-progress-test-summary.json",
+    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json"
+  },
+  "last_updated": "2026-08-02T15:18:07+08:00",
+  "blockers": []
 }

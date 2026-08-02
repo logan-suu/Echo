@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "resume-progress-basic",
+  "steps": [
+    { "surfaceId": "resume-progress-prompt", "stateId": "checking", "actionId": "task.start" },
+    { "surfaceId": "resume-progress-prompt", "stateId": "prompt", "actionId": "prompt.continue" },
+    { "surfaceId": "resume-progress-prompt", "stateId": "resumed", "actionId": "prompt.continue" }
+  ],
+  "preconditionFixtures": ["resume-progress-pending"],
+  "assertions": [
+    { "type": "prompt_shown", "expected": "pending progress found -> dialog with X/Y appears" },
+    { "type": "continue", "expected": "Continue -> dialog dismissed, resume intent recorded (resumePoint preserved)" },
+    { "type": "no_masonry", "expected": "Task surface uses Alert/confirmationDialog, no masonry" }
+  ],
+  "version": "1.0.0"
+}

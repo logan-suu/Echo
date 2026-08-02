@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-02T14:30:00+08:00",
+  "_last_updated": "2026-08-02T21:30:00+08:00",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -242,6 +242,26 @@
       "location": "HomeView.swift (DisableLargeTitleScroll modifier)",
       "reason": "iOS 26 Liquid Glass Large Title 与 ScrollView 联动（overscroll 穿过 banner），用水平禁滚 ScrollView + GeometryReader 包裹内容固定标题。已 #available(iOS 26.0) 守卫并在双设备 Live Sim 通过，但有连带布局风险（offline banner overlay / Dynamic Type AX5）。",
       "defer_to": "Phase 3.9 统一错误处理整合时复查；-degradationFixture 与 -ui-fixture 两套注入机制合并为单一机制",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-42-001",
+      "pr": 42,
+      "title": "ResumeProgressViewModel.progressActor dependency is an unwired placeholder",
+      "severity": "🟡",
+      "location": "Echo/UI/ViewModels/ResumeProgressViewModel.swift:277",
+      "reason": "DI hook for Phase 3.9 Core integration; not wired in UI slice (W-4).",
+      "defer_to": "Phase 3.9 Core ProgressActor/TaskQueueActor integration",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-42-002",
+      "pr": 42,
+      "title": "User-facing strings hardcoded (unified to English after W-3)",
+      "severity": "🟡",
+      "location": "Echo/UI/Views/ResumeProgressPromptView.swift",
+      "reason": "String Catalog migration deferred for UI slices (W-3 unified dialog to English pending full migration).",
+      "defer_to": "Phase 3.8 String Catalog (zh-Hans + en-US)",
       "deferred_at": "2026-08-02"
     }
   ]

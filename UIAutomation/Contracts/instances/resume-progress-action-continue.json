@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "prompt.continue",
+  "source": "user",
+  "targetIntent": "ResumeProgressViewModel.continueTask()",
+  "expectedOutcome": "User chooses to resume the interrupted task from its saved progress (lastProcessedIndex preserved); dialog dismissed; resume intent forwarded (US-SYS-001 AC-3)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

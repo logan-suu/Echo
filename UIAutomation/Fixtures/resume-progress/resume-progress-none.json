@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "resume-progress-none",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "taskType": "dataSourceSync",
+    "pendingProgress": null
+  },
+  "controlledVariables": ["taskType"],
+  "version": "1.0.0"
+}
