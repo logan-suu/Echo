@@ -1,0 +1,8 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.editPrompt",
+  "source": "user",
+  "targetIntent": "CreationViewModel.presentPromptEditor()",
+  "expectedOutcome": "Prompt editor sheet presented with editable draft (US-SYN-005 AC-4)",
+  "version": "1.0.0"
+}

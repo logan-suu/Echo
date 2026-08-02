@@ -1,0 +1,28 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "creation-generated-letter",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "templates": ["letter", "report", "poem", "timeline"],
+    "selectedTemplate": "letter",
+    "title": "A letter to your future self",
+    "generatedContent": [
+      {
+        "paragraph": "In the summer of 2025 you spent many evenings walking in the park, and a small orange cat often followed you home.",
+        "citation": { "memoryId": "22222222-2222-2222-2222-222222222222", "hasSource": true }
+      },
+      {
+        "paragraph": "You wrote down how peaceful those evenings felt, even on hard days.",
+        "citation": { "memoryId": "33333333-3333-3333-3333-333333333333", "hasSource": true }
+      }
+    ],
+    "sourceMemoryCount": 2,
+    "promptDraft": "You are Echo, a local AI memory assistant. Focus on recent queries and feelings."
+  },
+  "controlledVariables": ["timestamp", "memoryId", "generatedContent"],
+  "version": "1.0.0"
+}

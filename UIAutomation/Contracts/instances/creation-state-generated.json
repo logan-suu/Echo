@@ -1,0 +1,21 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "generated",
+  "surfaceId": "creation",
+  "dataConditions": {
+    "templateType": "letter",
+    "generationPhase": "generated",
+    "generatedContent": "non-empty AI text with citation anchors",
+    "sourceMemoryCount": ">= 1"
+  },
+  "allowedActions": ["creation.copy", "creation.export", "creation.saveToNotes", "creation.share", "creation.regenerate"],
+  "expectedSemantics": {
+    "generatedBody": "AI-generated content rendered",
+    "citationAnchors": "per-paragraph [🔗 MemoryID:xxx] anchors present (US-SYN-002/003 AC-2)",
+    "copyButton": "Copy content to clipboard",
+    "exportButton": "Export as PDF/Markdown (US-SYN-003 AC-3)",
+    "saveToNotesButton": "Save to Apple Notes (US-SYN-003 AC-4)",
+    "shareButton": "Share/export/print narrative report (US-SYN-004 AC-4)"
+  },
+  "version": "1.0.0"
+}

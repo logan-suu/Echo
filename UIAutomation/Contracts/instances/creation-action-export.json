@@ -1,0 +1,8 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.export",
+  "source": "user",
+  "targetIntent": "CreationViewModel.export(format:)",
+  "expectedOutcome": "Export sheet presented with PDF/Markdown options (US-SYN-003 AC-3)",
+  "version": "1.0.0"
+}

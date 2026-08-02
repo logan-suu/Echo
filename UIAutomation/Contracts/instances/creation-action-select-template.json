@@ -1,0 +1,8 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.selectTemplate",
+  "source": "user",
+  "targetIntent": "CreationViewModel.selectTemplate(_:)",
+  "expectedOutcome": "Template selection stored; Generate button enabled",
+  "version": "1.0.0"
+}

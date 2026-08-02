@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "error",
+  "surfaceId": "creation",
+  "dataConditions": {
+    "generationPhase": "error",
+    "errorLevel": "L2"
+  },
+  "allowedActions": ["creation.retry"],
+  "expectedSemantics": {
+    "errorMessage": "Generation failed message",
+    "retryButton": "Retry (L2 recovery path, AGENTS.md §4.4)"
+  },
+  "version": "1.0.0"
+}

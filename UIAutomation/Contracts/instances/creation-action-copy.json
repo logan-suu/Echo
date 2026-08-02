@@ -1,0 +1,8 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.copy",
+  "source": "user",
+  "targetIntent": "CreationViewModel.copyToClipboard()",
+  "expectedOutcome": "Generated content copied to UIPasteboard; confirmation announced",
+  "version": "1.0.0"
+}

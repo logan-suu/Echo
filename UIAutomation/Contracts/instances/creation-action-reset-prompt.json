@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.resetPrompt",
+  "source": "user",
+  "targetIntent": "CreationViewModel.resetPrompt()",
+  "expectedOutcome": "Prompt draft reset to default (US-SYN-005 AC-6)",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

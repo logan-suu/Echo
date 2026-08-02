@@ -55,6 +55,12 @@ struct SearchView: View {
     /// 预加载的记忆详情 ViewModel — Live Sim Review fixture 直接导航
     @State private var detailViewModel: MemoryDetailViewModel?
 
+    /// 预加载的创作结果 ViewModel — Live Sim Review fixture 直接导航 (US-SYN-003, Task 3.9)
+    @State private var creationViewModel: CreationViewModel?
+
+    /// 是否展示创作结果页 (US-SYN-003, Task 3.9)
+    @State private var isShowingCreation = false
+
     /// 首次出现标记 — 控制 fixture 注入仅执行一次 (2026-08-02 回归修复)
     @State private var hasHandledLaunchArguments = false
 
@@ -87,6 +93,14 @@ struct SearchView: View {
                 MemoryDetailView(viewModel: detailViewModel)
             } else {
                 MemoryDetailView(memoryId: memoryID)
+            }
+        }
+        // AI 创作结果页 (US-SYN-003, Task 3.9)
+        .navigationDestination(isPresented: $isShowingCreation) {
+            if let creationViewModel {
+                CreationView(viewModel: creationViewModel)
+            } else {
+                CreationView()
             }
         }
         .navigationTitle("Search")
@@ -140,6 +154,17 @@ struct SearchView: View {
                 vm.loadPreloaded(model)
                 detailViewModel = vm
                 selectedMemoryID = model.id
+            }
+            return
+        }
+
+        // 支持 `-ui-fixture creation-*` 导航到创作结果 surface (Task 3.9)
+        if fixtureID.hasPrefix("creation-") {
+            if let model = CreationFixtureLoader.load(fixtureID) {
+                let vm = CreationViewModel()
+                vm.loadPreloaded(model)
+                creationViewModel = vm
+                isShowingCreation = true
             }
             return
         }

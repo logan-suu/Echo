@@ -1,0 +1,30 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "creation-generated-report",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "templates": ["letter", "report", "poem", "timeline"],
+    "selectedTemplate": "report",
+    "title": "Your 2025 Narrative Report",
+    "periodType": "year",
+    "period": "2025",
+    "generatedContent": [
+      {
+        "paragraph": "This year had three clear chapters: a quiet winter, an active spring in the park, and a reflective autumn.",
+        "citation": { "memoryId": "44444444-4444-4444-4444-444444444444", "hasSource": true }
+      },
+      {
+        "paragraph": "Your top recurring theme was time outdoors with people close to you.",
+        "citation": { "memoryId": "55555555-5555-5555-5555-555555555555", "hasSource": true }
+      }
+    ],
+    "sourceMemoryCount": 2,
+    "promptDraft": "You are Echo, a local AI memory assistant. Focus on recent queries and feelings."
+  },
+  "controlledVariables": ["period", "memoryId", "generatedContent"],
+  "version": "1.0.0"
+}

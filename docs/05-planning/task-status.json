@@ -686,16 +686,22 @@
           "id": "3.9",
           "title": "整合所有 ViewModel 与 Pipeline + 创作保存 UI",
           "story": "US-SYN-003, US-SYN-004, US-SYN-005",
-          "status": "ready",
-          "last_updated": "2026-08-02T17:23:09+08:00",
+          "status": "review",
+          "last_updated": "2026-08-02T18:30:00+08:00",
+          "ui_run": {
+            "runId": "3.9-bootstrap",
+            "automation_phase": "accepted",
+            "started_at": "2026-08-02",
+            "delivery_approved_at": "2026-08-03T00:20:00+08:00"
+          },
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": [
             "3.8"
           ],
-          "test_file": "EchoTests/Phase3/EndToEndFlowTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。\n(2026-08-02 cascade) Dependency 3.8 merged (PR #43), flipped backlog -> ready per AGENTS.md §12.1."
+          "test_file": "EchoTests/Phase3/CreationViewModelTests.swift",
+          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。\n(2026-08-02 cascade) Dependency 3.8 merged (PR #43), flipped backlog -> ready per AGENTS.md §12.1.\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-03T00:20:00+08:00）。CreationView + CreationViewModel + CreationFixtureLoader + MemoryDetailView/SearchView 创作入口 + PromptEditorSheet + ShareLinkSheet 交付。单元测试 17/17（CreationViewModelTests）+ 3/3 XCUITest（CreationUITests），SwiftLint 0 新增 error 违规（13 条 warning 与既有 Phase3 测试模式一致）。i18n 硬编码英文，String Catalog 迁移与 Core 创作 Pipeline 接入延后（见 DEF-44-001）。任务 status in_progress → review，Git 交付经用户调用 /commit-pr-echo。"
         },
         {
           "id": "3.10",

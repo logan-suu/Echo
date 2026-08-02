@@ -1,0 +1,35 @@
+{
+  "runId": "3.9-bootstrap",
+  "surfaceId": "creation",
+  "stateIds": ["idle", "generating", "generated", "empty", "error", "saving", "saved"],
+  "source": "ax-service (iPhone 16 Pro iOS 18.2) + XCUITest accessibility queries (iPhone 17 Pro iOS 26.5 — SwiftUI AX not exposed via simulator-server native-devtools on iOS 26)",
+  "captured_at": "2026-08-03T00:00:00+08:00",
+  "elements": {
+    "navigation_title": "AI Creation (inline, back to Search)",
+    "creation_template_letter": "Button 'Letter' selected state, checkmark.circle.fill accent",
+    "creation_generate": "Button 'Generate' (borderedProminent), enabled after template selection",
+    "creation_edit_prompt": "Toolbar Button 'Personal prompt' (person.text.rectangle)",
+    "creation_paragraph_1": "Static text 'In the summer of 2025 you spent many evenings walking in the park...'",
+    "creation_citation_anchor_1": "Button 'Source memory citation' → 🔗 MemoryID:22222222…",
+    "creation_citation_anchor_2": "Button 'Source memory citation' → 🔗 MemoryID:33333333…",
+    "creation_copy": "Button 'Copy'",
+    "creation_export": "Button 'Export PDF / Markdown'",
+    "creation_share": "Button 'Share / Print'",
+    "creation_save_to_notes": "Button 'Save to Notes' (borderedProminent)",
+    "creation_open_note": "Link 'Open' (saved state, US-SYN-003 AC-5)",
+    "creation_prompt_editor": "TextEditor in Form sheet (editable, confirm/cancel/reset)",
+    "creation_confirm_prompt": "Button 'Confirm' (confirmationAction)",
+    "creation_reset_prompt": "Button 'Reset to default prompt' (destructive)",
+    "metadata": "Static text '2 source memories' (US-SYN-003 AC-2 source count)"
+  },
+  "verification": {
+    "xcuitest_journeys": {
+      "test_generateFlowFromMemoryDetail": "PASSED (17 Pro destination) — template select → generate → citation anchors + Copy/Export/Save buttons exist",
+      "test_saveToNotesShowsToast": "PASSED — save → creation-open-note link appears",
+      "test_promptEditorConfirm": "PASSED — prompt editor opens, text editable, confirm closes"
+    },
+    "surface_family": "focus (single_column, masonry forbidden — no masonry present)",
+    "dynamic_type": "Large (default), system text styles",
+    "accessibility": "All interactive elements carry accessibilityIdentifier; toggle/citation anchors have labels"
+  }
+}

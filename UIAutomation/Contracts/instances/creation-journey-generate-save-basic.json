@@ -1,0 +1,20 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "creation-generate-save-basic",
+  "steps": [
+    { "surfaceId": "creation", "stateId": "idle", "actionId": "creation.selectTemplate" },
+    { "surfaceId": "creation", "stateId": "idle", "actionId": "creation.generate" },
+    { "surfaceId": "creation", "stateId": "generating", "actionId": "creation.generate" },
+    { "surfaceId": "creation", "stateId": "generated", "actionId": "creation.copy" },
+    { "surfaceId": "creation", "stateId": "generated", "actionId": "creation.saveToNotes" },
+    { "surfaceId": "creation", "stateId": "saving", "actionId": "creation.saveToNotes" },
+    { "surfaceId": "creation", "stateId": "saved", "actionId": "creation.openNote" }
+  ],
+  "preconditionFixtures": ["creation-generated-letter"],
+  "assertions": [
+    { "type": "generate_flow", "expected": "idle -> generating -> generated with citation anchors" },
+    { "type": "copy", "expected": "Content copied to pasteboard" },
+    { "type": "save_to_notes", "expected": "generated -> saving -> saved Toast + link (US-SYN-003 AC-5)" }
+  ],
+  "version": "1.0.0"
+}
