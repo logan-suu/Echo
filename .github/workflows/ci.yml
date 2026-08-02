@@ -221,11 +221,13 @@ jobs:
           NSUnbufferedIO: YES
 
       # ── Coverage Gate (R-2.2a): enforce coverage threshold ──
-      # Phase 3 UI Views (Echo/UI/Views/) are excluded from coverage calculation.
+      # SwiftUI Views (*View.swift) and Fixture Loaders (*FixtureLoader.swift)
+      # under Echo/UI/ are excluded from coverage calculation (feature-dir
+      # layout since 2026-08-03; see Scripts/coverage_gate.py).
       # Rationale: SwiftUI Views are declarative layout code tested via Live
       # Simulator Review (visual QA) and XCUITest, not unit tests. ViewModels
-      # (Echo/UI/ViewModels/) remain included — they contain business logic
-      # that MUST be unit tested per AGENTS.md §9.3.
+      # remain included — they contain business logic that MUST be unit
+      # tested per AGENTS.md §9.3.
       # AGENTS.md §9.3 threshold (95%) applies to Core + ViewModels aggregate.
       # Coverage gate on excluded-source aggregate MUST restore to 95% in
       # Phase 4 when all Core Actor integration is complete.
@@ -239,7 +241,7 @@ jobs:
             echo "::error::TestResults.xcresult not found — coverage gate cannot pass"
             exit 1
           fi
-          echo "::group::Coverage Report (file-level, excluding Echo/UI/Views/)"
+          echo "::group::Coverage Report (file-level, excluding Views/FixtureLoaders)"
           python3 Scripts/coverage_gate.py TestResults.xcresult ${COVERAGE_THRESHOLD}
           echo "::endgroup::"
           echo "::group::Coverage Detail"
