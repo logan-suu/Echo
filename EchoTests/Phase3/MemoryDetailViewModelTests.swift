@@ -78,7 +78,7 @@ struct MemoryDetailViewModelTests {
         #expect(vm.memory?.translationVisible == false)
     }
 
-    @Test("US-DIS-002 AC-3: low-confidence translation retains original + language label")
+    @Test("US-DIS-002 AC-3: low source-language detection confidence retains original + language label")
     func lowConfidenceRetainsOriginal() {
         let vm = MemoryDetailViewModel()
         let lowConf = MemoryDetailModel(
@@ -92,11 +92,109 @@ struct MemoryDetailViewModelTests {
             timestamp: Date(timeIntervalSince1970: 1723420800),
             translationVisible: true,
             translatedText: "A low-confidence translation.",
-            translationConfidence: 0.55
+            sourceLanguageConfidence: 0.55
         )
         vm.loadPreloaded(lowConf)
         #expect(vm.memory?.translationVisible == true)
-        #expect(vm.memory?.translationConfidence ?? 1.0 < 0.7)
+        #expect(vm.memory?.sourceLanguageConfidence ?? 1.0 < 0.9)
+    }
+
+    // MARK: - US-DIS-002 On-demand Translation (Task 3.8)
+
+    @Test("US-DIS-002 AC-1/AC-4: toggle triggers on-demand translation on expand (fixture service)")
+    func toggleTriggersOnDemandTranslation() async {
+        let vm = MemoryDetailViewModel()
+        let model = TranslationFixtureLoader.load("translation-zh-en-high")!
+        vm.loadPreloaded(model)
+
+        #expect(vm.memory?.translationVisible == false)
+        #expect(vm.memory?.translatedText == nil)
+
+        vm.toggleTranslation()
+
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        #expect(vm.memory?.translationVisible == true)
+        #expect(vm.memory?.translatedText?.contains("orange tabby") == true)
+        #expect(vm.translationPhase == .translated)
+    }
+
+    @Test("US-DIS-002 AC-2: cache-first — second expand after collapse uses cached result without re-fetch")
+    func toggleUsesCacheOnSecondExpand() async {
+        let cache = TranslationCache()
+        let vm = MemoryDetailViewModel(translationCache: cache)
+        let model = TranslationFixtureLoader.load("translation-zh-en-high")!
+        vm.loadPreloaded(model)
+
+        vm.toggleTranslation()
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        #expect(vm.memory?.translatedText != nil)
+        #expect(await cache.count == 1, "Translation must be written to cache (AC-5)")
+
+        vm.toggleTranslation()
+        vm.toggleTranslation()
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        #expect(vm.memory?.translatedText?.contains("orange tabby") == true)
+        #expect(await cache.count == 1, "Cache must not grow on cache hit")
+    }
+
+    @Test("US-DIS-002 AC-1: collapse cancels in-flight translation")
+    func collapseCancelsInFlightTranslation() async {
+        let vm = MemoryDetailViewModel()
+        let model = TranslationFixtureLoader.load("translation-zh-en-high")!
+        vm.loadPreloaded(model)
+
+        vm.toggleTranslation()
+        vm.toggleTranslation()
+
+        #expect(vm.memory?.translationVisible == false)
+        #expect(vm.translationPhase == .idle)
+    }
+
+    @Test("US-DIS-002 AC-3/AC-4: low-confidence fixture resolves with detection confidence <0.9 and retains original")
+    func lowConfidenceFixtureKeepsOriginal() async {
+        let vm = MemoryDetailViewModel()
+        let model = TranslationFixtureLoader.load("translation-zh-en-low")!
+        vm.loadPreloaded(model)
+
+        vm.toggleTranslation()
+        try? await Task.sleep(nanoseconds: 300_000_000)
+
+        #expect(vm.memory?.translationVisible == true)
+        #expect(vm.memory?.translatedText != nil)
+        #expect(vm.memory?.sourceLanguageConfidence ?? 1.0 < 0.9)
+    }
+
+    @Test("US-DIS-002 AC-2: translation service error surfaces L2 error phase (retry available)")
+    func translationErrorShowsL2ErrorPhase() async {
+        let vm = MemoryDetailViewModel()
+        let model = TranslationFixtureLoader.load("translation-error")!
+        vm.loadPreloaded(model)
+
+        vm.toggleTranslation()
+        try? await Task.sleep(nanoseconds: 300_000_000)
+
+        if case .error = vm.translationPhase {
+            #expect(true)
+        } else {
+            #expect(Bool(false), "Expected .error translation phase for unmapped text")
+        }
+        #expect(vm.memory?.translatedText == nil, "Original must be retained on error")
+    }
+
+    @Test("US-DIS-002 AC-4: toggleTranslation no-op when translation already cached in model")
+    func toggleDoesNotReFetchWhenAlreadyTranslated() async {
+        let vm = MemoryDetailViewModel()
+        let model = TranslationFixtureLoader.load("translation-zh-en-cached")!
+        vm.loadPreloaded(model)
+
+        #expect(vm.memory?.translatedText != nil)
+        #expect(vm.translationPhase == .translated)
+
+        vm.toggleTranslation()
+        #expect(vm.memory?.translationVisible == false)
+        vm.toggleTranslation()
+        #expect(vm.memory?.translationVisible == true)
+        #expect(vm.memory?.translatedText != nil)
     }
 
     // MARK: - US-AWK-007 Edit

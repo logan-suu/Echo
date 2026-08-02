@@ -1,0 +1,32 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "surfaceId": "translation",
+  "surfaceFamily": "focus",
+  "responsibility": "On-demand translation of a non-preferred-language memory: original/translation toggle (US-DIS-002 AC-4), cache-first lookup via TranslationCache TTL=7d (AC-2/AC-5), Apple Translation fallback, confidence <0.7 keeps original + language label (AC-3), only triggered on detail expansion (AC-1)",
+  "inputs": {
+    "memory": "MemoryDetailModel with sourceLanguage != preferredLanguage (needsTranslation), originalText, translationVisible, translatedText, translationConfidence",
+    "translationService": "TranslationService protocol (display-layer) — cache-first, Apple Translation fallback (🔮 Phase 3.9 real model)",
+    "translationCache": "TranslationCache with TTL=7d, injectable clock for determinism",
+    "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US)"
+  },
+  "outputs": {
+    "visibleContent": "Original text, translation toggle button, translated text (when available and confidence >= 0.7), original text + language label (when confidence < 0.7), progress indicator while translating, L2 error toast + retry on failure",
+    "interactionTargets": "translation-toggle, translation-retry",
+    "accessibilityTree": "Toggle with value Original shown / Translation shown; translated body announced on completion"
+  },
+  "systemContainer": "NavigationStack (memory detail push) + ScrollView content section + Alert/Toast for L2 retry",
+  "layoutMode": "single_column",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "Focus surface — masonry always disabled (echo-memory-canvas §3.2, §8.1)"
+  ],
+  "states": [
+    "original",
+    "translating",
+    "translated",
+    "low-confidence",
+    "cached",
+    "error"
+  ],
+  "version": "1.0.0"
+}

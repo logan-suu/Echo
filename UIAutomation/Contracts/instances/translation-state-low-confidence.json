@@ -1,0 +1,21 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "low-confidence",
+  "surfaceId": "translation",
+  "dataConditions": {
+    "memory": "Text memory (zh-Hans), preferredLanguage = en-US",
+    "translationVisible": true,
+    "translatedText": "Low-confidence translation",
+    "translationConfidence": "< 0.9"
+  },
+  "allowedActions": [
+    "translation.toggle"
+  ],
+  "expectedSemantics": {
+    "translationToggle": "Show original",
+    "lowConfidenceWarning": "Source language detection uncertain (NLTagger < 0.9)",
+    "originalRetained": true,
+    "originalLabel": "Original: <original text>"
+  },
+  "version": "1.0.0"
+}

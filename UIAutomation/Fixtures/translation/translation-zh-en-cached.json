@@ -1,0 +1,42 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "translation-zh-en-cached",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "memory": {
+      "memoryId": "22222222-2222-2222-2222-222222222222",
+      "assetId": "note-zh-2",
+      "sourceType": "note",
+      "title": "昨晚的公园散步",
+      "originalText": "昨晚在公园遇到一只橘猫，很亲人。它在我脚边蹭了很久，后来跟着我走了一段路。",
+      "sourceLanguage": "zh-Hans",
+      "preferredLanguage": "en-US",
+      "timestamp": 1723420800,
+      "tags": [
+        "公园",
+        "橘猫"
+      ]
+    },
+    "translation": {
+      "requestedText": "昨晚在公园遇到一只橘猫，很亲人。它在我脚边蹭了很久，后来跟着我走了一段路。",
+      "sourceLanguage": "zh-Hans",
+      "targetLanguage": "en-US",
+      "translatedText": "Last night I met an orange tabby in the park. It was very friendly, rubbing against my legs and following me for a while.",
+      "cacheHit": true,
+      "cacheEntryAgeDays": 2,
+      "sourceLanguageConfidence": 0.95
+    }
+  },
+  "controlledVariables": [
+    "timestamp",
+    "memoryId",
+    "translation.sourceLanguageConfidence",
+    "translation.cacheHit",
+    "translation.cacheEntryAgeDays"
+  ],
+  "version": "1.0.0"
+}

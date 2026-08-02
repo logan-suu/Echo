@@ -1,0 +1,18 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "translating",
+  "surfaceId": "translation",
+  "dataConditions": {
+    "memory": "Text memory (zh-Hans), preferredLanguage = en-US",
+    "translationVisible": true,
+    "translationInFlight": true,
+    "translatedText": null
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "translationToggle": "Show original",
+    "progress": "ProgressView visible",
+    "translatingLabel": "Translating…"
+  },
+  "version": "1.0.0"
+}

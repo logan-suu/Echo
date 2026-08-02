@@ -7,7 +7,7 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-007, US-SYN-002/003, US-PRV-004, US-DIS-002
 // 任务: 3.3 - MemoryDetailView + ViewModel + Edit + Conflict + Creation + Translation
 // AC 覆盖: US-AWK-007 AC-1 ✅ (编辑入口 + 表单), AC-4 ✅ (冲突解决 UI),
-//          US-DIS-002 AC-4 ✅ (原文/译文切换), US-PRV-004 AC-1 ✅ (删除双选项弹窗),
+//          US-DIS-002 AC-3 ✅ (源语言检测不确定保留原文为主, ADR-005), AC-4 ✅ (原文/译文切换), US-PRV-004 AC-1 ✅ (删除双选项弹窗),
 //          US-SYN-002 AC-1 ✅ (溯源锚点渲染), US-SYN-003 AC-3 ✅ (创作预览/复制)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Focus 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统容器 + semantic colors + Dynamic Type
@@ -133,14 +133,17 @@ struct MemoryDetailView: View {
     #if DEBUG
     /// 处理 XCUITest / Live Sim Review 启动参数注入确定性 fixture。
     ///
-    /// 支持 `-ui-fixture memory-detail-loaded|memory-detail-translated|memory-detail-conflict|memory-detail-error`，
-    /// 通过 MemoryDetailFixtureLoader 加载确定性数据。
+    /// 支持 `-ui-fixture memory-detail-loaded|memory-detail-translated|memory-detail-conflict|memory-detail-error`
+    /// 及 `translation-zh-en-*|translation-error`（task 3.8 翻译 surface），
+    /// 通过 MemoryDetailFixtureLoader / TranslationFixtureLoader 加载确定性数据。
     /// 仅用于自动化；生产构建（#if DEBUG 排除）无此钩子。
     private func handleLaunchArguments() {
         let args = ProcessInfo.processInfo.arguments
         guard let idx = args.firstIndex(of: "-ui-fixture"), idx + 1 < args.count else { return }
         let fixtureID = args[idx + 1]
         if let model = MemoryDetailFixtureLoader.load(fixtureID) {
+            viewModel.loadPreloaded(model)
+        } else if let model = TranslationFixtureLoader.load(fixtureID) {
             viewModel.loadPreloaded(model)
         } else if fixtureID == "memory-detail-error" {
             viewModel.simulateError(.l2Recoverable(message: "Unable to load this memory. Please try again."))
@@ -373,28 +376,10 @@ struct MemoryDetailView: View {
             .accessibilityIdentifier("memory-detail-translation-toggle")
             .accessibilityValue(memory.translationVisible ? "Translation shown" : "Original shown")
 
-            // 内容展示
+            // 内容展示 — 由 ViewModel 翻译阶段驱动 (US-DIS-002)
             if memory.translationVisible {
-                if let translated = memory.translatedText {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(translated)
-                            .font(.body)
-                            .foregroundStyle(Color.primary)
-                            .textSelection(.enabled)
-
-                        Text("Translated · \(memory.preferredLanguage)")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-
-                        // 低置信度时保留原文 + 语言标签 (US-DIS-002 AC-3)
-                        if let confidence = memory.translationConfidence, confidence < 0.7 {
-                            Text("Original: \(memory.originalText)")
-                                .font(.footnote)
-                                .foregroundStyle(Color.secondary)
-                        }
-                    }
-                } else {
-                    // 🔮 Phase 3.8: 调用 Apple Translation。当前 fixture 注入。
+                switch viewModel.translationPhase {
+                case .idle, .translating:
                     HStack(spacing: 8) {
                         ProgressView()
                             .controlSize(.small)
@@ -402,6 +387,57 @@ struct MemoryDetailView: View {
                             .font(.subheadline)
                             .foregroundStyle(Color.secondary)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Translating memory")
+
+                case .translated:
+                    if let translated = memory.translatedText {
+                        // US-DIS-002 AC-3 (ADR-005): 源语言检测不确定 (<0.9) 时
+                        // 保留原文为主 + 语言标签，不提供译文 (翻译方向可能错误)。
+                        if let confidence = memory.sourceLanguageConfidence, confidence < 0.9 {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(memory.originalText)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                                    .textSelection(.enabled)
+
+                                Text("Detected · \(memory.sourceLanguage)")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Original: \(memory.originalText)")
+                        } else {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(translated)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                                    .textSelection(.enabled)
+
+                                Text("Translated · \(memory.preferredLanguage)")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Translated: \(translated)")
+                        }
+                    }
+
+                case .error(let message):
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(Color.secondary)
+                        Text(message)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.secondary)
+                        Button("Retry") {
+                            viewModel.retryTranslation()
+                        }
+                        .font(.callout)
+                        .accessibilityIdentifier("memory-detail-translation-retry")
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Translation failed. \(message)")
                 }
             } else {
                 Text(memory.originalText)
@@ -934,6 +970,24 @@ struct EditMemorySheet: View {
     }
 }
 
+#Preview("Translation high confidence") {
+    NavigationStack {
+        MemoryDetailView(viewModel: makeTranslationViewModel(state: .highConfidence))
+    }
+}
+
+#Preview("Translation low confidence") {
+    NavigationStack {
+        MemoryDetailView(viewModel: makeTranslationViewModel(state: .lowConfidence))
+    }
+}
+
+#Preview("Translation error") {
+    NavigationStack {
+        MemoryDetailView(viewModel: makeTranslationViewModel(state: .error))
+    }
+}
+
 #Preview("Conflict") {
     NavigationStack {
         MemoryDetailView(viewModel: makeDetailViewModel(state: .conflict))
@@ -979,11 +1033,43 @@ private func makeDetailViewModel(state: DetailPreviewState) -> MemoryDetailViewM
     return vm
 }
 
+/// 从翻译 fixture 构造确定性记忆详情 (task 3.8)。
+@MainActor
+private func makeTranslationViewModel(state: TranslationPreviewState) -> MemoryDetailViewModel {
+    let vm = MemoryDetailViewModel()
+
+    switch state {
+    case .highConfidence:
+        if let model = TranslationFixtureLoader.load("translation-zh-en-high") {
+            vm.loadPreloaded(model)
+        }
+
+    case .lowConfidence:
+        if let model = TranslationFixtureLoader.load("translation-zh-en-low") {
+            vm.loadPreloaded(model)
+        }
+
+    case .error:
+        if let model = TranslationFixtureLoader.load("translation-error") {
+            vm.loadPreloaded(model)
+        }
+    }
+
+    return vm
+}
+
 /// Preview 状态枚举
 private enum DetailPreviewState {
     case loading
     case loaded
     case translated
     case conflict
+    case error
+}
+
+/// 翻译 surface Preview 状态枚举
+private enum TranslationPreviewState {
+    case highConfidence
+    case lowConfidence
     case error
 }

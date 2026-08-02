@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "translation-on-demand-basic",
+  "steps": [
+    { "surfaceId": "translation", "stateId": "original", "actionId": "translation.toggle" },
+    { "surfaceId": "translation", "stateId": "translating", "actionId": "translation.toggle" },
+    { "surfaceId": "translation", "stateId": "translated", "actionId": "translation.toggle" },
+    { "surfaceId": "translation", "stateId": "original", "actionId": "translation.toggle" }
+  ],
+  "preconditionFixtures": ["translation-zh-en-high"],
+  "assertions": [
+    { "type": "toggle_state", "expected": "Original shown -> Translation shown -> Original shown on collapse" },
+    { "type": "translated_text", "expected": "English translation displayed when expanded" },
+    { "type": "cache_write", "expected": "Translation persisted to cache after success (TTL=7d)" }
+  ],
+  "version": "1.0.0"
+}

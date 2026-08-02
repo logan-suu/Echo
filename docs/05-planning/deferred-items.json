@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-02T21:30:00+08:00",
+  "_last_updated": "2026-08-02T23:30:00+08:00",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -262,6 +262,36 @@
       "location": "Echo/UI/Views/ResumeProgressPromptView.swift",
       "reason": "String Catalog migration deferred for UI slices (W-3 unified dialog to English pending full migration).",
       "defer_to": "Phase 3.8 String Catalog (zh-Hans + en-US)",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-43-001",
+      "pr": 43,
+      "title": "Translation error message + Retry/Translating strings hardcoded English (i18n)",
+      "severity": "🟡",
+      "location": "Echo/UI/ViewModels/MemoryDetailViewModel.swift:415-417, Echo/UI/Views/MemoryDetailView.swift:386,401,407,423",
+      "reason": "New translation surface strings ('Translation is currently unavailable. Please try again.', 'Translating…', 'Translated ·', 'Original:', 'Retry', accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
+      "defer_to": "Phase 3.9 String Catalog migration (zh-Hans + en-US) — task 3.8 wrap-up / 3.9",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-43-002",
+      "pr": 43,
+      "title": "Apple Translation real call not integrated — fixture only (US-DIS-002 AC-2)",
+      "severity": "🟡",
+      "location": "Echo/UI/Services/FixtureTranslationService.swift (zhEnMap), MemoryDetailViewModel.swift requestTranslation()",
+      "reason": "AC-2 requires 'cache-first, fallback Apple Translation'. Implemented cache-first + TranslationService protocol seam, but real Apple Translation Framework call deferred. FixtureTranslationService only maps 2 known strings; all others throw L2 serviceUnavailable. Real model + term-glossary JSON integration is Phase 3.9.",
+      "defer_to": "Phase 3.9 Apple Translation Framework + 术语表 JSON 接入",
+      "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-43-003",
+      "pr": 43,
+      "title": "translationCache is in-memory UI slice only, not persisted to Core (US-DIS-002 AC-5)",
+      "severity": "🟡",
+      "location": "Echo/UI/Services/TranslationCache.swift (actor, in-memory storage)",
+      "reason": "AC-5 requires 'translationCache, TTL=7d'. Implemented display-layer in-memory actor cache (TTL=7d, clock-injectable). Core translationCache field on Memory (persisted) + write path deferred to Phase 3.9; cache does not survive app relaunch.",
+      "defer_to": "Phase 3.9 Core translationCache 字段写入 + 持久化",
       "deferred_at": "2026-08-02"
     }
   ]
