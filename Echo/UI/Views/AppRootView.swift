@@ -52,9 +52,9 @@ struct AppRootView: View {
         }
         .tint(Color.accentColor)
         .fullScreenCover(isPresented: $isOnboardingPresented) {
-            OnboardingView(viewModel: onboardingViewModel) {
-                isOnboardingPresented = false
-            }
+            OnboardingView(viewModel: onboardingViewModel,
+                           onCompleted: { isOnboardingPresented = false },
+                           onDeclined: { isOnboardingPresented = false })
         }
         .onAppear { handleFirstAppear() }
     }

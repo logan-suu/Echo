@@ -116,9 +116,6 @@ final class OnboardingViewModel {
     /// UI 切片模式 fixture 注入源
     private var stubFixture: OnboardingFixture?
 
-    /// 权限拒绝索引（fixture 驱动 permissionDenied 态）
-    private var deniedIndex: Int?
-
     // MARK: - Initialization
 
     /// 初始化 OnboardingViewModel。
@@ -168,7 +165,6 @@ final class OnboardingViewModel {
     /// Step 3: 拒绝当前权限 → permissionDenied 态 (US-SRC-001 AC-6 提示 + 前往设置)。
     func denyPermission() {
         guard case .permissions(let index) = viewState else { return }
-        deniedIndex = index
         viewState = .permissionDenied(index)
     }
 
@@ -234,12 +230,6 @@ final class OnboardingViewModel {
         startModelLoad()
     }
 
-    /// 关闭 declined 态 (US-PRV-008 AC-3 拒绝后退出)。
-    func closeDeclined() {
-        guard viewState == .declined else { return }
-        // 保持 declined；宿主 (AppRootView) 决定后续行为 (🔮 数据不采集, 限制功能)
-    }
-
     /// 重置到初始状态。
     func reset() {
         loadTask?.cancel()
@@ -252,7 +242,6 @@ final class OnboardingViewModel {
         mappingHintVisible = false
         openSettingsRequested = false
         stubFixture = nil
-        deniedIndex = nil
     }
 
     // MARK: - Model Loading (fixture simulated)
@@ -307,7 +296,6 @@ final class OnboardingViewModel {
             viewState = .permissions(fixture.permissionIndex)
 
         case .permissionDenied:
-            deniedIndex = fixture.permissionIndex
             viewState = .permissionDenied(fixture.permissionIndex)
 
         case .language:

@@ -13,7 +13,7 @@ import XCTest
 
 /// 引导流程 journey 测试 — 通过 -ui-fixture onboarding-* 启动参数确定性导航。
 final class OnboardingUITests: XCTestCase {
-
+    deinit {}
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -63,7 +63,8 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(progress.waitForExistence(timeout: 5), "Model progress indicator should appear")
     }
 
-    /// 引导 PIPL 拒绝分支 (US-PRV-008 AC-3): 同意/拒绝同等醒目 → 拒绝 → declined 退出
+    /// 引导 PIPL 拒绝分支 (US-PRV-008 AC-3): 拒绝 → declined 终态页 → Close 退出引导
+    /// W-1 强化: 断言 declined 终态 UI 出现 + Close 后 cover 关闭 (此前断言平凡成立，无法捕获 P0-2 死胡同)
     @MainActor
     func test_privacyDeclinedBranch() throws {
         let app = XCUIApplication()
@@ -76,8 +77,13 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(decline.waitForExistence(timeout: 5), "Decline should be present")
         decline.tap()
 
-        // declined 态由 ViewModel 呈现；断言 UI 不再展示权限序列 (仅 Verify 引导流程状态机)
-        XCTAssertFalse(app.buttons["onboarding-permission-allow"].exists)
+        // declined 终态页出现 — 提供退出出口 (P0-2 修复)
+        let closeButton = app.buttons["onboarding-declined-close"]
+        XCTAssertTrue(closeButton.waitForExistence(timeout: 5), "Declined terminal state with Close should appear (US-PRV-008 AC-3)")
+
+        // 点击 Close → 引导 cover 关闭 (退出引导流程)
+        closeButton.tap()
+        XCTAssertFalse(app.buttons["onboarding-declined-close"].waitForExistence(timeout: 3), "Onboarding cover should dismiss after Close (P0-2)")
     }
 
     /// 引导权限拒绝分支 (US-SRC-001 AC-6): 拒绝照片权限 → 前往设置 / 继续

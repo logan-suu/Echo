@@ -10,8 +10,9 @@
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
 // 任务: 3.11 - 引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载
 // AC 覆盖: US-PRV-008 AC-1 ✅ (隐私摘要展示), AC-2 ✅ (摘要含目的/方式/种类/保留期限/本地处理声明),
-//          AC-3 ✅ (同意/拒绝同等醒目按钮), US-SRC-001 AC-6 ✅ (iCloud 提示 + Open Settings 按钮),
-//          US-SYN-001 AC-2 ✅ (zh-Hans/en-US Picker + 映射提示), 首次模型加载 ✅ (determinate ProgressView)
+//          AC-3 ✅ (同意/拒绝同等醒目 + declined 终态页 Close 退出, PR #45 review P0-2 修复),
+//          US-SRC-001 AC-6 ✅ (iCloud 提示 + Open Settings 按钮), US-SYN-001 AC-2 ✅ (zh-Hans/en-US Picker + 映射提示),
+//          首次模型加载 ✅ (determinate ProgressView)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统容器 + SF Symbols + Dynamic Type
 // 生成时间: 2026-08-03
@@ -47,9 +48,15 @@ struct OnboardingView: View {
     /// 引导完成回调 — 宿主 (AppRootView) 关闭 fullScreenCover
     var onCompleted: (() -> Void)?
 
-    init(viewModel: OnboardingViewModel = OnboardingViewModel(), onCompleted: (() -> Void)? = nil) {
+    /// 引导拒绝回调 — 宿主 (AppRootView) 关闭 fullScreenCover (US-PRV-008 AC-3 拒绝后退出)
+    var onDeclined: (() -> Void)?
+
+    init(viewModel: OnboardingViewModel = OnboardingViewModel(),
+         onCompleted: (() -> Void)? = nil,
+         onDeclined: (() -> Void)? = nil) {
         _viewModel = State(initialValue: viewModel)
         self.onCompleted = onCompleted
+        self.onDeclined = onDeclined
     }
 
     // MARK: - Body
@@ -61,6 +68,7 @@ struct OnboardingView: View {
             permissionsPage.tag("permissions")
             languagePage.tag("language")
             modelLoadingPage.tag("modelLoading")
+            declinedPage.tag("declined")
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .onChange(of: viewModel.viewState) { _, newState in
@@ -82,7 +90,7 @@ struct OnboardingView: View {
                 case .permissions, .permissionDenied: return "permissions"
                 case .language: return "language"
                 case .modelLoading, .completed: return "modelLoading"
-                case .declined: return "privacyConsent"
+                case .declined: return "declined"
                 }
             },
             set: { _ in }
@@ -469,15 +477,56 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Declined State (US-PRV-008 AC-3)
+    // MARK: - Step 6: Declined (US-PRV-008 AC-3)
 
-    /// PIPL 拒绝提示页 — 由 AppRootView 在 viewState == .declined 时另行展示 (Alert/覆盖层)。
-    /// ViewModel 的 declined 态由宿主处理；本视图 TabView 仅在 5 个主步骤间切换。
+    /// PIPL 拒绝终态页 — 说明 Echo 无法处理记忆 + Close 退出按钮。
+    ///
+    /// 修复 P0-2: 此前 declined 态被 stepSelection 映射回 privacyConsent 页但按钮已 guard 失效，
+    /// 用户被卡死。现提供独立终态页 + onDeclined 回调关闭 fullScreenCover。
+    private var declinedPage: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            Image(systemName: "hand.raised")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.secondary)
+                .accessibilityHidden(true)
+
+            Text("Privacy Consent Declined")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Echo cannot process your memories without your consent. Your data stays on this device.")
+                .font(.body)
+                .foregroundStyle(Color.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Spacer()
+
+            Button(action: { onDeclined?() }) {
+                Text("Close")
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("onboarding-declined-close")
+            .accessibilityHint("Close onboarding after declining privacy consent")
+
+            Spacer().frame(height: 8)
+        }
+        .padding(.horizontal, 24)
+    }
 }
 
 // MARK: - System Settings Helper
 
 /// 打开系统设置 (US-SRC-001 AC-6)。与 DegradationBannerView 同模式。
+/// 必须 @MainActor — UIApplication.shared 为 MainActor 隔离，文件级函数默认 nonisolated，
+/// 在 CI (Xcode 16.4 toolchain, -strict-concurrency=complete) 下会编译失败 (P0-1)。
+@MainActor
 private func openSystemSettings() {
     guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
     UIApplication.shared.open(url)

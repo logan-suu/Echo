@@ -21,8 +21,8 @@
     { "progress": "Model load", "role": "progressIndicator", "identifier": "onboarding-model-progress", "verified": "XCUITest test_happyPathCompletesOnboarding (echo-memory-canvas §15.6)" }
   ],
   "declinedState": {
-    "note": "PIPL declined exits to limited state; onboarding cover content not shown after decline",
-    "verified": "XCUITest test_privacyDeclinedBranch (asserts permission allow absent after decline, US-PRV-008 AC-3)"
+    "note": "PIPL declined shows terminal page (hand-raised icon + explanation + Close button, identifier onboarding-declined-close); Close triggers onDeclined callback which dismisses the onboarding fullScreenCover. Cover content is NOT shown after dismiss (P0-2 fix: decline is no longer a dead end).",
+    "verified": "XCUITest test_privacyDeclinedBranch (asserts onboarding-declined-close appears after decline, then cover dismisses after tapping Close; US-PRV-008 AC-3)"
   },
   "liveHierarchyEvidence": {
     "note": "Native hierarchy capture (iPhone 17 Pro iOS 26.5) confirmed fullScreenCover presentation: UITransitionView + SwiftUI.PresentationHostingController hosting UIKitPagingView/PagingCollectionView with one PagingCell for the active step; inner SwiftUI AX elements are exposed via the accessibility tree and verified via XCUITest journeys (accessibility-identifier driven, no coordinates).",
