@@ -174,15 +174,6 @@ struct Phase3IntegrationTests {
                 authorizedSourceTypes: ["photo"],  // search NOT authorized
                 policyVersion: 1
             ))
-            defer {
-                Task {
-                    try? await PrivacyActor.shared.updatePolicy(UserPolicy(
-                        preferredLanguage: "zh-Hans",
-                        authorizedSourceTypes: ["search", "photo", "note", "voice", "text"],
-                        policyVersion: 1
-                    ))
-                }
-            }
 
             await stubEmbedder.setNextEmbedding(makePhase3DirectionalVector(direction: 1.0))
             let vm = SearchViewModel(searchPipeline: searchPipeline, feedbackPipeline: feedbackPipeline)
@@ -197,6 +188,15 @@ struct Phase3IntegrationTests {
                 Issue.record("Expected .l2Recoverable (SearchError.privacyDenied is L2), got \(level)")
                 return
             }
+
+            // Restore policy synchronously before the test returns — the suite is
+            // serialized and later tests depend on search being authorized.
+            // No fire-and-forget Task (deterministic global PrivacyActor state).
+            try await PrivacyActor.shared.updatePolicy(UserPolicy(
+                preferredLanguage: "zh-Hans",
+                authorizedSourceTypes: ["search", "photo", "note", "voice", "text"],
+                policyVersion: 1
+            ))
         }
 
         @Test("Search writes audit log through UI layer (R-006 + §9 审计)")
@@ -398,12 +398,14 @@ struct Phase3IntegrationTests {
             vm.recordLike(target)
             _ = await awaitFeedbackCount(for: id3, expected: 1)
 
-            // Re-search: feedbackAdjustment must be reflected on the liked memory.
+            // Re-search: feedback re-ranking must lift the liked memory to rank #1.
+            // finalScore(id3) = 0.89 + 0.5 (like, decay 1.0, clamp ±0.5) = 1.39
+            // > finalScore(id1) = 0.93, finalScore(id2) = 0.91 (AGENTS.md §5.3).
             vm.submitQuery("rank test")
             _ = await awaitSettled(vm)
-            let liked = vm.results.first { $0.id == id3 }
-            #expect(liked != nil)
-            #expect((liked?.cosineSimilarity ?? 0) >= 0.80)
+            #expect(vm.results.first?.id == id3)
+            #expect(vm.results.contains { $0.id == id1 })
+            #expect(vm.results.contains { $0.id == id2 })
         }
     }
 
