@@ -444,7 +444,7 @@
       "id": 3,
       "name": "UI 与集成",
       "status": "in_progress",
-      "last_updated": "2026-08-01T09:00:00Z",
+      "last_updated": "2026-08-02T19:00:00+08:00",
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase3/Phase3IntegrationTests.swift",
       "tasks": [
@@ -660,7 +660,7 @@
           "story": "US-DIS-002",
           "status": "done",
           "merged_at": "2026-08-02T09:22:03Z",
-          "last_updated": "2026-08-02T17:23:09+08:00",
+  "last_updated": "2026-08-02T19:00:00+08:00",
           "ui_run": {
             "runId": "3.8-bootstrap",
             "automation_phase": "accepted",
@@ -686,8 +686,9 @@
           "id": "3.9",
           "title": "整合所有 ViewModel 与 Pipeline + 创作保存 UI",
           "story": "US-SYN-003, US-SYN-004, US-SYN-005",
-          "status": "review",
-          "last_updated": "2026-08-02T18:50:00+08:00",
+          "status": "done",
+          "merged_at": "2026-08-02T11:00:17Z",
+          "last_updated": "2026-08-02T19:00:00+08:00",
           "ui_run": {
             "runId": "3.9-bootstrap",
             "automation_phase": "accepted",
@@ -701,19 +702,23 @@
             "3.8"
           ],
           "test_file": "EchoTests/Phase3/CreationViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。\n(2026-08-02 cascade) Dependency 3.8 merged (PR #43), flipped backlog -> ready per AGENTS.md §12.1.\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-03T00:20:00+08:00）。CreationView + CreationViewModel + CreationFixtureLoader + MemoryDetailView/SearchView 创作入口 + PromptEditorSheet + ShareLinkSheet 交付。单元测试 17/17（CreationViewModelTests）+ 3/3 XCUITest（CreationUITests），SwiftLint 0 新增 error 违规（13 条 warning 与既有 Phase3 测试模式一致）。i18n 硬编码英文，String Catalog 迁移与 Core 创作 Pipeline 接入延后（见 DEF-44-001）。任务 status in_progress → review，Git 交付经用户调用 /commit-pr-echo。\n(2026-08-02 commit-pr) PR #44 created, status in_progress -> review.\n(2026-08-02 pr-review fix) PR #44 review W-1~W-3 修复并 push (commit 867b185): W-1 移除 savedToast Open 链接 example.com 硬编码回退与强解包; W-2 Toast 改 .accessibilityElement(children: .contain) 保证 VoiceOver 可单独激活 Open 链接; W-3 saveToNotes() 任务从 generateTask 迁移至独立 saveTask 属性, onDisappear 同时取消。单元测试 CreationViewModelTests 17/17 + XCUITest CreationUITests 3/3 全绿, SwiftLint 0 error, build SUCCEEDED。status 保持 review。",
+          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。\n(2026-08-02 cascade) Dependency 3.8 merged (PR #43), flipped backlog -> ready per AGENTS.md §12.1.\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-03T00:20:00+08:00）。CreationView + CreationViewModel + CreationFixtureLoader + MemoryDetailView/SearchView 创作入口 + PromptEditorSheet + ShareLinkSheet 交付。单元测试 17/17（CreationViewModelTests）+ 3/3 XCUITest（CreationUITests），SwiftLint 0 新增 error 违规（13 条 warning 与既有 Phase3 测试模式一致）。i18n 硬编码英文，String Catalog 迁移与 Core 创作 Pipeline 接入延后（见 DEF-44-001）。任务 status in_progress → review，Git 交付经用户调用 /commit-pr-echo。\n(2026-08-02 commit-pr) PR #44 created, status in_progress -> review.\n(2026-08-02 pr-review fix) PR #44 review W-1~W-3 修复并 push (commit 867b185): W-1 移除 savedToast Open 链接 example.com 硬编码回退与强解包; W-2 Toast 改 .accessibilityElement(children: .contain) 保证 VoiceOver 可单独激活 Open 链接; W-3 saveToNotes() 任务从 generateTask 迁移至独立 saveTask 属性, onDisappear 同时取消。单元测试 CreationViewModelTests 17/17 + XCUITest CreationUITests 3/3 全绿, SwiftLint 0 error, build SUCCEEDED。status 保持 review。\n(2026-08-02 pr-merge) PR #44 merged by human at 2026-08-02T11:00:17Z (merge commit 10c8aad). Status review -> done. DEF-44-001 (Creation surface i18n + Core 创作 Pipeline 接入) remains deferred (defer_to String Catalog migration / Phase 4, conditions unmet). Cascade: 3.10/4.2/4.3/4.8 flipped backlog -> ready per AGENTS.md §12.1.",
           "pr": {
             "branch": "feature/creation-save-ui-US-SYN-003",
             "base": "dev-1.0",
             "number": 44,
-            "url": "https://github.com/logan-suu/Echo/pull/44"
+            "url": "https://github.com/logan-suu/Echo/pull/44",
+            "created_at": "2026-08-02",
+            "merged_at": "2026-08-02T11:00:17Z",
+            "merge_commit": "10c8aadd244ce0369b0e6fe6bd20651b4718afee"
           }
         },
         {
           "id": "3.10",
           "title": "Phase 3 集成测试：UI 与 Pipeline 联调验证",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-08-02T19:00:00+08:00",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
@@ -721,7 +726,7 @@
             "3.9"
           ],
           "test_file": "EchoTests/Phase3/Phase3IntegrationTests.swift",
-          "notes": "📝 依赖更新（2026-07-26）。新增对 3.0、3.11、3.12 的依赖。"
+          "notes": "📝 依赖更新（2026-07-26）。新增对 3.0、3.11、3.12 的依赖。\n(2026-08-02 cascade) Dependency 3.9 merged (PR #44), flipped backlog -> ready per AGENTS.md §12.1."
         },
         {
           "id": "3.11",
@@ -786,27 +791,31 @@
           "id": "4.2",
           "title": "编写集成测试：每个 Pipeline 端到端",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-08-02T19:00:00+08:00",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
           "dependencies": [
             "3.9"
           ],
-          "test_file": "EchoTests/Phase4/AllPipelinesTests.swift"
+          "test_file": "EchoTests/Phase4/AllPipelinesTests.swift",
+          "notes": "(2026-08-02 cascade) Dependency 3.9 merged (PR #44), flipped backlog -> ready per AGENTS.md §12.1."
         },
         {
           "id": "4.3",
           "title": "性能基准测试（检索延迟、内存峰值、存储大小）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-08-02T19:00:00+08:00",
           "documents_required": [
             "docs/02-architecture/技术选型文档.md"
           ],
           "dependencies": [
             "3.9"
           ],
-          "test_file": "EchoTests/Phase4/BenchmarkTests.swift"
+          "test_file": "EchoTests/Phase4/BenchmarkTests.swift",
+          "notes": "(2026-08-02 cascade) Dependency 3.9 merged (PR #44), flipped backlog -> ready per AGENTS.md §12.1."
         },
         {
           "id": "4.4",
@@ -868,7 +877,8 @@
           "id": "4.8",
           "title": "完成项目文档更新",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
+          "last_updated": "2026-08-02T19:00:00+08:00",
           "documents_required": [
             "docs/",
             "AGENTS.md"
@@ -876,7 +886,8 @@
           "dependencies": [
             "3.9"
           ],
-          "test_file": null
+          "test_file": null,
+          "notes": "(2026-08-02 cascade) Dependency 3.9 merged (PR #44), flipped backlog -> ready per AGENTS.md §12.1."
         },
         {
           "id": "4.9",
