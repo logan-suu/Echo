@@ -1,0 +1,10 @@
+{
+  "surfaceId": "awakening-settings",
+  "stateId": "loading",
+  "fixtureId": "awakening-loading",
+  "description": "Initial loading state with ProgressView",
+  "expected": {
+    "progressIndicator": true,
+    "loadingText": "Loading awakening settings..."
+  }
+}

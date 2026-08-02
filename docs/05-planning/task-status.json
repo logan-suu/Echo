@@ -762,8 +762,8 @@
           "id": "3.12",
           "title": "唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置",
           "story": "US-AWK-001, US-AWK-002, US-AWK-003",
-          "status": "ready",
-          "last_updated": "2026-08-02T21:00:12+08:00",
+          "status": "review",
+          "last_updated": "2026-08-03T03:15:00+08:00",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",

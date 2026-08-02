@@ -1,0 +1,13 @@
+{
+  "surfaceId": "awakening-settings",
+  "stateId": "unavailable",
+  "fixtureId": "awakening-unavailable",
+  "description": "Notification permanently denied, all features gated",
+  "expected": {
+    "notificationPermission": "denied-permanently",
+    "isGeofenceEnabled": false,
+    "isEmotionEnabled": false,
+    "isAnniversaryEnabled": false,
+    "openSettingsButton": true
+  }
+}
