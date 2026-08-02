@@ -763,7 +763,7 @@
           "title": "唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置",
           "story": "US-AWK-001, US-AWK-002, US-AWK-003",
           "status": "review",
-          "last_updated": "2026-08-03T03:15:00+08:00",
+          "last_updated": "2026-08-03T15:30:00+08:00",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
@@ -787,7 +787,7 @@
             "started_at": "2026-08-03",
             "delivery_approved_at": "2026-08-03T03:11:00+08:00"
           },
-          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。UNUserNotificationCenter 设置、本地通知投递、通知点击→深层链接、位置/HealthKit 权限弹窗、地理围栏开关/管理页、情绪唤醒开关。覆盖 AWK-001/002/003 的投递层 UI。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)\n(2026-08-02 cascade) Dependencies satisfied after task 3.11 (PR #45) merged; flipped backlog→ready per AGENTS.md §12.1.\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准。22 单元测试 + 全量回归 699/76 0 失败。i18n 硬编码英文延后 Phase 3.8。Core 权限/API 集成延后 Phase 3.9。"
+          "notes": "🆕 新增任务（2026-07-26 审计发现缺失）。UNUserNotificationCenter 设置、本地通知投递、通知点击→深层链接、位置/HealthKit 权限弹窗、地理围栏开关/管理页、情绪唤醒开关。覆盖 AWK-001/002/003 的投递层 UI。\n(2026-08-01 账本修复 R-2.1b: 依赖未满足，从 ready 降级为 backlog)\n(2026-08-02 cascade) Dependencies satisfied after task 3.11 (PR #45) merged; flipped backlog→ready per AGENTS.md §12.1.\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准。22 单元测试 + 全量回归 699/76 0 失败。i18n 硬编码英文延后 Phase 3.8。Core 权限/API 集成延后 Phase 3.9。\n(2026-08-03 PR review #46) Corrected US-AWK-002 AC-4 from 🔶 to 🔮 Phase 3.9 (Core pipeline behavior, no UI surface). Added DEF-46-001 (i18n hardcoded English)."
         }
       ]
     },

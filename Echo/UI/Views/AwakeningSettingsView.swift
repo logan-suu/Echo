@@ -8,7 +8,7 @@
 //            docs/ui/architecture.md §2 (单向数据流), §3 (组件边界)
 // 任务: 3.12 - 唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置
 // AC 覆盖: US-AWK-001 AC-5 ✅ (位置权限静默禁用/重新开启), AC-6 ✅ (审计记录查看),
-//            US-AWK-002 AC-1 ✅ (每日推送开关控制), AC-4 ✅ (无匹配不推送指示),
+//            US-AWK-002 AC-1 ✅ (每日推送开关控制), AC-4 🔮 Phase 3.9 (无匹配不推送 — Core pipeline),
 //            US-AWK-003 AC-1 ✅ (HealthKit 权限管理)
 // Legend: ✅ implemented (UI slice) | 🔶 stub (Core integration deferred to Phase 3.9)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable), echo-memory-canvas apple-native 基础,
