@@ -687,7 +687,7 @@
           "title": "整合所有 ViewModel 与 Pipeline + 创作保存 UI",
           "story": "US-SYN-003, US-SYN-004, US-SYN-005",
           "status": "review",
-          "last_updated": "2026-08-02T18:30:00+08:00",
+          "last_updated": "2026-08-02T18:50:00+08:00",
           "ui_run": {
             "runId": "3.9-bootstrap",
             "automation_phase": "accepted",
@@ -701,7 +701,7 @@
             "3.8"
           ],
           "test_file": "EchoTests/Phase3/CreationViewModelTests.swift",
-          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。\n(2026-08-02 cascade) Dependency 3.8 merged (PR #43), flipped backlog -> ready per AGENTS.md §12.1.\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-03T00:20:00+08:00）。CreationView + CreationViewModel + CreationFixtureLoader + MemoryDetailView/SearchView 创作入口 + PromptEditorSheet + ShareLinkSheet 交付。单元测试 17/17（CreationViewModelTests）+ 3/3 XCUITest（CreationUITests），SwiftLint 0 新增 error 违规（13 条 warning 与既有 Phase3 测试模式一致）。i18n 硬编码英文，String Catalog 迁移与 Core 创作 Pipeline 接入延后（见 DEF-44-001）。任务 status in_progress → review，Git 交付经用户调用 /commit-pr-echo。\n(2026-08-02 commit-pr) PR #44 created, status in_progress -> review.",
+          "notes": "📝 范围扩展（2026-07-26 审计）。新增：创作生成预览/复制/导出/保存按钮(SYN-003)、叙事报告分享/导出(SYN-004)、Prompt 草稿编辑确认UI(SYN-005 AC-4)。\n(2026-08-02 cascade) Dependency 3.8 merged (PR #43), flipped backlog -> ready per AGENTS.md §12.1.\n✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-03T00:20:00+08:00）。CreationView + CreationViewModel + CreationFixtureLoader + MemoryDetailView/SearchView 创作入口 + PromptEditorSheet + ShareLinkSheet 交付。单元测试 17/17（CreationViewModelTests）+ 3/3 XCUITest（CreationUITests），SwiftLint 0 新增 error 违规（13 条 warning 与既有 Phase3 测试模式一致）。i18n 硬编码英文，String Catalog 迁移与 Core 创作 Pipeline 接入延后（见 DEF-44-001）。任务 status in_progress → review，Git 交付经用户调用 /commit-pr-echo。\n(2026-08-02 commit-pr) PR #44 created, status in_progress -> review.\n(2026-08-02 pr-review fix) PR #44 review W-1~W-3 修复并 push (commit 867b185): W-1 移除 savedToast Open 链接 example.com 硬编码回退与强解包; W-2 Toast 改 .accessibilityElement(children: .contain) 保证 VoiceOver 可单独激活 Open 链接; W-3 saveToNotes() 任务从 generateTask 迁移至独立 saveTask 属性, onDisappear 同时取消。单元测试 CreationViewModelTests 17/17 + XCUITest CreationUITests 3/3 全绿, SwiftLint 0 error, build SUCCEEDED。status 保持 review。",
           "pr": {
             "branch": "feature/creation-save-ui-US-SYN-003",
             "base": "dev-1.0",
