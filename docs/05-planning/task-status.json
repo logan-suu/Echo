@@ -600,13 +600,16 @@
           "id": "3.6",
           "title": "统一错误处理 UI（L1~L4）+ 空态/加载态 + 降级横幅 + 冷却期提醒",
           "story": "US-DIS-003, US-RES-002, US-RES-003, US-RES-004, US-SYN-008, US-PRV-005",
-          "status": "review",
-          "last_updated": "2026-08-02T14:10:00+08:00",
+          "status": "done",
+          "last_updated": "2026-08-02T14:30:00+08:00",
+          "merged_at": "2026-08-02T06:11:58Z",
           "pr": {
             "number": 41,
             "url": "https://github.com/logan-suu/Echo/pull/41",
             "branch": "feature/degradation-banner-US-RES-002",
-            "created_at": "2026-08-02T05:47:00Z"
+            "created_at": "2026-08-02T05:47:00Z",
+            "merged_at": "2026-08-02T06:11:58Z",
+            "merge_commit": "ce0dc361efaafe08b9ee79da1bcd07a3d5ac9d03"
           },
           "documents_required": [
             "docs/03-implementation/开发避坑与关键注意点手册.md",
@@ -625,7 +628,7 @@
           "id": "3.7",
           "title": "断点续传集成到长任务",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],
