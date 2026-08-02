@@ -3,8 +3,12 @@
 # 文件: Scripts/coverage_gate.py
 # 对应规格: AGENTS.md §9.3 (CI 门禁清单)
 # 用途: Compute Echo.app line coverage excluding SwiftUI Views
-#       (Echo/UI/Views/). Views are declarative layout code tested
+#       and Fixture Loaders. Views are declarative layout code tested
 #       via Live Simulator Review, not unit tests.
+# 排除规则 (2026-08-03 refactor/ui-feature-dirs): UI 层改为功能域目录
+#       (Echo/UI/{AppShell,Home,Search,Detail,...}), 不再有 Echo/UI/Views/。
+#       按文件名后缀排除: *View.swift (声明式视图) + *FixtureLoader.swift
+#       (确定性测试/Preview 数据注入器) — 与旧目录前缀行为等价。
 # 用法: python3 Scripts/coverage_gate.py <xcresult_path> [threshold]
 # 生成时间: 2026-08-02
 # ==========================================
@@ -13,11 +17,20 @@ import json
 import sys
 import os
 
-EXCLUDED_PATH_PREFIX = "Echo/UI/Views/"
 DEFAULT_THRESHOLD = 65
 
 
-def compute_coverage(xcresult_path: str, exclude_prefix: str) -> tuple[float, int, int, int]:
+def is_excluded(path: str) -> bool:
+    """True if the file is declarative SwiftUI view or a fixture loader.
+
+    Previously excluded the whole Echo/UI/Views/ directory; after the
+    feature-directory refactor the same file classes are matched by suffix.
+    """
+    base = os.path.basename(path)
+    return base.endswith("View.swift") or base.endswith("FixtureLoader.swift")
+
+
+def compute_coverage(xcresult_path: str, exclude_fn) -> tuple[float, int, int, int]:
     """Returns (coverage_pct, total_exec_lines, covered_lines, excluded_file_count)."""
     import subprocess
 
@@ -48,7 +61,7 @@ def compute_coverage(xcresult_path: str, exclude_prefix: str) -> tuple[float, in
 
     for f in target.get("files", []):
         path = f.get("path", "")
-        if path.startswith(exclude_prefix):
+        if exclude_fn(path):
             excluded_count += 1
             continue
         included_count += 1
@@ -101,7 +114,7 @@ def main():
         sys.exit(1)
 
     coverage_pct, total_exec, total_cov, excluded = compute_coverage(
-        xcresult_path, EXCLUDED_PATH_PREFIX
+        xcresult_path, is_excluded
     )
     coverage_int = int(coverage_pct)
 

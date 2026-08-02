@@ -119,8 +119,18 @@ Echo/
 │   ├── Services/
 │   └── Utils/
 ├── UI/
-│   ├── ViewModels/
-│   └── Views/
+│   ├── AppShell/                # App 壳：TabView + NavigationStack + DI
+│   ├── Home/                    # 主视图（唤醒卡片 + 离线指示）
+│   ├── Search/                  # 检索（结果 + 反馈 + 低置信度）
+│   ├── Detail/                  # 记忆详情（编辑 + 翻译 + 冲突解决）
+│   ├── Settings/                # 设置页
+│   ├── Onboarding/              # 引导流程（PIPL + 权限 + 语言 + 模型加载）
+│   ├── Awakening/               # 唤醒投递（通知 + 权限 + 地理围栏设置）
+│   ├── BackgroundTask/          # 实时后台任务面板
+│   ├── Creation/                # AI 创作（生成/保存/导出）
+│   ├── Degradation/             # 降级横幅（L1~L4 错误 + 低电量/过热）
+│   ├── ResumeProgress/          # 断点续传提示（US-SYS-001）
+│   └── Translation/             # 跨语言翻译展示层
 ├── Resources/
 │   ├── Models/ (SigLIP2 checkpoint 转换源, multilingual-e5-small, Whisper GGUF)
 │   └── StringCatalog/
