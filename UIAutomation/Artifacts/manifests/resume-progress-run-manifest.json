@@ -1,0 +1,49 @@
+{
+  "runId": "3.7-bootstrap",
+  "task_id": "3.7",
+  "actor": "opencode-agent",
+  "timestamp": "2026-08-02T20:55:00+08:00",
+  "commitSha": "bc56a86669e42705f9cc2dc9df7a813d76d0ab07",
+  "sourceDirty": false,
+  "contracts": {
+    "version": "1.0.0",
+    "surface_id": "resume-progress-prompt",
+    "state_ids": ["checking", "prompt", "none", "resumed", "restarted", "error"],
+    "action_ids": ["task.start", "prompt.continue", "prompt.restart", "error.retry"],
+    "journey_id": "resume-progress-basic",
+    "fixture_ids": ["resume-progress-pending", "resume-progress-none", "resume-progress-error"],
+    "content_hash": "6f90e88a55fb483203cd2f8f8f2dafed739c850a4383b67b1cf785fc34f6f718"
+  },
+  "acceptance_policy_hash": "acceptance-policy.json (v1.0.0, unmodified)",
+  "xcode": { "version": "26.5", "build_version": "17F42", "sdk": "iphonesimulator", "runtime": "iOS 26.5" },
+  "devices": {
+    "primary": { "role": "primary", "device_name": "iPhone 17 Pro", "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC", "runtime": "iOS 26.5" },
+    "minimum_version": { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
+  },
+  "simulator_owner": { "owner_type": "cli_xctest", "tools": ["xcodebuild", "simctl", "XCTest", "XCUITest", "xcresulttool"] },
+  "locale": "en-US",
+  "timezone": "Asia/Shanghai",
+  "theme": "light",
+  "surface_state_journey": {
+    "surfaceId": "resume-progress-prompt",
+    "stateId": "prompt",
+    "journeyId": "resume-progress-basic",
+    "testIds": ["EchoUITests.ResumeProgressPromptUITests.test_pendingJourneyContinue"]
+  },
+  "results": {
+    "build": "SUCCEEDED",
+    "unit_tests": "14/14 passed",
+    "full_unit_regression": "626 tests / 71 suites — 0 failures",
+    "xcuitest": "4/4 passed",
+    "full_xcuitest_regression": "23 tests — 0 failures",
+    "swiftlint": "0 violations",
+    "accessibility_audit": "PASSED (XCUITest accessibility-tree queries + native hierarchy confirm dialog elements)"
+  },
+  "artifacts": {
+    "manifest_path": "UIAutomation/Artifacts/manifests/resume-progress-run-manifest.json",
+    "build_log_path": "UIAutomation/Artifacts/logs/resume-progress-build.log",
+    "test_summary_path": "UIAutomation/Artifacts/summaries/resume-progress-test-summary.json",
+    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json"
+  },
+  "visualMediaCaptured": false
+}

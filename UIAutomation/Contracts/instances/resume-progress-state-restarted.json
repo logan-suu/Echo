@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "restarted",
+  "surfaceId": "resume-progress-prompt",
+  "dataConditions": {
+    "userDecision": "restart (prompt.restart)",
+    "resumeTarget": "delete progress record (ProgressActor.delete(taskId:)) + start new task from index 0"
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "dialogDismissed": "Prompt closes",
+    "outcome": "Restart intent forwarded (ProgressActor.delete + fresh start, US-SYS-001 AC-4: stale record removed)"
+  },
+  "version": "1.0.0"
+}

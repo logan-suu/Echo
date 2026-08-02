@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "prompt.restart",
+  "source": "user",
+  "targetIntent": "ResumeProgressViewModel.restartTask()",
+  "expectedOutcome": "User chooses to restart the task fresh: stale progress record deleted (ProgressActor.delete(taskId:)) and task restarts from index 0 (US-SYS-001 AC-4; AGENTS.md §4.5)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

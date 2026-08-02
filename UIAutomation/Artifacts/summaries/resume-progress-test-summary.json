@@ -1,0 +1,45 @@
+{
+  "runId": "3.7-bootstrap",
+  "task_id": "3.7",
+  "surfaceId": "resume-progress-prompt",
+  "generated_at": "2026-08-02T20:55:00+08:00",
+  "sourceRevision": "bc56a86669e42705f9cc2dc9df7a813d76d0ab07",
+  "build": {
+    "status": "SUCCEEDED",
+    "destination": "platform=iOS Simulator,name=iPhone 17 Pro",
+    "xcode": "26.5 (17F42)",
+    "log": "UIAutomation/Artifacts/logs/resume-progress-build.log"
+  },
+  "unit_tests": {
+    "suite": "EchoTests.ResumeProgressPromptTests",
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "file": "EchoTests/Phase3/ProgressActorTests.swift"
+  },
+  "full_regression": {
+    "unit_tests": "626 tests / 71 suites — 0 failures",
+    "xcuitests": "23 tests — 0 failures"
+  },
+  "xcuitests": {
+    "suite": "EchoUITests.ResumeProgressPromptUITests",
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "journeys": [
+      "test_pendingJourneyContinue",
+      "test_pendingJourneyRestart",
+      "test_errorFixtureShowsRetry",
+      "test_noneFixtureNoPrompt"
+    ]
+  },
+  "swiftlint": {
+    "status": "0 violations",
+    "scope": "changed + new files (ViewModel, FixtureLoader, View, HomeView, tests)"
+  },
+  "accessibility": {
+    "tree": "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json",
+    "evidence": "XCUITest accessibility-tree driven queries (Continue/Restart buttons by title, resume-prompt-retry identifier)"
+  },
+  "visual_media_captured": false
+}

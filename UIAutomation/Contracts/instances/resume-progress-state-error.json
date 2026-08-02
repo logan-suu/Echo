@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "error",
+  "surfaceId": "resume-progress-prompt",
+  "dataConditions": {
+    "pendingProgress": "unavailable (ProgressActor load failed — L2)",
+    "isError": true
+  },
+  "allowedActions": ["error.retry"],
+  "expectedSemantics": {
+    "errorMessage": "Unable to check saved progress (L2)",
+    "retryButton": "Retry button re-runs the pending-progress check",
+    "readingOrder": ["errorMessage", "retryButton"]
+  },
+  "version": "1.0.0"
+}

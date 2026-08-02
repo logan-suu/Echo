@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "error.retry",
+  "source": "user",
+  "targetIntent": "ResumeProgressViewModel.retry()",
+  "expectedOutcome": "Re-run the pending-progress check for the task type after an L2 load failure; transition to prompt/none on success",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

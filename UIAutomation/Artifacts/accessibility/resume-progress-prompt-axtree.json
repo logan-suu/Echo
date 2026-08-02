@@ -1,0 +1,27 @@
+{
+  "surfaceId": "resume-progress-prompt",
+  "surfaceFamily": "task",
+  "stateId": "prompt",
+  "fixtureId": "resume-progress-pending",
+  "layoutMode": "alert",
+  "masonryEnabled": false,
+  "elements": [
+    { "button": "Continue", "role": "button", "verified": "XCUITest test_pendingJourneyContinue" },
+    { "button": "Restart", "role": "button", "verified": "XCUITest test_pendingJourneyRestart" },
+    { "text": "检测到未完成的进度（已完成 50 / 128），是否继续？", "role": "staticText", "note": "Progress text in confirmationDialog message (US-SYS-001 AC-4)", "verified": "XCUITest test_pendingJourneyContinue (label CONTAINS 50)" }
+  ],
+  "errorState": {
+    "identifier": "resume-prompt-retry",
+    "role": "button",
+    "label": "Retry",
+    "verified": "XCUITest test_errorFixtureShowsRetry"
+  },
+  "noneState": {
+    "note": "No prompt when no pending progress",
+    "verified": "XCUITest test_noneFixtureNoPrompt (asserts Continue/Restart absent)"
+  },
+  "liveHierarchyEvidence": {
+    "note": "Native hierarchy capture (iPhone 17 Pro iOS 26.5) confirmed confirmationDialog presentation: _UIPopoverView + _UIAlertControllerPhoneTVMacView (SwiftUI.PlatformAlertController) with two _UIAlertControllerActionView rows (Continue/Restart) plus title/message UILabels. SwiftUI inner AX elements are exposed via system alert (action sheet buttons); accessibility contract verified via XCUITest (accessibility-tree driven, no coordinates).",
+    "visualMediaCaptured": false
+  }
+}

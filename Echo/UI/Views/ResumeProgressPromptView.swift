@@ -1,0 +1,169 @@
+// ==========================================
+// 文件: ResumeProgressPromptView.swift
+// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-SYS-001 AC-3 (取消后询问继续/重新开始),
+//            AC-4 (断点续传 — 继续保留进度 / 重新开始清除进度),
+//            docs/02-architecture/架构设计文档.md §6.2 (恢复流程),
+//            docs/ui/echo-memory-canvas-style.md §3.3 (Task surface — Alert/confirmationDialog),
+//            §11.2 (L1 Toast) / §12.1 (L3 全屏) / §10.1.3 (Task 空态)
+//            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
+// 任务: 3.7 - 断点续传集成到长任务
+// AC 覆盖: US-SYS-001 AC-3 ✅ (取消后弹窗询问 — 继续/重新开始), AC-4 ✅ (进度 X/Y 展示 + 决策映射),
+//          🔮 Core 读写 (ProgressActor.save/delete + TaskQueueActor.resume, Phase 3.9)
+// 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
+//           echo-memory-canvas apple-native 基础; 系统 confirmationDialog 容器
+// 生成时间: 2026-08-02
+// ==========================================
+
+import SwiftUI
+
+// MARK: - ResumeProgressPromptView
+
+/// 断点续传恢复提示 — 当长任务重启且存在未完成进度时，展示继续/重新开始确认弹窗。
+///
+/// ## Surface Family: Task
+/// - 布局: 系统 confirmationDialog（echo-memory-canvas §3.3, §7.2）
+/// - Masonry: 绝对禁止 (Task surface, §3.3)
+/// - 系统容器: confirmationDialog + 可选内联 L2 错误状态
+///
+/// ## 状态驱动
+/// - checking: 无弹窗（检查中，短暂过渡）
+/// - prompt: 系统 confirmationDialog，展示 "已完成 X / Y，是否继续？" + 继续/重新开始
+/// - none: 无弹窗（无未完成进度，任务直接从 0 开始）
+/// - resumed / restarted: 弹窗关闭（决策已记录）
+/// - error: 内联 L2 错误 + 重试按钮
+///
+/// ## 用法
+/// 嵌入任务启动宿主视图（如 HomeView / BackgroundTaskPanelView 等）。宿主调用
+/// `viewModel.checkForPendingProgress(taskType:)` 触发检查；当 `isPromptPresented`
+/// 变为 true 时本视图自动展示 confirmationDialog。
+struct ResumeProgressPromptView: View {
+    // MARK: - ViewModel
+
+    @State private var viewModel: ResumeProgressViewModel
+
+    init(viewModel: ResumeProgressViewModel = ResumeProgressViewModel()) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        content
+            .confirmationDialog(
+                dialogTitle,
+                isPresented: Binding(
+                    get: { viewModel.isPromptPresented },
+                    set: { if !$0 { viewModel.dismissPrompt() } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Continue") {
+                    viewModel.continueTask()
+                }
+                .accessibilityIdentifier("resume-prompt-continue")
+
+                Button("Restart", role: .destructive) {
+                    viewModel.restartTask()
+                }
+                .accessibilityIdentifier("resume-prompt-restart")
+            } message: {
+                Text(dialogMessage)
+            }
+            .accessibilityIdentifier("resume-progress-prompt")
+    }
+
+    // MARK: - Content
+
+    @ViewBuilder
+    private var content: some View {
+        switch viewModel.viewState {
+        case .idle, .checking, .prompt, .none, .resumed, .restarted:
+            Color.clear
+                .frame(height: 0)
+
+        case .error(let level):
+            errorState(level)
+        }
+    }
+
+    // MARK: - Error State (L2)
+
+    /// 内联 L2 错误 — 进度检查失败（echo-memory-canvas §11.2 L1 Toast 语义,
+    /// 此处为可交互重试的轻量提示）。
+    private func errorState(_ level: ResumeProgressViewModel.ErrorLevel) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.footnote)
+                .foregroundStyle(Color.yellow)
+                .accessibilityHidden(true)
+
+            Text(errorMessage(for: level))
+                .font(.footnote)
+                .foregroundStyle(Color.primary)
+                .lineLimit(2)
+
+            Spacer(minLength: 4)
+
+            Button(action: { viewModel.retry() }) {
+                Label("Retry", systemImage: "arrow.clockwise")
+                    .font(.caption)
+            }
+            .buttonStyle(.bordered)
+            .tint(Color.accentColor)
+            .accessibilityIdentifier("resume-prompt-retry")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Unable to check saved progress")
+    }
+
+    private func errorMessage(for level: ResumeProgressViewModel.ErrorLevel) -> String {
+        switch level {
+        case .l2Recoverable(let msg):
+            return msg
+        }
+    }
+
+    // MARK: - Dialog Text (US-SYS-001 AC-3/AC-4)
+
+    /// 恢复提示标题。
+    private var dialogTitle: String {
+        "Resume interrupted task"
+    }
+
+    /// 恢复提示正文 — 展示已完成进度 X / Y。
+    private var dialogMessage: String {
+        guard case .prompt(let progress) = viewModel.viewState else {
+            return ""
+        }
+        return "检测到未完成的进度（已完成 \(progress.lastProcessedIndex) / \(progress.totalCount)），是否继续？"
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Prompt") {
+    let vm = ResumeProgressViewModel()
+    vm.loadFixture("resume-progress-pending")
+    vm.checkForPendingProgress(taskType: .fullIndex)
+    return ResumeProgressPromptView(viewModel: vm)
+        .padding()
+}
+
+#Preview("None") {
+    let vm = ResumeProgressViewModel()
+    vm.loadFixture("resume-progress-none")
+    vm.checkForPendingProgress(taskType: .dataSourceSync)
+    return ResumeProgressPromptView(viewModel: vm)
+        .padding()
+}
+
+#Preview("Error") {
+    let vm = ResumeProgressViewModel()
+    vm.simulateCheckError()
+    return ResumeProgressPromptView(viewModel: vm)
+        .padding()
+}

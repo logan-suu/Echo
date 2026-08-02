@@ -628,7 +628,15 @@
           "id": "3.7",
           "title": "断点续传集成到长任务",
           "story": null,
-          "status": "ready",
+          "status": "review",
+          "last_updated": "2026-08-02T20:30:00+08:00",
+          "ui_run": {
+            "runId": "3.7-bootstrap",
+            "automation_phase": "accepted",
+            "started_at": "2026-08-02",
+            "delivery_approved_at": "2026-08-02T15:18:07+08:00"
+          },
+          "notes": "✅ 双设备 Live Sim Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.2）经用户批准（2026-08-02T15:18:07+08:00）。ResumeProgressPrompt UI 切片交付（US-SYS-001 AC-3 取消后询问 + AC-4 断点续传继续/重新开始意图映射）。单元测试 14/14 通过，全量回归 626 tests / 71 suites 0 失败，XCUITest 4/4 通过，SwiftLint 0 违规。i18n 硬编码英文，String Catalog 迁移延后至 Phase 3.8。Core 集成（ProgressActor/TaskQueueActor 真实读写 + 审计）延后至 Phase 3.9。",
           "documents_required": [
             "docs/02-architecture/架构设计文档.md"
           ],

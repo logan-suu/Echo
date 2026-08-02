@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "resumed",
+  "surfaceId": "resume-progress-prompt",
+  "dataConditions": {
+    "userDecision": "continue (prompt.continue)",
+    "resumeTarget": "resume from lastProcessedIndex 50 (saved progress retained)"
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "dialogDismissed": "Prompt closes",
+    "outcome": "Resume intent forwarded to TaskQueueActor.resume(taskId:) (Phase 3.9 Core); progress continues from 50/128"
+  },
+  "version": "1.0.0"
+}

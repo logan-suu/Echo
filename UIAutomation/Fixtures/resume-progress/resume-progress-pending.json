@@ -1,0 +1,21 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "resume-progress-pending",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "taskType": "fullIndex",
+    "pendingProgress": {
+      "taskId": "task-index-001",
+      "taskType": "fullIndex",
+      "lastProcessedIndex": 50,
+      "totalCount": 128,
+      "lastProcessedId": "item-050"
+    }
+  },
+  "controlledVariables": ["taskId", "lastProcessedIndex", "totalCount", "lastProcessedId"],
+  "version": "1.0.0"
+}
