@@ -737,7 +737,14 @@
             "3.12"
           ],
           "test_file": "EchoTests/Phase3/Phase3IntegrationTests.swift",
-          "notes": "📝 依赖更新（2026-07-26）。新增对 3.0、3.11、3.12 的依赖。\n(2026-08-02 cascade) Dependency 3.9 merged (PR #44), flipped backlog -> ready per AGENTS.md §12.1.\n(2026-08-03 §12.4 决策 A) dependencies 补全为 Phase 3 全部任务 [3.0~3.9, 3.11, 3.12]（§12.6 阶段集成测试须为阶段最后任务，依赖该阶段所有其他任务）。status ready→backlog。同步消除 3.10⟷3.11 循环依赖（3.11 移除对 3.10 的依赖）。等待 3.11/3.12 done 后经级联恢复 ready。\n(2026-08-03 3.10 集成测试) ✅ 编写 EchoTests/Phase3/Phase3IntegrationTests.swift 21 个集成测试（6 suites）：SearchViewModel↔SearchPipeline（真实检索+审计）、SearchViewModel↔FeedbackPipeline（反馈持久化+重排）、HomeViewModel↔AwakeningPipeline（地理围栏卡片映射+去重）、BackgroundTaskViewModel↔ProgressActor（进度持久化+适配器映射）、ResumeProgressViewModel↔ProgressActor（断点续传提示+意图映射）、MemoryDetailViewModel↔TranslationService（翻译+缓存+低置信度）。全量累积回归 720 tests / 83 suites 0 失败（含 Phase1~3 全部单元+集成测试）。SwiftLint 0 error（1 warning = force_try 测试辅助函数，与 Phase2 基线一致）。deferred-items.json 扫描：24 条 deferred_from_pr_review + 2 条 deferred_to_phase_4 均不可解决（i18n String Catalog 迁移 + Core 持久化 + R-3/R-4 工件接入为共同 blocker），已更新 last_checked_at。"
+          "notes": "📝 依赖更新（2026-07-26）。新增对 3.0、3.11、3.12 的依赖。\n(2026-08-02 cascade) Dependency 3.9 merged (PR #44), flipped backlog -> ready per AGENTS.md §12.1.\n(2026-08-03 §12.4 决策 A) dependencies 补全为 Phase 3 全部任务 [3.0~3.9, 3.11, 3.12]（§12.6 阶段集成测试须为阶段最后任务，依赖该阶段所有其他任务）。status ready→backlog。同步消除 3.10⟷3.11 循环依赖（3.11 移除对 3.10 的依赖）。等待 3.11/3.12 done 后经级联恢复 ready。\n(2026-08-03 3.10 集成测试) ✅ 编写 EchoTests/Phase3/Phase3IntegrationTests.swift 21 个集成测试（6 suites）：SearchViewModel↔SearchPipeline（真实检索+审计）、SearchViewModel↔FeedbackPipeline（反馈持久化+重排）、HomeViewModel↔AwakeningPipeline（地理围栏卡片映射+去重）、BackgroundTaskViewModel↔ProgressActor（进度持久化+适配器映射）、ResumeProgressViewModel↔ProgressActor（断点续传提示+意图映射）、MemoryDetailViewModel↔TranslationService（翻译+缓存+低置信度）。全量累积回归 720 tests / 83 suites 0 失败（含 Phase1~3 全部单元+集成测试）。SwiftLint 0 error（1 warning = force_try 测试辅助函数，与 Phase2 基线一致）。deferred-items.json 扫描：24 条 deferred_from_pr_review + 2 条 deferred_to_phase_4 均不可解决（i18n String Catalog 迁移 + Core 持久化 + R-3/R-4 工件接入为共同 blocker），已更新 last_checked_at。",
+          "pr": {
+            "number": 47,
+            "url": "https://github.com/logan-suu/Echo/pull/47",
+            "branch": "test/phase3-integration-test-3.10",
+            "base": "dev-1.0",
+            "created_at": "2026-08-02T22:57:46+08:00"
+          }
         },
         {
           "id": "3.11",
