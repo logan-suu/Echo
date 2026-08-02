@@ -1,0 +1,8 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.share",
+  "source": "user",
+  "targetIntent": "CreationViewModel.presentShare()",
+  "expectedOutcome": "Share/export/print sheet presented for narrative report (US-SYN-004 AC-4)",
+  "version": "1.0.0"
+}

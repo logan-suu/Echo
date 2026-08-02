@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "generating",
+  "surfaceId": "creation",
+  "dataConditions": {
+    "templateType": "selected",
+    "generationPhase": "generating"
+  },
+  "allowedActions": ["creation.cancel"],
+  "expectedSemantics": {
+    "progressView": "ProgressView shown with template name",
+    "generateButton": "Generate button disabled while generating"
+  },
+  "version": "1.0.0"
+}

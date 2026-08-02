@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "creation-prompt-edit-confirm",
+  "steps": [
+    { "surfaceId": "creation", "stateId": "idle", "actionId": "creation.editPrompt" },
+    { "surfaceId": "creation", "stateId": "idle", "actionId": "creation.confirmPrompt" },
+    { "surfaceId": "creation", "stateId": "idle", "actionId": "creation.editPrompt" },
+    { "surfaceId": "creation", "stateId": "idle", "actionId": "creation.resetPrompt" }
+  ],
+  "preconditionFixtures": ["creation-prompt-draft"],
+  "assertions": [
+    { "type": "edit_confirm", "expected": "Prompt draft editable; confirm stores draft (US-SYN-005 AC-4/AC-5)" },
+    { "type": "reset", "expected": "Reset to default prompt with confirmation (US-SYN-005 AC-6)" }
+  ],
+  "version": "1.0.0"
+}

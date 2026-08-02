@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "creation-prompt-draft",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "templates": ["letter", "report", "poem", "timeline"],
+    "selectedTemplate": null,
+    "generatedContent": null,
+    "promptDraft": "You are Echo, a local AI memory assistant. Focus on recent queries and feelings.",
+    "windowDays": 30,
+    "styleKeywords": ["park", "orange cat", "evening walks"]
+  },
+  "controlledVariables": ["windowDays", "styleKeywords"],
+  "version": "1.0.0"
+}

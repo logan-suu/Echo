@@ -1,0 +1,8 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.retry",
+  "source": "user",
+  "targetIntent": "CreationViewModel.retry()",
+  "expectedOutcome": "error -> generating (L2 recovery); empty -> generating",
+  "version": "1.0.0"
+}

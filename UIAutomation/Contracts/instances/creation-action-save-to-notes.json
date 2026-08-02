@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.saveToNotes",
+  "source": "user",
+  "targetIntent": "CreationViewModel.saveToNotes()",
+  "expectedOutcome": "generated -> saving -> saved (Toast + link) | error (L2 retry) (US-SYN-003 AC-4/AC-5)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

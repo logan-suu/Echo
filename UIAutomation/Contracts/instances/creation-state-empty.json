@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "empty",
+  "surfaceId": "creation",
+  "dataConditions": {
+    "templateType": "selected",
+    "generationPhase": "generated",
+    "generatedContent": null,
+    "sourceMemoryCount": 0
+  },
+  "allowedActions": ["creation.retry", "creation.generate"],
+  "expectedSemantics": {
+    "emptyMessage": "No source memories available for this template",
+    "retryButton": "Retry generation"
+  },
+  "version": "1.0.0"
+}

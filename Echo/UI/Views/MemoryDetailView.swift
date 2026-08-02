@@ -46,6 +46,8 @@ struct MemoryDetailView: View {
     @State private var pendingMemoryID: UUID?
     /// 首次出现标记 — 控制 fixture 注入仅执行一次 (2026-08-02 回归修复)
     @State private var hasHandledLaunchArguments = false
+    /// 是否进入 AI 创作结果页 (US-SYN-003, Task 3.9)
+    @State private var isShowingCreation = false
 
     init(viewModel: MemoryDetailViewModel = MemoryDetailViewModel()) {
         _viewModel = State(initialValue: viewModel)
@@ -89,6 +91,10 @@ struct MemoryDetailView: View {
         // 编辑 Sheet (US-AWK-007)
         .sheet(isPresented: $viewModel.isEditing) {
             EditMemorySheet(viewModel: viewModel)
+        }
+        // AI 创作结果页 (US-SYN-003, Task 3.9)
+        .navigationDestination(isPresented: $isShowingCreation) {
+            CreationView()
         }
         // 删除确认弹窗 (US-PRV-004 AC-1)
         .confirmationDialog(
@@ -524,6 +530,17 @@ struct MemoryDetailView: View {
 
                 Spacer()
             }
+
+            // 进入完整创作结果页 (US-SYN-003, Task 3.9)
+            Button {
+                isShowingCreation = true
+            } label: {
+                Label("Open full creation", systemImage: "arrow.up.right.square")
+                    .font(.callout)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("memory-detail-open-creation")
         }
         .padding(14)
         .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))

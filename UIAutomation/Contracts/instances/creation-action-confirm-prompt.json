@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "creation.confirmPrompt",
+  "source": "user",
+  "targetIntent": "CreationViewModel.confirmPrompt()",
+  "expectedOutcome": "Edited prompt draft confirmed; injected into subsequent synthesis requests (US-SYN-005 AC-4/AC-5)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

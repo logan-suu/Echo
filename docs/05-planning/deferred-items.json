@@ -293,6 +293,16 @@
       "reason": "AC-5 requires 'translationCache, TTL=7d'. Implemented display-layer in-memory actor cache (TTL=7d, clock-injectable). Core translationCache field on Memory (persisted) + write path deferred to Phase 3.9; cache does not survive app relaunch.",
       "defer_to": "Phase 3.9 Core translationCache 字段写入 + 持久化",
       "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-44-001",
+      "pr": 44,
+      "title": "Creation surface user-facing strings hardcoded English (i18n)",
+      "severity": "🟡",
+      "location": "Echo/UI/Views/CreationView.swift, Echo/UI/ViewModels/CreationViewModel.swift, Echo/UI/Views/CreationFixtureLoader.swift (template displayName)",
+      "reason": "New creation surface strings ('AI Creation', 'Choose a template', 'Generate', 'Copy', 'Export PDF / Markdown', 'Share / Print', 'Save to Notes', prompt editor labels, toast/error messages, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4. Also: creation generate/save are fixture-driven — Core CreativePipeline + NoteStore write path deferred (US-SYN-003 AC-4 real save).",
+      "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4) + Core 创作 Pipeline 接入时",
+      "deferred_at": "2026-08-02"
     }
   ]
 }

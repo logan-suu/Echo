@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "idle",
+  "surfaceId": "creation",
+  "dataConditions": {
+    "templateType": "none selected",
+    "generatedContent": null,
+    "generationPhase": "idle"
+  },
+  "allowedActions": ["creation.selectTemplate", "creation.generate", "creation.editPrompt"],
+  "expectedSemantics": {
+    "templatePicker": "Letter / Report / Poem / Timeline templates selectable",
+    "generateDisabled": "Generate disabled until a template is selected",
+    "promptEntry": "Edit personal prompt entry visible (US-SYN-005)"
+  },
+  "version": "1.0.0"
+}

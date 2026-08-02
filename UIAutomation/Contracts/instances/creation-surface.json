@@ -1,0 +1,34 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "surfaceId": "creation",
+  "surfaceFamily": "focus",
+  "responsibility": "AI creation generation result page: template selection (US-SYN-003), generated content preview with citation anchors (AC-3 preview), copy, export PDF/Markdown, save-to-Apple-Notes with L2 error handling (AC-4/AC-5); narrative report share/export/print (US-SYN-004 AC-4); editable personal prompt draft confirm/reset (US-SYN-005 AC-4)",
+  "inputs": {
+    "templateType": "Preset creation template: letter | report | poem | timeline (US-SYN-003 AC-1)",
+    "sourceMemories": "Retrieved memory summaries with citation anchors (US-SYN-002/003 AC-2)",
+    "generatedContent": "AI-generated text with per-paragraph citation anchors (fixture-driven; 🔮 Phase 3.9 real synthesis pipeline)",
+    "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US) — output language",
+    "promptDraft": "Personalized System Prompt draft (US-SYN-005) — editable, confirm/reset"
+  },
+  "outputs": {
+    "visibleContent": "Template picker (idle), ProgressView while generating, generated content with citation anchors + copy/export/save buttons, L2 error toast + retry, saved Toast with link, prompt editor sheet (edit/confirm/reset)",
+    "interactionTargets": "creation-generate, creation-copy, creation-export, creation-save-to-notes, creation-retry, creation-edit-prompt, creation-confirm-prompt, creation-reset-prompt, creation-citation-anchor-*",
+    "accessibilityTree": "Generated content with source citation semantics; save result announced; prompt editor is editable text with confirm/reset actions"
+  },
+  "systemContainer": "NavigationStack (pushed from MemoryDetailView creation entry) + ScrollView + Form sheet (prompt editor) + confirmationDialog (export/save) + Toast",
+  "layoutMode": "single_column",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "Focus surface — masonry always disabled (echo-memory-canvas §3.2, §8.1)"
+  ],
+  "states": [
+    "idle",
+    "generating",
+    "generated",
+    "empty",
+    "error",
+    "saving",
+    "saved"
+  ],
+  "version": "1.0.0"
+}
