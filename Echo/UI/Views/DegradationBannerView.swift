@@ -84,7 +84,10 @@ struct DegradationBannerView: View {
             }
 
             if degradation.showSettings {
-                Button(action: {}) {
+                Button {
+                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                    UIApplication.shared.open(url)
+                } label: {
                     Text("Settings")
                         .font(.caption)
                 }
@@ -112,7 +115,7 @@ struct DegradationBannerView: View {
                 .fill(degradation.tint)
                 .frame(height: 2)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("Degradation banner: \(degradation.type.rawValue)")
     }
 

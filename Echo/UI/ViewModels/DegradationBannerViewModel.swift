@@ -88,6 +88,7 @@ final class DegradationBannerViewModel {
     private(set) var activeDegradation: DegradationState?
 
     private var dismissTask: Task<Void, Never>?
+    private var retryTask: Task<Void, Never>?
 
     func loadFixture(_ fixtureID: String) {
         state = .loading
@@ -111,6 +112,8 @@ final class DegradationBannerViewModel {
     }
 
     func dismissBanner() {
+        retryTask?.cancel()
+        dismissTask?.cancel()
         isBannerVisible = false
         activeDegradation = nil
         state = .idle
@@ -124,17 +127,21 @@ final class DegradationBannerViewModel {
     }
 
     func retryModelLoad() {
+        retryTask?.cancel()
         state = .loading
-        Task {
+        retryTask = Task {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
             state = .active(.modelDegraded())
         }
     }
 
     func deactivate() {
+        retryTask?.cancel()
         dismissTask?.cancel()
         dismissTask = Task {
             try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
             isBannerVisible = false
             activeDegradation = nil
             state = .idle
