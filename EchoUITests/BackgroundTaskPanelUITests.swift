@@ -58,6 +58,38 @@ final class BackgroundTaskPanelUITests: XCTestCase {
         XCTAssertTrue(app.buttons["background-task-pause-task-sync-001"].exists)
     }
 
+    /// W-1 回归测试 (PR #40 review): 暂停全部任务后面板保持打开 — 自动隐藏
+    /// 仅在任务列表为空时触发（AC-5），paused 任务保留恢复入口（AC-3）。
+    @MainActor
+    func test_pauseAllTasksKeepsPanelOpen() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-fixture", "background-tasks-loaded"]
+        app.launch()
+
+        let panel = app.otherElements["background-tasks-panel"]
+        XCTAssertTrue(panel.waitForExistence(timeout: 10), "Panel should be presented")
+
+        // 暂停两条任务
+        let pauseSync = app.buttons["background-task-pause-task-sync-001"]
+        XCTAssertTrue(pauseSync.waitForExistence(timeout: 5))
+        pauseSync.tap()
+        app.buttons["background-task-pause-task-index-001"].tap()
+
+        // 两条均变为 Paused
+        XCTAssertTrue(app.staticTexts["Paused"].waitForExistence(timeout: 5))
+        let pausedCount = app.staticTexts.matching(NSPredicate(format: "label == 'Paused'")).count
+        XCTAssertEqual(pausedCount, 2, "Both tasks should show Paused")
+
+        // 等待超过自动隐藏窗口 (1.5s) — 面板必须保持打开（暂停状态可恢复，AC-3）
+        sleep(3)
+        XCTAssertTrue(panel.exists, "Panel should stay open with paused tasks (W-1)")
+
+        // 恢复一条 → 状态回到 Running
+        app.buttons["background-task-pause-task-sync-001"].tap()
+        XCTAssertTrue(app.staticTexts["Running"].waitForExistence(timeout: 5),
+                      "Resumed task should show Running")
+    }
+
     /// 取消交互: 点击取消 → 确认弹窗 → 确认后任务移除 (US-SYS-001 AC-3)
     @MainActor
     func test_cancelInteraction() throws {

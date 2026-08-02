@@ -48,6 +48,9 @@ struct BackgroundTaskPanelView: View {
     /// 首次出现标记 — 控制 fixture 注入仅执行一次
     @State private var hasHandledLaunchArguments = false
 
+    /// 自动隐藏调度 Task — 绑定视图生命周期（onDisappear 取消，W-4）
+    @State private var autoHideTask: Task<Void, Never>?
+
     init(viewModel: BackgroundTaskViewModel = BackgroundTaskViewModel(), onDismiss: (() -> Void)? = nil) {
         _viewModel = State(initialValue: viewModel)
         self.onDismiss = onDismiss
@@ -93,9 +96,12 @@ struct BackgroundTaskPanelView: View {
             Text("Progress up to this point will be saved. You can resume later.")
         }
         .onAppear { handleFirstAppear() }
-        .onChange(of: viewModel.hasActiveTasks, initial: true) { _, hasActive in
-            if !hasActive {
+        .onDisappear { autoHideTask?.cancel() }
+        .onChange(of: viewModel.tasks.isEmpty, initial: true) { _, isEmpty in
+            if isEmpty {
                 scheduleAutoHideIfNeeded()
+            } else {
+                autoHideTask?.cancel()
             }
         }
         .accessibilityIdentifier("background-tasks-panel")
@@ -285,16 +291,20 @@ struct BackgroundTaskPanelView: View {
     // MARK: - Auto-Hide (US-SYS-001 AC-5)
 
     /// 无活跃任务时延迟 1.5 秒自动关闭面板 (echo-memory-canvas §13.3)。
+    /// 仅当任务列表为空（全部完成/取消）时触发；存在 paused 任务时抑制，
+    /// 保留 AC-3「随时恢复继续」能力（W-1）。
     private func scheduleAutoHideIfNeeded() {
-        guard !viewModel.hasActiveTasks else { return }
+        guard viewModel.tasks.isEmpty else { return }
+        autoHideTask?.cancel()
 
         let capturedViewModel = viewModel
         let capturedOnDismiss = onDismiss
         let capturedDismiss = dismiss
 
-        Task { @MainActor in
+        autoHideTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_500_000_000)
-            guard !capturedViewModel.hasActiveTasks else { return }
+            guard !Task.isCancelled else { return }
+            guard capturedViewModel.tasks.isEmpty else { return }
             if capturedViewModel.isPanelPresented {
                 capturedViewModel.closePanel()
                 capturedDismiss()
