@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-02T23:05:03+08:00",
+  "_last_updated": "2026-08-03T00:05:00+08:00",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -366,7 +366,7 @@
       "reason": "Test metadata helper uses `try! memory.encodeMetadata()`. Matches 5 accepted Phase 2 baseline instances (e.g. SearchPipelineTests.swift:34); SwiftLint runs without --strict so warning is non-blocking. Accepted-not-fixed at PR #47 review (W-3).",
       "defer_to": "若后续 SwiftLint 门禁升级为 --strict 或 Phase 4 质量阶段统一清理测试辅助函数时",
       "deferred_at": "2026-08-03",
-      "last_checked_at": "2026-08-02T23:05:03+08:00"
+      "last_checked_at": "2026-08-03T00:05:00+08:00"
     }
   ]
 }
