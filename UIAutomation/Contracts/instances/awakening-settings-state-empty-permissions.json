@@ -1,0 +1,15 @@
+{
+  "surfaceId": "awakening-settings",
+  "stateId": "empty-permissions",
+  "fixtureId": "awakening-no-permissions",
+  "description": "No permissions granted, all features disabled",
+  "expected": {
+    "notificationPermission": "not-granted",
+    "locationPermission": "not-granted",
+    "healthPermission": "not-granted",
+    "isGeofenceEnabled": false,
+    "isEmotionEnabled": false,
+    "isAnniversaryEnabled": false,
+    "geofenceCount": 0
+  }
+}

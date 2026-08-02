@@ -74,13 +74,14 @@ struct AppRootView: View {
     }
 
     #if DEBUG
-    /// 处理 XCUITest / Live Sim Review 启动参数注入确定性 fixture。
     private func handleLaunchArguments() {
         let args = ProcessInfo.processInfo.arguments
+        if args.contains("-skip-onboarding") {
+            return
+        }
         guard let idx = args.firstIndex(of: "-ui-fixture"), idx + 1 < args.count else { return }
         let fixtureID = args[idx + 1]
 
-        // 支持 `-ui-fixture onboarding-*` 直接导航到引导流程 (Task 3.11)
         if fixtureID.hasPrefix("onboarding-") {
             onboardingViewModel.loadFixture(fixtureID)
             isOnboardingPresented = true

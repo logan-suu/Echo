@@ -143,6 +143,7 @@ struct SettingsView: View {
     private func settingsForm(_ sections: SettingsSections) -> some View {
         Form {
             dataSourcesSection(sections)
+            awakeningSection
             storageSection(sections)
             excludedItemsSection(sections)
             feedbackSection(sections)
@@ -219,6 +220,31 @@ struct SettingsView: View {
             Text("Data Sources")
         } footer: {
             Text("Photo access is required for Echo to index your memories. Notes and Voice Memos support coming via Share Extension — share content directly to Echo to index it.")
+        }
+    }
+
+    // MARK: - Awakening Section (US-AWK-001/002/003 — Task 3.12)
+
+    private var awakeningSection: some View {
+        Section {
+            NavigationLink {
+                AwakeningSettingsView()
+            } label: {
+                Label {
+                    Text("Awakening")
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                } icon: {
+                    Image(systemName: "bell.badge")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .accessibilityLabel("Awakening settings")
+            .accessibilityHint("Manage notification, location, and health permissions for memory awakening")
+        } header: {
+            Text("Awakening")
+        } footer: {
+            Text("Configure how Echo proactively delivers memories based on location, date anniversaries, and mood.")
         }
     }
 

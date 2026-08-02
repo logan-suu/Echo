@@ -1,0 +1,11 @@
+{
+  "surfaceId": "awakening-settings",
+  "surfaceFamily": "task",
+  "container": "NavigationStack + Form",
+  "masonry": "forbidden",
+  "description": "Awakening delivery settings — notification, location, health permissions and geofence/emotion/anniversary toggles",
+  "relatedStories": ["US-AWK-001", "US-AWK-002", "US-AWK-003"],
+  "states": ["loaded", "loading", "error", "empty-permissions", "all-disabled", "unavailable"],
+  "actions": ["toggleGeofence", "toggleEmotion", "toggleAnniversary", "requestNotification", "openSystemSettings", "showGeofenceDetail", "dismissGeofenceDetail"],
+  "journeys": ["awakening-settings-basic", "awakening-settings-no-permissions", "awakening-settings-unavailable"]
+}

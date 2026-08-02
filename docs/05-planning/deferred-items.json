@@ -323,6 +323,16 @@
       "reason": "AC-4 requires consent persisted to UserPolicyStore (PrivacyActor.updatePolicy) and AC-5 requires revoke == account-lite注销 (data purge) flow reachable from Settings. Current UI slice only transitions viewState; consent write path is Core-side (PrivacyActor/UserPolicy persistence, Phase 3.9) and Settings revoke entry is a Phase 3.4 surface not yet wired to onboarding state. Written tracking per §15.5 rule 3 (W-4 split from DEF-45-001 which now covers i18n only).",
       "defer_to": "Phase 3.9 Core UserPolicy persistence + Settings 撤回同意入口 (task 3.4 surface integration)",
       "deferred_at": "2026-08-03"
+    },
+    {
+      "id": "DEF-46-001",
+      "pr": 46,
+      "title": "AwakeningSettings 用户可见字符串硬编码英文（i18n 未接入）",
+      "severity": "🟡",
+      "location": "AwakeningSettingsView.swift, AwakeningSettingsFixtureLoader.swift",
+      "reason": "All UI strings (navigation titles, labels, footers, error messages, permission descriptions, toggle labels, geofence detail sheet, accessibility labels — ~50+ string literals) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001 / DEF-44-001 / DEF-45-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
+      "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4)",
+      "deferred_at": "2026-08-03"
     }
   ]
 }

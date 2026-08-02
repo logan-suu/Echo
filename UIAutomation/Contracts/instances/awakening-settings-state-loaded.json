@@ -1,0 +1,15 @@
+{
+  "surfaceId": "awakening-settings",
+  "stateId": "loaded",
+  "fixtureId": "awakening-full",
+  "description": "All permissions granted, all awakening types enabled, 3 geofences configured",
+  "expected": {
+    "notificationPermission": "granted",
+    "locationPermission": "granted",
+    "healthPermission": "granted",
+    "isGeofenceEnabled": true,
+    "isEmotionEnabled": true,
+    "isAnniversaryEnabled": true,
+    "geofenceCount": 3
+  }
+}
