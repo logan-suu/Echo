@@ -717,8 +717,8 @@
           "id": "3.10",
           "title": "Phase 3 集成测试：UI 与 Pipeline 联调验证",
           "story": null,
-          "status": "backlog",
-          "last_updated": "2026-08-03T00:30:00+08:00",
+          "status": "ready",
+          "last_updated": "2026-08-03T15:45:00+08:00",
           "documents_required": [
             "docs/02-architecture/数据流全链路技术说明文档.md"
           ],
@@ -762,8 +762,9 @@
           "id": "3.12",
           "title": "唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置",
           "story": "US-AWK-001, US-AWK-002, US-AWK-003",
-          "status": "review",
-          "last_updated": "2026-08-03T15:30:00+08:00",
+          "status": "done",
+          "last_updated": "2026-08-03T15:45:00+08:00",
+          "merged_at": "2026-08-03T15:35:00+08:00",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
