@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.permissionDeny",
+  "source": "user",
+  "targetIntent": "onboarding.denyPermission",
+  "expectedOutcome": "permissions -> permissionDenied state",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "privacyConsent",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "privacyConsent",
+    "privacyConsent": "undecided",
+    "permissionStepIndex": null,
+    "language": null,
+    "modelLoadProgress": null
+  },
+  "allowedActions": ["onboarding.privacyAgree", "onboarding.privacyDecline"],
+  "expectedSemantics": {
+    "summary": "Scrollable PIPL privacy summary with purpose/method/kind/retention/local-processing statement (US-PRV-008 AC-2)",
+    "agreeButton": "'Agree & Continue' equally prominent (US-PRV-008 AC-3) — onboarding-privacy-agree",
+    "declineButton": "'Decline' secondary equally visible (US-PRV-008 AC-3) — onboarding-privacy-decline"
+  },
+  "version": "1.0.0"
+}

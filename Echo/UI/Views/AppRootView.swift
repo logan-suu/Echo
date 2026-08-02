@@ -23,11 +23,19 @@ import SwiftUI
 /// - ViewModel: AppViewModel (DI 容器)
 /// - 数据流: User Action → ViewModel.selectTab() → TabView 切换
 struct AppRootView: View {
-
     // MARK: - State
 
     /// App 级 ViewModel（DI 容器），由 EchoApp 注入
     @State private var viewModel = AppViewModel()
+
+    /// 引导流程 ViewModel — 首次启动五步引导 (Task 3.11)
+    @State private var onboardingViewModel = OnboardingViewModel()
+
+    /// 引导流程是否展示 (fullScreenCover, echo-memory-canvas §15.1)
+    @State private var isOnboardingPresented = false
+
+    /// 首次出现标记 — 控制 fixture 注入仅执行一次
+    @State private var hasHandledLaunchArguments = false
 
     // MARK: - Body
 
@@ -43,7 +51,42 @@ struct AppRootView: View {
                 .tag(AppTab.settings)
         }
         .tint(Color.accentColor)
+        .fullScreenCover(isPresented: $isOnboardingPresented) {
+            OnboardingView(viewModel: onboardingViewModel,
+                           onCompleted: { isOnboardingPresented = false },
+                           onDeclined: { isOnboardingPresented = false })
+        }
+        .onAppear { handleFirstAppear() }
     }
+
+    // MARK: - Launch Argument Fixture Injection
+
+    /// 首次出现时处理启动参数 fixture 注入。
+    ///
+    /// 支持 `-ui-fixture onboarding-*` 确定性导航到引导流程 (XCUITest / Live Sim Review)。
+    /// 生产构建（#if DEBUG 排除）无任何注入逻辑。
+    private func handleFirstAppear() {
+        guard !hasHandledLaunchArguments else { return }
+        hasHandledLaunchArguments = true
+        #if DEBUG
+        handleLaunchArguments()
+        #endif
+    }
+
+    #if DEBUG
+    /// 处理 XCUITest / Live Sim Review 启动参数注入确定性 fixture。
+    private func handleLaunchArguments() {
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: "-ui-fixture"), idx + 1 < args.count else { return }
+        let fixtureID = args[idx + 1]
+
+        // 支持 `-ui-fixture onboarding-*` 直接导航到引导流程 (Task 3.11)
+        if fixtureID.hasPrefix("onboarding-") {
+            onboardingViewModel.loadFixture(fixtureID)
+            isOnboardingPresented = true
+        }
+    }
+    #endif
 
     // MARK: - Tab Definitions
 

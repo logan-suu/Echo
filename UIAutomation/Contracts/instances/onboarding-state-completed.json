@@ -1,0 +1,18 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "completed",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "completed",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "complete",
+    "language": "zh-Hans | en-US",
+    "modelLoadProgress": "1.0"
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "onboardingDone": "Onboarding cover dismissed; AppRootView reveals Home tab (main app)",
+    "policyPersisted": "privacyConsent + preferredLanguage + authorizedSourceTypes recorded (🔮 Phase 3.9 PrivacyActor write)"
+  },
+  "version": "1.0.0"
+}

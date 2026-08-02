@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "onboarding-declined",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "currentStep": "declined",
+    "privacyConsent": "declined",
+    "message": "Echo needs your consent to process your memories. No data has been collected. You can revisit consent in Settings.",
+    "closeLabel": "Close"
+  },
+  "controlledVariables": ["currentStep", "privacyConsent"],
+  "version": "1.0.0"
+}

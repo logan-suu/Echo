@@ -1,0 +1,36 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "surfaceId": "onboarding",
+  "surfaceFamily": "task",
+  "responsibility": "First-launch onboarding flow: welcome page (echo-memory-canvas §15.2), PIPL privacy consent summary + equal agree/decline (US-PRV-008 AC-1~3), permission sequence with iCloud download prompt (US-SRC-001 AC-6), language selection with zh-Hans mapping hint (US-SYN-001 AC-2), first model load progress (§15.6), declined exit state. AC-4 withdraw-consent entry (Settings) and AC-5 deregistration flow deferred.",
+  "inputs": {
+    "privacySummary": "PIPL privacy policy summary with purpose/method/kind/retention/local-processing statement (US-PRV-008 AC-2)",
+    "permissionSteps": "Ordered permission sequence: photos -> notifications -> location -> health (echo-memory-canvas §15.4)",
+    "icloudDownloadPrompt": "US-SRC-001 AC-6 first photo permission download-and-keep-original hint with Open Settings button",
+    "languages": "zh-Hans | en-US picker (US-SYN-001 AC-2); traditional/other mapped to zh-Hans with one-time hint",
+    "modelLoadProgress": "Determinate progress for first model load (§15.6, fixture-driven; real ModelLoaderActor Phase 3.9)"
+  },
+  "outputs": {
+    "visibleContent": "5-step TabView flow (welcome -> privacy consent -> permissions -> language -> model loading) presented as fullScreenCover; declined state on PIPL refuse",
+    "interactionTargets": "onboarding-start, onboarding-privacy-agree, onboarding-privacy-decline, onboarding-permission-allow, onboarding-permission-deny, onboarding-open-settings, onboarding-language-zh, onboarding-language-en, onboarding-begin-load, onboarding-declined-close",
+    "accessibilityTree": "Step indicator announced; privacy summary scrollable; agree/decline equally prominent (US-PRV-008 AC-3); language picker with selected checkmark"
+  },
+  "systemContainer": "fullScreenCover + TabView (step pages) + Form (language picker) + ProgressView (model loading)",
+  "layoutMode": "form",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "Task surface — masonry always disabled (echo-memory-canvas §3.3, §8.1)",
+    "FullScreenCover so system back is disabled; explicit Continue/Decline navigation only"
+  ],
+  "states": [
+    "welcome",
+    "privacyConsent",
+    "permissions",
+    "permissionDenied",
+    "language",
+    "modelLoading",
+    "completed",
+    "declined"
+  ],
+  "version": "1.0.0"
+}

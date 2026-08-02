@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.openSettings",
+  "source": "user",
+  "targetIntent": "onboarding.openSettings",
+  "expectedOutcome": "launch UIApplication.openSettingsURLString (US-SRC-001 AC-6)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

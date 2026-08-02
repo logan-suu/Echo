@@ -1,0 +1,31 @@
+{
+  "surfaceId": "onboarding",
+  "surfaceFamily": "task",
+  "stateId": "privacyConsent",
+  "fixtureId": "onboarding-privacy-consent",
+  "layoutMode": "form",
+  "masonryEnabled": false,
+  "elements": [
+    { "button": "Get Started", "role": "button", "identifier": "onboarding-start", "verified": "XCUITest test_happyPathCompletesOnboarding" },
+    { "text": "Echo · 回响", "role": "staticText", "verified": "XCUITest test_happyPathCompletesOnboarding (welcome step)" },
+    { "text": "Privacy & Consent", "role": "staticText", "verified": "XCUITest test_happyPathCompletesOnboarding" },
+    { "text": "Purpose/Methods/Data types/Retention/Local processing", "role": "staticText", "identifier": "onboarding-privacy-summary", "verified": "Unit test test_AC2_privacySummaryContent (US-PRV-008 AC-2)" },
+    { "button": "Agree & Continue", "role": "button", "identifier": "onboarding-privacy-agree", "verified": "XCUITest test_happyPathCompletesOnboarding (US-PRV-008 AC-3)" },
+    { "button": "Decline", "role": "button", "identifier": "onboarding-privacy-decline", "verified": "XCUITest test_privacyDeclinedBranch (US-PRV-008 AC-3)" },
+    { "button": "Allow", "role": "button", "identifier": "onboarding-permission-allow", "verified": "XCUITest test_happyPathCompletesOnboarding (permission sequence)" },
+    { "text": "iCloud Photos hint", "role": "other", "identifier": "onboarding-icloud-hint", "verified": "XCUITest test_happyPathCompletesOnboarding (US-SRC-001 AC-6)" },
+    { "button": "Open Settings", "role": "button", "identifier": "onboarding-open-settings", "verified": "XCUITest test_permissionDeniedBranch (US-SRC-001 AC-6)" },
+    { "button": "Continue Anyway", "role": "button", "identifier": "onboarding-permission-skip", "verified": "XCUITest test_permissionDeniedBranch" },
+    { "segmentedControl": "Language", "role": "segmentedControl", "identifier": "onboarding-language-picker", "verified": "XCUITest test_happyPathCompletesOnboarding (US-SYN-001 AC-2)" },
+    { "button": "Continue", "role": "button", "identifier": "onboarding-begin-load", "verified": "XCUITest test_happyPathCompletesOnboarding" },
+    { "progress": "Model load", "role": "progressIndicator", "identifier": "onboarding-model-progress", "verified": "XCUITest test_happyPathCompletesOnboarding (echo-memory-canvas §15.6)" }
+  ],
+  "declinedState": {
+    "note": "PIPL declined shows terminal page (hand-raised icon + explanation + Close button, identifier onboarding-declined-close); Close triggers onDeclined callback which dismisses the onboarding fullScreenCover. Cover content is NOT shown after dismiss (P0-2 fix: decline is no longer a dead end).",
+    "verified": "XCUITest test_privacyDeclinedBranch (asserts onboarding-declined-close appears after decline, then cover dismisses after tapping Close; US-PRV-008 AC-3)"
+  },
+  "liveHierarchyEvidence": {
+    "note": "Native hierarchy capture (iPhone 17 Pro iOS 26.5) confirmed fullScreenCover presentation: UITransitionView + SwiftUI.PresentationHostingController hosting UIKitPagingView/PagingCollectionView with one PagingCell for the active step; inner SwiftUI AX elements are exposed via the accessibility tree and verified via XCUITest journeys (accessibility-identifier driven, no coordinates).",
+    "visualMediaCaptured": false
+  }
+}

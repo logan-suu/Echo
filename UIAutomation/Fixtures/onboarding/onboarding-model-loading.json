@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "onboarding-model-loading",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "currentStep": "modelLoading",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "complete",
+    "selectedLanguage": "en-US",
+    "modelLoadProgress": 0.0,
+    "loadingLabel": "Loading models…"
+  },
+  "controlledVariables": ["modelLoadProgress"],
+  "version": "1.0.0"
+}

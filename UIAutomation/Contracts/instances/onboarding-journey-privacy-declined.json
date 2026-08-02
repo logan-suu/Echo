@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "onboarding-privacy-declined",
+  "steps": [
+    { "surfaceId": "onboarding", "stateId": "welcome", "actionId": "onboarding.start" },
+    { "surfaceId": "onboarding", "stateId": "privacyConsent", "actionId": "onboarding.privacyDecline" },
+    { "surfaceId": "onboarding", "stateId": "declined", "actionId": null }
+  ],
+  "preconditionFixtures": ["onboarding-welcome"],
+  "assertions": [
+    { "after": "onboarding.privacyDecline", "observable": "Declined state visible with message and Close" },
+    { "after": "onboarding.declinedClose", "observable": "App does not enter main flow; limited state persists" }
+  ],
+  "version": "1.0.0"
+}

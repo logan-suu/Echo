@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.privacyAgree",
+  "source": "user",
+  "targetIntent": "onboarding.acceptPrivacy",
+  "expectedOutcome": "privacyConsent -> permissions step (consent recorded)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

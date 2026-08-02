@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.2.0",
-  "_last_updated": "2026-08-02T23:30:00+08:00",
+  "_last_updated": "2026-08-03T02:40:00+08:00",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -303,6 +303,26 @@
       "reason": "New creation surface strings ('AI Creation', 'Choose a template', 'Generate', 'Copy', 'Export PDF / Markdown', 'Share / Print', 'Save to Notes', prompt editor labels, toast/error messages, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4. Also: creation generate/save are fixture-driven — Core CreativePipeline + NoteStore write path deferred (US-SYN-003 AC-4 real save).",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4) + Core 创作 Pipeline 接入时",
       "deferred_at": "2026-08-02"
+    },
+    {
+      "id": "DEF-45-001",
+      "pr": 45,
+      "title": "Onboarding surface user-facing strings hardcoded English (i18n)",
+      "severity": "🟡",
+      "location": "Echo/UI/Views/OnboardingView.swift, Echo/UI/ViewModels/OnboardingViewModel.swift, Echo/UI/Views/OnboardingFixtureLoader.swift",
+      "reason": "New onboarding surface strings (welcome title/subtitle, privacy consent summary + Agree/Decline buttons, permission prompt iCloud hint + Open Settings, language picker labels, model-loading text, declined-state copy + Close button, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001 / DEF-44-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
+      "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4)",
+      "deferred_at": "2026-08-03"
+    },
+    {
+      "id": "DEF-45-002",
+      "pr": 45,
+      "title": "US-PRV-008 AC-4/AC-5: PIPL consent persistence + revoke/withdraw flow deferred to Core integration",
+      "severity": "🟡",
+      "location": "OnboardingViewModel.swift (acceptPrivacy/declinePrivacy), AppRootView.swift (fullScreenCover dismissal)",
+      "reason": "AC-4 requires consent persisted to UserPolicyStore (PrivacyActor.updatePolicy) and AC-5 requires revoke == account-lite注销 (data purge) flow reachable from Settings. Current UI slice only transitions viewState; consent write path is Core-side (PrivacyActor/UserPolicy persistence, Phase 3.9) and Settings revoke entry is a Phase 3.4 surface not yet wired to onboarding state. Written tracking per §15.5 rule 3 (W-4 split from DEF-45-001 which now covers i18n only).",
+      "defer_to": "Phase 3.9 Core UserPolicy persistence + Settings 撤回同意入口 (task 3.4 surface integration)",
+      "deferred_at": "2026-08-03"
     }
   ]
 }

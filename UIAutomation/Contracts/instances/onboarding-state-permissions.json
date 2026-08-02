@@ -1,0 +1,20 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "permissions",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "permissions",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "0..3 (photos -> notifications -> location -> health)",
+    "language": null,
+    "modelLoadProgress": null
+  },
+  "allowedActions": ["onboarding.permissionAllow", "onboarding.permissionDeny", "onboarding.openSettings"],
+  "expectedSemantics": {
+    "permissionCards": "Each permission explains purpose; photos step shows iCloud download-and-keep-original hint (US-SRC-001 AC-6)",
+    "allowButton": "'Allow' primary — onboarding-permission-allow",
+    "denyButton": "'Not Now' secondary — onboarding-permission-deny",
+    "openSettings": "'Open Settings' shown after deny (US-SRC-001 AC-6) — onboarding-open-settings"
+  },
+  "version": "1.0.0"
+}

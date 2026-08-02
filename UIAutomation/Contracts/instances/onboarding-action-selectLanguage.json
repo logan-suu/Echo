@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.selectLanguage",
+  "source": "user",
+  "targetIntent": "onboarding.selectLanguage",
+  "expectedOutcome": "record preferredLanguage zh-Hans|en-US (US-SYN-001 AC-2)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

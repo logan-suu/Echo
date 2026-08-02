@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.privacyDecline",
+  "source": "user",
+  "targetIntent": "onboarding.declinePrivacy",
+  "expectedOutcome": "privacyConsent -> declined exit state",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

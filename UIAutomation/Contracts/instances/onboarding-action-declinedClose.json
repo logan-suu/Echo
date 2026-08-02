@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.declinedClose",
+  "source": "user",
+  "targetIntent": "onboarding.closeDeclined",
+  "expectedOutcome": "dismiss declined state; app remains at limited entry",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

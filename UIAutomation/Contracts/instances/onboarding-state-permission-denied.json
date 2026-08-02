@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "permissionDenied",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "permissionDenied",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "denied permission id",
+    "language": null,
+    "modelLoadProgress": null
+  },
+  "allowedActions": ["onboarding.openSettings", "onboarding.permissionSkip"],
+  "expectedSemantics": {
+    "deniedMessage": "Explains the denied permission and consequence (limited functionality)",
+    "openSettings": "'Open Settings' primary — onboarding-open-settings (US-SRC-001 AC-6)",
+    "skipButton": "'Continue Anyway' allows proceeding without the permission — onboarding-permission-skip"
+  },
+  "version": "1.0.0"
+}

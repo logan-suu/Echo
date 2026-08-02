@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "onboarding-permission-denied",
+  "steps": [
+    { "surfaceId": "onboarding", "stateId": "welcome", "actionId": "onboarding.start" },
+    { "surfaceId": "onboarding", "stateId": "privacyConsent", "actionId": "onboarding.privacyAgree" },
+    { "surfaceId": "onboarding", "stateId": "permissions", "actionId": "onboarding.permissionDeny" },
+    { "surfaceId": "onboarding", "stateId": "permissionDenied", "actionId": "onboarding.openSettings" }
+  ],
+  "preconditionFixtures": ["onboarding-welcome"],
+  "assertions": [
+    { "after": "onboarding.permissionDeny", "observable": "PermissionDenied state with Open Settings button" },
+    { "after": "onboarding.openSettings", "observable": "openSettingsURLString intent fired (UIApplication.openSettingsURLString)" },
+    { "alternative": "onboarding.permissionSkip", "observable": "Continues to next step without the denied permission" }
+  ],
+  "version": "1.0.0"
+}

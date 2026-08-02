@@ -1,0 +1,21 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "onboarding-language",
+  "schemaVersion": "1.0.0",
+  "locale": "en-US",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "currentStep": "language",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "complete",
+    "selectedLanguage": null,
+    "languages": ["zh-Hans", "en-US"],
+    "mappingHintVisible": false,
+    "mappingHint": "Echo currently supports Simplified Chinese and English only. It will display in Simplified Chinese.",
+    "continueLabel": "Continue"
+  },
+  "controlledVariables": ["selectedLanguage", "mappingHintVisible"],
+  "version": "1.0.0"
+}

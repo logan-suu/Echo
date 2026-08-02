@@ -1,0 +1,21 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "onboarding-happy-path",
+  "steps": [
+    { "surfaceId": "onboarding", "stateId": "welcome", "actionId": "onboarding.start" },
+    { "surfaceId": "onboarding", "stateId": "privacyConsent", "actionId": "onboarding.privacyAgree" },
+    { "surfaceId": "onboarding", "stateId": "permissions", "actionId": "onboarding.permissionAllow" },
+    { "surfaceId": "onboarding", "stateId": "language", "actionId": "onboarding.selectLanguage" },
+    { "surfaceId": "onboarding", "stateId": "modelLoading", "actionId": "onboarding.beginLoad" },
+    { "surfaceId": "onboarding", "stateId": "completed", "actionId": null }
+  ],
+  "preconditionFixtures": ["onboarding-welcome"],
+  "assertions": [
+    { "after": "onboarding.start", "observable": "Privacy summary visible" },
+    { "after": "onboarding.privacyAgree", "observable": "Permission step 1 (photos) visible with iCloud hint" },
+    { "after": "onboarding.permissionAllow x4", "observable": "Language picker visible" },
+    { "after": "onboarding.selectLanguage", "observable": "Begin load enabled; language recorded" },
+    { "after": "onboarding.beginLoad", "observable": "Determinate progress reaches 1.0, cover dismisses" }
+  ],
+  "version": "1.0.0"
+}
