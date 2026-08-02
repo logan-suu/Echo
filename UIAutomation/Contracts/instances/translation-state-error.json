@@ -1,0 +1,17 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "error",
+  "surfaceId": "translation",
+  "dataConditions": {
+    "memory": "Text memory (zh-Hans), preferredLanguage = en-US",
+    "translationVisible": true,
+    "translationError": "L2 recoverable error (translation unavailable / cache write failed)"
+  },
+  "allowedActions": ["translation.toggle", "translation.retry"],
+  "expectedSemantics": {
+    "errorToast": "L2 toast with retry button",
+    "originalRetained": true,
+    "retryButton": "Retry"
+  },
+  "version": "1.0.0"
+}

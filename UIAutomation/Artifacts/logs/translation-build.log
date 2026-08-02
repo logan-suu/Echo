@@ -1,0 +1,1177 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -project Echo.xcodeproj -scheme Echo -destination "platform=iOS Simulator,name=iPhone 17 Pro" -derivedDataPath /tmp/echo-dd-artifact
+
+Resolve Package Graph
+
+Fetching from https://github.com/vivekptnk/ProximaKit.git (cached)
+
+Creating working copy of package ‘ProximaKit’
+
+Checking out 1.7.0 of package ‘ProximaKit’
+
+
+Resolved source packages:
+  ProximaKit: https://github.com/vivekptnk/ProximaKit.git @ 1.7.0
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (3 targets)
+    Target 'Echo' in project 'Echo'
+        ➜ Explicit dependency on target 'ProximaKit' in project 'ProximaKit'
+    Target 'ProximaKit' in project 'ProximaKit'
+        ➜ Explicit dependency on target 'ProximaKit' in project 'ProximaKit'
+    Target 'ProximaKit' in project 'ProximaKit' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /usr/bin/what -q /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image --dry-run yes --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_image-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text --dry-run yes --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_text-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small --dry-run yes --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MultilingualE5Small-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Assets.xcassets
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+Build description signature: bee7efa363a054dc4197e7b4d286c12f
+Build description path: /tmp/echo-dd-artifact/Build/Intermediates.noindex/XCBuildData/bee7efa363a054dc4197e7b4d286c12f.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+CreateBuildDirectory /tmp/echo-dd-artifact/Build/Products
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-create-build-directory /tmp/echo-dd-artifact/Build/Products
+
+CreateBuildDirectory /tmp/echo-dd-artifact/Build/Intermediates.noindex
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-create-build-directory /tmp/echo-dd-artifact/Build/Intermediates.noindex
+
+CreateBuildDirectory /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-create-build-directory /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator
+
+CreateBuildDirectory /tmp/echo-dd-artifact/Build/Intermediates.noindex/ExplicitPrecompiledModules
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-create-build-directory /tmp/echo-dd-artifact/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-create-build-directory /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/echo-dd-artifact/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-create-build-directory /tmp/echo-dd-artifact/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo-ffb9939ae8ba03680559e8bc801c82d5-VFS-iphonesimulator/all-product-headers.yaml
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo-ffb9939ae8ba03680559e8bc801c82d5-VFS-iphonesimulator/all-product-headers.yaml
+
+CreateBuildDirectory /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-create-build-directory /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.DependencyStaticMetadataFileList (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.DependencyMetadataFileList (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.DependencyMetadataFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.modulemap (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.modulemap
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.LinkFileList (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.LinkFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftFileList (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftConstValuesFileList (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_const_extract_protocols.json (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_const_extract_protocols.json
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-OutputFileMap.json (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-OutputFileMap.json
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/empty-Echo.plist (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/empty-Echo.plist
+
+Copy /tmp/echo-dd-artifact/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/ProximaKit.modulemap /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.modulemap (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.modulemap /tmp/echo-dd-artifact/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/be6e8e5e5e40de44ef60aa953826d05a.sb (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/be6e8e5e5e40de44ef60aa953826d05a.sb
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/be09825bf24b352148d795789ec78a40.sb (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/be09825bf24b352148d795789ec78a40.sb
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/a96c4c65ef505b0bcee62847a3e4eb17.sb (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/a96c4c65ef505b0bcee62847a3e4eb17.sb
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_const_extract_protocols.json (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_const_extract_protocols.json
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftFileList (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftConstValuesFileList (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.LinkFileList (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.LinkFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-OutputFileMap.json (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-OutputFileMap.json
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.hmap (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.hmap
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyStaticMetadataFileList (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-project-headers.hmap (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-project-headers.hmap
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-own-target-headers.hmap (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-own-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-generated-files.hmap (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-generated-files.hmap
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-all-target-headers.hmap (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-all-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-all-non-framework-target-headers.hmap (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibPath-normal-arm64.txt (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibPath-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibInstallName-normal-arm64.txt (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibInstallName-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/Entitlements-Simulated.plist (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/Entitlements-Simulated.plist
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/7d0f02554662cbb7339d8ba393dc6e28.sb (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/7d0f02554662cbb7339d8ba393dc6e28.sb
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/622b0ec9c39ae99a50120cfe289693fb.sb (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/622b0ec9c39ae99a50120cfe289693fb.sb
+
+WriteAuxiliaryFile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/28f940616c5ea864116510b59efa18b5.sb (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    write-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/28f940616c5ea864116510b59efa18b5.sb
+
+MkDir /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /bin/mkdir -p /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+SwiftDriver ProximaKit normal arm64 com.apple.xcode.tools.swift.compiler (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name ProximaKit -Onone @/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -DXcode -enable-experimental-feature StrictConcurrency -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -suppress-warnings -index-store-path /tmp/echo-dd-artifact/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j8 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -sdk-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/echo-dd-artifact/ModuleCache.noindex/Session.modulevalidation -package-name proximakit -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_const_extract_protocols.json -Xcc -I/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources-normal/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-Swift.h -working-directory /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/SwiftShims-13LTRO1UXZRWWHUNLD0V8T103.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_AvailabilityInternal-5ST3PLTV2TPU27P47DBON1K0W.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_SwiftConcurrencyShims-CANOPAHUA0DYGAJ1Q5H04MXV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_float-DYYIKWDRZTX1TVF2ED58X856L.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ptrauth-BAM2CRFLKES1LNYJH50DCL81S.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stddef-3GC8UUMAKQ8ZSF3A7EIK23IB1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdbool-BS2E4GZPQIB2DXOJI2UUB6N27.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdarg-4TZZZZE6E45K3861QX3H6WYFV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ptrcheck-2PSHLADR1026WODA2PGYCC2ON.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_DarwinFoundation1-4BRHIC6RJKIWEFGAHQ9E3BHEE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_DarwinFoundation2-4CF3NO6YJ9GIHXA950E8ZA75I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_limits-9RA1X862ZBJVRYAB7R2WM30VM.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/sys_types-71UMSQCJZDL22SBMOPE6SE7OB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_tgmath-8RE5FMC2EX4KFVMTQUO28MOOW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdint-5TT5R9FN6IB53LPUZ3E8XZGY8.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdatomic-9LVNPY4VNTTHNF6WMKXH5OCEV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_intrinsics-2KYTRC60XP9J6WSJ7NMIHR1GF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_DarwinFoundation3-1ZBQER1MGYIZPSCYWQXAVLC0Y.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_inttypes-8H96UIBKSRBMMA8V9EHWCSF1T.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Darwin-BB8Q9EKHN10M2TDZ7NN6PQN2M.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/simd-86CLC2QOG83VTHXYLSOZGIWQY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/MachO-2VEKQDHGZZR4N1S4F3L57TM6V.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ObjectiveC-3A3IFP4ZOQFIKZEZ952EBEPZ7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/os_object-43AI0NZWDP11ZGVSNZH5ZBT24.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/os_workgroup-7ZE6O2BK0KYD0BP7U9LWMENAO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Dispatch-9CBZO9GIEIJTB113YLNWV496.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/XPC-CKQRFAXYLN08TIPHF2K4MLRYV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreFoundation-KGAGCFZRM7B1LZL6PH0H5QNZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/os-2XHXLT3NLXSLJAHHTNYV88PVW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreGraphics-58P8HIRJFH2LLOLAM9FYI5XFZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Security-LLWQNDEYJIZDKVHX5ZVTXZP6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CFNetwork-VNM8OJVKVKUXIDGGECYWS08J.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Foundation-92ZEQ8NIV7Z1Y5CNNVGC16M7U.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/IOSurface-5WTUQM5CTGODJ3U2FT4HKIIPK.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/OpenGLES-6TYJ7UASO442LBFEBZL60W57D.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Metal-5ZEX3C6IMRLCFO7BE6EB9CRWM.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreVideo-9IZ3J07V2NFF7E7RMQ75Y056K.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Accelerate-99KWX82CRL41NXMKDOIYT7JH3.pcm
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ ProximaKit (in target 'ProximaKit' from project 'ProximaKit')
+
+EmitSwiftModule normal arm64 (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ QuantizedHNSWIndexPersistence.swift,\ ScalarQuantizedHNSWIndex.swift,\ ScalarQuantizedHNSWIndexPersistence.swift,\ SparseIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/QuantizedHNSWIndexPersistence.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/ScalarQuantizedHNSWIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/ScalarQuantizedHNSWIndexPersistence.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/SparseIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/QuantizedHNSWIndexPersistence.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/ScalarQuantizedHNSWIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/ScalarQuantizedHNSWIndexPersistence.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/SparseIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ ProximaKit.swift,\ ProductQuantizer.swift,\ ProductQuantizerError.swift,\ ProductQuantizerPersistence.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/ProximaKit.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ProductQuantizer.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ProductQuantizerError.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ProductQuantizerPersistence.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/ProximaKit.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ProductQuantizer.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ProductQuantizerError.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ProductQuantizerPersistence.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ BatchDistance.swift,\ DistanceMetric.swift,\ DistanceMetricType.swift,\ MetalBatchDistance.swift,\ BM25Tokenizer.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/BatchDistance.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/DistanceMetric.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/DistanceMetricType.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/MetalBatchDistance.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/BM25Tokenizer.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/BatchDistance.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/DistanceMetric.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/DistanceMetricType.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Distance/MetalBatchDistance.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/BM25Tokenizer.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ BruteForceIndex.swift,\ HNSWIndex.swift,\ Heap.swift,\ HybridIndex.swift,\ QuantizedHNSWIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/BruteForceIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/HNSWIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/Heap.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/HybridIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/QuantizedHNSWIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/BruteForceIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/HNSWIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/Heap.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/HybridIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/QuantizedHNSWIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ TextEmbedder.swift,\ VectorStore.swift,\ VectorStoreError.swift,\ Vector.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/TextEmbedder.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/VectorStore.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/VectorStoreError.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Vector.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/TextEmbedder.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/VectorStore.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/VectorStoreError.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Vector.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ PersistenceError.swift,\ SparseIndexPersistence.swift,\ WALFormat.swift,\ WALJournal.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/PersistenceError.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/SparseIndexPersistence.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/WALFormat.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/WALJournal.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/PersistenceError.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/SparseIndexPersistence.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/WALFormat.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/WALJournal.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ SparseVectorIndex.swift,\ VectorIndex.swift,\ MappedVectorRegion.swift,\ PersistenceEngine.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/SparseVectorIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/VectorIndex.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/MappedVectorRegion.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/PersistenceEngine.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/SparseVectorIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Index/VectorIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/MappedVectorRegion.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Persistence/PersistenceEngine.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ ScalarQuantizer.swift,\ SearchResult.swift,\ ChunkMetadata.swift,\ HybridVectorStore.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ScalarQuantizer.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Query/SearchResult.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/ChunkMetadata.swift /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/HybridVectorStore.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Quantization/ScalarQuantizer.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Query/SearchResult.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/ChunkMetadata.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit/Sources/ProximaKit/Store/HybridVectorStore.swift (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for ProximaKit (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftDriver\ Compilation\ Requirements ProximaKit normal arm64 com.apple.xcode.tools.swift.compiler (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name ProximaKit -Onone @/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -DXcode -enable-experimental-feature StrictConcurrency -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -suppress-warnings -index-store-path /tmp/echo-dd-artifact/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j8 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -sdk-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/echo-dd-artifact/ModuleCache.noindex/Session.modulevalidation -package-name proximakit -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_const_extract_protocols.json -Xcc -I/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources-normal/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-Swift.h -working-directory /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling PersistenceError.swift, SparseIndexPersistence.swift, WALFormat.swift, WALJournal.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftMergeGeneratedHeaders /tmp/echo-dd-artifact/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/ProximaKit-Swift.h /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-Swift.h (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    builtin-swiftHeaderTool -arch arm64 /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-Swift.h -o /tmp/echo-dd-artifact/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/ProximaKit-Swift.h
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/arm64-apple-ios-simulator.swiftmodule /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/arm64-apple-ios-simulator.swiftdoc /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftdoc (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftdoc /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/arm64-apple-ios-simulator.abi.json /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.abi.json (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.abi.json /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftsourceinfo (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftsourceinfo /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+ProcessProductPackaging "" /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Entitlements:
+    
+    {
+    "application-identifier" = "UJ876FXT32.com.echo.Echo";
+}
+    
+    builtin-productPackagingUtility -entitlements -format xml -o /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent
+
+ProcessProductPackagingDER /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent.der (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/derq query -f xml -i /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent -o /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent.der --raw
+
+MkDir /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_output/unthinned (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /bin/mkdir -p /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_output/unthinned
+
+MkDir /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_output/thinned (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /bin/mkdir -p /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_output/thinned
+
+GenerateAssetSymbols /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Assets.xcassets (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Assets.xcassets --compile /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_dependencies --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 18.0 --platform iphonesimulator --bundle-identifier com.echo.Echo --generate-swift-asset-symbols /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/* com.apple.actool.compilation-results */
+/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols.h
+/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols.swift
+
+
+CoreMLModelCompile /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/ /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/sandbox-exec -D SCRIPT_OUTPUT_FILE_0\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/MultilingualE5Small.mlmodelc -D SCRIPT_OUTPUT_FILE_1\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MultilingualE5Small-CoreMLPartialInfo.plist -D SCRIPT_INPUT_FILE_0\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage -D SCRIPT_INPUT_FILE_1\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage -D SCRIPT_INPUT_ANCESTOR_0\=/ -D SCRIPT_INPUT_ANCESTOR_1\=/Users -D SCRIPT_INPUT_ANCESTOR_2\=/Users/logansu -D SCRIPT_INPUT_ANCESTOR_3\=/Users/logansu/Documents -D SCRIPT_INPUT_ANCESTOR_4\=/Users/logansu/Documents/Dev -D SCRIPT_INPUT_ANCESTOR_5\=/Users/logansu/Documents/Dev/SwiftProjects -D SCRIPT_INPUT_ANCESTOR_6\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D SCRIPT_INPUT_ANCESTOR_7\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo -D SCRIPT_INPUT_ANCESTOR_8\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources -D SCRIPT_INPUT_ANCESTOR_9\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models -D SCRIPT_OUTPUT_ANCESTOR_0\=/ -D SCRIPT_OUTPUT_ANCESTOR_1\=/tmp -D SCRIPT_OUTPUT_ANCESTOR_2\=/tmp/echo-dd-artifact -D SCRIPT_OUTPUT_ANCESTOR_3\=/tmp/echo-dd-artifact/Build -D SCRIPT_OUTPUT_ANCESTOR_4\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SCRIPT_OUTPUT_ANCESTOR_5\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_6\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_7\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_8\=/tmp/echo-dd-artifact/Build/Products -D SCRIPT_OUTPUT_ANCESTOR_9\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_10\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app -D SRCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D PROJECT_DIR\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D OBJROOT\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SYMROOT\=/tmp/echo-dd-artifact/Build/Products -D DSTROOT\=/tmp/Echo.dst -D SHARED_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/PrecompiledHeaders -D CACHE_ROOT\=/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/C/com.apple.DeveloperTools/26.5-17F42/Xcode -D CONFIGURATION_BUILD_DIR\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D CONFIGURATION_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D LOCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D LOCSYMROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D INDEX_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Index.noindex/PrecompiledHeaders -D INDEX_DATA_STORE_DIR\=/tmp/echo-dd-artifact/Index.noindex/DataStore -D TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D TARGET_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D DERIVED_FILE_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -f /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/be6e8e5e5e40de44ef60aa953826d05a.sb /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc compile /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/ --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MultilingualE5Small-CoreMLPartialInfo.plist --container bundle-resources
+/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/MultilingualE5Small.mlmodelc/coremldata.bin
+
+CoreMLModelCompile /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/ /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/sandbox-exec -D SCRIPT_OUTPUT_FILE_0\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/MobileCLIP-B-lt_text.mlmodelc -D SCRIPT_OUTPUT_FILE_1\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_text-CoreMLPartialInfo.plist -D SCRIPT_INPUT_FILE_0\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage -D SCRIPT_INPUT_FILE_1\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage -D SCRIPT_INPUT_ANCESTOR_0\=/ -D SCRIPT_INPUT_ANCESTOR_1\=/Users -D SCRIPT_INPUT_ANCESTOR_2\=/Users/logansu -D SCRIPT_INPUT_ANCESTOR_3\=/Users/logansu/Documents -D SCRIPT_INPUT_ANCESTOR_4\=/Users/logansu/Documents/Dev -D SCRIPT_INPUT_ANCESTOR_5\=/Users/logansu/Documents/Dev/SwiftProjects -D SCRIPT_INPUT_ANCESTOR_6\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D SCRIPT_INPUT_ANCESTOR_7\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo -D SCRIPT_INPUT_ANCESTOR_8\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources -D SCRIPT_INPUT_ANCESTOR_9\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models -D SCRIPT_OUTPUT_ANCESTOR_0\=/ -D SCRIPT_OUTPUT_ANCESTOR_1\=/tmp -D SCRIPT_OUTPUT_ANCESTOR_2\=/tmp/echo-dd-artifact -D SCRIPT_OUTPUT_ANCESTOR_3\=/tmp/echo-dd-artifact/Build -D SCRIPT_OUTPUT_ANCESTOR_4\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SCRIPT_OUTPUT_ANCESTOR_5\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_6\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_7\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_8\=/tmp/echo-dd-artifact/Build/Products -D SCRIPT_OUTPUT_ANCESTOR_9\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_10\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app -D SRCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D PROJECT_DIR\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D OBJROOT\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SYMROOT\=/tmp/echo-dd-artifact/Build/Products -D DSTROOT\=/tmp/Echo.dst -D SHARED_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/PrecompiledHeaders -D CACHE_ROOT\=/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/C/com.apple.DeveloperTools/26.5-17F42/Xcode -D CONFIGURATION_BUILD_DIR\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D CONFIGURATION_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D LOCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D LOCSYMROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D INDEX_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Index.noindex/PrecompiledHeaders -D INDEX_DATA_STORE_DIR\=/tmp/echo-dd-artifact/Index.noindex/DataStore -D TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D TARGET_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D DERIVED_FILE_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -f /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/28f940616c5ea864116510b59efa18b5.sb /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc compile /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/ --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_text-CoreMLPartialInfo.plist --container bundle-resources
+/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/MobileCLIP-B-lt_text.mlmodelc/coremldata.bin
+
+SwiftDriverJobDiscovery normal arm64 Compiling ScalarQuantizer.swift, SearchResult.swift, ChunkMetadata.swift, HybridVectorStore.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+CoreMLModelCompile /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/ /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/sandbox-exec -D SCRIPT_OUTPUT_FILE_0\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/MobileCLIP-B-lt_image.mlmodelc -D SCRIPT_OUTPUT_FILE_1\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_image-CoreMLPartialInfo.plist -D SCRIPT_INPUT_FILE_0\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage -D SCRIPT_INPUT_FILE_1\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage -D SCRIPT_INPUT_ANCESTOR_0\=/ -D SCRIPT_INPUT_ANCESTOR_1\=/Users -D SCRIPT_INPUT_ANCESTOR_2\=/Users/logansu -D SCRIPT_INPUT_ANCESTOR_3\=/Users/logansu/Documents -D SCRIPT_INPUT_ANCESTOR_4\=/Users/logansu/Documents/Dev -D SCRIPT_INPUT_ANCESTOR_5\=/Users/logansu/Documents/Dev/SwiftProjects -D SCRIPT_INPUT_ANCESTOR_6\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D SCRIPT_INPUT_ANCESTOR_7\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo -D SCRIPT_INPUT_ANCESTOR_8\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources -D SCRIPT_INPUT_ANCESTOR_9\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models -D SCRIPT_OUTPUT_ANCESTOR_0\=/ -D SCRIPT_OUTPUT_ANCESTOR_1\=/tmp -D SCRIPT_OUTPUT_ANCESTOR_2\=/tmp/echo-dd-artifact -D SCRIPT_OUTPUT_ANCESTOR_3\=/tmp/echo-dd-artifact/Build -D SCRIPT_OUTPUT_ANCESTOR_4\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SCRIPT_OUTPUT_ANCESTOR_5\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_6\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_7\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_8\=/tmp/echo-dd-artifact/Build/Products -D SCRIPT_OUTPUT_ANCESTOR_9\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_10\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app -D SRCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D PROJECT_DIR\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D OBJROOT\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SYMROOT\=/tmp/echo-dd-artifact/Build/Products -D DSTROOT\=/tmp/Echo.dst -D SHARED_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/PrecompiledHeaders -D CACHE_ROOT\=/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/C/com.apple.DeveloperTools/26.5-17F42/Xcode -D CONFIGURATION_BUILD_DIR\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D CONFIGURATION_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D LOCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D LOCSYMROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D INDEX_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Index.noindex/PrecompiledHeaders -D INDEX_DATA_STORE_DIR\=/tmp/echo-dd-artifact/Index.noindex/DataStore -D TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D TARGET_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D DERIVED_FILE_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -f /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/622b0ec9c39ae99a50120cfe289693fb.sb /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc compile /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/ --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_image-CoreMLPartialInfo.plist --container bundle-resources
+/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/MobileCLIP-B-lt_image.mlmodelc/coremldata.bin
+
+SwiftDriverJobDiscovery normal arm64 Compiling ProximaKit.swift, ProductQuantizer.swift, ProductQuantizerError.swift, ProductQuantizerPersistence.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftDriverJobDiscovery normal arm64 Compiling BatchDistance.swift, DistanceMetric.swift, DistanceMetricType.swift, MetalBatchDistance.swift, BM25Tokenizer.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+CoreMLModelCodegen /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/sandbox-exec -D SCRIPT_OUTPUT_FILE_0\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small/MultilingualE5Small.swift -D SCRIPT_INPUT_FILE_0\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage -D SCRIPT_INPUT_ANCESTOR_0\=/ -D SCRIPT_INPUT_ANCESTOR_1\=/Users -D SCRIPT_INPUT_ANCESTOR_2\=/Users/logansu -D SCRIPT_INPUT_ANCESTOR_3\=/Users/logansu/Documents -D SCRIPT_INPUT_ANCESTOR_4\=/Users/logansu/Documents/Dev -D SCRIPT_INPUT_ANCESTOR_5\=/Users/logansu/Documents/Dev/SwiftProjects -D SCRIPT_INPUT_ANCESTOR_6\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D SCRIPT_INPUT_ANCESTOR_7\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo -D SCRIPT_INPUT_ANCESTOR_8\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources -D SCRIPT_INPUT_ANCESTOR_9\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models -D SCRIPT_OUTPUT_ANCESTOR_0\=/ -D SCRIPT_OUTPUT_ANCESTOR_1\=/tmp -D SCRIPT_OUTPUT_ANCESTOR_2\=/tmp/echo-dd-artifact -D SCRIPT_OUTPUT_ANCESTOR_3\=/tmp/echo-dd-artifact/Build -D SCRIPT_OUTPUT_ANCESTOR_4\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SCRIPT_OUTPUT_ANCESTOR_5\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_6\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_7\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_8\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -D SCRIPT_OUTPUT_ANCESTOR_9\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated -D SCRIPT_OUTPUT_ANCESTOR_10\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small -D SRCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D PROJECT_DIR\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D OBJROOT\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SYMROOT\=/tmp/echo-dd-artifact/Build/Products -D DSTROOT\=/tmp/Echo.dst -D SHARED_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/PrecompiledHeaders -D CACHE_ROOT\=/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/C/com.apple.DeveloperTools/26.5-17F42/Xcode -D CONFIGURATION_BUILD_DIR\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D CONFIGURATION_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D LOCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D LOCSYMROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D INDEX_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Index.noindex/PrecompiledHeaders -D INDEX_DATA_STORE_DIR\=/tmp/echo-dd-artifact/Index.noindex/DataStore -D TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D TARGET_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D DERIVED_FILE_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -f /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/a96c4c65ef505b0bcee62847a3e4eb17.sb /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MultilingualE5Small.mlpackage /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MultilingualE5Small-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small/MultilingualE5Small.swift
+
+CoreMLModelCodegen /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/sandbox-exec -D SCRIPT_OUTPUT_FILE_0\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text/MobileCLIP-B-lt_text.swift -D SCRIPT_INPUT_FILE_0\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage -D SCRIPT_INPUT_ANCESTOR_0\=/ -D SCRIPT_INPUT_ANCESTOR_1\=/Users -D SCRIPT_INPUT_ANCESTOR_2\=/Users/logansu -D SCRIPT_INPUT_ANCESTOR_3\=/Users/logansu/Documents -D SCRIPT_INPUT_ANCESTOR_4\=/Users/logansu/Documents/Dev -D SCRIPT_INPUT_ANCESTOR_5\=/Users/logansu/Documents/Dev/SwiftProjects -D SCRIPT_INPUT_ANCESTOR_6\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D SCRIPT_INPUT_ANCESTOR_7\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo -D SCRIPT_INPUT_ANCESTOR_8\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources -D SCRIPT_INPUT_ANCESTOR_9\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models -D SCRIPT_OUTPUT_ANCESTOR_0\=/ -D SCRIPT_OUTPUT_ANCESTOR_1\=/tmp -D SCRIPT_OUTPUT_ANCESTOR_2\=/tmp/echo-dd-artifact -D SCRIPT_OUTPUT_ANCESTOR_3\=/tmp/echo-dd-artifact/Build -D SCRIPT_OUTPUT_ANCESTOR_4\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SCRIPT_OUTPUT_ANCESTOR_5\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_6\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_7\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_8\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -D SCRIPT_OUTPUT_ANCESTOR_9\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated -D SCRIPT_OUTPUT_ANCESTOR_10\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text -D SRCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D PROJECT_DIR\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D OBJROOT\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SYMROOT\=/tmp/echo-dd-artifact/Build/Products -D DSTROOT\=/tmp/Echo.dst -D SHARED_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/PrecompiledHeaders -D CACHE_ROOT\=/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/C/com.apple.DeveloperTools/26.5-17F42/Xcode -D CONFIGURATION_BUILD_DIR\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D CONFIGURATION_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D LOCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D LOCSYMROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D INDEX_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Index.noindex/PrecompiledHeaders -D INDEX_DATA_STORE_DIR\=/tmp/echo-dd-artifact/Index.noindex/DataStore -D TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D TARGET_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D DERIVED_FILE_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -f /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/7d0f02554662cbb7339d8ba393dc6e28.sb /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_text.mlpackage /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_text-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text/MobileCLIP-B-lt_text.swift
+
+SwiftDriverJobDiscovery normal arm64 Compiling SparseVectorIndex.swift, VectorIndex.swift, MappedVectorRegion.swift, PersistenceEngine.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+CoreMLModelCodegen /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/sandbox-exec -D SCRIPT_OUTPUT_FILE_0\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image/MobileCLIP-B-lt_image.swift -D SCRIPT_INPUT_FILE_0\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage -D SCRIPT_INPUT_ANCESTOR_0\=/ -D SCRIPT_INPUT_ANCESTOR_1\=/Users -D SCRIPT_INPUT_ANCESTOR_2\=/Users/logansu -D SCRIPT_INPUT_ANCESTOR_3\=/Users/logansu/Documents -D SCRIPT_INPUT_ANCESTOR_4\=/Users/logansu/Documents/Dev -D SCRIPT_INPUT_ANCESTOR_5\=/Users/logansu/Documents/Dev/SwiftProjects -D SCRIPT_INPUT_ANCESTOR_6\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D SCRIPT_INPUT_ANCESTOR_7\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo -D SCRIPT_INPUT_ANCESTOR_8\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources -D SCRIPT_INPUT_ANCESTOR_9\=/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models -D SCRIPT_OUTPUT_ANCESTOR_0\=/ -D SCRIPT_OUTPUT_ANCESTOR_1\=/tmp -D SCRIPT_OUTPUT_ANCESTOR_2\=/tmp/echo-dd-artifact -D SCRIPT_OUTPUT_ANCESTOR_3\=/tmp/echo-dd-artifact/Build -D SCRIPT_OUTPUT_ANCESTOR_4\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SCRIPT_OUTPUT_ANCESTOR_5\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_6\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D SCRIPT_OUTPUT_ANCESTOR_7\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D SCRIPT_OUTPUT_ANCESTOR_8\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -D SCRIPT_OUTPUT_ANCESTOR_9\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated -D SCRIPT_OUTPUT_ANCESTOR_10\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image -D SRCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D PROJECT_DIR\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D OBJROOT\=/tmp/echo-dd-artifact/Build/Intermediates.noindex -D SYMROOT\=/tmp/echo-dd-artifact/Build/Products -D DSTROOT\=/tmp/Echo.dst -D SHARED_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/PrecompiledHeaders -D CACHE_ROOT\=/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/C/com.apple.DeveloperTools/26.5-17F42/Xcode -D CONFIGURATION_BUILD_DIR\=/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -D CONFIGURATION_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator -D LOCROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D LOCSYMROOT\=/Users/logansu/Documents/Dev/SwiftProjects/Echo -D INDEX_PRECOMPS_DIR\=/tmp/echo-dd-artifact/Index.noindex/PrecompiledHeaders -D INDEX_DATA_STORE_DIR\=/tmp/echo-dd-artifact/Index.noindex/DataStore -D TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D TARGET_TEMP_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build -D DERIVED_FILE_DIR\=/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -f /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/be09825bf24b352148d795789ec78a40.sb /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/coremlc generate /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/MobileCLIP-B-lt_image.mlpackage /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image --deployment-target 18.0 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --platform ios --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_image-CoreMLPartialInfo.plist --container bundle-resources --language Swift --swift-version 6.0
+/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image/MobileCLIP-B-lt_image.swift
+
+SwiftDriverJobDiscovery normal arm64 Compiling TextEmbedder.swift, VectorStore.swift, VectorStoreError.swift, Vector.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+CompileAssetCatalogVariant thinned /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Assets.xcassets (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Assets.xcassets --compile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_dependencies_thinned --output-partial-info-plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone18,1 --filter-for-device-os-version 26.5 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 18.0 --platform iphonesimulator
+/* com.apple.actool.compilation-results */
+/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist_thinned
+
+
+SwiftDriverJobDiscovery normal arm64 Compiling BruteForceIndex.swift, HNSWIndex.swift, Heap.swift, HybridIndex.swift, QuantizedHNSWIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+LinkAssetCatalog /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Assets.xcassets (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-linkAssetCatalog --thinned /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_output/thinned --thinned-dependencies /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist_thinned --unthinned /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_output/unthinned --unthinned-dependencies /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist_unthinned --output /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app --plist-output /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist
+
+SwiftDriver Echo normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Echo -Onone @/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftFileList -DDEBUG -default-isolation\=MainActor -enable-upcoming-feature MemberImportVisibility -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios18.0-simulator -g -module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /tmp/echo-dd-artifact/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -emit-localized-strings -emit-localized-strings-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64 -c -j8 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -sdk-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/echo-dd-artifact/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-generated-files.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-own-target-headers.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo-ffb9939ae8ba03680559e8bc801c82d5-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-project-headers.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources-normal/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-Swift.h -working-directory /Users/logansu/Documents/Dev/SwiftProjects/Echo -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling QuantizedHNSWIndexPersistence.swift, ScalarQuantizedHNSWIndex.swift, ScalarQuantizedHNSWIndexPersistence.swift, SparseIndex.swift (in target 'ProximaKit' from project 'ProximaKit')
+
+SwiftDriver\ Compilation ProximaKit normal arm64 com.apple.xcode.tools.swift.compiler (in target 'ProximaKit' from project 'ProximaKit')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name ProximaKit -Onone @/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -DXcode -enable-experimental-feature StrictConcurrency -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -suppress-warnings -index-store-path /tmp/echo-dd-artifact/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j8 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -sdk-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/echo-dd-artifact/ModuleCache.noindex/Session.modulevalidation -package-name proximakit -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_const_extract_protocols.json -Xcc -I/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources-normal/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-Swift.h -working-directory /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+Ld /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.o normal (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -r -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -w -F/tmp/echo-dd-artifact/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -filelist /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.LinkFileList -nostdlib -Xlinker -object_path_lto -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_lto.o -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -Xlinker -dependency_info -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule @/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-linker-args.resp -o /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.o
+
+ExtractAppIntentsMetadata (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name ProximaKit --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F42 --platform-family iOS --deployment-target 17.0 --bundle-identifier proximakit.ProximaKit --output /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.appintents --target-triple arm64-apple-ios17.0-simulator --binary-file /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.o --dependency-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit_dependency_info.dat --stringsdata-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftFileList --metadata-file-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.DependencyMetadataFileList --static-metadata-file-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/ProximaKit.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.SwiftConstValuesFileList --force --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-08-02 16:24:08.433 appintentsmetadataprocessor[49112:69006031] Starting appintentsmetadataprocessor export
+2026-08-02 16:24:08.453 appintentsmetadataprocessor[49112:69006031] Extracted no relevant App Intents symbols, skipping writing output
+
+RegisterExecutionPolicyException /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.o (in target 'ProximaKit' from project 'ProximaKit')
+    cd /tmp/echo-dd-artifact/SourcePackages/checkouts/ProximaKit
+    builtin-RegisterExecutionPolicyException /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/ProximaKit.o
+
+CpResource /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/sensevoice-small-q4_k.gguf /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/sensevoice-small-q4_k.gguf (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/sensevoice-small-q4_k.gguf /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+CpResource /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/voice-note-reminder.wav /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/voice-note-reminder.wav (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/voice-note-reminder.wav /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+Ld /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/__preview.dylib normal (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios18.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -install_name @rpath/Echo.debug.dylib -Xlinker -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -Xlinker -dependency_info -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_dependency_info.dat -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent.der -Xlinker -no_adhoc_codesign -o /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/__preview.dylib
+
+CpResource /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/video-seaside-sunset.mp4 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/video-seaside-sunset.mp4 (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/video-seaside-sunset.mp4 /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+ProcessInfoPlistFile /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/empty-Echo.plist (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-infoPlistUtility /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/empty-Echo.plist -producttype com.apple.product-type.application -genpkginfo /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_image-CoreMLPartialInfo.plist -additionalcontentfile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MobileCLIP-B-lt_text-CoreMLPartialInfo.plist -additionalcontentfile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/MultilingualE5Small-CoreMLPartialInfo.plist -additionalcontentfile /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/assetcatalog_generated_info.plist -o /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist
+
+CpResource /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/SenseVoiceSmall_int8.mlmodelc /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/SenseVoiceSmall_int8.mlmodelc (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/SenseVoiceSmall_int8.mlmodelc /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+CpResource /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/SenseVoicePreprocessor.mlmodelc /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/SenseVoicePreprocessor.mlmodelc (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/SenseVoicePreprocessor.mlmodelc /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+CpResource /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/.gitkeep /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/.gitkeep (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/Models/.gitkeep /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+CopyPNGFile /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/video-seaside-sunset.png /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/video-seaside-sunset.png (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/usr/bin/copypng -compress -strip-PNG-text /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/video-seaside-sunset.png /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/video-seaside-sunset.png
+
+CopyPNGFile /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/photo-park-sunset.png /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/photo-park-sunset.png (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/usr/bin/copypng -compress -strip-PNG-text /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Resources/MediaSamples/photo-park-sunset.png /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/photo-park-sunset.png
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/SwiftShims-CYTBM4990CQEU48N60MI6CL4T.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ptrauth-3FEKCMSD6Q77QONVH1K8ZFBMC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stddef-DQ40G0JP8TCS4IW7MCYS9I4W4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdbool-1B2NRADNPP2CO83NM5QBJXIPT.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_float-B17MDZAJB5YBW1FL5SG2V9FN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_SwiftConcurrencyShims-W2G0I8HBPKS5SWXW84X0K68D.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ptrcheck-CGRXPZR96M7P4Q9Z03PTVX56E.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdarg-9E3Y6EE24KEHMCF34U1QJAU1W.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/DeveloperToolsSupport-CDDKLRC91AWJDID87TYX13J3Q.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_AvailabilityInternal-AEMJZY11HP3KAHPY5TT91WZB8.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_DarwinFoundation1-EVP21WWB7YOPJC66M29VG0V9Z.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_limits-1V4W5J3GF8VQQDM3ECSKAUZBE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/SQLite3-F0AI3JJI2277GLNUCDM5W8TSF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ExtensionFoundation-GMJPF1P82KKSQ9203TGFXTIP.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_DarwinFoundation2-85RO4L9E7UKDYUJCM6CQUZKR0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdint-766N1K0J58TTG7MTY33HPJ73U.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_tgmath-5H8I6FKEMM64FZUI2E46A9U98.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/sys_types-DM4M7UXYDVYS4NO57U2VQ2DC8.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_intrinsics-3D87684F791NKY934B49L1L7W.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_DarwinFoundation3-C9KONNITF67PD0VXAX79AFYXF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_stdatomic-CADG72RHBWEA9OEY2N6M1BM7I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_Builtin_inttypes-UGBL5DRW1JW8C1G8A6ZZ0WCC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Darwin-6SF5S9ZPTP23ODQ0YZPDJ1AGR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/simd-5JXTLTT41XXHRRCP7XZUE35KZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/MachO-A8AMK9UEWZURSGOMUX8S1BT5I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ObjectiveC-5ZL8TJS5ROJUJ5D7IT9VAEA55.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/os_object-1EG8ZBRAPC6R62H394RHIB8YS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/os_workgroup-AQT5RYNW8DIOW8OEGM9PGVTRX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Spatial-9ONAXQM9DTE1VMK7BO8EFYF4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Dispatch-EVKME6RR90QCWPLK3OQDRBOJ2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/dnssd-AVDDXM3NOS8GOLZ8EE7KSBVIN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreFoundation-C913HD25UBCAV3YYAG2NG370O.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/XPC-5SJ6LGOJ9JC5YASLCGLU3R6X3.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/os-9LFWQL5W3C5ZPVWXACC7OA64N.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Security-1F0M25VIQ72DMF4PR9I0STEVQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreAudioTypes-8B5RVMENZJ8EQKZCO6BMOI5PC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CFNetwork-2ODUB6XCVEK31NWFCUQ0BCP9Y.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreGraphics-BCTLE5AKCXGRCGDOLL5DICJLJ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreAudio-1QVO66TK3LTIMZJ8PEUPN7GQ7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Foundation-58V0U0TLO4VMRJVJY0O9F5FC2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreText-50HHYJS0PUYZRH3SFGGZVVCRK.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/ImageIO-3KH1ZHUZ2SRG4YSEJMWDT4RWQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/OpenGLES-BYRCJVD2DDXGVCCFAYFT5KRWV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/IOSurface-21A359X4YGQ3JZ2N5DAS88DYF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/OSLog-2U3CP3HXTXZHXU1B0HPVI5O39.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Accessibility-2Y52LEC4IZTFIR77DE0NMESQ7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/NaturalLanguage-9NCLO73IYO5QJFUVKEA1WAX15.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Network-D0C6JRNWBU8CLZPSEZIL3O8RZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreData-26KO76BUGIBCAZ5LCDSM981J.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/UIUtilities-BLJ2GJ93HHE1N1WDC15NK485J.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/FileProvider-6RLOMH0YY9895BWWEBIS51O1G.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/UniformTypeIdentifiers-5TTIDGF97ZP2L4OIEWG833XHE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/UserNotifications-12EJLYDJHYOLD7XGG854FYZQE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/MediaAccessibility-E4BEPVQAJ18GH7XNO0TMIFIFO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Metal-21YXNYSDKYLTM4OMUQJZPLDBS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/_LocationEssentials-AW422NPMBZ7E9JN4AWL92DVTQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Symbols-11HEOBSI65GFPP9AM8E72IDZD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreMIDI-BBRRFBDEKQ0FXF7JO9Z5ZLDCU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/AVRouting-F1OMCLDUA8P8TD2OEJCUIZB5G.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreTransferable-BUUAHP7V5GE2T9YGC717WDEHJ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/DataDetection-4FE43YWF6AY9BW8HZCIXA51R6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreLocation-8WGZ4GXUFDZ41VAO7F83XQ7UC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/AudioToolbox-BFL2UYAEOJZLX9ZGZ1KJ5951A.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreVideo-ACSLLLKUVX31BFW7B2BFTPH2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreImage-7D534KQ38DNHLQYF4DTVBG3CJ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreMedia-59W84DEZOGHW7PSLZDVND9ALF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Accelerate-BETY9EQJ3KQQBF6S8SJRLJJRR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/CoreML-DFGCZNREKUC95QJ0RSHKDASA0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/QuartzCore-8Y08KF21AEIIG8ICF8ZOZ1K9F.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/SwiftUICore-7UL5AF1NOGW1EZ7RF73BTI50.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/AVFAudio-3G2I8GY8JBOXI3TTYL010OLKT.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/MediaToolbox-BOHI6XG6RNLTF6O0UWGYSUJXC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Vision-E0PJZ6DGMMWVVZLHJ32O65D2Q.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/UIKit-96BY2AJNE92GNCUHZRDZMLH8W.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/AVFoundation-7VQE3LQODQZVZHBFBSUIWCNTL.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/Photos-5FFY5TWJEMUT0XSG24Q2FERDS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/AVKit-8VKXWUK5406FVQSFFIP521XGP.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/echo-dd-artifact/ModuleCache.noindex/SwiftUI-1X7SDEB3MLV90LIAJDVASN944.pcm
+
+SwiftCompile normal arm64 Compiling\ HomeView.swift,\ MemoryDetailFixtureLoader.swift,\ MemoryDetailView.swift,\ ResumeProgressFixtureLoader.swift,\ ResumeProgressPromptView.swift,\ SearchFixtureLoader.swift,\ SearchView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/HomeView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/MemoryDetailFixtureLoader.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/MemoryDetailView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/ResumeProgressFixtureLoader.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/ResumeProgressPromptView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/SearchFixtureLoader.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/SearchView.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/HomeView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/MemoryDetailFixtureLoader.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/MemoryDetailView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/ResumeProgressFixtureLoader.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/ResumeProgressPromptView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/SearchFixtureLoader.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/SearchView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ Echo (in target 'Echo' from project 'Echo')
+
+EmitSwiftModule normal arm64 (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 Compiling\ SettingsViewModel.swift,\ AppRootView.swift,\ BackgroundTaskFixtureLoader.swift,\ BackgroundTaskPanelView.swift,\ ContentView.swift,\ DegradationBannerView.swift,\ DegradationFixtureLoader.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/SettingsViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/AppRootView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/BackgroundTaskFixtureLoader.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/BackgroundTaskPanelView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/ContentView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/DegradationBannerView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/DegradationFixtureLoader.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/SettingsViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/AppRootView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/BackgroundTaskFixtureLoader.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/BackgroundTaskPanelView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/ContentView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/DegradationBannerView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/DegradationFixtureLoader.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 Compiling\ PrivacyActor.swift,\ ProgressActor.swift,\ VectorStoreActor.swift,\ ActiveRouteSet.swift,\ CanonicalMemory.swift,\ ErrorEnums.swift,\ IndexGeneration.swift,\ Memory.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/PrivacyActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ProgressActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/VectorStoreActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/ActiveRouteSet.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/CanonicalMemory.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/ErrorEnums.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/IndexGeneration.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/Memory.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/PrivacyActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ProgressActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/VectorStoreActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/ActiveRouteSet.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/CanonicalMemory.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/ErrorEnums.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/IndexGeneration.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/Memory.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 Compiling\ ModelManifest.swift,\ AwakeningPipeline.swift,\ FeedbackPipeline.swift,\ IngestPipeline.swift,\ SearchPipeline.swift,\ SyncPipeline.swift,\ ASREngineService.swift,\ E5Embedder.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/ModelManifest.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/AwakeningPipeline.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/FeedbackPipeline.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/IngestPipeline.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/SearchPipeline.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/SyncPipeline.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/ASREngineService.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/E5Embedder.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Models/ModelManifest.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/AwakeningPipeline.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/FeedbackPipeline.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/IngestPipeline.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/SearchPipeline.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Pipelines/SyncPipeline.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/ASREngineService.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/E5Embedder.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 Compiling\ EmbedderService.swift,\ LexicalEngine.swift,\ OCREngine.swift,\ SigLIP2Embedder.swift,\ WhisperASREngine.swift,\ FixtureTranslationService.swift,\ TranslationCache.swift,\ TranslationService.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/EmbedderService.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/LexicalEngine.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/OCREngine.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/SigLIP2Embedder.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/WhisperASREngine.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Services/FixtureTranslationService.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Services/TranslationCache.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Services/TranslationService.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/EmbedderService.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/LexicalEngine.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/OCREngine.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/SigLIP2Embedder.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Services/WhisperASREngine.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Services/FixtureTranslationService.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Services/TranslationCache.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Services/TranslationService.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 Compiling\ SettingsView.swift,\ TranslationFixtureLoader.swift,\ EchoApp.swift,\ MobileCLIP-B-lt_image.swift,\ MobileCLIP-B-lt_text.swift,\ MultilingualE5Small.swift,\ GeneratedAssetSymbols.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/SettingsView.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/TranslationFixtureLoader.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/EchoApp.swift /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image/MobileCLIP-B-lt_image.swift /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text/MobileCLIP-B-lt_text.swift /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small/MultilingualE5Small.swift /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/SettingsView.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/Views/TranslationFixtureLoader.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/EchoApp.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_image/MobileCLIP-B-lt_image.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MobileCLIP-B-lt_text/MobileCLIP-B-lt_text.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/CoreMLGenerated/MultilingualE5Small/MultilingualE5Small.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 Compiling\ AppViewModel.swift,\ BackgroundTaskViewModel.swift,\ DegradationBannerViewModel.swift,\ HomeViewModel.swift,\ MemoryDetailViewModel.swift,\ ResumeProgressViewModel.swift,\ SearchViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/AppViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/BackgroundTaskViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/DegradationBannerViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/HomeViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/MemoryDetailViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/ResumeProgressViewModel.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/SearchViewModel.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/AppViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/BackgroundTaskViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/DegradationBannerViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/HomeViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/MemoryDetailViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/ResumeProgressViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/UI/ViewModels/SearchViewModel.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 Compiling\ AppDelegate.swift,\ DatabaseManager.swift,\ ExcludedAssetsActor.swift,\ FeedbackActor.swift,\ GenerationRegistryActor.swift,\ ModelLoaderActor.swift,\ ModelManifestActor.swift,\ PendingOpsActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/App/AppDelegate.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/DatabaseManager.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ExcludedAssetsActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/FeedbackActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/GenerationRegistryActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ModelLoaderActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ModelManifestActor.swift /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/PendingOpsActor.swift (in target 'Echo' from project 'Echo')
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/App/AppDelegate.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/DatabaseManager.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/DatabaseManager.swift:264:22: warning: result of call to 'withUnsafeBytes' is unused
+                data.withUnsafeBytes { bytes in
+                     ^               ~~~~~~~~~~
+/Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/DatabaseManager.swift:294:22: warning: result of call to 'withUnsafeBytes' is unused
+                data.withUnsafeBytes { bytes in
+                     ^               ~~~~~~~~~~
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ExcludedAssetsActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/FeedbackActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/GenerationRegistryActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ModelLoaderActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/ModelManifestActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftCompile normal arm64 /Users/logansu/Documents/Dev/SwiftProjects/Echo/Echo/Core/Actors/PendingOpsActor.swift (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling PrivacyActor.swift, ProgressActor.swift, VectorStoreActor.swift, ActiveRouteSet.swift, CanonicalMemory.swift, ErrorEnums.swift, IndexGeneration.swift, Memory.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for Echo (in target 'Echo' from project 'Echo')
+
+SwiftDriver\ Compilation\ Requirements Echo normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Echo -Onone @/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftFileList -DDEBUG -default-isolation\=MainActor -enable-upcoming-feature MemberImportVisibility -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios18.0-simulator -g -module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /tmp/echo-dd-artifact/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -emit-localized-strings -emit-localized-strings-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64 -c -j8 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -sdk-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/echo-dd-artifact/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-generated-files.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-own-target-headers.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo-ffb9939ae8ba03680559e8bc801c82d5-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-project-headers.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources-normal/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-Swift.h -working-directory /Users/logansu/Documents/Dev/SwiftProjects/Echo -experimental-emit-module-separately -disable-cmo
+
+SwiftMergeGeneratedHeaders /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/Echo-Swift.h /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-Swift.h (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-swiftHeaderTool -arch arm64 /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-Swift.h -o /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/Echo-Swift.h
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/arm64-apple-ios-simulator.swiftmodule /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftmodule (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftmodule /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/arm64-apple-ios-simulator.swiftdoc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftdoc (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftdoc /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/arm64-apple-ios-simulator.abi.json /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.abi.json (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.abi.json /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+Copy /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftsourceinfo (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftsourceinfo /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling ModelManifest.swift, AwakeningPipeline.swift, FeedbackPipeline.swift, IngestPipeline.swift, SearchPipeline.swift, SyncPipeline.swift, ASREngineService.swift, E5Embedder.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriverJobDiscovery normal arm64 Compiling EmbedderService.swift, LexicalEngine.swift, OCREngine.swift, SigLIP2Embedder.swift, WhisperASREngine.swift, FixtureTranslationService.swift, TranslationCache.swift, TranslationService.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SettingsView.swift, TranslationFixtureLoader.swift, EchoApp.swift, MobileCLIP-B-lt_image.swift, MobileCLIP-B-lt_text.swift, MultilingualE5Small.swift, GeneratedAssetSymbols.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SettingsViewModel.swift, AppRootView.swift, BackgroundTaskFixtureLoader.swift, BackgroundTaskPanelView.swift, ContentView.swift, DegradationBannerView.swift, DegradationFixtureLoader.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriverJobDiscovery normal arm64 Compiling AppViewModel.swift, BackgroundTaskViewModel.swift, DegradationBannerViewModel.swift, HomeViewModel.swift, MemoryDetailViewModel.swift, ResumeProgressViewModel.swift, SearchViewModel.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriverJobDiscovery normal arm64 Compiling AppDelegate.swift, DatabaseManager.swift, ExcludedAssetsActor.swift, FeedbackActor.swift, GenerationRegistryActor.swift, ModelLoaderActor.swift, ModelManifestActor.swift, PendingOpsActor.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriverJobDiscovery normal arm64 Compiling HomeView.swift, MemoryDetailFixtureLoader.swift, MemoryDetailView.swift, ResumeProgressFixtureLoader.swift, ResumeProgressPromptView.swift, SearchFixtureLoader.swift, SearchView.swift (in target 'Echo' from project 'Echo')
+
+SwiftDriver\ Compilation Echo normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Echo -Onone @/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftFileList -DDEBUG -default-isolation\=MainActor -enable-upcoming-feature MemberImportVisibility -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios18.0-simulator -g -module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /tmp/echo-dd-artifact/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -emit-localized-strings -emit-localized-strings-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64 -c -j8 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/echo-dd-artifact/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -sdk-module-cache-path /tmp/echo-dd-artifact/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/echo-dd-artifact/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-generated-files.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-own-target-headers.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo-ffb9939ae8ba03680559e8bc801c82d5-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-project-headers.hmap -Xcc -I/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/include -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources-normal/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources/arm64 -Xcc -I/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-Swift.h -working-directory /Users/logansu/Documents/Dev/SwiftProjects/Echo -experimental-emit-module-separately -disable-cmo
+
+Ld /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib normal (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios18.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/tmp/echo-dd-artifact/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F/tmp/echo-dd-artifact/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -filelist /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.LinkFileList -install_name @rpath/Echo.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -Xlinker -dependency_info -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_dependency_info.dat -fobjc-link-runtime -fprofile-instr-generate -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.swiftmodule @/tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo-linker-args.resp -Wl,-no_warn_duplicate_libraries -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -Xlinker -no_adhoc_codesign -o /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib -Xlinker -add_ast_path -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit.swiftmodule @/tmp/echo-dd-artifact/Build/Intermediates.noindex/ProximaKit.build/Debug-iphonesimulator/ProximaKit.build/Objects-normal/arm64/ProximaKit-linker-args.resp
+
+ConstructStubExecutorLinkFileList /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-ExecutorLinkFileList-normal-arm64.txt (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    construct-stub-executor-link-file-list /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'Echo' from project 'Echo')
+
+Ld /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo normal (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios18.0-simulator -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -F/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/PackageFrameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -debug_variant -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo-ExecutorLinkFileList-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.app-Simulated.xcent.der /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib -Xlinker -no_adhoc_codesign -o /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo
+
+CopySwiftLibs /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib --scan-folder /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Frameworks --scan-folder /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/PlugIns --scan-folder /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/SystemExtensions --scan-folder /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ExtractAppIntentsMetadata (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name Echo --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F42 --platform-family iOS --deployment-target 18.0 --bundle-identifier com.echo.Echo --output /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app --target-triple arm64-apple-ios18.0-simulator --binary-file /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo --dependency-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo_dependency_info.dat --stringsdata-file /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftFileList --metadata-file-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList --static-metadata-file-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Objects-normal/arm64/Echo.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-08-02 16:24:16.337 appintentsmetadataprocessor[49235:69006626] Starting appintentsmetadataprocessor export
+2026-08-02 16:24:16.339 appintentsmetadataprocessor[49235:69006626] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+AppIntentsSSUTraining (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist --temp-dir-path /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/ssu --bundle-id com.echo.Echo --product-path /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app --extracted-metadata-path /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Metadata.appintents --metadata-file-list /tmp/echo-dd-artifact/Build/Intermediates.noindex/Echo.build/Debug-iphonesimulator/Echo.build/Echo.DependencyMetadataFileList --source-file /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Info.plist --archive-ssu-assets
+2026-08-02 16:24:16.365 appintentsnltrainingprocessor[49236:69006627] Parsing options for appintentsnltrainingprocessor
+2026-08-02 16:24:16.366 appintentsnltrainingprocessor[49236:69006627] Starting AppIntents SSU YAML Generation
+2026-08-02 16:24:16.368 appintentsnltrainingprocessor[49236:69006627] No AppShortcuts found - Skipping.
+
+CodeSign /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/Echo.debug.dylib
+
+CodeSign /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/__preview.dylib (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app/__preview.dylib
+
+CodeSign /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+RegisterExecutionPolicyException /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-RegisterExecutionPolicyException /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+Validate /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    builtin-validationUtility /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app (in target 'Echo' from project 'Echo')
+    cd /Users/logansu/Documents/Dev/SwiftProjects/Echo
+    /usr/bin/touch -c /tmp/echo-dd-artifact/Build/Products/Debug-iphonesimulator/Echo.app
+
+** BUILD SUCCEEDED **
+

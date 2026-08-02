@@ -133,6 +133,17 @@ struct SearchView: View {
             return
         }
 
+        // 支持 `-ui-fixture translation-*` 导航到翻译 surface (Task 3.8)
+        if fixtureID.hasPrefix("translation-") {
+            if let model = TranslationFixtureLoader.load(fixtureID) {
+                let vm = MemoryDetailViewModel()
+                vm.loadPreloaded(model)
+                detailViewModel = vm
+                selectedMemoryID = model.id
+            }
+            return
+        }
+
         let items = SearchFixtureLoader.load(fixtureID)
         viewModel.loadPreloadedResults(items)
     }

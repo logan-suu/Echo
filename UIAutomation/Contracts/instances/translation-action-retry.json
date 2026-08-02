@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "translation.retry",
+  "source": "user",
+  "targetIntent": "MemoryDetailViewModel.retryTranslation()",
+  "expectedOutcome": "Retries translation after L2 error (cache-first then service). Clears error state, returns to translating → translated / low-confidence / cached / error.",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

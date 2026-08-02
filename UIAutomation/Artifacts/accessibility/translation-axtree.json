@@ -1,0 +1,18 @@
+{
+  "runId": "3.8-bootstrap",
+  "surfaceId": "translation",
+  "stateIds": ["original", "translating", "translated", "low-confidence", "cached", "error"],
+  "source": "XCUITest accessibility queries (SwiftUI AX not exposed via simulator-server native-devtools on iOS 26)",
+  "captured_at": "2026-08-02T22:30:00+08:00",
+  "elements": {
+    "memory-detail-translation-toggle": "Button, label varies 'Show translation'/'Show original', value 'Original shown'/'Translation shown'",
+    "memory-detail-translation-retry": "Button 'Retry', shown in L2 error state",
+    "translated_body": "Static text 'Translated · en-US' + translated text (fixture 'orange tabby')",
+    "low_confidence_original": "Static text 'Original: <source text>' retained when confidence < 0.7"
+  },
+  "verification": {
+    "high_confidence_journey": "toggle -> translation shown -> toggle back to original (XCUITest passed)",
+    "low_confidence_journey": "toggle -> original retained + language label (XCUITest passed)",
+    "error_journey": "toggle -> L2 error + retry button (XCUITest passed)"
+  }
+}

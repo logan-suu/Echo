@@ -1,0 +1,33 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "translation-error",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "focus",
+  "payload": {
+    "memory": {
+      "memoryId": "44444444-4444-4444-4444-444444444444",
+      "assetId": "note-zh-4",
+      "sourceType": "note",
+      "title": "翻译失败记忆",
+      "originalText": "这是一条需要翻译但服务暂不可用的记忆。",
+      "sourceLanguage": "zh-Hans",
+      "preferredLanguage": "en-US",
+      "timestamp": 1723756800,
+      "tags": []
+    },
+    "translation": {
+      "requestedText": "这是一条需要翻译但服务暂不可用的记忆。",
+      "sourceLanguage": "zh-Hans",
+      "targetLanguage": "en-US",
+      "translatedText": null,
+      "confidence": null,
+      "cacheHit": false,
+      "error": "L2 recoverable — translation service unavailable"
+    }
+  },
+  "controlledVariables": ["timestamp", "memoryId", "translation.error"],
+  "version": "1.0.0"
+}

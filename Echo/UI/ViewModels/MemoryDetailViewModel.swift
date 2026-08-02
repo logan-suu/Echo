@@ -7,7 +7,9 @@
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.3 - MemoryDetailView + ViewModel + Edit + Conflict + Creation + Translation
 // AC 覆盖: US-AWK-007 AC-1 ✅ (编辑入口: 标题/描述/标签/时间戳), AC-4 ✅ (冲突解决 UI, 🔮 Core 写),
-//          US-DIS-002 AC-4 ✅ (原文/译文切换), US-PRV-004 AC-1 ✅ (删除双选项弹窗, 🔮 Core 写),
+//          US-DIS-002 AC-1 ✅ (展开详情触发), AC-2 ✅ (cache-first + TranslationService fallback),
+//          AC-3 ✅ (置信度 <0.7 保留原文 + 语言标签), AC-4 ✅ (原文/译文切换), AC-5 ✅ (缓存写入 TTL=7d),
+//          US-PRV-004 AC-1 ✅ (删除双选项弹窗, 🔮 Core 写),
 //          US-SYN-002 AC-1 ✅ (溯源锚点展示), US-SYN-003 AC-3 ✅ (创作预览/复制)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
@@ -262,9 +264,41 @@ final class MemoryDetailViewModel {
     /// UI 切片模式模拟记忆源 — fixture 注入
     private var stubMemory: MemoryDetailModel?
 
+    /// 展示层翻译服务 — 按需翻译 (US-DIS-002 AC-2)
+    private let translationService: any TranslationService
+
+    /// 展示层翻译缓存 — TTL=7d (US-DIS-002 AC-5)
+    private let translationCache: TranslationCache
+
+    /// 当前活跃的翻译 Task — 视图消失时取消
+    private var translationTask: Task<Void, Never>?
+
+    // MARK: - Translation State (US-DIS-002)
+
+    /// 翻译流程状态 — 驱动翻译区 UI (translating / translated / error)
+    enum TranslationPhase: Equatable, Sendable {
+        /// 未请求翻译
+        case idle
+        /// 翻译中
+        case translating
+        /// 翻译完成（含低置信度 <0.7 情况，由 view 保留原文）
+        case translated
+        /// L2 可恢复错误
+        case error(String)
+    }
+
+    /// 当前翻译阶段 — 用于翻译区 UI 渲染
+    private(set) var translationPhase: TranslationPhase = .idle
+
     // MARK: - Initialization
 
-    init() {}
+    init(
+        translationService: any TranslationService = FixtureTranslationService(),
+        translationCache: TranslationCache = TranslationCache()
+    ) {
+        self.translationService = translationService
+        self.translationCache = translationCache
+    }
 
     // MARK: - Actions
 
@@ -309,15 +343,99 @@ final class MemoryDetailViewModel {
         stubMemory = model
         memory = model
         viewState = .completed
+        translationPhase = model.translatedText == nil ? .idle : .translated
     }
 
     /// 切换原文/译文 (US-DIS-002 AC-4)。
     ///
-    /// 源语言 ≠ 首选语言时可用。译文若未请求，通过翻译服务获取
-    /// （🔮 Phase 3.8 接入 translationCache + Apple Translation；当前为 fixture 注入）。
+    /// 源语言 ≠ 首选语言时可用。展开详情时触发按需翻译 (AC-1)：
+    /// 优先查 translationCache (AC-2)，未命中调 TranslationService；
+    /// 成功后写入缓存 TTL=7d (AC-5)。
     func toggleTranslation() {
         guard let current = memory, current.needsTranslation else { return }
         memory?.translationVisible.toggle()
+
+        if memory?.translationVisible == true {
+            // 展开 — 触发按需翻译 (AC-1)。已有译文则不重复请求。
+            guard current.translatedText == nil else {
+                translationPhase = .translated
+                return
+            }
+            requestTranslation()
+        } else {
+            translationTask?.cancel()
+            translationTask = nil
+            translationPhase = .idle
+        }
+    }
+
+    /// 按需翻译 — cache-first (AC-2) + 服务 fallback + 缓存写入 (AC-5)。
+    private func requestTranslation() {
+        guard let current = memory, current.needsTranslation, current.translationVisible else { return }
+
+        translationTask?.cancel()
+        translationPhase = .translating
+
+        let text = current.originalText
+        let source = current.sourceLanguage
+        let target = current.preferredLanguage
+        let key = TranslationCache.makeKey(
+            sourceText: text,
+            sourceLanguage: source,
+            targetLanguage: target
+        )
+
+        translationTask = Task { [weak self] in
+            guard let self else { return }
+
+            // AC-2: 优先查缓存
+            if let cached = await self.translationCache.lookup(key: key) {
+                guard !Task.isCancelled else { return }
+                self.applyTranslation(cached.translatedText, confidence: cached.confidence)
+                return
+            }
+
+            // AC-2 fallback: TranslationService (Apple Translation, 🔮 Phase 3.9 真实模型)
+            do {
+                let result = try await self.translationService.translate(
+                    text, from: source, to: target
+                )
+                guard !Task.isCancelled, self.memory?.translationVisible == true else { return }
+                // AC-5: 成功后写入缓存
+                await self.translationCache.store(
+                    sourceText: text,
+                    sourceLanguage: source,
+                    targetLanguage: target,
+                    translatedText: result.translatedText,
+                    confidence: result.confidence
+                )
+                self.applyTranslation(result.translatedText, confidence: result.confidence)
+            } catch {
+                guard !Task.isCancelled, self.memory?.translationVisible == true else { return }
+                self.translationPhase = .error(
+                    "Translation is currently unavailable. Please try again."
+                )
+            }
+        }
+    }
+
+    /// 应用翻译结果到展示模型 — 置信度 <0.7 由 view 保留原文 + 语言标签 (AC-3)。
+    private func applyTranslation(_ translatedText: String, confidence: Double) {
+        guard var current = memory, current.translationVisible else { return }
+        current.translatedText = translatedText
+        current.translationConfidence = confidence
+        memory = current
+        translationPhase = .translated
+    }
+
+    /// 重试翻译 (L2 恢复路径) — 清空错误态，重新走 cache-first 流程。
+    func retryTranslation() {
+        guard memory?.translationVisible == true else { return }
+        guard memory?.translatedText == nil else {
+            translationPhase = .translated
+            return
+        }
+        requestTranslation()
     }
 
     /// 呈现编辑 Sheet (US-AWK-007 AC-1)。
@@ -456,6 +574,8 @@ final class MemoryDetailViewModel {
     func onDisappear() {
         loadTask?.cancel()
         loadTask = nil
+        translationTask?.cancel()
+        translationTask = nil
         if viewState == .loading {
             viewState = .cancelled
         }

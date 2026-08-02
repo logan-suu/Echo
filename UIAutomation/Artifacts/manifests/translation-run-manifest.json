@@ -1,0 +1,42 @@
+{
+  "runId": "3.8-bootstrap",
+  "taskId": "3.8",
+  "taskTitle": "跨语言翻译层集成",
+  "story": "US-DIS-002",
+  "actor": "OpenCode Agent",
+  "startedAt": "2026-08-02T22:00:00+08:00",
+  "sourceRevision": "d9f6a022a39a4d32659d871ac8ef17ec9c65bad1",
+  "sourceDirty": false,
+  "contractVersion": "1.0.0",
+  "contractsHash": "62e5d6cc8c522d11a9137d6a14de56b504f5e330b671e1a9b4b6e66732a525e3",
+  "fixturesHash": "62e5d6cc8c522d11a9137d6a14de56b504f5e330b671e1a9b4b6e66732a525e3",
+  "xcode": { "version": "26.5", "build_version": "17F42" },
+  "simulator_owner": {
+    "owner_type": "cli_xctest",
+    "devices": [
+      { "role": "primary", "device_name": "iPhone 17 Pro", "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC", "runtime": "iOS 26.5" },
+      { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
+    ]
+  },
+  "surface_id": "translation",
+  "state_id": "original → translated (toggle journey)",
+  "fixture_id": "translation-zh-en-high / translation-zh-en-low / translation-error",
+  "journey_id": "translation-on-demand-basic",
+  "test_results": {
+    "build": "SUCCEEDED",
+    "unit_tests_passed": 9,
+    "full_unit_regression": "639 tests / 72 suites — 0 failures",
+    "xcuitest": "3/3 passed",
+    "full_xcuitest_regression": "26 tests — 0 failures",
+    "swiftlint": "0 new violations",
+    "unverified": false
+  },
+  "artifacts": {
+    "build_log_path": "UIAutomation/Artifacts/logs/translation-build.log",
+    "test_summary_path": "UIAutomation/Artifacts/summaries/translation-test-summary.json",
+    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/translation-axtree.json",
+    "manifest_path": "UIAutomation/Artifacts/manifests/translation-run-manifest.json"
+  },
+  "visualMediaCaptured": false,
+  "blockers": []
+}

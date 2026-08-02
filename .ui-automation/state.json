@@ -1,22 +1,14 @@
 {
   "schemaVersion": "1.1.0",
-  "task_id": "3.7",
-  "runId": "3.7-bootstrap",
+  "task_id": "3.8",
+  "runId": "3.8-bootstrap",
   "repositoryRoot": "/Users/logansu/Documents/Dev/SwiftProjects/Echo",
-  "sourceRevision": "bc56a86669e42705f9cc2dc9df7a813d76d0ab07",
+  "sourceRevision": "d9f6a022a39a4d32659d871ac8ef17ec9c65bad1",
   "sourceDirty": false,
   "automation_phase": "accepted",
   "automation_phase_status": "completed",
-  "contracts": {
-    "surface_id": "resume-progress-prompt",
-    "state_ids": ["checking", "prompt", "none", "resumed", "restarted", "error"],
-    "action_ids": ["task.start", "prompt.continue", "prompt.restart", "error.retry"],
-    "journey_id": "resume-progress-basic",
-    "fixture_ids": ["resume-progress-pending", "resume-progress-none", "resume-progress-error"],
-    "content_hash": "6f90e88a55fb483203cd2f8f8f2dafed739c850a4383b67b1cf785fc34f6f718"
-  },
-  "fixtures_hash": "6f90e88a55fb483203cd2f8f8f2dafed739c850a4383b67b1cf785fc34f6f718",
-  "inventoryHash": "7c3055f984a8ec939895771e35cfdc93da37aad98a5924dfbb6df6d4ff554dd1",
+  "inventoryHash": "6008a63d40ae657a7b31ac03bf96a299b8a99ea32d7eb5ad7d6e8764f9c1ffe9",
+  "migrationMapHash": "4ad6a3cea22b1ccb4354a9d138ddc047a7c43e71d1e8a8337563c908fe7898bd",
   "readiness_gates": {
     "bootstrap_database": "PASSED",
     "privacy_policy": "PASSED",
@@ -26,81 +18,95 @@
   },
   "xcode": { "version": "26.5", "build_version": "17F42" },
   "mcpbridge": { "preflight_passed": true, "preflight_detail": "mcpbridge found at /Applications/Xcode.app/Contents/Developer/usr/bin/mcpbridge; no OpenCode bridge MCP config present; using CLI + XCTest fallback (cli_xctest)", "selected_as_owner": false },
-  "simulator_owner": {
-    "owner_type": "cli_xctest",
-    "devices": [
-      { "role": "primary", "device_name": "iPhone 17 Pro", "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC", "runtime": "iOS 26.5" },
-      { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
-    ]
+  "contracts": {
+    "surface_id": "translation",
+    "state_ids": ["original", "translating", "translated", "low-confidence", "cached", "error"],
+    "action_ids": ["translation.toggle", "translation.retry"],
+    "journey_id": "translation-on-demand-basic",
+    "fixture_ids": ["translation-zh-en-high", "translation-zh-en-low", "translation-zh-en-cached", "translation-error"],
+    "content_hash": "62e5d6cc8c522d11a9137d6a14de56b504f5e330b671e1a9b4b6e66732a525e3"
   },
+  "fixtures_hash": "62e5d6cc8c522d11a9137d6a14de56b504f5e330b671e1a9b4b6e66732a525e3",
   "pilot_selection": {
-    "surface_id": "resume-progress-prompt",
-    "score": 24,
+    "surface_id": "translation",
+    "score": 23,
     "max_score": 24,
-    "states": ["checking", "none", "prompt", "resumed", "restarted", "error"],
-    "rationale": "Task 3.7 scope is the resume progress prompt (architecture doc §6.2: when a cancelled task is restarted, check ProgressActor for pending progress; if found, show dialog with Continue/Restart). ProgressActor exposes stable read APIs (hasPendingProgress/load). >=3 meaningful states, Task surface family (alert/dialog), no Core/signature/real-data/migration requirements. 24/24 across all 8 dimensions."
+    "states": ["original", "translating", "translated", "low-confidence", "cached", "error"],
+    "rationale": "Task 3.8 (US-DIS-002) scope is the on-demand translation layer: TranslationService + TranslationCache (TTL=7d) + confidence <0.7 fallback + original/translation toggle. MemoryDetailView already exposes the translationSection UI stub (🔮 Phase 3.8). Focus surface family (style §3.2: translation). No Core/signature/real-data/migration requirements. 23/24 across all 8 dimensions (environment dependency 2/3 — Apple Translation real call deferred, fixture-driven)."
   },
   "design_profile": {
     "profile_id": "echo-memory-canvas",
     "profile_version": "1.0.0",
     "base_profile": "apple-native",
     "approval_record": { "approved_by": "user", "approved_at": "2026-07-25", "source": "docs/ui/echo-memory-canvas-style.md §9" },
-    "surface_family": "task",
-    "layout_mode": "alert",
+    "surface_family": "focus",
+    "layout_mode": "single_column",
     "masonry": "forbidden"
   },
+  "simulator_owner": {
+    "owner_type": "cli_xctest",
+    "devices": [
+      { "role": "primary", "device_name": "iPhone 17 Pro", "device_udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC", "runtime": "iOS 26.5" },
+      { "role": "minimum_version", "device_name": "iPhone 16 Pro", "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D", "runtime": "iOS 18.2" }
+    ],
+    "surface_id": "translation",
+    "state_id": "original → translated (toggle journey)",
+    "fixture_id": "translation-zh-en-high"
+  },
+  "completed_steps": ["repo_discovery", "materialize_structure", "readiness_check", "select_pilot", "contract_drafting", "design_profile_validation", "ui_slice_generation", "verification", "awaiting_delivery_approval", "accepted"],
   "delivery_approval": {
     "approved": true,
     "approved_by": "user",
-    "approved_at": "2026-08-02T15:18:07+08:00",
-    "simulator_uri": "simctl://2789B5D1-D292-4144-A66B-649CE2DF32EC"
+    "approved_at": "2026-08-02T22:40:00+08:00"
   },
-  "completed_steps": ["repo_discovery", "readiness_check", "select_pilot", "contract_drafting", "design_profile_validation", "ui_slice_generation", "verification", "awaiting_delivery_approval", "accepted"],
   "files_created": [
-    "Echo/UI/ViewModels/ResumeProgressViewModel.swift",
-    "Echo/UI/Views/ResumeProgressFixtureLoader.swift",
-    "Echo/UI/Views/ResumeProgressPromptView.swift",
-    "EchoTests/Phase3/ProgressActorTests.swift",
-    "EchoUITests/ResumeProgressPromptUITests.swift",
-    "UIAutomation/Contracts/instances/resume-progress-surface.json",
-    "UIAutomation/Contracts/instances/resume-progress-state-checking.json",
-    "UIAutomation/Contracts/instances/resume-progress-state-prompt.json",
-    "UIAutomation/Contracts/instances/resume-progress-state-none.json",
-    "UIAutomation/Contracts/instances/resume-progress-state-resumed.json",
-    "UIAutomation/Contracts/instances/resume-progress-state-restarted.json",
-    "UIAutomation/Contracts/instances/resume-progress-state-error.json",
-    "UIAutomation/Contracts/instances/resume-progress-action-continue.json",
-    "UIAutomation/Contracts/instances/resume-progress-action-restart.json",
-    "UIAutomation/Contracts/instances/resume-progress-action-retry.json",
-    "UIAutomation/Contracts/instances/resume-progress-action-start.json",
-    "UIAutomation/Contracts/instances/resume-progress-journey-basic.json",
-    "UIAutomation/Fixtures/resume-progress/resume-progress-pending.json",
-    "UIAutomation/Fixtures/resume-progress/resume-progress-none.json",
-    "UIAutomation/Fixtures/resume-progress/resume-progress-error.json",
-    "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json",
-    "UIAutomation/Artifacts/logs/resume-progress-build.log",
-    "UIAutomation/Artifacts/summaries/resume-progress-test-summary.json",
-    "UIAutomation/Artifacts/manifests/resume-progress-run-manifest.json"
+    "Echo/UI/Services/TranslationService.swift",
+    "Echo/UI/Services/TranslationCache.swift",
+    "Echo/UI/Services/FixtureTranslationService.swift",
+    "Echo/UI/Views/TranslationFixtureLoader.swift",
+    "EchoTests/Phase3/TranslationServiceTests.swift",
+    "EchoUITests/TranslationUITests.swift",
+    "UIAutomation/Contracts/instances/translation-surface.json",
+    "UIAutomation/Contracts/instances/translation-state-original.json",
+    "UIAutomation/Contracts/instances/translation-state-translating.json",
+    "UIAutomation/Contracts/instances/translation-state-translated.json",
+    "UIAutomation/Contracts/instances/translation-state-low-confidence.json",
+    "UIAutomation/Contracts/instances/translation-state-cached.json",
+    "UIAutomation/Contracts/instances/translation-state-error.json",
+    "UIAutomation/Contracts/instances/translation-action-toggle.json",
+    "UIAutomation/Contracts/instances/translation-action-retry.json",
+    "UIAutomation/Contracts/instances/translation-journey-basic.json",
+    "UIAutomation/Fixtures/translation/translation-zh-en-high.json",
+    "UIAutomation/Fixtures/translation/translation-zh-en-low.json",
+    "UIAutomation/Fixtures/translation/translation-zh-en-cached.json",
+    "UIAutomation/Fixtures/translation/translation-error.json",
+    "UIAutomation/Artifacts/accessibility/translation-axtree.json",
+    "UIAutomation/Artifacts/logs/translation-build.log",
+    "UIAutomation/Artifacts/summaries/translation-test-summary.json",
+    "UIAutomation/Artifacts/manifests/translation-run-manifest.json"
   ],
   "files_modified": [
-    "Echo/UI/Views/HomeView.swift",
+    "Echo/UI/ViewModels/MemoryDetailViewModel.swift",
+    "Echo/UI/Views/MemoryDetailView.swift",
+    "Echo/UI/Views/SearchView.swift",
+    "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
     "docs/05-planning/task-status.json"
   ],
   "test_results": {
-    "unit_tests_passed": 14,
+    "unit_tests_passed": 9,
     "build": "SUCCEEDED",
-    "full_unit_regression": "626 tests / 71 suites — 0 failures",
-    "xcuitest": "4/4 passed",
-    "full_xcuitest_regression": "23 tests — 0 failures",
-    "swiftlint": "0 violations",
+    "full_unit_regression": "639 tests / 72 suites — 0 failures",
+    "xcuitest": "3/3 passed",
+    "full_xcuitest_regression": "26 tests — 0 failures",
+    "swiftlint": "0 new violations",
     "unverified": false
   },
   "artifacts": {
-    "manifest_path": "UIAutomation/Artifacts/manifests/resume-progress-run-manifest.json",
-    "build_log_path": "UIAutomation/Artifacts/logs/resume-progress-build.log",
-    "test_summary_path": "UIAutomation/Artifacts/summaries/resume-progress-test-summary.json",
-    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json"
+    "manifest_path": "UIAutomation/Artifacts/manifests/translation-run-manifest.json",
+    "build_log_path": "UIAutomation/Artifacts/logs/translation-build.log",
+    "test_summary_path": "UIAutomation/Artifacts/summaries/translation-test-summary.json",
+    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/translation-axtree.json"
   },
-  "last_updated": "2026-08-02T15:18:07+08:00",
+  "last_updated": "2026-08-02T22:40:00+08:00",
   "blockers": []
 }
