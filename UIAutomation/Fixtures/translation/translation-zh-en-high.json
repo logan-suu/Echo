@@ -16,17 +16,25 @@
       "sourceLanguage": "zh-Hans",
       "preferredLanguage": "en-US",
       "timestamp": 1723420800,
-      "tags": ["公园", "橘猫"]
+      "tags": [
+        "公园",
+        "橘猫"
+      ]
     },
     "translation": {
       "requestedText": "昨晚在公园遇到一只橘猫，很亲人。它在我脚边蹭了很久，后来跟着我走了一段路。",
       "sourceLanguage": "zh-Hans",
       "targetLanguage": "en-US",
       "translatedText": "Last night I met an orange tabby in the park. It was very friendly, rubbing against my legs and following me for a while.",
-      "confidence": 0.95,
-      "cacheHit": false
+      "cacheHit": false,
+      "sourceLanguageConfidence": 0.95
     }
   },
-  "controlledVariables": ["timestamp", "memoryId", "translation.confidence", "translation.cacheHit"],
+  "controlledVariables": [
+    "timestamp",
+    "memoryId",
+    "translation.sourceLanguageConfidence",
+    "translation.cacheHit"
+  ],
   "version": "1.0.0"
 }

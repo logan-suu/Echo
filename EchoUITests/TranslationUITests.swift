@@ -3,7 +3,7 @@
 // 对应规格: docs/ui/automation-workflow.md §2 (journey 验证),
 //            docs/ui/testing-and-artifacts.md §2.4 (journey 测试)
 // 任务: 3.8 - 跨语言翻译层集成
-// AC 覆盖: US-DIS-002 AC-1 (展开触发), AC-3 (低置信度保留原文), AC-4 (切换按钮)
+// AC 覆盖: US-DIS-002 AC-1 (展开触发), AC-3 (源语言检测不确定保留原文), AC-4 (切换按钮)
 // 架构约束: 使用稳定 accessibility identifier，不依赖坐标 (AGENTS.md §9.1 UI 测试)
 // 生成时间: 2026-08-02
 // ==========================================
@@ -43,7 +43,7 @@ final class TranslationUITests: XCTestCase {
         XCTAssertFalse(translated.exists, "Toggle back to original hides translation")
     }
 
-    /// low-confidence fixture: 展开后置信度 <0.7 → 保留原文 + 语言标签
+    /// low-confidence fixture: 展开后源语言检测不确定 (<0.9) → 保留原文为主，不提供译文 (AC-3, ADR-005)
     @MainActor
     func test_lowConfidenceRetainsOriginal() throws {
         let app = XCUIApplication()
@@ -57,11 +57,13 @@ final class TranslationUITests: XCTestCase {
 
         toggle.tap()
 
-        // 原文保留标签出现 (US-DIS-002 AC-3)
-        let originalLabel = app.staticTexts.matching(
-            NSPredicate(format: "label BEGINSWITH 'Original:'")
-        ).firstMatch
-        XCTAssertTrue(originalLabel.waitForExistence(timeout: 5), "Original text + language label retained")
+        // AC-3 (ADR-005): 源语言检测不确定 → 原文保留为主内容
+        let originalText = app.staticTexts["今天整个下午都在搞这个破项目，快崩了。"]
+        XCTAssertTrue(originalText.waitForExistence(timeout: 5), "Original text retained as primary content")
+
+        // 不提供译文 — 低置信度译文不得展示
+        let lowConfidenceTranslation = app.staticTexts["I spent the whole afternoon on this broken project and it is falling apart."]
+        XCTAssertFalse(lowConfidenceTranslation.exists, "Low-confidence translation must NOT be displayed")
     }
 
     /// error fixture: 翻译服务不可用 → L2 错误 + Retry 按钮

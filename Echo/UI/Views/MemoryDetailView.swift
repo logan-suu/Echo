@@ -7,7 +7,7 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-007, US-SYN-002/003, US-PRV-004, US-DIS-002
 // 任务: 3.3 - MemoryDetailView + ViewModel + Edit + Conflict + Creation + Translation
 // AC 覆盖: US-AWK-007 AC-1 ✅ (编辑入口 + 表单), AC-4 ✅ (冲突解决 UI),
-//          US-DIS-002 AC-4 ✅ (原文/译文切换), US-PRV-004 AC-1 ✅ (删除双选项弹窗),
+//          US-DIS-002 AC-3 ✅ (源语言检测不确定保留原文为主, ADR-005), AC-4 ✅ (原文/译文切换), US-PRV-004 AC-1 ✅ (删除双选项弹窗),
 //          US-SYN-002 AC-1 ✅ (溯源锚点渲染), US-SYN-003 AC-3 ✅ (创作预览/复制)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Focus 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统容器 + semantic colors + Dynamic Type
@@ -392,25 +392,35 @@ struct MemoryDetailView: View {
 
                 case .translated:
                     if let translated = memory.translatedText {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(translated)
-                                .font(.body)
-                                .foregroundStyle(Color.primary)
-                                .textSelection(.enabled)
+                        // US-DIS-002 AC-3 (ADR-005): 源语言检测不确定 (<0.9) 时
+                        // 保留原文为主 + 语言标签，不提供译文 (翻译方向可能错误)。
+                        if let confidence = memory.sourceLanguageConfidence, confidence < 0.9 {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(memory.originalText)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                                    .textSelection(.enabled)
 
-                            Text("Translated · \(memory.preferredLanguage)")
-                                .font(.caption)
-                                .foregroundStyle(Color.secondary)
-
-                            // 低置信度时保留原文 + 语言标签 (US-DIS-002 AC-3)
-                            if let confidence = memory.translationConfidence, confidence < 0.7 {
-                                Text("Original: \(memory.originalText)")
-                                    .font(.footnote)
+                                Text("Detected · \(memory.sourceLanguage)")
+                                    .font(.caption)
                                     .foregroundStyle(Color.secondary)
                             }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Original: \(memory.originalText)")
+                        } else {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(translated)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                                    .textSelection(.enabled)
+
+                                Text("Translated · \(memory.preferredLanguage)")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Translated: \(translated)")
                         }
-                        .accessibilityElement(children: .contain)
-                        .accessibilityLabel("Translated: \(translated)")
                     }
 
                 case .error(let message):

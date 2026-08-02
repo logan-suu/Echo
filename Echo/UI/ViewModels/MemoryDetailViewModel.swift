@@ -8,7 +8,7 @@
 // 任务: 3.3 - MemoryDetailView + ViewModel + Edit + Conflict + Creation + Translation
 // AC 覆盖: US-AWK-007 AC-1 ✅ (编辑入口: 标题/描述/标签/时间戳), AC-4 ✅ (冲突解决 UI, 🔮 Core 写),
 //          US-DIS-002 AC-1 ✅ (展开详情触发), AC-2 ✅ (cache-first + TranslationService fallback),
-//          AC-3 ✅ (置信度 <0.7 保留原文 + 语言标签), AC-4 ✅ (原文/译文切换), AC-5 ✅ (缓存写入 TTL=7d),
+//          AC-3 ✅ (源语言检测不确定 <0.9 保留原文为主, ADR-005), AC-4 ✅ (原文/译文切换), AC-5 ✅ (缓存写入 TTL=7d),
 //          US-PRV-004 AC-1 ✅ (删除双选项弹窗, 🔮 Core 写),
 //          US-SYN-002 AC-1 ✅ (溯源锚点展示), US-SYN-003 AC-3 ✅ (创作预览/复制)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
@@ -67,8 +67,8 @@ struct MemoryDetailModel: Identifiable, Sendable, Equatable {
     var translationVisible: Bool
     /// 译文文本（未请求时为 nil）
     var translatedText: String?
-    /// 翻译置信度 — < 0.7 时保留原文 + 语言标签 (US-DIS-002 AC-3)
-    var translationConfidence: Double?
+    /// 源语言检测置信度 (NLTagger) — < 0.9 (.uncertain) 时保留原文 + 语言标签 (US-DIS-002 AC-3, ADR-005)
+    var sourceLanguageConfidence: Double?
 
     // MARK: - Conflict (US-AWK-007 AC-4)
 
@@ -101,7 +101,7 @@ struct MemoryDetailModel: Identifiable, Sendable, Equatable {
         userEdited: Bool = false,
         translationVisible: Bool = false,
         translatedText: String? = nil,
-        translationConfidence: Double? = nil,
+        sourceLanguageConfidence: Double? = nil,
         conflict: MemoryConflictModel? = nil,
         mediaAssetName: String? = nil,
         location: String? = nil
@@ -118,7 +118,7 @@ struct MemoryDetailModel: Identifiable, Sendable, Equatable {
         self.userEdited = userEdited
         self.translationVisible = translationVisible
         self.translatedText = translatedText
-        self.translationConfidence = translationConfidence
+        self.sourceLanguageConfidence = sourceLanguageConfidence
         self.conflict = conflict
         self.mediaAssetName = mediaAssetName
         self.location = location
@@ -391,7 +391,7 @@ final class MemoryDetailViewModel {
             // AC-2: 优先查缓存
             if let cached = await self.translationCache.lookup(key: key) {
                 guard !Task.isCancelled else { return }
-                self.applyTranslation(cached.translatedText, confidence: cached.confidence)
+                self.applyTranslation(cached.translatedText, sourceLanguageConfidence: cached.sourceLanguageConfidence)
                 return
             }
 
@@ -407,9 +407,9 @@ final class MemoryDetailViewModel {
                     sourceLanguage: source,
                     targetLanguage: target,
                     translatedText: result.translatedText,
-                    confidence: result.confidence
+                    sourceLanguageConfidence: result.sourceLanguageConfidence
                 )
-                self.applyTranslation(result.translatedText, confidence: result.confidence)
+                self.applyTranslation(result.translatedText, sourceLanguageConfidence: result.sourceLanguageConfidence)
             } catch {
                 guard !Task.isCancelled, self.memory?.translationVisible == true else { return }
                 self.translationPhase = .error(
@@ -419,11 +419,11 @@ final class MemoryDetailViewModel {
         }
     }
 
-    /// 应用翻译结果到展示模型 — 置信度 <0.7 由 view 保留原文 + 语言标签 (AC-3)。
-    private func applyTranslation(_ translatedText: String, confidence: Double) {
+    /// 应用翻译结果到展示模型 — 源语言检测置信度由 view 决定是否展示译文 (AC-3, ADR-005)。
+    private func applyTranslation(_ translatedText: String, sourceLanguageConfidence: Double) {
         guard var current = memory, current.translationVisible else { return }
         current.translatedText = translatedText
-        current.translationConfidence = confidence
+        current.sourceLanguageConfidence = sourceLanguageConfidence
         memory = current
         translationPhase = .translated
     }

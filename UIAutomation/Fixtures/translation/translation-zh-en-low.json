@@ -16,17 +16,24 @@
       "sourceLanguage": "zh-Hans",
       "preferredLanguage": "en-US",
       "timestamp": 1723680000,
-      "tags": ["工作"]
+      "tags": [
+        "工作"
+      ]
     },
     "translation": {
       "requestedText": "今天整个下午都在搞这个破项目，快崩了。",
       "sourceLanguage": "zh-Hans",
       "targetLanguage": "en-US",
       "translatedText": "Working on this project all afternoon.",
-      "confidence": 0.55,
-      "cacheHit": false
+      "cacheHit": false,
+      "sourceLanguageConfidence": 0.55
     }
   },
-  "controlledVariables": ["timestamp", "memoryId", "translation.confidence", "translation.cacheHit"],
+  "controlledVariables": [
+    "timestamp",
+    "memoryId",
+    "translation.sourceLanguageConfidence",
+    "translation.cacheHit"
+  ],
   "version": "1.0.0"
 }

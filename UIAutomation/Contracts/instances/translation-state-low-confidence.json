@@ -6,12 +6,14 @@
     "memory": "Text memory (zh-Hans), preferredLanguage = en-US",
     "translationVisible": true,
     "translatedText": "Low-confidence translation",
-    "translationConfidence": "< 0.7"
+    "translationConfidence": "< 0.9"
   },
-  "allowedActions": ["translation.toggle"],
+  "allowedActions": [
+    "translation.toggle"
+  ],
   "expectedSemantics": {
     "translationToggle": "Show original",
-    "lowConfidenceWarning": "Confidence below 0.7",
+    "lowConfidenceWarning": "Source language detection uncertain (NLTagger < 0.9)",
     "originalRetained": true,
     "originalLabel": "Original: <original text>"
   },

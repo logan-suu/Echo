@@ -17,8 +17,8 @@ import Foundation
 /// 确定性翻译 Fixture Loader — Preview / 单元测试 / Live Sim Review 注入。
 ///
 /// ## Fixture ID 映射 (与 FixtureTranslationService.zhEnMap 对齐)
-/// - `translation-zh-en-high`: 中文记忆 → 高置信度译文 (0.95)
-/// - `translation-zh-en-low`: 中文记忆 → 低置信度译文 (0.55, <0.7 保留原文 + 语言标签)
+/// - `translation-zh-en-high`: 中文记忆 → 源语言检测高置信度译文 (0.95)
+/// - `translation-zh-en-low`: 中文记忆 → 源语言检测不确定 (0.55, <0.9) 保留原文 + 语言标签
 /// - `translation-zh-en-cached`: 中文记忆 → 缓存命中 (translationVisible=true, 已含译文)
 /// - `translation-error`: 中文记忆 → 触发 L2 错误 (未命中服务映射)
 enum TranslationFixtureLoader {
@@ -68,7 +68,7 @@ enum TranslationFixtureLoader {
 
     // MARK: - translation-zh-en-low
 
-    /// 中文俚语记忆 — 翻译置信度 0.55 (<0.7)，保留原文 + 语言标签 (AC-3)。
+    /// 中文俚语记忆 — 源语言检测不确定 (0.55, <0.9 .uncertain)，保留原文 + 语言标签 (AC-3, ADR-005)。
     private static var lowConfidence: MemoryDetailModel {
         MemoryDetailModel(
             id: uuid("33333333-3333-3333-3333-333333333333"),
@@ -100,7 +100,7 @@ enum TranslationFixtureLoader {
             tags: ["公园", "橘猫"],
             translationVisible: true,
             translatedText: "Last night I met an orange tabby in the park. It was very friendly, rubbing against my legs and following me for a while.",
-            translationConfidence: 0.95
+            sourceLanguageConfidence: 0.95
         )
     }
 

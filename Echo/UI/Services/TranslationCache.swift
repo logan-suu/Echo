@@ -25,8 +25,8 @@ actor TranslationCache {
         let targetLanguage: String
         /// 译文
         let translatedText: String
-        /// 置信度
-        let confidence: Double
+        /// 源语言检测置信度 (ADR-005)
+        let sourceLanguageConfidence: Double
         /// 写入时间
         let cachedAt: Date
     }
@@ -74,14 +74,14 @@ actor TranslationCache {
         sourceLanguage: String,
         targetLanguage: String,
         translatedText: String,
-        confidence: Double
+        sourceLanguageConfidence: Double
     ) {
         let entry = Entry(
             sourceText: sourceText,
             sourceLanguage: sourceLanguage,
             targetLanguage: targetLanguage,
             translatedText: translatedText,
-            confidence: confidence,
+            sourceLanguageConfidence: sourceLanguageConfidence,
             cachedAt: clock()
         )
         storage[Self.makeKey(

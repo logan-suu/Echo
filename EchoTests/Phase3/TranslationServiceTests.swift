@@ -22,7 +22,7 @@ struct FixtureTranslationServiceTests {
 
     private let service = FixtureTranslationService()
 
-    @Test("US-DIS-002 AC-2: known zh-Hans text translates to en-US with confidence")
+    @Test("US-DIS-002 AC-2: known zh-Hans text translates to en-US with detection confidence")
     func translatesKnownText() async throws {
         let result = try await service.translate(
             "昨晚在公园遇到一只橘猫，很亲人。它在我脚边蹭了很久，后来跟着我走了一段路。",
@@ -30,17 +30,17 @@ struct FixtureTranslationServiceTests {
             to: "en-US"
         )
         #expect(result.translatedText.contains("orange tabby"))
-        #expect(result.confidence == 0.95)
+        #expect(result.sourceLanguageConfidence == 0.95)
     }
 
-    @Test("US-DIS-002 AC-3: low-confidence map entry returns confidence < 0.7")
+    @Test("US-DIS-002 AC-3: low-confidence map entry returns sourceLanguageConfidence < 0.9")
     func returnsLowConfidence() async throws {
         let result = try await service.translate(
             "今天整个下午都在搞这个破项目，快崩了。",
             from: "zh-Hans",
             to: "en-US"
         )
-        #expect(result.confidence < 0.7)
+        #expect(result.sourceLanguageConfidence < 0.9)
     }
 
     @Test("US-DIS-002 AC-2: unknown text throws L2 serviceUnavailable")
@@ -102,14 +102,14 @@ struct TranslationCacheTests {
             sourceLanguage: "zh-Hans",
             targetLanguage: "en-US",
             translatedText: "An orange tabby in the park.",
-            confidence: 0.95
+            sourceLanguageConfidence: 0.95
         )
 
         clock.advance(by: 3 * 24 * 3600) // 3 天
         let entry = await cache.lookup(key: key)
         #expect(entry != nil)
         #expect(entry?.translatedText == "An orange tabby in the park.")
-        #expect(entry?.confidence == 0.95)
+        #expect(entry?.sourceLanguageConfidence == 0.95)
     }
 
     @Test("US-DIS-002 AC-5: lookup after TTL (7d) returns nil and prunes entry")
@@ -123,7 +123,7 @@ struct TranslationCacheTests {
             sourceLanguage: "zh-Hans",
             targetLanguage: "en-US",
             translatedText: "An orange tabby in the park.",
-            confidence: 0.95
+            sourceLanguageConfidence: 0.95
         )
 
         clock.advance(by: 7 * 24 * 3600 + 1) // 7 天 + 1s
@@ -143,7 +143,7 @@ struct TranslationCacheTests {
             sourceLanguage: "zh-Hans",
             targetLanguage: "en-US",
             translatedText: "An orange tabby in the park.",
-            confidence: 0.95
+            sourceLanguageConfidence: 0.95
         )
 
         clock.advance(by: 7 * 24 * 3600) // 恰好 7 天

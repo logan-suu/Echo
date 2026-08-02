@@ -107,7 +107,7 @@ enum MemoryDetailFixtureLoader {
             tags: ["公园", "橘猫"],
             translationVisible: false,
             translatedText: nil,
-            translationConfidence: nil
+            sourceLanguageConfidence: nil
         )
     }
 
@@ -128,7 +128,7 @@ enum MemoryDetailFixtureLoader {
             tags: ["公园", "橘猫"],
             translationVisible: true,
             translatedText: "Last night I met an orange tabby in the park. It was very friendly, rubbing against my legs and following me for a while.",
-            translationConfidence: 0.95
+            sourceLanguageConfidence: 0.95
         )
     }
 
