@@ -7,6 +7,7 @@ agent: build
 
 > **上游权威**：`Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范.md` §22.5
 > **权限**：严格只读。不改变任务状态，不写运行状态，不触发 Git。
+> **阶段判定**：本命令针对 UI 阶段，即 phase id **精确等于** `"3"`（用 `^3$` 匹配，**不得**捕获 `"3F"`）。当 `current_phase` 为 `"3F"`（Phase 3F 生产集成）时，本命令只用于查看遗留的 phase `"3"` UI run 状态，不参与 phase `"3F"` 任务的执行与状态修改。
 
 ---
 

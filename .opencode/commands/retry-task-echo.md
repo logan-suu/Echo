@@ -11,7 +11,7 @@ agent: build
 1. 读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json`。
 2. 如果用户指定了任务 ID（如 2.1），则锁定该任务。
 3. 如果未指定，则查找第一个 `status: "blocked"` 的任务。
-4. **Phase 3 UI 任务重定向**：如果目标任务属于 Phase 3 UI（3.1–3.9），**输出**并退出：
+4. **phase `"3"` UI 任务重定向**：如果目标任务属于 phase `"3"`（`tasks` 数组包含关系确定，且非其 `integration_task_id`；**不得**捕获 phase `"3F"` 任务），**输出**并退出：
    ```
    ⚠️ Phase 3 UI 任务请使用专用重试命令：
    /ui-retry-echo [任务ID]
@@ -19,7 +19,7 @@ agent: build
 5. **延期任务检查**：如果目标任务 ID 出现在 `deferred-items.json` 的 `deferred_to_phase_*` 数组中，阻断并提示：「该任务已被延期到后续 Phase，当前无法重试。请等待 blocker 消除。」
 5. 输出该任务的 ID、标题和阻断原因（如果有记录）。
 5. 输出该任务的 ID、标题和阻断原因（如果有记录）。
-6. **如果目标任务属于 Phase 3 UI 且未在上一步重定向**：同步骤 4 处理。
+6. **如果目标任务属于 phase `"3"` UI 且未在上一步重定向**：同步骤 4 处理。
 7. **如果没有找到 blocked 任务**：
    - 输出：“✅ 当前没有被阻断的任务。”
    - 列出当前所有 `in_progress` 和 `ready` 的任务状态。

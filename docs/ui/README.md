@@ -23,9 +23,22 @@
 | 任务 | 必读文档 |
 |------|----------|
 | Phase 3 UI 实现（3.1–3.9） | `echo-memory-canvas-style.md` + `architecture.md` |
+| Phase 3F UI 任务（3F.7–3F.10） | `echo-memory-canvas-style.md` + `architecture.md` + `automation-workflow.md`（经 `/ui-bootstrap-build-echo` 执行） |
 | UI 测试 | `testing-and-artifacts.md` |
 | UI 交付 | `automation-workflow.md`（§批准点 — 含 UI 审查指南：页面清单/导航路径/未实现说明） |
 | 首次 bootstrap | `echo-readiness.md` + `automation-workflow.md` |
+
+---
+
+## Phase 3F 感知
+
+UI bootstrap 命令流水线（`/init-session-echo`、`/next-task-echo`、`/ui-bootstrap-build-echo`、`/ui-status-echo`、`/ui-retry-echo`）是 **3F-aware** 的：
+
+- **phase 是字符串**：`docs/05-planning/task-status.json` 的 `phase_order` 与 `current_phase` 均为字符串，包含 `"3F"`（`["1","2","3","3F","4","5"]`）
+- **UI 模式匹配精确 `"3"`**：`init-session-echo` / `next-task-echo` 的 UI 分支仅在 `current_phase == "3"`（精确字符串匹配）时进入 UI handoff/bootstrap 模式；`current_phase == "3F"` 时命令按通用流程运行，UI 模式不自动触发
+- **Phase 3F UI 任务经 `/ui-bootstrap-build-echo` 执行**：Phase 3F 的 UI 任务（3F.7 UI→Core 全域接线、3F.8 Awakening 与 system adapters、3F.9 Apple Translation 与 grounded creation、3F.10 i18n/accessibility/errors）在适用处经 `ui-bootstrap-build-echo` 流水线执行；非 UI 的 Phase 3F 任务（3F.1–3F.6、3F.11）走通用流程。`do-task-echo` 对 3F.7–3F.10 阻断并重定向到 `/ui-bootstrap-build-echo`
+- **UI 工作延续同一设计 profile 与规则**：Phase 3F UI 工作继续使用已批准的 `echo-memory-canvas` 设计配置与本文档目录全部规则（双设备 Live Simulator Review、无媒体 manifest `visualMediaCaptured: false`）；`3F.0` 人类合并后，standing authority 允许在任务穷尽式 Files 清单内修改 UI-adjacent Core 接线文件
+- 详见 `command-compatibility.md`
 
 ---
 

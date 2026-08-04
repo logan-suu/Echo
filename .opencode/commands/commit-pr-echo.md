@@ -9,7 +9,7 @@ agent: build
 
 ### 第一步：前置检查（强制门禁）
 0. **Phase 3 UI 任务交付门禁（AGENTS.md §17.6）**：
-   - 如果当前任务属于 Phase 3 UI（3.1–3.9），检查 `.ui-automation/state.json`：
+   - 如果当前任务属于 phase `"3"` 的 UI 任务（`tasks` 数组包含关系确定，且非其 `integration_task_id`；**不得**捕获 phase `"3F"` 任务），检查 `.ui-automation/state.json`：
      - `automation_phase` 必须为 `accepted`（用户已完成 Live Sim Review 批准）
      - `delivery_approval.approved` 必须为 `true`
    - 如果未通过，**阻断**并输出：

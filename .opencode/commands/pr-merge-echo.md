@@ -77,7 +77,9 @@ agent: build
       - 记录 `merged_at` 时间戳。
       - 更新 `last_updated` 时间戳。
       - 同步检查 `docs/05-planning/deferred-items.json`，确认是否有延期任务被本次合并解决（如对应的依赖已全部完成），若有则移至 `resolved_deferred` 并更新 `last_checked_at`。
-- **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。
+- **级联更新 backlog → ready**（AGENTS.md §12.1）：按 `phase_order` 遍历每个 phase，对其 `tasks` 中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。
+- **Phase 入口门禁（`entry_gate`）**：对声明了 `entry_gate` 的 phase（如 phase `"4"` 的 `entry_gate: "3F.11"`），仅当该 gate 任务（按精确字符串 ID 查找）为 `done`/`merged` 时，才允许级联该 phase 的 backlog→ready；否则该 phase 视为锁定，跳过其全部任务的级联。
+- **Phase `"3F"` finalizer 例外**：若被合并的任务是 phase `"3F"` 的集成测试任务 `"3F.11"`，**不得**自动级联 phase `"4"` 的 backlog→ready。Phase `"4"` 解锁只发生在人类合并 `"3F.11"` 后触发 finalizer 记录 `3F.finalize`（docs/05-planning/phase3f-execution-plan.md §10.1）时，由该 finalizer 显式把 `current_phase` 改为 `"4"` 并仅将 `4.1`–`4.9` 置为 `ready`。普通 pr-merge 流程只把 `3F.11` 置为 `done`，**不**改 `current_phase`、**不**改 phase `"4"` 任务状态。
    - **最后** `git add` → `git commit` → `git push origin dev-1.0`
    - ⚠️ **禁止在 feature 分支上更新 task-status.json**，必须切到 dev-1.0 操作。
 3. 输出任务完成摘要：

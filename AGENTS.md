@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.25  
+**版本**：v5.26
 **生效日期**：2026-08-02  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -1438,6 +1438,19 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 - Simulator 重复所有者或控制冲突（同一设备被多个 run/owner 控制；双审查设备 17 Pro + 16 Pro 为同一 owner 合法持有，不构成冲突）
 - Artifact 包含凭据、PII
 
+### 17.9 Phase 3F 持续授权（3F.0 人类合并后生效）
+
+> 权威来源：`docs/05-planning/phase3f-execution-plan.md` §1.1（两段式授权）。本节只在 `3F.0` docs-only bootstrap PR 被人类合并后生效；合并前本节不构成任何 standing authority。
+
+**合并后持续授权**：人类通过 `3F.0` 合并授予的持续权限允许 Agent 按 `3F.1` 至 `3F.11` 各任务**穷尽式 Files 清单**自动修改指定 Core、UI、测试、Xcode、CI 与发布文件，并自动 commit、push、创建或更新目标为 `dev-1.0` 的当前任务 PR，**无需逐任务重复批准**。
+
+- ✅ Agent 自动执行：任务 Files 清单内的文件修改、`git commit`、`git push`、`gh pr create` / `gh pr edit`（当前任务 PR）、`task-status.json` 状态与 notes 更新、evidence index 更新、PR 描述 AC 表刷新
+- ❌ **人类专属（Agent 禁止）**：合并 PR、关闭 PR、删除本地或远程分支、任何超出当前任务明示范围的操作
+- 🚫 **始终禁止**：`gh pr merge`、`--delete-branch`、降低/跳过/静音任何测试、覆盖率、隐私、静态分析、签名或发布门禁；把 fixture/Preview/模拟状态当生产完成证据；提交模型、用户数据、凭据、签名材料、DerivedData、`.xcresult` 或生成制品；生成或持久化 screenshot/video（no-media-capture 规则保持不变）
+- 🔒 **no-overwrite 与停止条件保留**：`UIAutomation/Policies/*` 的停止条件、受保护资产、重试上限、no-overwrite 与 no-media 规则全部保持原样；本授权不覆盖现有工作、不绕过门禁、不执行人类专属操作
+- 🔐 **`3F.0` bootstrap 例外**：`3F.0` 本身是 docs-only bootstrap，必须由目标机器人类显式授权（`PHASE3F_BOOTSTRAP_AUTHORIZATION=human-approved-docs-only` + `PHASE3F_BOOTSTRAP_AUTHORIZED_BY` + `PHASE3F_BOOTSTRAP_AUTHORIZED_AT`）才能执行；只允许 §4.5/§4.6.0/3F.0 Files 清单中的文档、planning、policy、command 与状态 schema 变更及唯一一份 docs-only PR
+- 🔒 **Phase 4 锁定**：Phase 4（`entry_gate: "3F.11"`）在 `3F.11` 人类合并前保持 `backlog`；`current_phase` 只在 `3F.11` 合并后由人类触发的 finalizer（`3F.finalize`）改为 `"4"`。Agent 不得在 `3F.11 == done` 前级联 Phase 4 为 `ready`，也不得在 `3F.11` PR 内记录 merge SHA 或声明 Phase 4 解锁
+
 ---
 
 **版本历史**：
@@ -1474,3 +1487,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.23 | 2026-08-01 | Live Simulator Review 双设备审查：§9.4 明确视觉审批同时使用 iPhone 17 Pro (iOS 26.5) + iPhone 16 Pro (iOS 18.x)，构建仍以 17 Pro 为 destination；§17.5/§17.7/§17.8 同步双设备措辞。同步更新 docs/ui/ 五份文档、UIAutomation/Policies/simulator-ownership.json、.ui-automation/state.schema.json（simulator_owner 双设备数组，schemaVersion 1.1.0）及 ui-bootstrap-build-echo/ui-status-echo/commit-pr-echo 三个命令。 | AI 架构师 |
 | v5.24 | 2026-08-02 | 翻译质量兜底信号修订（ADR-005）：US-DIS-002 AC-3「置信度 <0.7 保留原文」因 Apple Translation 不返回译文质量分数而不可落地，改为「源语言检测不确定（NLTagger 置信度 < 0.9，标记 .uncertain）时保留原文 + 语言标签，不提供译文」。同步修订双语言文档 §6.4/§8.1。本规约正文无直接引用 0.7 翻译置信度，无需改动 §6 契约。 | AI 架构师 |
 | v5.25 | 2026-08-03 | UI 层功能域重构：§10.1 目录结构 `UI/ViewModels/` + `UI/Views/`（按层平铺）改为 12 个功能域目录（AppShell/Home/Search/Detail/Settings/Onboarding/Awakening/BackgroundTask/Creation/Degradation/ResumeProgress/Translation），每域内 View + ViewModel + FixtureLoader 高内聚。§3.2 scope 表 `viewmodel`/`view` 描述同步。同步更新 `Scripts/coverage_gate.py`（排除规则由目录前缀 `Echo/UI/Views/` 改为文件名后缀 `*View.swift`/`*FixtureLoader.swift`，行为等价）与 ci.yml 注释。Swift 同 module 内无路径 import，Xcode PBXFileSystemSynchronizedRootGroup 自动同步文件系统，纯 git mv 无编译影响。 | AI 架构师 |
+| v5.26 | 2026-08-04 | Phase 3F bootstrap（3F.0，docs-only）：新增 §17.9 Phase 3F 持续授权条款（两段式授权模型：bootstrap 显式授权 + 合并后 standing authority；人类专属 merge/close/delete；no-overwrite/no-media/门禁保留；Phase 4 entry_gate 锁定）。同步修订 `docs/ui/`、`UIAutomation/Policies/`、`.opencode/commands/`（16 个命令 exact-string 任务/phase 查找、3F-safe 路径、UI exact-3 匹配）与 `.ui-automation/state.schema.json`。新增 `docs/05-planning/phase3f-execution-plan.md`、`phase3f-story-matrix.md`、`phase3f-evidence-index.md` 及 ADR-006~014。 | AI 架构师 |

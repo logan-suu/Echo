@@ -1,8 +1,11 @@
 {
   "$schema": "https://echo-ui-automation/schemas/policy/v1",
   "id": "protected-paths",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Echo protected paths — absolute read-only for UI automation. Any modification triggers immediate STOPPED.",
+  "phase3f": {
+    "note": "Phase 3F scoped authority (docs/05-planning/phase3f-execution-plan.md §1.1, §4.6): after 3F.0 is human-merged, a protected path becomes editable for a specific 3F task ONLY when that task's exhaustive Files list names it. Every protected path outside that per-task scope keeps severity 'stopped' unchanged, with the same immediate STOPPED and no-retry-budget behavior."
+  },
 
   "protected_categories": [
     {
@@ -49,6 +52,43 @@
     }
   ],
 
+  "phase3f_scoped_authority": {
+    "enabled_when": "3F.0 docs-only bootstrap PR is human-merged into dev-1.0; no scoped authority exists before that merge",
+    "authority_source": "docs/05-planning/phase3f-execution-plan.md §1.1 (post-merge standing authority) and §4.6 (per-task exhaustive Files contracts)",
+    "editable_scope": {
+      "areas": [
+        "Core actors/pipelines/models",
+        "UI (views, viewmodels, adapters)",
+        "tests (EchoTests/Phase3F/**, EchoTests/Phase*/**, EchoUITests/**)",
+        "Xcode project/scheme",
+        "CI",
+        "release config"
+      ],
+      "condition_a_task_files": "A specific 3F task's exhaustive Files list (the Files block of that task's execution-plan section, mirrored by its §4.6 doc contract) must name the exact path",
+      "condition_b_3f0_merged": "3F.0 is human-merged; edits under this authority may not proceed before that merge",
+      "no_overwrite": "Existing human-approved work, worktrees and branches are never overwritten or deleted (no-overwrite/no-reset/no-clean/no-delete rules of §6.2.1 still apply)",
+      "no_expansion": "Fuzzy paths, generalized descriptions or unmarked wildcards may not widen a task's scope; if RED tests prove a previously unlisted file must change, the task becomes blocked and only a human-approved scope PR amending the canonical plan, named ADR and task ledger may add it"
+    },
+    "protected_outside_scope": {
+      "rule": "Every path not named in the current 3F task's exhaustive Files list retains its original protected_categories severity ('stopped'), this file's stop_rule and the no-retry-budget behavior",
+      "severity_unchanged": "stopped",
+      "human_only_operations": [
+        "PR merge",
+        "PR close",
+        "local/remote branch deletion",
+        "any action outside the current task's explicit scope"
+      ]
+    },
+    "preserved_rules": [
+      "immediate STOPPED on any write to a protected path outside the authorized per-task scope",
+      "no retry budget consumed for protected-path violations",
+      "no screenshot/video/reference/actual/diff generation or persistence (media-policy.json global_prohibition)",
+      "dual-device Live Simulator Review + AX tree + unified logs + structured manifest only; visualMediaCaptured: false",
+      "retry ceilings and stop conditions unchanged (retry-policy.json)",
+      "acceptance thresholds unchanged (acceptance-policy.json)"
+    ]
+  },
+
   "allowed_categories": [
     {
       "category": "swiftui_views",
@@ -77,5 +117,5 @@
     }
   ],
 
-  "stop_rule": "Any write to protected paths triggers immediate STOPPED. No retry budget consumed."
+  "stop_rule": "Any write to protected paths triggers immediate STOPPED. No retry budget consumed. phase3f_scoped_authority is the ONLY mechanism that can make a protected path editable; unless BOTH conditions hold (3F.0 human-merged AND the exact path is in the current 3F task's exhaustive Files list), this rule applies unchanged with severity 'stopped'."
 }

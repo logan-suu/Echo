@@ -7,6 +7,8 @@ agent: build
 
 请按 Echo 项目 AGENTS.md 的文档问题处理流程（§12.4）和决策同步规范执行：
 
+> **任务/阶段定位**：所有 task id 与 phase id 均为精确字符串（如 `"3F"`、`"3F.11"`），从 `docs/05-planning/task-status.json` 的 `phase_order` / `phases[].tasks` 精确查找，禁止数值推断。同步文档中引用阶段时使用字符串 ID（如 `"3F"`），测试路径用 `EchoTests/Phase${phase.id}`（`"3F"` → `EchoTests/Phase3F`）。
+
 ### 第一步：确定同步范围
 1. **如果用户提供了决策内容**（如“选择方案 A，Actor 不标注 @MainActor”）：
    - 记录决策摘要。

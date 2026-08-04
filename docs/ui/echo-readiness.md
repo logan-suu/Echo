@@ -66,8 +66,8 @@
 - 模型文件（`Echo/Resources/Models/`）增删或版本变更
 - CI workflow（`.github/workflows/ci.yml`）或 SwiftLint（`.swiftlint.yml`）修改
 - 上次 readiness_check 通过后超过 30 天
-- `task-status.json` 中 Phase 3 任务的 `dependencies` 发生变化
-- `deferred-items.json` 中 Phase 3 相关条目发生变化（新增延期 / 移回 / 已解决）
+- `task-status.json` 中 Phase 3 或 Phase 3F 任务的 `dependencies` 发生变化
+- `deferred-items.json` 中 Phase 3 / Phase 3F 相关条目发生变化（新增延期 / 移回 / 已解决）
 
 复检时只验证受影响的类别，不重做全部五类门禁。hash 未变的门禁结果可复用。
 
@@ -82,3 +82,12 @@
 | 保护路径清单 | `docs/ui/architecture.md` §4 |
 | 命令兼容性清单 | `docs/ui/automation-workflow.md`、`.opencode/commands/` |
 | Build log | 开发机本地 / CI artifact |
+
+---
+
+## 6. Phase 3F 感知
+
+- **phase 为字符串**：`task-status.json` 的 `phase_order` / `current_phase` 均为字符串，包含 `"3F"`（`["1","2","3","3F","4","5"]`）
+- **五类门禁适用**：Phase 3F UI 任务（3F.7–3F.10）沿用本文档全部就绪门禁；Phase 3F 引入的「默认 App 无 `-ui-fixture`」生产路径要求 §2.1 Bootstrap 与数据库打开门禁以真实（非 fixture）入口为准
+- **双审查设备**：§2.5 的 Xcode 26.5 / Bridge Preflight 与双设备目标（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.x）对 Phase 3F UI 交付同样有效
+- **UI 模式匹配精确 `"3"`**：首次 bootstrap 的 `readiness_check` 在 `current_phase == "3"` 的 UI 模式下按原流程触发；`current_phase == "3F"` 时按通用流程（Phase 3F UI 任务经 `/ui-bootstrap-build-echo`）执行，复检触发条件含 Phase 3F（§4）

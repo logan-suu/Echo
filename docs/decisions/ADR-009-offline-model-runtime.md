@@ -1,0 +1,48 @@
+# ADR-009: 离线模型运行时与生成决策
+
+**状态**: 已接受
+**日期**: 2026-08-04
+**决策人**: Model Legal and Privacy Approver（审批）+ On-device ML Lead（实现）
+
+## 背景
+
+基线中模型 Bundle 0/6：E5/SigLIP2/Whisper 均为 scaffold/不可达推理；`ModelLoaderActor` 状态与 embedder 实际加载不同步（DEF-34-003）；`prepare_models.sh` 的 E5/SIGLIP2 revision 是可变 ref `main`（DEF-35-001）；模型许可证/校验和/SBOM/分发批准无登记（`model-provenance-register.md` 不存在）。US-SRC-011 无可用视觉 embedding 与主观查询 Golden 集。SYN 故事（生成）依赖的离线 LLM 运行时无批准。
+
+## 决策
+
+1. **模型空间分离**：E5 384d 文本嵌入、SigLIP2 视觉嵌入、Whisper 转写各自独立 generation + VectorStoreActor；禁止跨空间对齐（ADR-006）。
+2. **不可变捆绑工件**：每个捆绑工件固定不可变 revision + SHA-256（`model_checksums.sha256`）、转换 lineage、运行时许可证、tokenizer 许可证、NOTICE 位置、SBOM 位置、商业分发处置、审批人与审批日期，全部登记到 `docs/05-planning/model-provenance-register.md`；manifest→bundle→register 计数 100%，哈希全部可验证；未获批模型不得进入打包。
+3. **零网络运行时**：模型随 App 分发，App 内无下载代码（R-005）；`prepare_models.sh --verify-only` 校验 100% 存在/有效。
+4. **离线 LLM 决策（本 ADR 批准）**：**保留 grounded creation（US-SYN-001/002/003/004/005/006/007/008 的批准子集）**，采用不可变捆绑运行时/工件 + 许可证 + 校验和，并实现 `LanguageAligner`（单次重试 ≤1，R-004 语言对齐）。语言输出仅 zh-Hans/en-US。
+5. **Loader 状态回报**：embedder→ModelLoaderActor 状态回报机制（关闭 DEF-34-003）；损坏/缺失工件进入 L3 阻断 + 手动重试（US-RES-004）。
+6. **参考输出**：`e5-reference-vectors.json`、`siglip2-reference-vectors.json`、`whisper-reference-transcripts.json` 提供确定性参考（US-SRC-011 model semantics），Golden 验证在 Phase 4 4.1。
+
+## 备选方案
+
+| 方案 | 描述 | 结论 |
+|------|------|------|
+| **A（采纳）** | 保留离线 generation：不可变捆绑 LLM 运行时 + Language Aligner | ✅ 满足 v1 创作闭环、R-004/R-005，全离线 |
+| B | 移除全部 SYN 故事 | ❌ 丢失核心创作能力（Echo 记忆助手的差异化功能） |
+| C | 云端 LLM 兜底 | ❌ 违反 R-001/R-005 绝对红线 |
+
+## 后果
+
+### 正面
+
+- 全部模型工件可溯源、可验证、全离线；`model-provenance-register` 成为分发唯一事实源。
+- Language Aligner 保证 AI 输出语言符合 `UserPolicy.preferredLanguage`。
+- 关闭 DEF-34-003/004、DEF-35-001 的证据路径确定。
+
+### 负面
+
+- 捆绑 LLM 增加包体积；须接受体积/质量权衡并经 Model Legal 批准。
+- 不可变工件使模型升级走「新 revision + 新审批」路径，无法热替换。
+- 参考输出需维护与模型 revision 一一对应。
+
+## 参考
+
+- `docs/01-spec/用户故事与验收标准规格书.md` US-ING-001~005、US-RET-001/002/006、US-RES-001/004、US-SRC-011、US-SYN-001~008
+- AGENTS.md R-004/R-005
+- `docs/02-architecture/技术选型文档.md`、`docs/03-implementation/双语言实现说明文档.md`
+- `docs/05-planning/model-provenance-register.md`（3F.3 创建）
+- ADR-006（范围契约）、ADR-013（创作/导出边界）

@@ -24,19 +24,20 @@ agent: build
 ### 第二步：定位当前进度（任务溯源）
 
 4. 读取 `docs/05-planning/task-status.json`。
-5. **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。此操作为**幂等操作**，必须在搜索 ready 任务之前执行。
+5. **级联更新 backlog → ready**（AGENTS.md §12.1）：按 `phase_order` 遍历每个 phase（phase id 为**字符串**，如 `"1"`、`"2"`、`"3"`、`"3F"`、`"4"`、`"5"`），对其 `tasks` 中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。此操作为**幂等操作**，必须在搜索 ready 任务之前执行。
+   - **Phase 入口门禁（`entry_gate`）**：对声明了 `entry_gate` 的 phase（如 phase `"4"` 的 `entry_gate: "3F.11"`），仅当该 gate 任务（按精确字符串 ID 查找）为 `done`/`merged` 时，才允许级联该 phase 的 backlog→ready；否则该 phase 视为锁定，跳过其全部任务的级联。
 
 ---
 
 ### 第三步：Phase 3 UI 分支判定
 
-6. 检查 `current_phase`：
-   - **若 `current_phase != 3`**：进入「非 UI 模式」，按原流程（第四步-第五步）执行。
-   - **若 `current_phase == 3`**：进入「Phase 3 UI 模式」，按以下规则执行：
+6. 检查 `current_phase`（字符串，如 `"3F"`）：
+   - **若 `current_phase` 精确等于 `"3"`**（用 `^3$` 精确匹配，**不得**捕获 `"3F"`）：进入「Phase 3 UI 模式」，按以下规则执行。
+   - **否则**（包括 `"3F"`、`"4"`、`"5"` 等）：进入「非 UI 模式」，按原流程（第四步-第五步）执行。
 
 ---
 
-## 🎨 Phase 3 UI 模式（`current_phase == 3`）
+## 🎨 Phase 3 UI 模式（`current_phase == "3"`，精确匹配 `^3$`，不含 `"3F"`）
 
 > **核心规则**：init 只做 UI-aware 会话初始化，只读级联 backlog→ready，报告 phase/ready/in_progress 与 UI bootstrap 可用性。**不选任务、不写运行状态、不实现、不测试、不运行 Git。**
 
@@ -110,20 +111,21 @@ agent: build
 
 ---
 
-## 📋 非 UI 模式（`current_phase != 3`）
+## 📋 非 UI 模式（`current_phase != "3"`，含 `"3F"`、`"4"`、`"5"`）
 
 ### 第四步：定位任务
 7. **若用户指定了任务 ID**，优先使用该任务：
-   - **跨阶段阻断检查**：若该任务属于阶段 N（N > 1），检查阶段 N-1 的集成测试任务是否为 `done`。
+   - 通过**包含关系**确定任务所属 phase：遍历 `phases[].tasks`，找到 `tasks` 数组包含该任务 ID 的 phase 对象（**禁止**用任务 ID 前缀或数字范围推断 phase；如 `"3F.11"` 属于 phase `"3F"`）。
+   - **跨阶段阻断检查**：若该 phase 的 `previous_phase_id` 非空，读取前一 phase 对象（按精确字符串 ID 查找），检查其 `integration_task_id` 对应的集成测试任务是否为 `done`。
    - 如果不是 `done`，阻断并提示先完成前一阶段集成测试。
 8. **若用户未指定**：
-   - 找出 `current_phase`（当前阶段）。
-   - **跨阶段阻断检查**：若 `current_phase > 1`，检查阶段 `current_phase - 1` 的集成测试任务是否为 `done`。
-   - 找到该阶段中第一个 `status: "ready"` 的任务。
+   - 找出 `current_phase`（字符串，如 `"3F"`），用 `phase_order` 定位该 phase 对象。
+   - **跨阶段阻断检查**：若该 phase 的 `previous_phase_id` 非空，读取前一 phase 对象，检查其 `integration_task_id` 是否为 `done`。
+   - 找到该 phase 的 `tasks` 中第一个 `status: "ready"` 的任务（当前阶段为 `"3F"` 时即从 phase `"3F"` 的 `tasks` 中选取；phase `"4"` 在 `entry_gate`（`"3F.11"`）未满足前视为锁定，**不得**从中选取）。
    - 如果找不到 ready 任务，检查是否有 `in_progress` 的任务。
-   - 如果都没有，列出当前阶段的所有 `backlog` 任务，让用户选择。
+   - 如果都没有，列出当前 phase 的所有 `backlog` 任务，让用户选择。
 9. 确认该任务的所有 `dependencies` 是否已标记为 `done`。
-10. 输出当前阶段、任务 ID、标题及关联的用户故事编号。
+10. 输出当前 phase（ID 与名称）、任务 ID、标题及关联的用户故事编号。
 
 ### 第五步：锁定规格上下文（防幻觉）
 11. 根据上述任务 ID，查阅 `AGENTS.md` 中的「任务类型 → 文档快速索引」（§0.2）。

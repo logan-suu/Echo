@@ -3,7 +3,7 @@
   "_description": "Echo UI 自动化单次运行状态。只保存 task_id 外键关联 task-status.json，不得复制项目 phase、task title、dependencies、lifecycle status、test_file、PR 或 merge evidence。",
   "_managed_by": ".opencode/commands/ui-bootstrap-build-echo.md",
   "_created_by": "Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范 §9.4",
-  "_version": "1.1.0",
+  "_version": "1.2.0",
 
   "$ref": "#/$defs/RunState",
 
@@ -17,7 +17,7 @@
         "schemaVersion": {
           "type": "string",
           "description": "本 schema 版本",
-          "const": "1.1.0"
+          "const": "1.2.0"
         },
         "repositoryRoot": {
           "type": "string",
@@ -25,8 +25,8 @@
         },
         "task_id": {
           "type": "string",
-          "description": "外键 → docs/05-planning/task-status.json 中的 task.id",
-          "examples": ["3.1", "3.2"]
+          "description": "外键 → docs/05-planning/task-status.json 中的 task.id（精确字符串，phase id 可为 \"3F\" 等含字母的字符串，task id 形如 \"3F.1\"）",
+          "examples": ["3.1", "3F.1"]
         },
         "runId": {
           "type": "string",
@@ -211,7 +211,7 @@
             "properties": {
               "type": {"type": "string", "enum": ["contract", "implementation", "environment", "product_divergence", "security_scope"]},
               "detail": {"type": "string"},
-              "phase": {"type": "string"},
+              "phase": {"type": "string", "description": "phase id 为字符串，如 \"3\"、\"3F\"（3F-safe，不做数值推断）"},
               "retry_count": {"type": "integer"}
             }
           }

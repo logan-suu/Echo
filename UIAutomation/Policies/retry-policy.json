@@ -1,8 +1,11 @@
 {
   "$schema": "https://echo-ui-automation/schemas/policy/v1",
   "id": "retry-policy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Error classification, retry budget, and stop conditions for Phase 3 UI automation",
+  "phase3f": {
+    "note": "Phase 3F failure recovery (execution plan §9): three distinct hypotheses → minimal repro → on a third different failed approach, restore last green commit, set the task blocked and present 2-3 decision options. Retry ceilings and stop conditions are unchanged."
+  },
 
   "error_classification": {
     "types": [
@@ -71,5 +74,33 @@
     "simulator_reuse": "Only after environment health check passes",
     "product_divergence": "Return to appropriate human approval point; do not fix with code micro-adjustments",
     "security_stop": "Only authorized person may clear the cause and resume"
+  },
+
+  "phase3f_recovery": {
+    "scope": "docs/05-planning/phase3f-execution-plan.md §9",
+    "procedure": [
+      "First failure: save full logs, form at least three falsifiable hypotheses, run minimal reproduction",
+      "Second distinct approach fails: inspect actor boundaries, schema/migration, Apple entitlements, model artifacts and test isolation; never repeat the same path",
+      "Third different approach fails: restore the last green commit, set the task status to blocked, record the three attempts, evidence, impact and 2-3 executable decision options, and request architecture/product adjudication"
+    ],
+    "additional_immediate_stops": [
+      "Spec remains contradictory",
+      "Private or nonexistent API required",
+      "Missing legal model or signing assets",
+      "Irreversible migration risk",
+      "Rollback failure",
+      "Privacy red-line conflict",
+      "User data or credentials enter an artifact",
+      "Dependency task not done"
+    ],
+    "prohibited_recovery": "Deleting tests, relaxing assertions, extending arbitrary sleeps, switching fixtures, or lowering thresholds to 'recover'",
+    "ceilings_unchanged": [
+      "max_retries_per_phase = 2",
+      "environment max 1 retry after health check + cleanup",
+      "contract/implementation max_retries = 2 with requires_evidence_change",
+      "product_divergence and security_scope: retry_eligible false (immediate human decision / stopped)",
+      "auto_fail: two auto-retries exhausted on same phase, or environment error twice"
+    ],
+    "human_only_after_third_failure": "blocked status + 2-3 decision options to architecture/product lead; no further automatic retries"
   }
 }

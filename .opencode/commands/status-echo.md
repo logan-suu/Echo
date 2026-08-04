@@ -8,11 +8,11 @@ agent: build
 请读取 `docs/05-planning/task-status.json`，输出以下信息：
 
 ### 全局概览
-- 当前阶段：Phase X - [阶段名称]
+- 当前阶段：Phase [当前阶段ID，字符串，如 "3F"] - [阶段名称]（从 `current_phase` + `phase_order` 读取，禁止数值推断）
 - 整体进度：已完成 X / 总任务数（所有阶段）— XX%
 - 当前阶段状态：[in_progress/completed/not_started]
 
-### Phase 3 UI 状态（仅当 current_phase == 3）
+### Phase 3 UI 状态（仅当 current_phase 精确等于 "3"，`^3$` 匹配，不含 "3F"）
 - UI Bootstrap 物化：[✅ 已就绪 / ⚠️ 不完整]
 - 推荐入口：`/init-session-echo → /next-task-echo → /ui-bootstrap-build-echo <task-id>`
 - **如果存在 `.ui-automation/state.json`**：读取并报告 UI 运行状态（run ID、automation_phase、阶段进度）
@@ -47,5 +47,5 @@ agent: build
 - `last_updated` 时间戳
 - `deferred-items.json` 延期任务：[N] 条（执行 `/test-phase-echo` 时会自动扫描是否已可解决）
 
-### Phase 3 UI 运行状态（额外步骤，仅当 current_phase == 3）
+### Phase 3 UI 运行状态（额外步骤，仅当 current_phase 精确等于 "3"，`^3$` 匹配，不含 "3F"）
 - 如果 `.ui-automation/state.json` 存在，读取并报告：run ID、自动化阶段、阶段进度、blocker、建议下一步动作
