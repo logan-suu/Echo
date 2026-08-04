@@ -917,9 +917,14 @@
             "66 个故事全部进入 phase3f-story-matrix.md 的任务或批准延期",
             "三个 UIAutomation policy 保留停止条件并授权 Phase 3F 路径"
           ],
-          "last_updated": "2026-08-04T14:04:35Z",
+          "last_updated": "2026-08-04T14:06:28Z",
           "notes": "Creates the canonical tracked plan from the current instruction, the story matrix from Appendix C, and the evidence-index skeleton.",
-          "pr": null
+          "pr": {
+            "number": 49,
+            "url": "https://github.com/logan-suu/Echo/pull/49",
+            "head": "docs/phase3f-spec-ledger-3F.0",
+            "base": "dev-1.0"
+          }
         },
         {
           "id": "3F.1",
