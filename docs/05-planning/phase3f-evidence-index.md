@@ -27,7 +27,7 @@ This index is created by `3F.0` and maintained by every Phase 3F task. It contai
 Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs and exact-ID command behavior. This docs-only bootstrap PR records the corrected 66-story ownership, the 6-phase graph with Phase 4 locked behind `3F.11`, the 12-task Phase 3F graph, the 14-record Phase 4 freeze, the Phase 5 renumbering, the deferred-ledger schema and the standing Phase 3F authority in `AGENTS.md` `§17`.
 
 ## Related Specs
-- Task: 3F.0 — 规格、范围、账本与接口冻结
+- Task ID: 3F.0 — 规格、范围、账本与接口冻结
 - Stories: US-SRC-002, US-SRC-006, US-ING-001..004, US-RET-003, US-RET-004, US-SYN-003, US-SYN-004, US-AWK-002, US-PRV-003, US-PRV-005, US-PRV-007
 - Ownership repair: US-SRC-007, US-SRC-009, US-SRC-010, US-SRC-011 (`§4.2.1`)
 - Documents: AGENTS.md, README.md, docs/INDEX.md, 用户故事与验收标准规格书.md, 架构设计文档.md, 技术选型文档.md, 数据流全链路技术说明文档.md, 双语言实现说明文档.md, 产品创新工具全景指南.md, 开发计划安排文档.md, docs/ui/*, UIAutomation/Policies/*, ADR-006..ADR-014
