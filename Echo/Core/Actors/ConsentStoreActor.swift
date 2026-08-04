@@ -6,9 +6,10 @@
 //            US-PRV-005 (撤回=注销, 事务清除), US-PRV-004 (删除时事务性清除)
 // 任务: 3F.1 - Production composition、首次启动、同意与隐私
 // AC 覆盖: ADR-007 §决策-2 (同意版本与时间戳持久化), §决策-3 (事务清除 + blocked + 审计),
-//          US-PRV-005 AC-5/AC-7 (冷却期满异步擦除 + 审计自擦除), US-PRV-008 AC-4/AC-5
+//          US-PRV-005 AC-5/AC-7 (冷却期满异步擦除 + 审计自擦除), US-PRV-008 AC-4/AC-5,
+//          PR review 修复: 撤回成功写 .consentRevoked 审计; 内存状态仅在持久化/commit 成功后更新
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §5.4 (审计 hash-only), R-007 (禁止 unchecked Sendable)
-// 生成时间: 2026-08-04
+// 生成时间: 2026-08-04, 2026-08-05 (PR review 修复)
 // ==========================================
 
 import Foundation
@@ -43,14 +44,27 @@ public actor ConsentStoreActor {
     /// 测试用故障注入（非生产路径）
     internal var injectedPurgeFault: PurgeFault?
 
+    /// 测试用故障注入：acceptConsent 写库失败（非生产路径）
+    internal var injectedConsentWriteFault = false
+
     /// 清除故障注入点
     internal enum PurgeFault: Sendable {
         case failBeforeCommit
     }
 
+    /// 同意写库注入错误（测试专用）
+    internal enum ConsentWriteError: Error {
+        case injectedWriteFault
+    }
+
     /// 注入/清除清除故障（测试专用；actor 隔离所以经方法访问）
     internal func setPurgeFault(_ fault: PurgeFault?) {
         injectedPurgeFault = fault
+    }
+
+    /// 注入/清除同意写库故障（测试专用）
+    internal func setConsentWriteFault(_ enabled: Bool) {
+        injectedConsentWriteFault = enabled
     }
 
     // MARK: - Initialization
@@ -96,7 +110,10 @@ public actor ConsentStoreActor {
 
     /// 用户同意 PIPL 隐私政策并持久化 (US-PRV-008 AC-4, ADR-007 §决策-2)
     public func acceptConsent(consentVersion: Int, policyVersion: Int) async throws {
-        state = ConsentState(
+        if injectedConsentWriteFault {
+            throw ConsentWriteError.injectedWriteFault
+        }
+        let newState = ConsentState(
             hasConsented: true,
             consentVersion: consentVersion,
             consentedAt: Date(),
@@ -108,13 +125,15 @@ public actor ConsentStoreActor {
                 VALUES (1, ?, ?, ?, ?, ?)
                 """,
             bindings: [
-                .int(state.hasConsented ? 1 : 0),
-                .int(Int64(state.consentVersion)),
-                state.consentedAt.map { .double($0.timeIntervalSince1970) } ?? .null,
-                .int(Int64(state.policyVersion)),
+                .int(newState.hasConsented ? 1 : 0),
+                .int(Int64(newState.consentVersion)),
+                newState.consentedAt.map { .double($0.timeIntervalSince1970) } ?? .null,
+                .int(Int64(newState.policyVersion)),
                 .double(Date().timeIntervalSince1970),
             ]
         )
+        // 持久化成功后才更新内存状态，避免写库失败时内存/SQLite 发散
+        state = newState
         try? await privacy.writeAuditLog(
             eventType: .consentAccepted,
             traceID: UUID().uuidString,
@@ -136,6 +155,15 @@ public actor ConsentStoreActor {
 
         try await db.beginTransaction()
         do {
+            // 记录撤回动作审计（full purge 时随 AuditLog 自擦除，符合 US-PRV-005 AC-7；
+            // 部分清除边界时保留，记录撤回事件）
+            try? await privacy.writeAuditLog(
+                eventType: .consentRevoked,
+                traceID: traceID,
+                policyVersion: policyVersion,
+                success: true,
+                sourceType: "consent"
+            )
             var affected = 0
             if boundary.purgeMetadata {
                 affected += try await purgeTable("Memory")
@@ -171,8 +199,7 @@ public actor ConsentStoreActor {
             }
             // translationCache 为内存层，此处仅重置同意状态（持久化由 UI 层负责）
 
-            // 重置同意状态（deny-by-default）
-            state = .notConsented
+            // 删除同意记录（持久化）
             try await db.executeWrite(sql: "DELETE FROM ConsentStore", bindings: [])
 
             if injectedPurgeFault != nil {
@@ -180,6 +207,8 @@ public actor ConsentStoreActor {
             }
 
             try await db.commitTransaction()
+            // 事务成功提交后才重置内存状态，回滚时保持与 SQLite 一致（不发散）
+            state = .notConsented
             return PurgeResult(success: true, blocked: false, affectedCount: affected)
         } catch {
             try? await db.rollbackTransaction()

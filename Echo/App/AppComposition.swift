@@ -5,9 +5,9 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-PRV-001, US-PRV-008, US-RES-004
 // 任务: 3F.1 - Production composition、首次启动、同意与隐私
 // AC 覆盖: ADR-007 §决策-1 (唯一依赖图 + 启动状态机), §决策-2 (同意闸门装配),
-//          §决策-3 (撤回 → 事务清除 → blocked), §决策-5 (model/route/index-unavailable)
+//          §决策-3 (撤回 → 事务清除 → blocked), §决策-5 (model/route/index-unavailable/bootstrap-failed)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §8.1 (@MainActor @Observable), R-007 (禁止 unchecked Sendable)
-// 生成时间: 2026-08-04
+// 生成时间: 2026-08-04, 2026-08-05 (PR review 修复: bootstrapFailed 独立状态)
 // ==========================================
 
 import Foundation
@@ -35,6 +35,8 @@ public enum AppStartupState: Sendable, Equatable {
     case indexUnavailable
     /// 撤回/清除失败，进入 blocked 状态（ADR-007 §决策-3）
     case purgeBlocked
+    /// 启动装配失败（数据库打开/同意/策略加载），与 purge 失败语义分离
+    case bootstrapFailed
 }
 
 // MARK: - App Composition Root
@@ -97,8 +99,9 @@ public final class AppComposition {
             let consented = await consentStore.hasConsented()
             startupState = consented ? .ready : .requiresConsent
         } catch {
-            // 数据库损坏等 L3：进入 blocked（由统一错误 UI 处理，见 3F.10）
-            startupState = .purgeBlocked
+            // 数据库打开/同意/策略加载失败（L3）：进入独立 bootstrapFailed 状态，
+            // 与 purge 失败 (purgeBlocked) 语义分离，避免 UI 误显示"上次清除未完成"。
+            startupState = .bootstrapFailed
         }
     }
 

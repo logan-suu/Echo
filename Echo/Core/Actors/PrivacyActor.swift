@@ -4,14 +4,16 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-PRV-001
 // 任务: 1.8 - 搭建单元测试框架，编写第一个 Actor 测试用例 (Stub)
 //       2.1 - PrivacyActor + UserPolicy 实现 (Full Implementation)
+//       3F.1 - deny-by-default 同意闸门 (ADR-007 §决策-2)
 // AC 覆盖: US-PRV-001 AC-1 (策略即时生效), AC-2 (被拒数据不进 Retriever),
 //          AC-3 (Denial Response), AC-4 (缓存失效), AC-5 (重新授权不清除排除表),
-//          AC-6 (审计记录 .denied/.reauthorized)
+//          AC-6 (审计记录 .denied/.reauthorized),
+//          PR review 修复: 同意闸门仅 .denied 短路，.allowed 落入 per-source 授权检查 (US-PRV-001)
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), §7.1 (PrivacyCheckpoint 强制注入),
 //           §7.3 (审计日志), §5.4 (30天保留), R-006 (审计强制覆盖),
 //           R-007 (禁止 unchecked Sendable), R-008 (跨 Actor 调用必须 await)
 // 重要: 所有 struct stored/computed properties 必须 nonisolated（项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor）
-// 生成时间: 2026-07-05 (Stub), 2026-07-07 (Task 2.1 Full Implementation)
+// 生成时间: 2026-07-05 (Stub), 2026-07-07 (Task 2.1 Full Implementation), 2026-08-05 (3F.1 PR review 修复)
 // ==========================================
 
 import Foundation
@@ -286,21 +288,23 @@ public actor PrivacyActor {
         await ensurePolicyLoaded()
 
         // deny-by-default 同意闸门 (3F.1, ADR-007 §决策-2)
-        if let consentDecision = await consentDecision() {
+        // 仅 .denied 短路：未同意时拒绝一切业务访问并写拒绝审计 (AC-6 decision=.denied)；
+        // .allowed 时继续落入 per-source 授权检查（US-PRV-001），避免绕过数据源授权与审计事件语义错乱。
+        if let consentDecision = await consentDecision(), consentDecision == .denied {
             let checkpoint = PrivacyCheckpoint(
                 traceID: traceID,
                 timestamp: Date(),
                 operation: operation,
                 policyVersion: policy.policyVersion,
                 sourceTypes: sourceTypes,
-                decision: consentDecision
+                decision: .denied
             )
             let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
             try? await writeAuditLog(
                 eventType: .permissionChanged,
                 traceID: traceID,
                 policyVersion: policy.policyVersion,
-                success: consentDecision == .allowed,
+                success: false,
                 sourceType: sourceTypes.isEmpty ? "consent" : sourceTypes.joined(separator: ","),
                 elapsedMs: elapsedMs
             )

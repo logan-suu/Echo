@@ -71,6 +71,10 @@ struct AppRootView: View {
                 unavailableGate(title: "Action Blocked",
                                 message: "The previous cleanup did not complete. Try again.")
 
+            case .bootstrapFailed:
+                unavailableGate(title: "Startup Failed",
+                                message: "Echo could not initialize its local storage. Reinstall Echo or restart the device.")
+
             default:
                 mainTabs
             }
