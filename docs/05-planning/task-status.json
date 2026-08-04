@@ -998,7 +998,13 @@
           ],
           "last_updated": "2026-08-04T16:07:24Z",
           "notes": "✅ 3F.1 实现完成 (2026-08-04)。AppComposition composition root + AppStartupState 状态机；ConsentStoreActor deny-by-default 同意持久化 (ConsentStore 表)；revokeConsent 事务性清除 (PurgeBoundary + blocked + purgeFailed 审计 + 审计自擦除 US-PRV-005 AC-7)；AuditLog contentHash 列 (hash-only) + 必填字段 NOT NULL + 30 天清理 + NSFileProtectionComplete；OnboardingViewModel/SettingsViewModel 生产接线。测试：focused 19/19，全量回归 753 tests / 85 suites 0 失败，SwiftLint exit 0，R-007/网络扫描 clean。DEF-45-002 以 purge evidence 关闭（deferred-items.json resolved_deferred）。Release simulator build 存在基线（dev-1.0）同样复现的 simulateError #Preview 编译错误，非本任务引入。",
-          "pr": null
+          "pr": {
+            "number": 50,
+            "url": "https://github.com/logan-suu/Echo/pull/50",
+            "head": "feature/phase3f-production-composition-3F.1",
+            "base": "dev-1.0",
+            "created_at": "2026-08-04T16:09:00Z"
+          }
         },
         {
           "id": "3F.2",
