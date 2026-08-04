@@ -11,6 +11,7 @@ This index is created by `3F.0` and maintained by every Phase 3F task. It contai
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead `/private/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/echo-phase3f-worktree-y6ykylt6/3F.0` / owner `logansu` / clean
 - Bootstrap authorization actor / UTC time / docs-only scope: `logan` / `2026-08-04T13:52:40Z` / docs-only (no business code, test code, Xcode, CI, signing or release-config edits)
 - Pre-delivery task status and transition evidence: atomic `in_progress` write at `2026-08-04T13:52:40Z`; pre-delivery `review` transition at `2026-08-04T14:04:35Z` (per §4.2, before §6.2.2)
+- Post-merge evidence: PR #49 merged into `dev-1.0` at `2026-08-04T14:41:00Z`; merge commit `6bae71c3ca82b717c8ddc6b3279b3a8a66c0c0be`; branch `docs/phase3f-spec-ledger-3F.0` preserved (not deleted, per §3.1.1); `3F.0` recorded `done` with `merged_at` in `task-status.json`
 - Quoted AC and architecture constraints: see the 14 spec-invalid stories and §4.2.1 ownership repair recorded in the execution plan; AGENTS.md R-001..R-008 and D-001..D-005 preserved
 - RED test command and observed failure: n/a — 3F.0 is docs-only and has no focused source test (`§6.1`)
 - Focused test command / exit / passed count: n/a — docs-only

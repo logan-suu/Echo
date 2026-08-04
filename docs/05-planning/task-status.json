@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-04T13:52:40Z",
+  "last_updated": "2026-08-04T14:42:11Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -851,7 +851,7 @@
             "US-PRV-005",
             "US-PRV-007"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "Technical Program Lead",
             "approver": "Product and Architecture Lead"
@@ -917,14 +917,16 @@
             "66 个故事全部进入 phase3f-story-matrix.md 的任务或批准延期",
             "三个 UIAutomation policy 保留停止条件并授权 Phase 3F 路径"
           ],
-          "last_updated": "2026-08-04T14:06:28Z",
+          "last_updated": "2026-08-04T14:42:11Z",
           "notes": "Creates the canonical tracked plan from the current instruction, the story matrix from Appendix C, and the evidence-index skeleton.",
           "pr": {
             "number": 49,
             "url": "https://github.com/logan-suu/Echo/pull/49",
             "head": "docs/phase3f-spec-ledger-3F.0",
             "base": "dev-1.0"
-          }
+          },
+          "merged_at": "2026-08-04T14:41:00Z",
+          "merge_commit": "6bae71c3ca82b717c8ddc6b3279b3a8a66c0c0be"
         },
         {
           "id": "3F.1",
@@ -938,7 +940,7 @@
             "US-SRC-001",
             "US-RES-004"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "iOS Platform Lead",
             "approver": "Privacy Engineering Lead"
@@ -994,7 +996,7 @@
             "Privacy approver 对 deny-by-default、事务清除与 audit contract 签字",
             "evidence index 中的 commit、命令和制品索引"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
+          "last_updated": "2026-08-04T14:42:11Z",
           "notes": "Closes DEF-45-002 only with purge evidence.",
           "pr": null
         },
@@ -1060,7 +1062,7 @@
             "US-RES-004",
             "US-SRC-011"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "On-device ML Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1102,7 +1104,7 @@
             "US-SRC-011 model-semantics reference outputs",
             "参考输出、损坏恢复与零网络证据"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
+          "last_updated": "2026-08-04T14:42:11Z",
           "notes": "Migrated from 4.21 and 4.22; ADR-009 governs.",
           "pr": null,
           "migrated_from": [
@@ -2296,61 +2298,66 @@
           "id": "5.6",
           "title": "R-3.9 挑战者：PP-OCRv6 备选 OCR 路线",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/PPOCRv6ChallengeTests.swift",
           "notes": "R-3.9 挑战者赛道。对照 Apple Vision OCR，评估中文场景增益",
           "migrated_from": [
             "4.12"
-          ]
+          ],
+          "last_updated": "2026-08-04T14:42:11Z"
         },
         {
           "id": "5.7",
           "title": "R-3.9 挑战者：Echo 自有蒸馏双语重排器训练管线",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/BilingualRerankerTests.swift",
           "notes": "R-3.9 挑战者赛道。训练样本全部自有或已授权，固定 shape Core ML 转换，12-24 候选重排 P95 达标",
           "migrated_from": [
             "4.13"
-          ]
+          ],
+          "last_updated": "2026-08-04T14:42:11Z"
         },
         {
           "id": "5.8",
           "title": "R-3.9 挑战者：Qwen3-Embedding-0.6B 4-bit 挑战赛（MLX Swift 实机）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/Qwen3EmbeddingChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.8 冲突未落地）。门禁：法律（Apache-2.0 SBOM）+ 质量（同集对 E5 增益）+ 设备（MLX 实机）+ 迁移。",
           "migrated_from": [
             "4.23"
-          ]
+          ],
+          "last_updated": "2026-08-04T14:42:11Z"
         },
         {
           "id": "5.9",
           "title": "R-3.9 挑战者：EmbeddingGemma Q4 挑战赛（gated terms 审查 + 实机评测）",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/EmbeddingGemmaChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.9 冲突未落地）。门禁：法律（gated terms 下游义务）+ 质量 + 设备 + 迁移。",
           "migrated_from": [
             "4.24"
-          ]
+          ],
+          "last_updated": "2026-08-04T14:42:11Z"
         },
         {
           "id": "5.10",
           "title": "R-3.9 挑战者：WhisperKit runtime 对照实验",
           "story": null,
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [],
           "test_file": "EchoTests/Phase4/WhisperKitChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.11 冲突未落地）。对照 whisper.cpp 路线，评估 Core ML runtime 性能差异。",
           "migrated_from": [
             "4.25"
-          ]
+          ],
+          "last_updated": "2026-08-04T14:42:11Z"
         },
         {
           "id": "5.11",
