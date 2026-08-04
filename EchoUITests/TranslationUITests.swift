@@ -21,7 +21,7 @@ final class TranslationUITests: XCTestCase {
     @MainActor
     func test_highConfidenceToggleShowsTranslation() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-fixture", "translation-zh-en-high"]
+        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "translation-zh-en-high"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -47,7 +47,7 @@ final class TranslationUITests: XCTestCase {
     @MainActor
     func test_lowConfidenceRetainsOriginal() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-fixture", "translation-zh-en-low"]
+        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "translation-zh-en-low"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -70,7 +70,7 @@ final class TranslationUITests: XCTestCase {
     @MainActor
     func test_errorFixtureShowsRetry() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-fixture", "translation-error"]
+        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "translation-error"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()

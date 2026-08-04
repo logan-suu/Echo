@@ -52,8 +52,13 @@ struct AppRootView: View {
     var body: some View {
         Group {
             switch composition.startupState {
-            case .requiresConsent, .consentDeclined:
+            case .requiresConsent:
                 onboardingGate
+
+            case .consentDeclined:
+                // 拒绝同意 = 终态：显示拒绝占位而非引导 cover（避免 Close 后 cover 死循环重现）
+                unavailableGate(title: "Consent Declined",
+                                message: "Echo cannot process your memories without consent. Reopen Echo to review the privacy policy.")
 
             case .modelUnavailable:
                 unavailableGate(title: "Models Unavailable",

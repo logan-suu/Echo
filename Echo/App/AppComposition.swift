@@ -93,6 +93,14 @@ public final class AppComposition {
             try await databaseManager.open()
             try await consentStore.loadState()
             try await privacyActor.loadPolicy()
+            // UI 测试/预览 (DEBUG only)：-ui-skip-consent 跳过 deny-by-default 门控，
+            // 直接进入主界面（fixture 驱动的 XCUITest 依赖无门控启动路径）
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-ui-skip-consent") {
+                startupState = .ready
+                return
+            }
+            #endif
             // 生产装配启用 deny-by-default 同意闸门
             await privacyActor.enableConsentEnforcement(consentStore: consentStore)
 
