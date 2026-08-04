@@ -269,4 +269,31 @@ struct OnboardingTests {
         #expect(vm.viewState == .declined)
         #expect(await store.hasConsented() == false)
     }
+
+    @Test("acceptPrivacy with empty permissionSteps skips to language (production path, no fixture)")
+    func test_3f1_acceptPrivacy_emptyPermissionSteps_skipsToLanguage() {
+        // 复现生产装配路径: 无 loadFixture → permissionSteps 保持为空 (AppRootView 生产构造)
+        let vm = OnboardingViewModel()
+        vm.start()
+        #expect(vm.viewState == .privacyConsent)
+        #expect(vm.permissionSteps.isEmpty)
+
+        vm.acceptPrivacy()
+
+        // 空 permissionSteps 时跳过 permissions 页，避免 TabView 渲染 EmptyView 卡死引导流程
+        #expect(vm.viewState == .language)
+        // 跨页跳转不依赖 onAppear：默认语言必须在 acceptPrivacy 内显式初始化，Continue 才能启用
+        #expect(vm.selectedLanguage != nil)
+    }
+
+    @Test("acceptPrivacy with non-empty permissionSteps still advances to permissions (fixture path)")
+    func test_3f1_acceptPrivacy_nonEmptyPermissionSteps_advancesToPermissions() {
+        let vm = OnboardingViewModel()
+        vm.loadFixture("onboarding-privacy-consent")
+        #expect(vm.permissionSteps.count == 4)
+
+        vm.acceptPrivacy()
+
+        #expect(vm.viewState == .permissions(0))
+    }
 }

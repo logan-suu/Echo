@@ -38,7 +38,8 @@ struct AppRootView: View {
     @State private var composition = AppComposition.shared
 
     /// 引导流程 ViewModel — 首次启动五步引导 (Task 3.11)
-    @State private var onboardingViewModel = OnboardingViewModel()
+    /// 3F.1 修复: 注入 composition.consentStore，同意即时持久化 (US-PRV-008 AC-4)
+    @State private var onboardingViewModel = OnboardingViewModel(consentStore: AppComposition.shared.consentStore)
 
     /// 引导流程是否展示 (fullScreenCover, echo-memory-canvas §15.1)
     @State private var isOnboardingPresented = false

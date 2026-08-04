@@ -148,6 +148,8 @@ final class OnboardingViewModel {
     /// Step 2: 同意隐私政策 → 进入权限序列 (US-PRV-008 AC-3)。
     ///
     /// 3F.1: 若已注入 consentStore，同意持久化到 ConsentStore (US-PRV-008 AC-4)。
+    /// 3F.1 修复: 生产路径无权限源 (permissionSteps 为空) 时跳过 permissions 直接进语言选择，
+    /// 避免 TabView 渲染 EmptyView 页导致引导流程卡死。
     func acceptPrivacy() {
         guard viewState == .privacyConsent else { return }
         if let consentStore {
@@ -156,7 +158,14 @@ final class OnboardingViewModel {
                 consentPersisted = true
             }
         }
-        viewState = .permissions(0)
+        if permissionSteps.isEmpty {
+            // 生产路径无权限源: 跳过 permissions 直接进语言选择
+            viewState = .language
+            // TabView 跨页跳转时 languagePage.onAppear 可能不触发，显式初始化默认语言
+            applyDefaultLanguage()
+        } else {
+            viewState = .permissions(0)
+        }
     }
 
     /// Step 2: 拒绝隐私政策 → declined 退出态 (US-PRV-008 AC-3)。
@@ -244,7 +253,10 @@ final class OnboardingViewModel {
     ///
     /// 🔮 Phase 3.9: ModelLoaderActor 真实加载进度。当前 fixture 模式模拟 determinate 进度。
     func beginLoad() {
-        guard case .language = viewState, selectedLanguage != nil else { return }
+        guard case .language = viewState else { return }
+        // 兜底: 跨页跳转可能未触发 onAppear 初始化，点 Continue 时补设默认语言
+        if selectedLanguage == nil { applyDefaultLanguage() }
+        guard selectedLanguage != nil else { return }
         viewState = .modelLoading(0.0)
         startModelLoad()
     }
