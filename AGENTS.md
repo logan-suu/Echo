@@ -1450,6 +1450,7 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 - 🔒 **no-overwrite 与停止条件保留**：`UIAutomation/Policies/*` 的停止条件、受保护资产、重试上限、no-overwrite 与 no-media 规则全部保持原样；本授权不覆盖现有工作、不绕过门禁、不执行人类专属操作
 - 🔐 **`3F.0` bootstrap 例外**：`3F.0` 本身是 docs-only bootstrap，必须由目标机器人类显式授权（`PHASE3F_BOOTSTRAP_AUTHORIZATION=human-approved-docs-only` + `PHASE3F_BOOTSTRAP_AUTHORIZED_BY` + `PHASE3F_BOOTSTRAP_AUTHORIZED_AT`）才能执行；只允许 §4.5/§4.6.0/3F.0 Files 清单中的文档、planning、policy、command 与状态 schema 变更及唯一一份 docs-only PR
 - 🔒 **Phase 4 锁定**：Phase 4（`entry_gate: "3F.11"`）在 `3F.11` 人类合并前保持 `backlog`；`current_phase` 只在 `3F.11` 合并后由人类触发的 finalizer（`3F.finalize`）改为 `"4"`。Agent 不得在 `3F.11 == done` 前级联 Phase 4 为 `ready`，也不得在 `3F.11` PR 内记录 merge SHA 或声明 Phase 4 解锁
+- 🔧 **分支执行模式（人类批准 2026-08-04）**：Phase 3F 任务（3F.1~3F.11）在**主仓库内普通分支**执行（`git checkout -b {type}/{description}-US-XXX`），**不创建隔离 worktree**；`docs/05-planning/phase3f-execution-plan.md` §6.2.1 的 worktree setup **仅适用于 `3F.0` bootstrap**（已执行完毕），后续任务不再运行该 setup 脚本。§6.2.2 交付脚本继续使用，`PHASE3F_WORKTREE_PATH` 设为主仓库根路径（其 workdir/root 守卫等效通过）
 
 ---
 

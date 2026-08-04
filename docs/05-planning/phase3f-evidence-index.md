@@ -8,7 +8,7 @@ This index is created by `3F.0` and maintained by every Phase 3F task. It contai
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR: `3F.0` / `docs(phase3f-spec-ledger-3F.0)` / `docs/phase3f-spec-ledger-3F.0` / created at delivery
-- Registered worktree path / ownership / clean rebase result: `/private/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/echo-phase3f-worktree-y6ykylt6/3F.0` / owner `logansu` / clean
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead `/private/var/folders/_r/6dh_2jf542d4p97jl9nqwk480000gn/T/echo-phase3f-worktree-y6ykylt6/3F.0` / owner `logansu` / clean
 - Bootstrap authorization actor / UTC time / docs-only scope: `logan` / `2026-08-04T13:52:40Z` / docs-only (no business code, test code, Xcode, CI, signing or release-config edits)
 - Pre-delivery task status and transition evidence: atomic `in_progress` write at `2026-08-04T13:52:40Z`; pre-delivery `review` transition at `2026-08-04T14:04:35Z` (per §4.2, before §6.2.2)
 - Quoted AC and architecture constraints: see the 14 spec-invalid stories and §4.2.1 ownership repair recorded in the execution plan; AGENTS.md R-001..R-008 and D-001..D-005 preserved
@@ -21,6 +21,7 @@ This index is created by `3F.0` and maintained by every Phase 3F task. It contai
 - Files and documentation changed: the exhaustive `3F.0` Files list (Modify + Create) in the execution plan `§7` and `§4.6.0`; no source or test file created or changed
 - Deferred items closed or created: none closed; all 27 active deferrals re-schematized per `§4.4` (`owners`, `target_tasks`, `acceptance_evidence`, `tracking_status: open`, `recheck_trigger`)
 - Known risks that do not weaken an in-scope gate: the ledger schema changed from integer phase ids to string phase ids plus explicit `previous_phase_id`/`next_phase_id`/`integration_task_id`; all commands were updated to exact string lookup, so no numeric inference remains
+- Process deviation (human-approved 2026-08-04, recorded in AGENTS.md §17.9 and execution-plan §6.2.1): 3F.0 used the mandated registered worktree (documented above); 3F.1~3F.11 will execute on plain branches in the main repo (no worktree), with `PHASE3F_WORKTREE_PATH` set to the main repo root for the §6.2.2 delivery script
 
 <!-- PR-BODY:3F.0:START -->
 ## Overview
@@ -67,6 +68,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 - Ledger schema change (integer to string phase ids) is a breaking change for any tool that inferred phase by numeric comparison; all in-repo commands were migrated to exact string lookup, and UI patterns match exact `"3"` only.
 - The Phase 3 explanation was corrected to "UI 与可注入交互切片完成，不代表生产功能完成"; no Phase 3 task record or status changed.
 - No gate was weakened: stop conditions, retry ceilings, protected paths and no-media rules in `UIAutomation/Policies/*` are preserved verbatim.
+- Process deviation (human-approved 2026-08-04, recorded in AGENTS.md §17.9 and execution-plan §6.2.1): 3F.0 used the mandated registered worktree; 3F.1~3F.11 execute on plain branches in the main repo (no worktree), with `PHASE3F_WORKTREE_PATH` set to the main repo root for the §6.2.2 delivery script.
 
 ## Deferred Items
 - No deferral closed by 3F.0.
@@ -89,7 +91,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -137,7 +139,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -185,7 +187,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -233,7 +235,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -281,7 +283,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -329,7 +331,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -377,7 +379,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -425,7 +427,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -473,7 +475,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -521,7 +523,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:
@@ -569,7 +571,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 
 ## Phase 3F Task Evidence
 - Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result:
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence:
 - Quoted AC and architecture constraints:

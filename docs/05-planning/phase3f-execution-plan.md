@@ -767,6 +767,8 @@ xcodebuild test \
 
 #### 6.2.1 Branch/worktree setup（仅 preflight）
 
+> 🔧 **修订（人类批准 2026-08-04，记录于 AGENTS.md §17.9）**：本 worktree setup **仅适用于 `3F.0` bootstrap**（已执行完毕）。`3F.1` 至 `3F.11` 在**主仓库内普通分支**执行（`git checkout -b {type}/{description}-US-XXX`），**不再创建 worktree**，不再运行本脚本；§6.2.2 交付脚本继续使用，其 `PHASE3F_WORKTREE_PATH` 设为主仓库根路径（workdir/root 守卫等效通过）。
+
 下列脚本是 task ledger transition 之前的 environment setup。必须从 clean repository root 运行；它只执行 guard、fetch、registered worktree ownership validation、`git worktree add`/reuse 与 task-worktree rebase，不 stage、commit、push 或创建/更新 PR。`3F.0` 还必须由目标机器上的人类先提供 §1.1 三个显式授权值。技能缺失不影响此 fallback。
 
 ```
