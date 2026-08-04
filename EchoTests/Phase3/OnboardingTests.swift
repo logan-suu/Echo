@@ -227,4 +227,46 @@ struct OnboardingTests {
         #expect(vm.permissionSteps.isEmpty)
         #expect(vm.selectedLanguage == nil)
     }
+
+    // MARK: - 3F.1: Consent persistence (US-PRV-008 AC-4, ADR-007 §决策-2)
+
+    @Test("acceptPrivacy with consentStore persists consent (US-PRV-008 AC-4)")
+    func test_3f1_acceptPrivacy_persistsConsent() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM ConsentStore")
+        let store = ConsentStoreActor(db: db, privacyActor: PrivacyActor.shared)
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0, consentStore: store)
+        vm.loadFixture("onboarding-privacy-consent")
+        vm.acceptPrivacy()
+
+        #expect(vm.viewState == .permissions(0))
+        // 等待异步持久化收敛
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline {
+            // 用全新实例验证 SQLite 已落盘（relaunch 语义，避免同实例内存态掩蔽）
+            let fresh = ConsentStoreActor(db: db, privacyActor: PrivacyActor.shared)
+            try await fresh.loadState()
+            if await fresh.hasConsented() { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        let fresh = ConsentStoreActor(db: db, privacyActor: PrivacyActor.shared)
+        try await fresh.loadState()
+        #expect(await fresh.hasConsented() == true)
+        #expect(vm.consentPersisted == true)
+    }
+
+    @Test("declinePrivacy does not persist consent (deny-by-default)")
+    func test_3f1_declinePrivacy_noConsent() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM ConsentStore")
+        let store = ConsentStoreActor(db: db, privacyActor: PrivacyActor.shared)
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0, consentStore: store)
+        vm.loadFixture("onboarding-privacy-consent")
+        vm.declinePrivacy()
+
+        #expect(vm.viewState == .declined)
+        #expect(await store.hasConsented() == false)
+    }
 }

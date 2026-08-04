@@ -106,132 +106,6 @@ public struct UserPolicy: Sendable, Codable {
     }
 }
 
-// MARK: - Audit Event
-
-/// 审计事件类型 — 对应 AGENTS.md §7.3 审计事件完整清单
-public enum AuditEvent: String, Sendable, Codable {
-    case dataSourceConnected
-    case autoImportCompleted
-    case scheduledScanCompleted
-    case personSynced
-    case deviceMigrationCompleted
-    case permissionChanged
-    case excluded
-    case excludedRestored
-    case excludedBatchRestored
-    case excludedAutoCleaned
-    case excludedChangeDetected
-    case excludedRestoreFailedFileMissing
-    case dataSourceChangeSynced
-    case manualChangeDetectionCompleted
-    case memoryIngested
-    case imageIngested
-    case videoIngested
-    case voiceIngested
-    case memoryDeleted
-    case cascadeDeleteFromOriginal
-    case memoryEdited
-    case feedbackReceived
-    case feedbackReset
-    case feedbackRevoked
-    case badCaseMarked
-    case badCaseRevoked
-    case modelLoadFailed
-    case modelLoadRetrySuccess
-    case backgroundTaskInterrupted
-    case retryPending
-    case syncConflict
-    case reauthorized
-    case retrieval
-    case contextualAwakening
-    case emotionalAwakening
-}
-
-// MARK: - Audit Log Entry
-
-/// 审计日志条目 — 对应 AGENTS.md §5.4 审计日志契约
-///
-/// 强制字段: eventType, timestamp, traceID, policyVersion, success
-/// 可选字段: sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs
-/// 隐私保护: 仅记录哈希摘要，禁止原文
-public struct AuditLogEntry: Sendable, Codable {
-    public nonisolated let id: Int64
-    public nonisolated let eventType: AuditEvent
-    public nonisolated let timestamp: Date
-    public nonisolated let traceID: String
-    public nonisolated let policyVersion: Int
-    public nonisolated let success: Bool
-    public nonisolated let sourceType: String?
-    public nonisolated let affectedCount: Int?
-    public nonisolated let excludedWritten: Bool?
-    public nonisolated let sourceLanguage: String?
-    public nonisolated let elapsedMs: Int?
-    /// 视频摄入关键帧数（US-ING-005 AC-5）
-    public nonisolated let frameCount: Int?
-    /// 视频音频转写字符长度（US-ING-005 AC-5）
-    public nonisolated let audioTranscriptLength: Int?
-    /// 视频是否含音频轨道（US-ING-005 AC-5）
-    public nonisolated let hasAudio: Bool?
-
-    public nonisolated init(
-        id: Int64 = 0,
-        eventType: AuditEvent,
-        timestamp: Date = Date(),
-        traceID: String,
-        policyVersion: Int,
-        success: Bool = true,
-        sourceType: String? = nil,
-        affectedCount: Int? = nil,
-        excludedWritten: Bool? = nil,
-        sourceLanguage: String? = nil,
-        elapsedMs: Int? = nil,
-        frameCount: Int? = nil,
-        audioTranscriptLength: Int? = nil,
-        hasAudio: Bool? = nil
-    ) {
-        self.id = id
-        self.eventType = eventType
-        self.timestamp = timestamp
-        self.traceID = traceID
-        self.policyVersion = policyVersion
-        self.success = success
-        self.sourceType = sourceType
-        self.affectedCount = affectedCount
-        self.excludedWritten = excludedWritten
-        self.sourceLanguage = sourceLanguage
-        self.elapsedMs = elapsedMs
-        self.frameCount = frameCount
-        self.audioTranscriptLength = audioTranscriptLength
-        self.hasAudio = hasAudio
-    }
-
-    /// 从数据库查询结果行构造 AuditLogEntry（用于 fetchAuditLogs）
-    public nonisolated static func fromRow(_ row: [String: DBValue]) -> AuditLogEntry? {
-        guard let etStr = row["eventType"]?.stringValue,
-              let eventType = AuditEvent(rawValue: etStr),
-              let ts = row["timestamp"]?.doubleValue,
-              let traceID = row["traceID"]?.stringValue,
-              let pv = row["policyVersion"]?.intValue,
-              let successInt = row["success"]?.intValue else { return nil }
-        return AuditLogEntry(
-            id: row["id"]?.intValue ?? 0,
-            eventType: eventType,
-            timestamp: Date(timeIntervalSince1970: ts),
-            traceID: traceID,
-            policyVersion: Int(pv),
-            success: successInt != 0,
-            sourceType: row["sourceType"]?.stringValue,
-            affectedCount: row["affectedCount"]?.intValue.map(Int.init),
-            excludedWritten: row["excludedWritten"]?.intValue.map { $0 != 0 },
-            sourceLanguage: row["sourceLanguage"]?.stringValue,
-            elapsedMs: row["elapsedMs"]?.intValue.map(Int.init),
-            frameCount: row["frameCount"]?.intValue.map(Int.init),
-            audioTranscriptLength: row["audioTranscriptLength"]?.intValue.map(Int.init),
-            hasAudio: row["hasAudio"]?.intValue.map { $0 != 0 }
-        )
-    }
-}
-
 // MARK: - Privacy Actor
 
 /// 隐私校验与审计 Actor — 管理 UserPolicy，提供 Pipeline 入口的授权校验（PrivacyCheckpoint）。
@@ -273,11 +147,38 @@ public actor PrivacyActor {
     /// 策略是否已从数据库加载
     private var policyLoaded = false
 
+    // MARK: - Consent Gate (3F.1, ADR-007 §决策-2)
+
+    private var consentEnforcementEnabled = false
+    private var consentStore: ConsentStoreActor?
+
     // MARK: - Initialization
 
-    private init(db: DatabaseManager = .shared, policy: UserPolicy = UserPolicy()) {
+    internal init(db: DatabaseManager = .shared, policy: UserPolicy = UserPolicy()) {
         self.db = db
         self.policy = policy
+    }
+
+    // MARK: - Consent Enforcement (3F.1)
+
+    public func enableConsentEnforcement(consentStore: ConsentStoreActor) {
+        self.consentStore = consentStore
+        self.consentEnforcementEnabled = true
+    }
+
+    public func disableConsentEnforcement() {
+        self.consentEnforcementEnabled = false
+        self.consentStore = nil
+    }
+
+    public func isConsentEnforcementEnabled() -> Bool {
+        consentEnforcementEnabled
+    }
+
+    private func consentDecision() async -> PrivacyDecision? {
+        guard consentEnforcementEnabled, let store = consentStore else { return nil }
+        let consented = await store.hasConsented()
+        return consented ? .allowed : .denied
     }
 
     // MARK: - Policy Persistence
@@ -384,6 +285,28 @@ public actor PrivacyActor {
         let startTime = Date()
         await ensurePolicyLoaded()
 
+        // deny-by-default 同意闸门 (3F.1, ADR-007 §决策-2)
+        if let consentDecision = await consentDecision() {
+            let checkpoint = PrivacyCheckpoint(
+                traceID: traceID,
+                timestamp: Date(),
+                operation: operation,
+                policyVersion: policy.policyVersion,
+                sourceTypes: sourceTypes,
+                decision: consentDecision
+            )
+            let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+            try? await writeAuditLog(
+                eventType: .permissionChanged,
+                traceID: traceID,
+                policyVersion: policy.policyVersion,
+                success: consentDecision == .allowed,
+                sourceType: sourceTypes.isEmpty ? "consent" : sourceTypes.joined(separator: ","),
+                elapsedMs: elapsedMs
+            )
+            return checkpoint
+        }
+
         // 检查所有涉及的数据源是否均已授权
         let allAuthorized = sourceTypes.isEmpty || sourceTypes.allSatisfy { policy.isAuthorized(sourceType: $0) }
         let decision: PrivacyDecision = allAuthorized ? .allowed : .denied
@@ -438,12 +361,15 @@ public actor PrivacyActor {
         elapsedMs: Int? = nil,
         frameCount: Int? = nil,
         audioTranscriptLength: Int? = nil,
-        hasAudio: Bool? = nil
+        hasAudio: Bool? = nil,
+        content: String? = nil
     ) async throws {
+        // hash-only: 内容字段在持久化前哈希 (AGENTS.md §5.4)
+        let contentHash = content.map { AuditContentHasher.sha256Hex($0) }
         try await db.executeWrite(
             sql: """
-                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             bindings: [
                 .text(eventType.rawValue),
@@ -459,6 +385,7 @@ public actor PrivacyActor {
                 frameCount.map { .int(Int64($0)) } ?? .null,
                 audioTranscriptLength.map { .int(Int64($0)) } ?? .null,
                 hasAudio.map { .int($0 ? 1 : 0) } ?? .null,
+                contentHash.map { .text($0) } ?? .null,
             ]
         )
     }
@@ -486,7 +413,7 @@ public actor PrivacyActor {
             sql = """
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
-                       frameCount, audioTranscriptLength, hasAudio
+                       frameCount, audioTranscriptLength, hasAudio, contentHash
                 FROM AuditLog WHERE eventType = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.text(eventType.rawValue), .int(Int64(limit)), .int(Int64(offset))]
@@ -494,7 +421,7 @@ public actor PrivacyActor {
             sql = """
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
-                       frameCount, audioTranscriptLength, hasAudio
+                       frameCount, audioTranscriptLength, hasAudio, contentHash
                 FROM AuditLog ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.int(Int64(limit)), .int(Int64(offset))]
@@ -507,6 +434,21 @@ public actor PrivacyActor {
     public func auditLogCount() async throws -> Int {
         let rows = try await db.executeQuery(sql: "SELECT COUNT(*) AS cnt FROM AuditLog", bindings: [])
         return rows.first?["cnt"]?.intValue.map(Int.init) ?? 0
+    }
+
+    /// 记录记忆永久保留策略评估审计 (US-PRV-006 AC-6)。
+    ///
+    /// 内容以 hash-only 存储：mediaExempt=true, textExempt=true, autoExpiry=false。
+    public func evaluateRetentionPolicy(traceID: String = UUID().uuidString) async throws {
+        let payload = #"{"mediaExempt":true,"textExempt":true,"autoExpiry":false}"#
+        try await writeAuditLog(
+            eventType: .retentionPolicyEvaluated,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: true,
+            sourceType: "retention",
+            content: payload
+        )
     }
 
     // MARK: - Policy Management

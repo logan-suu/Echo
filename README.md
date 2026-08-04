@@ -300,6 +300,8 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 
 **目标**：在默认 Echo App 路径上完成生产功能闭环（同意、真实来源、真实模型、规范存储、摄入、检索、反馈、编辑/删除、唤醒、翻译/创作、重启恢复），以 **3F.11 的无 fixture 生产 E2E 门禁** 作为 Phase 4 的唯一入口。
 
+> **3F.1 已交付（2026-08-04）**：生产 composition root（`Echo/App/AppComposition.swift`）+ deny-by-default 同意（`ConsentStoreActor`，版本与时间戳持久化）+ 事务性撤回/清除（`PurgeBoundary`，失败进 blocked 并写审计）+ 审计存储契约（必填字段 / hash-only `contentHash` / 30 天清理 / NSFileProtectionComplete）+ 显式启动状态（`requiresConsent` / `ready` / `modelUnavailable` / `routeUnavailable` / `indexUnavailable` / `purgeBlocked`）。无 CloudKit。
+
 **12 个任务（3F.0..3F.11）**：
 - **3F.0** 规格、范围、账本与接口冻结（docs-only bootstrap）
 - **3F.1** Production composition、首次启动、同意与隐私

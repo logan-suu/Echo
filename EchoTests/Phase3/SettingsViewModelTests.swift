@@ -161,4 +161,52 @@ struct SettingsViewModelTests {
         vm.exportAuditLog()
         #expect(vm.showExportInProgress == true)
     }
+
+    // MARK: - 3F.1: Revoke consent (US-PRV-008 AC-5, ADR-007 §决策-3)
+
+    @Test func requestRevokeConsentShowsConfirmation() async throws {
+        let vm = SettingsViewModel()
+        #expect(vm.showRevokeConsentConfirmation == false)
+        vm.requestRevokeConsent()
+        #expect(vm.showRevokeConsentConfirmation == true)
+    }
+
+    @Test func confirmRevokeConsentWithoutCompositionReportsUnavailable() async throws {
+        let vm = SettingsViewModel(composition: nil)
+        vm.requestRevokeConsent()
+        await vm.confirmRevokeConsent()
+        guard case .error(.l2Recoverable(let message)) = vm.state else {
+            Issue.record("Expected l2Recoverable error, got \(vm.state)")
+            return
+        }
+        #expect(message.contains("unavailable"))
+    }
+
+    @Test func confirmRevokeConsentWithCompositionTriggersPurge() async throws {
+        let db = DatabaseManager.shared
+        let privacy = PrivacyActor(db: db)
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM ConsentStore")
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        let store = ConsentStoreActor(db: db, privacyActor: privacy)
+        try await store.acceptConsent(consentVersion: 1, policyVersion: 1)
+        let composition = AppComposition(
+            databaseManager: db,
+            privacyActor: privacy,
+            consentStore: store
+        )
+        await composition.bootstrap()
+        #expect(composition.startupState == .ready)
+
+        let vm = SettingsViewModel(composition: composition)
+        vm.requestRevokeConsent()
+        #expect(vm.showRevokeConsentConfirmation == true)
+        await vm.confirmRevokeConsent()
+
+        #expect(vm.showRevokeConsentConfirmation == false)
+        #expect(composition.startupState == .requiresConsent)
+        #expect(await store.hasConsented() == false)
+
+        await privacy.disableConsentEnforcement()
+    }
 }

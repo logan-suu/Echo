@@ -143,6 +143,8 @@ public actor DatabaseManager {
         try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN frameCount INTEGER")
         try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN audioTranscriptLength INTEGER")
         try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN hasAudio INTEGER")
+        // v4 schema migration (3F.1): add hash-only content column (AGENTS.md §5.4)
+        try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN contentHash TEXT")
         // UserPolicy persistence table
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS UserPolicyStore (
@@ -230,7 +232,40 @@ public actor DatabaseManager {
                 updatedAt REAL NOT NULL
             )
             """)
+        // 同意状态表 (3F.1, ADR-007 §决策-2): deny-by-default 同意版本与时间戳持久化
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS ConsentStore (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                hasConsented INTEGER NOT NULL DEFAULT 0,
+                consentVersion INTEGER NOT NULL DEFAULT 1,
+                consentedAt REAL,
+                policyVersion INTEGER NOT NULL DEFAULT 1,
+                updatedAt REAL NOT NULL
+            )
+            """)
     }
+
+    // MARK: - Transaction Support (3F.1, ADR-007 §决策-3)
+
+    /// 开启事务（用于事务性撤回/清除）
+    public func beginTransaction() throws {
+        try execute(sql: "BEGIN TRANSACTION")
+    }
+
+    /// 提交事务
+    public func commitTransaction() throws {
+        try execute(sql: "COMMIT")
+    }
+
+    /// 回滚事务
+    public func rollbackTransaction() throws {
+        try execute(sql: "ROLLBACK")
+    }
+
+    // MARK: - Database URL
+
+    /// SQLite 数据库文件 URL（测试/审计用，NSFileProtectionComplete 校验）
+    public nonisolated var databaseURL: URL { dbURL }
 
     // MARK: - Generic SQL Execution
 

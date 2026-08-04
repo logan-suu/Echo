@@ -940,7 +940,7 @@
             "US-SRC-001",
             "US-RES-004"
           ],
-          "status": "ready",
+          "status": "review",
           "owner": {
             "implementation": "iOS Platform Lead",
             "approver": "Privacy Engineering Lead"
@@ -996,8 +996,8 @@
             "Privacy approver 对 deny-by-default、事务清除与 audit contract 签字",
             "evidence index 中的 commit、命令和制品索引"
           ],
-          "last_updated": "2026-08-04T14:42:11Z",
-          "notes": "Closes DEF-45-002 only with purge evidence.",
+          "last_updated": "2026-08-04T16:07:24Z",
+          "notes": "✅ 3F.1 实现完成 (2026-08-04)。AppComposition composition root + AppStartupState 状态机；ConsentStoreActor deny-by-default 同意持久化 (ConsentStore 表)；revokeConsent 事务性清除 (PurgeBoundary + blocked + purgeFailed 审计 + 审计自擦除 US-PRV-005 AC-7)；AuditLog contentHash 列 (hash-only) + 必填字段 NOT NULL + 30 天清理 + NSFileProtectionComplete；OnboardingViewModel/SettingsViewModel 生产接线。测试：focused 19/19，全量回归 753 tests / 85 suites 0 失败，SwiftLint exit 0，R-007/网络扫描 clean。DEF-45-002 以 purge evidence 关闭（deferred-items.json resolved_deferred）。Release simulator build 存在基线（dev-1.0）同样复现的 simulateError #Preview 编译错误，非本任务引入。",
           "pr": null
         },
         {

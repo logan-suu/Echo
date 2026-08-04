@@ -114,4 +114,54 @@ struct AppViewModelTests {
         #expect(viewModel.selectedTab != initialTab)
         #expect(viewModel.selectedTab == .settings)
     }
+
+    // MARK: - 3F.1: Startup State passthrough (ADR-007 §决策-5)
+
+    @Test("AppViewModel defaults to idle startup state")
+    func testAppViewModel_defaultStartupState() async throws {
+        let viewModel = AppViewModel()
+        #expect(viewModel.startupState == .idle)
+    }
+
+    @Test("updateStartupState reflects composition state")
+    func testAppViewModel_updateStartupState() async throws {
+        let viewModel = AppViewModel()
+        viewModel.updateStartupState(.requiresConsent)
+        #expect(viewModel.startupState == .requiresConsent)
+        viewModel.updateStartupState(.ready)
+        #expect(viewModel.startupState == .ready)
+        viewModel.updateStartupState(.modelUnavailable)
+        #expect(viewModel.startupState == .modelUnavailable)
+    }
+}
+
+// MARK: - AppComposition Tests (3F.1)
+
+@MainActor
+struct AppCompositionStateTests {
+
+    @Test("AppStartupState exposes all unavailable states")
+    func testStartupState_enumCases() async throws {
+        let all: [AppStartupState] = [
+            .idle,
+            .bootstrapping,
+            .requiresConsent,
+            .consentDeclined,
+            .ready,
+            .modelUnavailable,
+            .routeUnavailable,
+            .indexUnavailable,
+            .purgeBlocked,
+        ]
+        #expect(Set(all.map(String.init(describing:))).count == 9)
+    }
+
+    @Test("AppComposition declares dependency graph without side effects")
+    func testAppComposition_dependencyGraph() async throws {
+        let composition = AppComposition()
+        #expect(composition.databaseManager === DatabaseManager.shared)
+        #expect(composition.privacyActor === PrivacyActor.shared)
+        #expect(composition.startupState == .idle)
+        // 不调用 bootstrap()，避免 consent gate 启用影响共享单例
+    }
 }

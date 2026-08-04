@@ -91,47 +91,69 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 ## Entry: 3F.1 — Production composition、首次启动、同意与隐私
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: `3F.1` / commit at delivery / `feature/phase3f-production-composition-3F.1` / created at delivery
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: `in_progress` at `2026-08-04T15:00:59Z`; pre-delivery `review` transition at delivery
+- Quoted AC and architecture constraints: ADR-007 §决策-1 (composition root), §决策-2 (deny-by-default consent), §决策-3 (transactional revoke/purge + PurgeBoundary + blocked + audit), §决策-4 (AuditLog required fields / hash-only / 30-day / NSFileProtectionComplete), §决策-5 (model/route/index-unavailable states), §决策-6 (no CloudKit); AGENTS.md §5.4
+- RED test command and observed failure: `xcodebuild test ... -only-testing:EchoTests/ProductionCompositionTests` — new suite compiled and 2 initial failures observed (purge self-erase count, 30-day boundary) then fixed to GREEN
+- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/ProductionCompositionTests` — 19/19 passed
+- Cumulative test command / exit / passed count: `xcodebuild test ... -only-testing:EchoTests` — 753 tests / 85 suites, 0 failures, exit 0
+- Release simulator and device commands / exits: Release simulator build fails on pre-existing non-DEBUG-gated `simulateError` in `#Preview` blocks (CreationView/MemoryDetailView/SearchView) — identical failure on `dev-1.0` base, out of 3F.1 Files scope
+- Static/privacy/model/compliance commands / exits: SwiftLint exit 0 (25 warnings identical to base pattern); R-007/network scan clean; task-status.json + deferred-items.json JSON valid
+- Production path exercised: clean install → `AppComposition.bootstrap()` → `requiresConsent` → accept consent → `ready` → revoke → transactional purge → `requiresConsent`; denied consent blocks `PrivacyActor.validate` (PrivacyCheckpoint `.denied`)
+- Files and documentation changed: per `§7` 3F.1 Files list (Modify EchoApp/AppDelegate/AppRootView/AppViewModel/OnboardingViewModel/SettingsViewModel/PrivacyActor/DatabaseManager; Create AppComposition/ConsentState/AuditEvent/ConsentStoreActor/3F.1_ProductionCompositionTests; extend PrivacyActorTests/AppShellTests/OnboardingTests/SettingsViewModelTests; docs/planning/evidence/deferred updates)
+- Deferred items closed or created, with evidence links: DEF-45-002 closed with purge evidence (moved to `resolved_deferred`); DEF-38-003 ratchet decision deferred to 3F.11
+- Known risks that do not weaken an in-scope gate: production consent gate is enabled by `AppComposition.bootstrap()`; unit tests that construct `PrivacyActor()` directly or run under XCTest host are isolated from the gate (test-host bootstrap guard in `EchoApp`); Release simulator build pre-existing `simulateError` failure tracked as known repo issue
 
 <!-- PR-BODY:3F.1:START -->
 ## Overview
-<fill with the completed task overview>
+Add the production app composition root, deny-by-default consent, transactional revoke/purge, and the hardened audit-log storage contract (required fields, hash-only content, 30-day cleanup, NSFileProtectionComplete). `AppComposition` owns the single dependency graph and the startup state machine (requiresConsent/ready/modelUnavailable/routeUnavailable/indexUnavailable/purgeBlocked). `ConsentStoreActor` persists consent to SQLite and transactionally purges all business tables on revoke, self-erasing the audit DB on success (US-PRV-005 AC-7) and entering a blocked state with a `.purgeFailed` audit on failure. AuditLog gains a `contentHash` column storing only SHA-256 digests. DEF-45-002 is closed with purge evidence.
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task ID: 3F.1 — Production composition、首次启动、同意与隐私
+- Stories: US-PRV-001, US-PRV-004, US-PRV-005, US-PRV-006, US-PRV-008, US-SRC-001, US-RES-004
+- Documents: docs/decisions/ADR-007-production-composition-consent.md; docs/01-spec/用户故事与验收标准规格书.md; AGENTS.md §5.4; docs/05-planning/phase3f-execution-plan.md §4.6.1/§6.1/§6.2
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| ADR-007 决策-1 | App-owned composition root + startup state machine | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift, EchoTests/Phase3/AppShellTests.swift | Echo/App/AppComposition.swift | ✅ |
+| ADR-007 决策-2 | Deny-by-default consent; version/timestamp persisted; PrivacyCheckpoint `.denied` | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift, EchoTests/Phase2/PrivacyActorTests.swift | Echo/Core/Actors/ConsentStoreActor.swift, PrivacyActor.swift | ✅ |
+| ADR-007 决策-3 | Transactional revoke/purge; PurgeBoundary; blocked + audit on failure | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift | ConsentStoreActor.revokeConsent + DatabaseManager transaction methods | ✅ |
+| ADR-007 决策-4 | AuditLog required NOT NULL fields; hash-only content; 30-day cleanup; NSFileProtectionComplete | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift | DatabaseManager AuditLog migration + contentHash; PrivacyActor.writeAuditLog(content:) | ✅ |
+| ADR-007 决策-5 | Explicit model/route/index-unavailable startup states | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift | AppStartupState + markModel/Route/IndexUnavailable | ✅ |
+| ADR-007 决策-6 | No CloudKit dependency | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift | AppComposition graph | ✅ |
+| US-PRV-008 AC-4/AC-5 | Consent persisted; revoke = purge (DEF-45-002) | EchoTests/Phase3/OnboardingTests.swift, EchoTests/Phase3/SettingsViewModelTests.swift | OnboardingViewModel.acceptPrivacy + SettingsViewModel revoke | ✅ |
+| US-PRV-006 AC-6 | retentionPolicyEvaluated audit (hash content) | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift, PrivacyActorTests.swift | PrivacyActor.evaluateRetentionPolicy | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- Focused: `xcodebuild test ... -only-testing:EchoTests/ProductionCompositionTests` — 19/19 passed.
+- Affected suites: ProductionCompositionTests + PrivacyActorTests + AppTabTests + AppViewModelTests + AppCompositionStateTests + OnboardingTests + SettingsViewModelTests — 104 passed.
+- Cumulative: `xcodebuild test ... -only-testing:EchoTests` — 753 tests / 85 suites, 0 failures, exit 0.
+- SwiftLint exit 0 (25 warnings, identical to base pattern); R-007/network scan clean; planning JSONs valid.
+- Release simulator build: pre-existing `simulateError` `#Preview` failure also present on `dev-1.0` base (out of scope).
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- Created: Echo/App/AppComposition.swift, Echo/Core/Models/ConsentState.swift, Echo/Core/Models/AuditEvent.swift, Echo/Core/Actors/ConsentStoreActor.swift, EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift.
+- Modified: EchoApp.swift (test-host bootstrap guard), AppDelegate.swift, AppRootView.swift, AppViewModel.swift, OnboardingViewModel.swift, SettingsViewModel.swift, PrivacyActor.swift, DatabaseManager.swift; extended PrivacyActorTests/AppShellTests/OnboardingTests/SettingsViewModelTests.
+- Ledger: task-status.json 3F.1 in_progress→review; deferred-items.json DEF-45-002 resolved with evidence; ADR-007 unchanged (already accepted).
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- The production consent gate is enabled by AppComposition.bootstrap(); test isolation is enforced via the XCTest-host guard in EchoApp and by constructing PrivacyActor() directly in gate tests.
+- Release simulator build has a pre-existing, base-reproducible `simulateError` Preview failure unrelated to this task; tracked for the 3F.11 release gate.
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+- DEF-45-002 (US-PRV-008 consent persistence + revoke) closed with purge evidence — moved to `resolved_deferred`.
+- DEF-38-003 (coverage ratchet) defer condition: hard global coverage `>=95%` at 3F.11; unchanged.
+- No other 3F.1-scoped deferral created.
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- Deny-by-default gate only active when AppComposition enables it; shared-singleton leakage isolated (test-host guard + fresh PrivacyActor in gate tests).
+- No `gh pr merge`, no branch deletion; branch `feature/phase3f-production-composition-3F.1` preserved.
+- No network, Combine, `Task.detached`, `@unchecked Sendable`, or `nonisolated(unsafe)`.
+- Audit content hash-only verified by full-table plaintext scan test.
+- Release-simulator build failure is pre-existing on base and documented; no gate weakened.
 <!-- PR-BODY:3F.1:END -->
 
 ---

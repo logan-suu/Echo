@@ -5,22 +5,24 @@
 //            US-SRC-007 (设备迁移), US-SRC-008 (排除项管理), US-SRC-009 (数据可视化),
 //            US-PRV-002 (审计日志查看), US-PRV-003 (审计日志导出), US-RES-004 (模型加载失败),
 //            US-SET-001 (统一语言), US-SET-002 (永久保留), US-SET-003 (缓存管理), US-SET-004 (迁移指引),
-//            US-FBK-002 (反馈重排), US-PRV-005 (数据删除冷却期)
+//            US-FBK-002 (反馈重排), US-PRV-005 (数据删除冷却期), US-PRV-008 (撤回同意)
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surfaces), §7.2 (Task surfaces),
 //            §10.1.3 (空态), §11 (Toast/Banner/通知栏)
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.4 - SettingsView + SettingsViewModel
+//       3F.1 - 撤回同意/注销接线 (ADR-007 §决策-3, US-PRV-008 AC-5)
 // AC 覆盖: US-SRC-004 AC-1/AC-2 ✅ (数据源开关), US-SRC-008 AC-1 ✅ / AC-5/AC-6 🔶 (排除项管理入口, sub-page deferred to 3.9),
 //            US-SRC-009 AC-1/AC-2 ✅ (数据概览/模型状态), US-PRV-002 AC-1 🔶 (审计日志入口, sub-page deferred to 3.9),
 //            US-PRV-003 AC-1 ✅ / AC-2 🔶 (审计导出, stub deferred to 3.9), US-RES-004 AC-2/AC-7 ✅ (模型重试/降级),
 //            US-SET-002 AC-1/AC-3 ✅ (永久保留), US-SET-003 AC-1/AC-3 ✅ (缓存清理/存储占用),
 //            US-SET-004 AC-1 ✅ / AC-2 🔶 (迁移指引, sub-page deferred to 3.9), US-FBK-002 AC-5 ✅ (清除所有反馈),
-//            US-PRV-005 AC-1/AC-2/AC-4 ✅ (冷却期 UI), L1~L4 错误映射 ✅
+//            US-PRV-005 AC-1/AC-2/AC-4 ✅ (冷却期 UI), US-PRV-008 AC-5 ✅ (撤回同意→注销清除),
+//            L1~L4 错误映射 ✅
 // Legend: ✅ implemented | 🔶 stub/skeleton (entry point exists, detail deferred to Phase 3.9) | 🔮 planned future phase
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相)
-// 生成时间: 2026-08-02
+// 生成时间: 2026-08-02, 2026-08-04 (Task 3F.1)
 // ==========================================
 
 import SwiftUI
@@ -89,6 +91,7 @@ final class SettingsViewModel {
     var showClearCacheConfirmation = false
     var showResetFeedbackConfirmation = false
     var showDeleteDataConfirmation = false
+    var showRevokeConsentConfirmation = false
     var showExportInProgress = false
 
     var isSyncingEnabled = true
@@ -96,8 +99,13 @@ final class SettingsViewModel {
 
     private let fixtureLoader: SettingsFixtureLoader
 
-    init(fixtureLoader: SettingsFixtureLoader = .shared) {
+    /// 撤回同意/注销用 composition（3F.1 生产接线，fixture 模式可为 nil）
+    private let composition: AppComposition?
+
+    init(fixtureLoader: SettingsFixtureLoader = .shared,
+         composition: AppComposition? = nil) {
         self.fixtureLoader = fixtureLoader
+        self.composition = composition
     }
 
     func loadSettings() async {
@@ -158,6 +166,28 @@ final class SettingsViewModel {
             await loadSettings()
         } catch {
             state = .error(.l2Recoverable("Failed to start data deletion"))
+        }
+    }
+
+    /// 请求撤回同意（显示二次确认，US-PRV-008 AC-4/AC-5）
+    func requestRevokeConsent() {
+        showRevokeConsentConfirmation = true
+    }
+
+    /// 确认撤回同意 = 注销清除（US-PRV-008 AC-5, ADR-007 §决策-3）
+    func confirmRevokeConsent() async {
+        showRevokeConsentConfirmation = false
+        guard let composition else {
+            state = .error(.l2Recoverable("Consent revocation is unavailable"))
+            return
+        }
+        do {
+            let result = try await composition.revokeConsent(boundary: .full)
+            if result.blocked {
+                state = .error(.l3Blocking("Cleanup did not complete. Please retry."))
+            }
+        } catch {
+            state = .error(.l3Blocking(error.localizedDescription))
         }
     }
 

@@ -1300,6 +1300,8 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 
 **Expected evidence:** clean-install run manifest、accessibility tree 与 unified log without `-ui-fixture`; explicit unavailable-state transitions; persisted policy snapshot; restart log; purge fault-injection report; DB/file inventory before/after revocation; AuditLog migration SQL/schema inventory; required-field rejection matrix; plaintext scan with zero hits; 30-day cleanup boundary output; file-protection attribute proof; Privacy Engineering Lead acceptance. 遵循 `AGENTS.md`，不生成 screenshot/video。
 
+> **✅ 3F.1 实现记录（2026-08-04）**：`Echo/App/AppComposition.swift` composition root + `AppStartupState` 状态机（requiresConsent/ready/modelUnavailable/routeUnavailable/indexUnavailable/purgeBlocked）；`ConsentStoreActor` deny-by-default 同意持久化 + 事务性撤回/清除（PurgeBoundary，失败 blocked + `.purgeFailed` 审计，成功审计自擦除）；AuditLog `contentHash` 列（hash-only）+ 必填字段 NOT NULL + 30 天清理 + NSFileProtectionComplete。测试证据见 `docs/05-planning/phase3f-evidence-index.md` 3F.1 条目；DEF-45-002 以 purge evidence 关闭。Release simulator build 的 `simulateError` `#Preview` 编译错误在 dev-1.0 基线同样复现（非 3F.1 引入）。
+
 ### 3F.2: PhotoKit、Share Extension 与真实来源
 
 **Files**

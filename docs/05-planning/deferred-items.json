@@ -105,6 +105,12 @@
       "story": "US-FBK-001, US-FBK-003",
       "resolution": "融入 Phase 3 任务 3.2 + 3.4。反馈 UI。",
       "resolved_at": "2026-07-26"
+    },
+    {
+      "id": "DEF-45-002",
+      "story": "US-PRV-008",
+      "resolution": "CLOSED by 3F.1 with purge evidence: ConsentStoreActor persists consent to SQLite ConsentStore (deny-by-default, ADR-007 §决策-2); OnboardingViewModel.acceptPrivacy/declinePrivacy wired to consentStore; AppComposition bootstrap enables production consent gate; SettingsViewModel revoke = transactional purge (US-PRV-008 AC-5) with blocked+purgeFailed audit on failure. See EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift, EchoTests/Phase3/OnboardingTests.swift, EchoTests/Phase3/SettingsViewModelTests.swift.",
+      "resolved_at": "2026-08-04"
     }
   ],
   "phase_integration_scan_rules": {
@@ -634,7 +640,7 @@
       "reason": "AC-4 requires consent persisted to UserPolicyStore (PrivacyActor.updatePolicy) and AC-5 requires revoke == account-lite注销 (data purge) flow reachable from Settings. Current UI slice only transitions viewState; consent write path is Core-side (PrivacyActor/UserPolicy persistence, Phase 3.9) and Settings revoke entry is a Phase 3.4 surface not yet wired to onboarding state. Written tracking per §15.5 rule 3 (W-4 split from DEF-45-001 which now covers i18n only).",
       "defer_to": "Phase 3.9 Core UserPolicy persistence + Settings 撤回同意入口 (task 3.4 surface integration)",
       "deferred_at": "2026-08-03",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-04T15:30:00Z",
       "owners": [
         "Privacy",
         "iOS"
@@ -645,7 +651,9 @@
       "acceptance_evidence": [
         "consent 持久化、撤回、事务清除"
       ],
-      "tracking_status": "open",
+      "tracking_status": "resolved",
+      "resolved_at": "2026-08-04T15:30:00Z",
+      "resolution": "CLOSED by 3F.1 with purge evidence: ConsentStoreActor persists consent version/timestamp to SQLite ConsentStore (deny-by-default, ADR-007 §决策-2); OnboardingViewModel.acceptPrivacy/declinePrivacy wired to consentStore; AppComposition bootstrap enables production consent gate; SettingsViewModel.requestRevokeConsent/confirmRevokeConsent = transactional purge (US-PRV-008 AC-5) with blocked+purgeFailed audit on failure. Evidence: EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift (relaunch restoration, revoke transactional purge, purge failure blocked+audit), EchoTests/Phase3/OnboardingTests.swift, EchoTests/Phase3/SettingsViewModelTests.swift.",
       "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {

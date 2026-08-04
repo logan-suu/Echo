@@ -2,9 +2,10 @@
 // 文件: AppViewModel.swift
 // 对应规格: AGENTS.md §8.1 (ViewModel 契约), docs/ui/architecture.md §6 (ViewModel 契约)
 // 任务: 3.0 - App Shell: TabView + NavigationStack + DI 注入
-// AC 覆盖: App Shell 依赖注入容器，selectedTab 状态管理
+//       3F.1 - Production composition (ADR-007 §决策-1/2)
+// AC 覆盖: App Shell 依赖注入容器, selectedTab 状态管理, startupState 透传
 // 架构约束: 遵循 AGENTS.md §8.1 (ViewModel 契约: @MainActor + @Observable + state enum), §10.1 (ViewModels 目录)
-// 生成时间: 2026-07-26
+// 生成时间: 2026-07-26, 2026-08-04 (Task 3F.1)
 // ==========================================
 
 import SwiftUI
@@ -45,6 +46,7 @@ enum AppTab: String, CaseIterable, Sendable {
 ///
 /// ## 职责
 /// - selectedTab: 根标签页切换状态
+/// - startupState: 透传 AppComposition 启动状态（3F.1）
 /// - 不保存第二份领域真相
 /// - 不直接访问 Core Actor
 @MainActor
@@ -55,6 +57,11 @@ final class AppViewModel {
 
     /// 当前选中的标签页
     var selectedTab: AppTab = .home
+
+    // MARK: - Startup State (3F.1)
+
+    /// 启动状态透传 — 由 AppComposition 驱动 (ADR-007 §决策-5)
+    var startupState: AppStartupState = .idle
 
     // MARK: - UI State
 
@@ -97,5 +104,10 @@ final class AppViewModel {
     /// 切换标签页
     func selectTab(_ tab: AppTab) {
         selectedTab = tab
+    }
+
+    /// 更新启动状态 (3F.1) — 由 AppRootView 从 composition 同步
+    func updateStartupState(_ state: AppStartupState) {
+        startupState = state
     }
 }
