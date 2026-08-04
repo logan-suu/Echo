@@ -21,17 +21,17 @@ agent: build
 
 1. 读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json`
 2. **跨阶段阻断检查（AGENTS.md §12.6）**：
-   - 获取 `current_phase`（如 2）。
-   - 如果 `current_phase > 1`，找到阶段 `current_phase - 1` 的最后一个任务（该阶段的集成测试任务，如 Phase 1→1.9）。
-   - 检查该集成测试任务的状态是否为 `done`。
+   - 获取 `current_phase`（字符串，如 `"3F"`），用 `phase_order` 定位该 phase 对象。
+   - 若该 phase 的 `previous_phase_id` 非空：读取前一 phase 对象（按精确字符串 ID 查找），用其 `integration_task_id` 字段得到集成测试任务 ID（**禁止**用「ID 最大」或数值推断），检查该任务状态是否为 `done`。
    - 如果不是 `done`，**阻断**并输出：
      ```
-     ⛔ 阶段 [N-1] 的集成测试任务 [任务ID] 尚未完成（当前状态：[status]）。
-     请先执行 do-task-echo [任务ID] 完成该阶段的集成测试，再继续阶段 N 的任务。
+     ⛔ 阶段 [previous_phase_id] 的集成测试任务 [集成任务ID] 尚未完成（当前状态：[status]）。
+     请先执行 do-task-echo [集成任务ID] 完成该阶段的集成测试，再继续阶段 [当前阶段ID] 的任务。
      ```
    - 如果前一阶段所有任务（包括集成测试）均为 `done`，继续下一步。
-3. **级联更新 backlog → ready**（AGENTS.md §12.1）：遍历所有阶段中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。此操作为**幂等操作**，必须在搜索 ready 任务之前执行。
-4. 找到当前阶段中第一个 `status: ready` 的任务。
+3. **级联更新 backlog → ready**（AGENTS.md §12.1）：按 `phase_order` 遍历每个 phase，对其 `tasks` 中 `status: backlog` 的任务，若其 `dependencies` 全部为 `done`/`merged`，则翻转为 `ready`。此操作为**幂等操作**，必须在搜索 ready 任务之前执行。
+   - **Phase 入口门禁（`entry_gate`）**：对声明了 `entry_gate` 的 phase（如 phase `"4"` 的 `entry_gate: "3F.11"`），仅当该 gate 任务（按精确字符串 ID 查找）为 `done`/`merged` 时，才允许级联该 phase 的 backlog→ready；否则该 phase 视为锁定，跳过其全部任务的级联。
+4. 找到当前 phase（`current_phase` 指向的 phase 对象）的 `tasks` 中第一个 `status: ready` 的任务（任务所属 phase 由 `tasks` 数组**包含关系**确定）。phase `"4"` 在 `entry_gate`（`"3F.11"`）未满足前视为锁定，**不得**从中选取任务。
 
    **若用户指定了 task ID**（原命令已支持显式 task 参数），选择该参数指定的 ready 任务。
 5. 如果找不到 ready 任务：
@@ -46,8 +46,8 @@ agent: build
 ### 第二步：Phase 3 UI 分支判定
 
 6. 检查 `current_phase` 与选中的任务：
-   - **若 `current_phase != 3` 或选中任务不属于 Phase 3**：进入「标准任务模式」，按原流程（第三步-第四步）执行。
-   - **若 `current_phase == 3` 且选中任务属于 Phase 3 UI**：进入「Phase 3 UI Handoff Mode」，按以下规则执行：
+   - **若 `current_phase` 精确等于 `"3"`**（用 `^3$` 精确匹配，**不得**捕获 `"3F"`）**且**选中任务属于 phase `"3"`（通过 `tasks` 数组包含关系确定）且非该 phase 的 `integration_task_id`：进入「Phase 3 UI Handoff Mode」，按以下规则执行。
+   - **否则**（含 `current_phase` 为 `"3F"`、`"4"`、`"5"` 等）：进入「标准任务模式」，按原流程（第三步-第四步）执行。
 
 ---
 
@@ -57,7 +57,7 @@ agent: build
 
 ### A. Handoff 前置验证
 1. 逐项验证：
-   - 任务属于 Phase 3 ✅
+   - 任务属于 phase `"3"`（`tasks` 数组包含关系确定）✅
    - `status == ready` ✅
    - 全部 `dependencies` 为 `done` ✅
    - **不存在任何 Phase 3 UI `in_progress` 任务**（一个 Phase 3 只能有一个 UI 任务在执行）
@@ -118,7 +118,7 @@ agent: build
 
 ## 📋 标准任务模式（非 Phase 3 UI）
 
-> **注意**：Phase 3 UI 任务禁止走此路径。此路径保留给 Phase 1、2、4、5 任务使用。Phase 3 UI 任务必须通过 `/ui-bootstrap-build-echo` 执行。
+> **注意**：phase `"3"` 的 UI 任务禁止走此路径。此路径保留给 phase `"1"`、`"2"`、`"3F"`、`"4"`、`"5"` 的任务使用（phase id 均为字符串，如 `"3F"`）。phase `"3"` 的 UI 任务必须通过 `/ui-bootstrap-build-echo` 执行。
 
 ### 第三步：查阅文档
 1. 根据任务特征匹配类型：
@@ -133,7 +133,7 @@ agent: build
 
 ### 第四步：执行开发
 1. **编写测试用例**：
-   - 使用 `write` 在 `EchoTests/Phase{N}/` 中创建测试文件
+   - 使用 `write` 在 `EchoTests/Phase${phase.id}/` 中创建测试文件（`phase.id` 为字符串，如 `"3F"` → `EchoTests/Phase3F/`）
    - 命名格式：`[任务ID]_[功能名]Tests.swift`
    - 测试方法命名含 AC 编号
 2. **增量实现（TDD 循环）**：

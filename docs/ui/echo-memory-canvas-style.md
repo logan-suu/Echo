@@ -446,8 +446,11 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 ### 16.2 首次启动无网络
 - 引导流程完全离线可用，本地 Core ML 模型无需联网
 
-### 16.3 iCloud 同步状态
-- 设置页 trailing 位置，`icloud.fill`/`icloud`/`icloud.slash` 状态指示
+### 16.3 同步语义（离线-only，禁止 CloudKit/iCloud）
+- Echo 生产环境**没有 CloudKit / iCloud 同步**（R-001 红线：禁止任何数据上传云端；R-005：模型加载无网络下载），任何 UI 状态**不得暗示 iCloud/云端同步存在**
+- 数据源同步仅在设备本地进行：PhotoKit 授权范围内读取（自动）+ Share Extension 显式分享摄入（备忘录/语音备忘录）
+- 若设置页需要展示数据状态，使用**离线语义**：本地优先徽标（如"所有数据仅保存在本机"），**禁止**使用 `icloud.fill`/`icloud`/`icloud.slash` 或任何云端同步状态指示器
+- 设备迁移（US-SRC-007）通过加密迁移包导出/导入完成，不经过任何云端同步服务
 
 ---
 

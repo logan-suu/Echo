@@ -7,6 +7,7 @@ agent: build
 
 > **上游权威**：`Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范.md` §22.5
 > **权限**：只重试当前失败的 bootstrap phase。不重启整个任务，不触发 Git，不降低验收门禁。
+> **阶段判定**：本命令只针对 phase `"3"` 的 UI 任务（`tasks` 数组包含关系确定；phase id 精确等于 `"3"`，**不得**捕获 `"3F"`）。Phase `"3F"` 任务的失败恢复走 do-task-echo 等标准路径。
 
 ---
 

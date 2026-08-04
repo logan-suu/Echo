@@ -7,6 +7,8 @@ agent: build
 
 请按 Echo 项目 AGENTS.md 的代码质量契约（第 4、6、7 章）对当前 PR 进行审查：
 
+> **任务/阶段定位**：所有 task id 与 phase id 均为精确字符串（如 `"3F"`、`"3F.11"`），从 `docs/05-planning/task-status.json` 的 `phase_order` / `phases[].tasks` 精确查找，禁止数值推断（不得把 `"3F"` 当作数字 3 处理）。
+
 ### 第一步：获取变更
 1. **确定 PR 编号**：
    - 如果用户提供了 PR 编号（如 `pr-review-echo 42`），直接使用。

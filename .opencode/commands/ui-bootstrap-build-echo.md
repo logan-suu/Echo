@@ -15,8 +15,8 @@ agent: build
 
 1. 读取 `docs/05-planning/task-status.json`、`docs/05-planning/deferred-items.json` 和 `.ui-automation/state.json`（若存在）。
 2. 验证任务合法性：
-   - `current_phase == 3`
-   - 任务属于 Phase 3
+   - `current_phase` 精确等于 `"3"`（用 `^3$` 精确匹配，**不得**捕获 `"3F"`）
+   - 任务属于 phase `"3"`（通过该 phase 的 `tasks` 数组**包含关系**确定）
    - 全部 `dependencies` 为 `done`
 3. 接受两种起点（其他组合停止并报告证据）：
 
@@ -51,7 +51,7 @@ agent: build
 9. 若此前 bootstrap 已物化，检查 hash 一致性后跳过。若缺失文件或 hash 不一致：
    - 生成 migration map，逐项标明 `exists/create/merge/adapt-path/blocked`
    - 缺失文件创建、已有文件按语义合并（不盲目覆盖）
-   - 创建 `EchoTests/Phase3/` 目录（若不存在）
+   - 创建 `EchoTests/Phase${phase.id}/` 目录（若不存在；phase `"3"` → `EchoTests/Phase3/`，**不**映射为 `Phase3F`）
    - **每批结构变更后编译**：`xcodebuild build -project Echo.xcodeproj -scheme Echo -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`
 10. 更新 `.ui-automation/state.json`：`automation_phase: materialize_structure`、`migrationMapHash`。
 

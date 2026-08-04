@@ -22,9 +22,9 @@ Echo 是一款**完全离线**的端侧 AI 记忆助手。它自动索引你的 
 | 🎙️ **语音备忘录** | Share Sheet 显式分享（需用户操作） | Whisper ASR 转写 + 文本向量索引 | 🔶 |
 
 > ⚠️ **Echo 不会主动上传任何内容。** 所有数据在设备本地处理。
-> 📌 **目标态**：AI 模型随 App 安装包分发、运行时无网络请求（R-005 红线）。当前推理层为 Stub/Scaffold，模型工件接入见修复计划 R-3/R-4 与 Phase 4 任务 4.21/4.22。
+> 📌 **目标态**：AI 模型随 App 安装包分发、运行时无网络请求（R-005 红线）。当前推理层为 Stub/Scaffold，模型工件接入见修复计划 R-3/R-4 与 Phase 3F 任务 3F.3（原 4.21/4.22）。
 >
-> 📌 **当前状态**：核心架构（Actor 隔离、认知管线、隐私校验、反馈学习）已实现并通过测试；AI 推理层（E5/SigLIP2/Whisper）为 Stub/Scaffold，模型工件接入见修复计划 Phase R-3/R-4。数据源接入遵循 R-5.2 决策（Photos 自动 + 备忘录/语音备忘录 Share 分享）。
+> 📌 **当前状态**：核心架构（Actor 隔离、认知管线、隐私校验、反馈学习）已实现并通过测试；AI 推理层（E5/SigLIP2/Whisper）为 Stub/Scaffold，模型工件接入见修复计划 Phase R-3/R-4 与 Phase 3F 任务 3F.3。数据源接入遵循 R-5.2 决策（Photos 自动 + 备忘录/语音备忘录 Share 分享）。
 
 ---
 
@@ -285,11 +285,43 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | ---------- | ------------------- | -------------- |
 | **阶段 1** | 6月15日 - 7月12日   | 基础设施搭建   |
 | **阶段 2** | 7月13日 - 9月20日   | 核心认知管线   |
-| **阶段 3** | 7月26日 - 10月18日  | UI 与集成（13 个任务，44 个故事） |
-| **阶段 4** | 11月16日 - 12月15日 | 质量保障与发布 |
+| **阶段 3** | 7月26日 - 10月18日  | UI 与集成（13 个任务，44 个故事）— UI 与可注入交互切片完成，不代表生产功能完成 |
+| **阶段 3F** | 2026-08 启动        | 功能完成与生产集成（12 个任务 3F.0..3F.11，Phase 4 唯一入口 3F.11） |
+| **阶段 4** | 11月16日 - 12月15日 | 质量保障与发布（锁定在 3F.11 之后，未开始） |
 | **阶段 5** | 并行                | 创新工具预研   |
 
 详见 `docs/05-planning/开发计划安排文档.md`
+
+---
+
+## 🚩 当前阶段：Phase 3F — 功能完成与生产集成
+
+> **ledger 状态**：`current_phase` 为字符串 `"3F"`，`phase_order = ["1","2","3","3F","4","5"]`。Phase 3 已 `done`（"UI 与可注入交互切片完成，不代表生产功能完成"）；Phase 4 通过 `entry_gate: "3F.11"` 锁定，**尚未开始**。
+
+**目标**：在默认 Echo App 路径上完成生产功能闭环（同意、真实来源、真实模型、规范存储、摄入、检索、反馈、编辑/删除、唤醒、翻译/创作、重启恢复），以 **3F.11 的无 fixture 生产 E2E 门禁** 作为 Phase 4 的唯一入口。
+
+**12 个任务（3F.0..3F.11）**：
+- **3F.0** 规格、范围、账本与接口冻结（docs-only bootstrap）
+- **3F.1** Production composition、首次启动、同意与隐私
+- **3F.2** PhotoKit、Share Extension 与真实来源
+- **3F.3** E5、SigLIP2、Whisper 与离线生成决策落地
+- **3F.4** Canonical storage 与 generation 生命周期
+- **3F.5** Production ingestion
+- **3F.6** Production search 与 feedback
+- **3F.7** UI 到 Core 全域接线
+- **3F.8** Awakening 与 system adapters
+- **3F.9** Apple Translation 与 grounded creation
+- **3F.10** i18n、accessibility 与 production errors
+- **3F.11** Production E2E 与 Phase 4 准入门禁（阶段集成测试）
+
+**Phase 3F 规划文档**：
+- `docs/05-planning/phase3f-execution-plan.md` — Phase 3F 开发 Agent 执行指令与任务账本迁移契约
+- `docs/05-planning/phase3f-story-matrix.md` — 66 个用户故事的 Phase 3F 归属矩阵
+- `docs/05-planning/phase3f-evidence-index.md` — Phase 3F 预合并证据索引
+
+**决策记录（ADR-006..ADR-014）**：`docs/decisions/ADR-006`~`ADR-014` 覆盖 Phase 3F 范围契约、生产 composition 与同意、来源导入边界、离线模型运行时、canonical generation 生命周期、任务进度边界、唤醒系统边界、创作导出边界与发布合规边界。
+
+**Phase 4/5 任务重排**：`4.20 → 3F.2`；`4.21/4.22 → 3F.3`；`4.12/4.13/4.23/4.24/4.25 → 5.6..5.10`；`5.5 → 5.11`。
 
 ---
 

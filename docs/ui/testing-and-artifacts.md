@@ -133,3 +133,15 @@
 - 一个边界清楚的 UI 切片
 - 必要测试 + 受影响验证矩阵
 - 两台 Simulator（17 Pro iOS 26 + 16 Pro iOS 18）导航到目标 state 并保持前台
+
+---
+
+## 5. Phase 3F 感知
+
+> Phase 3F 的 UI 任务（3F.7–3F.10）沿用本节全部测试与 artifact 规则，以下为 3F 专项补充。phase ID 为字符串（含 `"3F"`），任务账本见 `docs/05-planning/task-status.json`。
+
+- **测试套件**：每个 Phase 3F UI 任务配套 `EchoTests/Phase3F/` 单元/集成测试（如 `3F.7_UIToCoreIntegrationTests.swift`、`3F.8_AwakeningSystemAdaptersTests.swift`）与 `EchoUITests` 旅程套件；阶段集成测试为 `EchoTests/Phase3F/Phase3FIntegrationTests.swift`（`3F.11`）
+- **PR 门禁不变**：受影响 target clean build、契约校验、双设备 Live Simulator Review（变更 surface）、String Catalog 双语键完整，均与 §1 一致
+- **双设备 Live Simulator Review 要求**：Phase 3F UI 交付的视觉批准仍只通过双设备 Live Simulator Review——iPhone 17 Pro (iOS 26.5) 主审查 + iPhone 16 Pro (iOS 18.x) 最低版本审查，同一产物安装到两台设备；Agent 不能自行批准界面
+- **无媒体 manifest**：每次运行的 manifest 必须记录 `visualMediaCaptured: false`（§3 第 8 项），Phase 3F 同样不创建、不持久化 screenshot、video、reference/actual/diff，不维护图像 baseline
+- **生产集成专项**：Phase 3F 的测试强调「默认 App 无 `-ui-fixture` 参数」的生产路径证据（如 3F.7 默认 live adapter、3F.11 no-fixture E2E），fixtures 仅用于测试或 Preview，不作为生产完成证据

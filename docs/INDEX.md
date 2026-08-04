@@ -19,6 +19,10 @@
 | **AI Native 开发理念** | `04-ai-native/AI Native开发理念与实战技巧手册.md` | AI Native 方法论、工具、Agent 协作                |
 | **产品创新工具**       | `04-ai-native/产品创新工具全景指南.md`            | 前沿 AI 工具介绍及融入方案                        |
 | **开发计划**           | `05-planning/开发计划安排文档.md`                 | 里程碑、时间线、资源安排                          |
+| **Phase 3F 执行计划**  | `05-planning/phase3f-execution-plan.md`           | Phase 3F 开发 Agent 执行指令与任务账本迁移契约    |
+| **Phase 3F 故事矩阵**  | `05-planning/phase3f-story-matrix.md`             | 66 个用户故事的 Phase 3F 归属矩阵                 |
+| **Phase 3F 证据索引**  | `05-planning/phase3f-evidence-index.md`           | Phase 3F 预合并证据索引                           |
+| **决策记录 (ADR)**     | `decisions/ADR-006~014`                            | Phase 3F 范围、离线运行时、发布合规等 9 项决策    |
 | **UI 文档路由**        | `ui/README.md`                                     | Phase 3 UI 设计配置、自动化工作流、架构边界、测试 |
 | **UI 设计风格**        | `ui/echo-memory-canvas-style.md`                   | echo-memory-canvas 完整设计规范、surface family、token |
 | **UI 自动化工作流**    | `ui/automation-workflow.md`                        | 状态机、批准点、重试/停止规则、试点评分           |
@@ -49,6 +53,9 @@
 | 创新工具选型与融入方案                    | `04-ai-native/产品创新工具全景指南.md` §3~7            |
 | 工具融入优先级                            | `04-ai-native/产品创新工具全景指南.md` §8              |
 | 开发里程碑与时间线                        | `05-planning/开发计划安排文档.md` §2                   |
+| Phase 3F 执行计划与任务重排                | `05-planning/phase3f-execution-plan.md` + `05-planning/开发计划安排文档.md` |
+| Phase 3F 故事归属与证据                    | `05-planning/phase3f-story-matrix.md` + `05-planning/phase3f-evidence-index.md` |
+| Phase 3F 决策记录                          | `decisions/ADR-006~014`                                 |
 | Phase 3 UI 设计配置与规范                  | `ui/echo-memory-canvas-style.md`                       |
 | UI 自动化工作流与试点选择                  | `ui/automation-workflow.md`                            |
 | UI 架构边界与保护路径                      | `ui/architecture.md`                                   |

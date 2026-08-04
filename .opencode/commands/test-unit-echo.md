@@ -23,7 +23,7 @@ agent: build
 1. 确定测试目标：
    - 从 task-status.json 读取 test_file 路径（如 `EchoTests/Phase2/PrivacyActorTests.swift`）。
    - 从文件名提取测试套件名（类名，如 `PrivacyActorTests`）。
-   - 注意：Echo 项目的测试文件按阶段存放在 `EchoTests/Phase{N}/` 目录下。
+   - 注意：Echo 项目的测试文件按阶段存放在 `EchoTests/Phase${phase.id}/` 目录下（`phase.id` 为字符串，如 `"3F"` → `EchoTests/Phase3F/`）。
 2. 执行测试：
     ```bash
     xcodebuild test -project Echo.xcodeproj -scheme Echo \

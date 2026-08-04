@@ -25,7 +25,7 @@ agent: build
    - **任务包含“调试/避坑”** → `避坑手册.md`（按关键词查找）
     - **任务包含“创新工具”** → `产品创新工具全景指南.md`（对应工具章节）
     - **任务包含“技术选型”** → `技术选型文档.md`（对应章节）
-    - **任务属于 Phase 3 UI（3.1–3.9）** → `docs/ui/echo-memory-canvas-style.md` + `docs/ui/architecture.md`
+    - **任务属于 phase `"3"` 的 UI 任务**（`tasks` 数组包含关系确定，且非其 `integration_task_id`；**不得**捕获 phase `"3F"` 任务） → `docs/ui/echo-memory-canvas-style.md` + `docs/ui/architecture.md`
     - **Phase 3 UI 测试** → `docs/ui/testing-and-artifacts.md`
     - **无法确定类型** → 读取 `docs/INDEX.md` 辅助定位，然后重新判断
 

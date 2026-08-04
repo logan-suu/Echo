@@ -1,8 +1,8 @@
 {
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
-  "_version": "1.2.0",
-  "_last_updated": "2026-08-03T00:05:00+08:00",
+  "_version": "1.3.0",
+  "_last_updated": "2026-08-04T13:52:55Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -14,7 +14,18 @@
       "reason": "需要 Widget Extension target + App Group 共享数据。当前 Phase 3 聚焦主 App UI，Widget 是独立 target 开发。",
       "ac_count": 5,
       "blocker": "Widget Extension 需要独立的 provisioning profile 和 App Group entitlement 配置，当前开发环境未准备。",
-      "deferred_at": "2026-07-26"
+      "deferred_at": "2026-07-26",
+      "owners": [
+        "Product"
+      ],
+      "target_tasks": [
+        "非门禁 backlog"
+      ],
+      "acceptance_evidence": [
+        "owner、批准 scope、目标版本"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-002",
@@ -26,7 +37,18 @@
       "reason": "需要 AppIntents framework 集成 + Siri 语音交互环境。当前 Phase 3 聚焦主 App UI，App Intents 是独立扩展开发。",
       "ac_count": 5,
       "blocker": "AppIntents 扩展需要 Siri Intent Definition 文件 + 独立 AppIntents Extension target，当前开发环境未配置。",
-      "deferred_at": "2026-07-26"
+      "deferred_at": "2026-07-26",
+      "owners": [
+        "Product"
+      ],
+      "target_tasks": [
+        "非门禁 backlog"
+      ],
+      "acceptance_evidence": [
+        "owner、批准 scope、目标版本"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     }
   ],
   "moved_back_to_phase_3": [
@@ -102,7 +124,19 @@
       "reason": "当前为死代码（无调用方）。vectorStore.search(k:1) 返回 top-1 近邻而非指定 ID 文档，融合 ID 被静默丢弃。接入前必须重写为按 ID 点查或缓存元数据。",
       "defer_to": "R-3 通道集成时（R-3.2/R-3.5/R-3.6 接入后）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.6"
+      ],
+      "acceptance_evidence": [
+        "ID-based metadata、timeout/error 分离、partial results 测试"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-34-002",
@@ -113,7 +147,19 @@
       "reason": "当前 catch {} 捕获所有错误，可能掩盖 L3 阻断错误（如模型损坏）。应区分 timeout（跳过通道）与其他错误（记录审计 + 上报）。",
       "defer_to": "R-3 通道集成时",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.6"
+      ],
+      "acceptance_evidence": [
+        "ID-based metadata、timeout/error 分离、partial results 测试"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-34-003",
@@ -124,7 +170,19 @@
       "reason": "embedder 通过 getModelBundleURL 自行加载 MLModel 后，ModelLoaderActor 的 modelStates 仍报 .notLoaded，导致 AC-5/AC-7 降级 UI 与审计失真。需设计 embedder→ModelLoaderActor 状态回报机制。",
       "defer_to": "R-3 模型文件就绪后（E5/SigLIP2/Whisper 接入时）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "AI",
+        "Release"
+      ],
+      "target_tasks": [
+        "3F.3"
+      ],
+      "acceptance_evidence": [
+        "loader 状态、预处理/PCM、revision/hash/license/SBOM"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-34-004",
@@ -135,7 +193,19 @@
       "reason": "SigLIP2: preprocess 忽略 UIImage.imageOrientation + 强制拉伸破坏宽高比 + 未设 bitmap 字节序。Whisper: AVLinearPCMBitDepthKey:16 + IsFloatKey:true 不匹配（应改 32-bit float）+ 不校验 reader.status==.completed。均为 scaffold 代码，接入真实工件前必须修复。",
       "defer_to": "R-3 工件接入时（Core ML 转换 / whisper.cpp 集成）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "AI",
+        "Release"
+      ],
+      "target_tasks": [
+        "3F.3"
+      ],
+      "acceptance_evidence": [
+        "loader 状态、预处理/PCM、revision/hash/license/SBOM"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-35-001",
@@ -146,7 +216,19 @@
       "reason": "E5_REVISION 和 SIGLIP2_REVISION 当前为可变 ref 'main'。完全可复现需固定为不可变 commit hash。R-4 范围内以 TODO 标记接受，SHA256 校验已提供完整性保障。",
       "defer_to": "模型工件正式接入时（确定稳定 revision 后固定）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "AI",
+        "Release"
+      ],
+      "target_tasks": [
+        "3F.3"
+      ],
+      "acceptance_evidence": [
+        "loader 状态、预处理/PCM、revision/hash/license/SBOM"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-35-002",
@@ -157,7 +239,19 @@
       "reason": "R-5.3 决策（2026-08-01）：PHAsset 公开 API 不提供 People 身份标签（调研报告 §20.4），自动人物同步无法在 iOS 公开 API 能力内实现。人物身份需独立 opt-in + 隐私/法律批准管线（不在本轮推荐栈内）。US-SRC-006 从 v1.0 移除。",
       "defer_to": "独立 opt-in 人物身份管线获批后（v1.x）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "Product",
+        "Privacy"
+      ],
+      "target_tasks": [
+        "v1.x，v1 外"
+      ],
+      "acceptance_evidence": [
+        "ADR、规格移除和目标版本"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-37-001",
@@ -168,7 +262,20 @@
       "reason": "反馈转发失败时 UI 层空 catch 静默降级（本地状态已即时更新）。正确修复需在 FeedbackPipeline（Core 受保护层）内部将 L2 错误写入 PendingOperations + 统一 Toast 重试 UI，超出 3.2 UI 切片边界。",
       "defer_to": "Task 3.6 统一错误处理 UI（L2 Toast + PendingOperations 接入）时",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.6",
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "feedback L2 写 PendingOperations 且仅手动重试"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-38-001",
@@ -179,7 +286,20 @@
       "reason": "AC-2 要求保存 originalTimestamp 作为覆盖时间戳的备份。当前 UI 切片模型仅 var timestamp，无 originalTimestamp 字段；Core 元数据写入（Phase 3.9）时需补充该字段并接入数据库 schema。",
       "defer_to": "Phase 3.9 Core 写路径接入时（时间戳覆盖 + 元数据持久化）",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "Storage",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.4",
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "originalTimestamp、userLocked 持久化与同步/编辑测试"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-38-002",
@@ -190,7 +310,20 @@
       "reason": "AC-4 要求用户选择'保留我的编辑'后置 userLocked=true 使后续同步永久跳过该记忆。当前模型无 userLocked 字段，resolveConflict(.local) 仅置 userEdited；同步跳过逻辑属 Core SyncPipeline 行为，需 Phase 3.9 接入。",
       "defer_to": "Phase 3.9 SyncPipeline 冲突处理接入时",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "Storage",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.4",
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "originalTimestamp、userLocked 持久化与同步/编辑测试"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-38-003",
@@ -201,7 +334,20 @@
       "reason": "Phase 3 UI 切片新增声明式 SwiftUI 代码难以单元测试，Echo.app 覆盖率从 PR #33 时的 75.8% 降至 ~68%，低于 70% 临时阈值。经用户确认下调至 65%。原注释承诺的 'Phase R-4 恢复 95%' 不成立（R 任务实为 Phase 4 的 4.12+，尚未开始）。",
       "defer_to": "Phase 4 质量保障阶段恢复 AGENTS.md §9.3 的 95% 阈值（覆盖测试扩充后）",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "QA",
+        "DevOps"
+      ],
+      "target_tasks": [
+        "3F.0",
+        "3F.11"
+      ],
+      "acceptance_evidence": [
+        "3F.0 人类批准覆盖率路径；3F.11 全局覆盖率 >=95% 报告与修复后的 coverage gate"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-39-1",
@@ -212,7 +358,20 @@
       "reason": "Fixture-based ViewModel has no transient/blocking error sources yet",
       "defer_to": "Phase 4 Core Actor integration",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "Core"
+      ],
+      "target_tasks": [
+        "3F.7",
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "Settings live adapter 与 L1/L3/L4 注入证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-39-2",
@@ -223,7 +382,18 @@
       "reason": "Export stub — will be fixed when PrivacyActor integration lands",
       "defer_to": "Phase 4 PrivacyActor adapter integration",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "真实导出/状态/ProgressActor 证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-39-3",
@@ -234,7 +404,18 @@
       "reason": "loadSettings() internally sets .loading; standalone .loading would cause double-transition",
       "defer_to": "Refactor when real cache/feedback persistence is added",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "真实导出/状态/ProgressActor 证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-41-1",
@@ -245,7 +426,19 @@
       "reason": "banner message/label 全部硬编码英文，未走 String Catalog。符合 Phase 3 UI 分期模式（Task 3.5 同模式），但需明确追踪避免丢失。",
       "defer_to": "Phase 3.8 跨语言翻译层集成（String Catalog zh-Hans + en-US）",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "双语 catalog 100%、可见硬编码为 0"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-41-2",
@@ -256,7 +449,19 @@
       "reason": "iOS 26 Liquid Glass Large Title 与 ScrollView 联动（overscroll 穿过 banner），用水平禁滚 ScrollView + GeometryReader 包裹内容固定标题。已 #available(iOS 26.0) 守卫并在双设备 Live Sim 通过，但有连带布局风险（offline banner overlay / Dynamic Type AX5）。",
       "defer_to": "Phase 3.9 统一错误处理整合时复查；-degradationFixture 与 -ui-fixture 两套注入机制合并为单一机制",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "AX5、banner、iOS 18/26 双版本证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-42-001",
@@ -267,7 +472,18 @@
       "reason": "DI hook for Phase 3.9 Core integration; not wired in UI slice (W-4).",
       "defer_to": "Phase 3.9 Core ProgressActor/TaskQueueActor integration",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "真实导出/状态/ProgressActor 证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-42-002",
@@ -278,7 +494,19 @@
       "reason": "String Catalog migration deferred for UI slices (W-3 unified dialog to English pending full migration).",
       "defer_to": "Phase 3.8 String Catalog (zh-Hans + en-US)",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "双语 catalog 100%、可见硬编码为 0"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-43-001",
@@ -289,7 +517,19 @@
       "reason": "New translation surface strings ('Translation is currently unavailable. Please try again.', 'Translating…', 'Translated ·', 'Original:', 'Retry', accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
       "defer_to": "Phase 3.9 String Catalog migration (zh-Hans + en-US) — task 3.8 wrap-up / 3.9",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "双语 catalog 100%、可见硬编码为 0"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-43-002",
@@ -300,7 +540,19 @@
       "reason": "AC-2 requires 'cache-first, fallback Apple Translation'. Implemented cache-first + TranslationService protocol seam, but real Apple Translation Framework call deferred. FixtureTranslationService only maps 2 known strings; all others throw L2 serviceUnavailable. Real model + term-glossary JSON integration is Phase 3.9.",
       "defer_to": "Phase 3.9 Apple Translation Framework + 术语表 JSON 接入",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "Storage"
+      ],
+      "target_tasks": [
+        "3F.9"
+      ],
+      "acceptance_evidence": [
+        "Apple Translation 与七天 cache 跨重启"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-43-003",
@@ -311,7 +563,19 @@
       "reason": "AC-5 requires 'translationCache, TTL=7d'. Implemented display-layer in-memory actor cache (TTL=7d, clock-injectable). Core translationCache field on Memory (persisted) + write path deferred to Phase 3.9; cache does not survive app relaunch.",
       "defer_to": "Phase 3.9 Core translationCache 字段写入 + 持久化",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "Storage"
+      ],
+      "target_tasks": [
+        "3F.9"
+      ],
+      "acceptance_evidence": [
+        "Apple Translation 与七天 cache 跨重启"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-44-001",
@@ -322,7 +586,21 @@
       "reason": "New creation surface strings ('AI Creation', 'Choose a template', 'Generate', 'Copy', 'Export PDF / Markdown', 'Share / Print', 'Save to Notes', prompt editor labels, toast/error messages, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4. Also: creation generate/save are fixture-driven — Core CreativePipeline + NoteStore write path deferred (US-SYN-003 AC-4 real save).",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4) + Core 创作 Pipeline 接入时",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "AI",
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.9",
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "grounded creation、i18n、AX"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-45-001",
@@ -333,7 +611,19 @@
       "reason": "New onboarding surface strings (welcome title/subtitle, privacy consent summary + Agree/Decline buttons, permission prompt iCloud hint + Open Settings, language picker labels, model-loading text, declined-state copy + Close button, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001 / DEF-44-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4)",
       "deferred_at": "2026-08-03",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "双语 catalog 100%、可见硬编码为 0"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-45-002",
@@ -344,7 +634,19 @@
       "reason": "AC-4 requires consent persisted to UserPolicyStore (PrivacyActor.updatePolicy) and AC-5 requires revoke == account-lite注销 (data purge) flow reachable from Settings. Current UI slice only transitions viewState; consent write path is Core-side (PrivacyActor/UserPolicy persistence, Phase 3.9) and Settings revoke entry is a Phase 3.4 surface not yet wired to onboarding state. Written tracking per §15.5 rule 3 (W-4 split from DEF-45-001 which now covers i18n only).",
       "defer_to": "Phase 3.9 Core UserPolicy persistence + Settings 撤回同意入口 (task 3.4 surface integration)",
       "deferred_at": "2026-08-03",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "Privacy",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.1"
+      ],
+      "acceptance_evidence": [
+        "consent 持久化、撤回、事务清除"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-46-001",
@@ -355,7 +657,19 @@
       "reason": "All UI strings (navigation titles, labels, footers, error messages, permission descriptions, toggle labels, geofence detail sheet, accessibility labels — ~50+ string literals) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001 / DEF-44-001 / DEF-45-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4.",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4)",
       "deferred_at": "2026-08-03",
-      "last_checked_at": "2026-08-02T22:56:55+08:00"
+      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "owners": [
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "双语 catalog 100%、可见硬编码为 0"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
       "id": "DEF-47-001",
@@ -366,7 +680,19 @@
       "reason": "Test metadata helper uses `try! memory.encodeMetadata()`. Matches 5 accepted Phase 2 baseline instances (e.g. SearchPipelineTests.swift:34); SwiftLint runs without --strict so warning is non-blocking. Accepted-not-fixed at PR #47 review (W-3).",
       "defer_to": "若后续 SwiftLint 门禁升级为 --strict 或 Phase 4 质量阶段统一清理测试辅助函数时",
       "deferred_at": "2026-08-03",
-      "last_checked_at": "2026-08-03T00:05:00+08:00"
+      "last_checked_at": "2026-08-03T00:05:00+08:00",
+      "owners": [
+        "QA",
+        "DevOps"
+      ],
+      "target_tasks": [
+        "3F.11"
+      ],
+      "acceptance_evidence": [
+        "测试 helper 修复、全套测试通过与可定位证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "target task review or Phase 3F integration scan"
     }
   ]
 }

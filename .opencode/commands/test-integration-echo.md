@@ -20,7 +20,7 @@ agent: build
       -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
       -parallel-testing-enabled NO
     ```
-2. 测试文件按阶段分布于 `EchoTests/Phase1/` ~ `EchoTests/Phase5/`。
+2. 测试文件按阶段分布于 `EchoTests/Phase${phase.id}/` 目录（`phase.id` 为字符串，如 `"3F"` → `EchoTests/Phase3F/`；完整阶段集合见 `task-status.json` 的 `phase_order`）。
 
 ### 第二步：性能与质量监控
 1. 除了测试通过率，重点检查：
