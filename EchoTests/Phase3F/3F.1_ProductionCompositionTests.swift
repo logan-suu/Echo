@@ -150,6 +150,25 @@ struct ProductionCompositionTests {
         #expect(checkpoint.isAllowed == true)
     }
 
+    @Test("Accepted consent still enforces per-source authorization (US-PRV-001, no gate bypass)")
+    func test_acceptedConsent_enforcesPerSourceAuthorization() async throws {
+        let privacy = makePrivacy()
+        let consentStore = ConsentStoreActor(db: db, privacyActor: privacy)
+        await privacy.enableConsentEnforcement(consentStore: consentStore)
+        try await consentStore.acceptConsent(consentVersion: 1, policyVersion: 1)
+
+        // .allowed 不短路 per-source 授权检查：未授权数据源仍被拒绝（US-PRV-001 语义保留）
+        let denied = await privacy.validate(operation: .search, traceID: "t-unauth", sourceTypes: ["message"])
+        #expect(denied.decision == .denied)
+        #expect(denied.isAllowed == false)
+
+        // 已授权数据源通过
+        let allowed = await privacy.validate(operation: .search, traceID: "t-auth", sourceTypes: ["photo"])
+        #expect(allowed.decision == .allowed)
+
+        await privacy.disableConsentEnforcement()
+    }
+
     // MARK: - ConsentStoreActor 持久化与重启恢复
 
     @Test("Consent persists to SQLite and reloads on a fresh instance (relaunch restoration)")
@@ -196,6 +215,46 @@ struct ProductionCompositionTests {
 
         // 同意状态重置
         #expect(await store.hasConsented() == false)
+    }
+
+    @Test("Revoke consent writes consentRevoked audit (kept on partial purge, self-erased on full)")
+    func test_revokeConsent_writesConsentRevokedAudit() async throws {
+        let privacy = makePrivacy()
+        let store = ConsentStoreActor(db: db, privacyActor: privacy)
+        try await store.acceptConsent(consentVersion: 1, policyVersion: 1)
+
+        // 部分清除（不清审计库）→ .consentRevoked 审计保留
+        let partial = PurgeBoundary(
+            purgeVectors: false, purgeIndexes: false, purgeCaches: false,
+            purgeMetadata: true, purgeAuditLog: false, purgeTranslationCache: false
+        )
+        _ = try await store.revokeConsent(boundary: partial)
+        let revokedLogs = try await privacy.fetchAuditLogs(eventType: .consentRevoked)
+        #expect(!revokedLogs.isEmpty)
+
+        // full purge → 审计自擦除（含 .consentRevoked，符合 AC-7）
+        try await store.acceptConsent(consentVersion: 1, policyVersion: 1)
+        _ = try await store.revokeConsent(boundary: .full)
+        let afterFull = try await privacy.fetchAuditLogs(eventType: .consentRevoked)
+        #expect(afterFull.isEmpty)
+    }
+
+    @Test("acceptConsent write failure keeps in-memory state unchanged (no SQLite divergence)")
+    func test_acceptConsent_writeFailure_keepsStateUnchanged() async throws {
+        let store = ConsentStoreActor(db: db, privacyActor: PrivacyActor.shared)
+        await store.setConsentWriteFault(true)
+        do {
+            try await store.acceptConsent(consentVersion: 1, policyVersion: 1)
+            Issue.record("acceptConsent should throw when the write is faulted")
+        } catch {
+            // 预期抛出注入错误
+        }
+        await store.setConsentWriteFault(false)
+
+        // 写库失败后内存状态保持未同意（与 SQLite 一致，不发散）
+        #expect(await store.hasConsented() == false)
+        let rows = try await db.executeQuery(sql: "SELECT COUNT(*) AS cnt FROM ConsentStore", bindings: [])
+        #expect(rows.first?["cnt"]?.intValue == 0)
     }
 
     @Test("Purge failure enters blocked state and writes an audit, preserving data")
