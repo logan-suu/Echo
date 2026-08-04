@@ -90,4 +90,4 @@
 - **phase 为字符串**：`task-status.json` 的 `phase_order` / `current_phase` 均为字符串，包含 `"3F"`（`["1","2","3","3F","4","5"]`）
 - **五类门禁适用**：Phase 3F UI 任务（3F.7–3F.10）沿用本文档全部就绪门禁；Phase 3F 引入的「默认 App 无 `-ui-fixture`」生产路径要求 §2.1 Bootstrap 与数据库打开门禁以真实（非 fixture）入口为准
 - **双审查设备**：§2.5 的 Xcode 26.5 / Bridge Preflight 与双设备目标（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.x）对 Phase 3F UI 交付同样有效
-- **UI 模式匹配精确 `"3"`**：首次 bootstrap 的 `readiness_check` 在 `current_phase == "3"` 的 UI 模式下按原流程触发；`current_phase == "3F"` 时按通用流程（Phase 3F UI 任务经 `/ui-bootstrap-build-echo`）执行，复检触发条件含 Phase 3F（§4）
+- **UI 模式匹配精确 `"3"`**：首次 bootstrap 的 `readiness_check` 在 `current_phase == "3"` 的 UI 模式下按原流程触发；`current_phase == "3F"` 时按通用流程执行（Phase 3F 任务含 UI 任务按 canonical plan §7 + §6.2.2 协议执行），复检触发条件含 Phase 3F（§4）

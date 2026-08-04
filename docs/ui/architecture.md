@@ -197,7 +197,7 @@ enum State {
 
 > `docs/05-planning/task-status.json` 的 phase 为字符串（`phase_order = ["1","2","3","3F","4","5"]`，`current_phase = "3F"`）。Phase 3F 的 UI 任务在**同一 `echo-memory-canvas` 设计 profile 与本文档全部规则**下继续执行，六层架构、单向数据流、组件边界、受保护/允许内容等既有规则全部保留。
 
-- **Phase 3F UI 任务**：3F.7（UI→Core 全域接线）、3F.8（Awakening 与 system adapters）、3F.9（Apple Translation 与 grounded creation）、3F.10（i18n、accessibility 与 production errors）在适用处经 `/ui-bootstrap-build-echo` 流水线执行（见 `README.md`、`command-compatibility.md`）
+- **Phase 3F UI 任务**：3F.7（UI→Core 全域接线）、3F.8（Awakening 与 system adapters）、3F.9（Apple Translation 与 grounded creation）、3F.10（i18n、accessibility 与 production errors）按 canonical plan §7 + §6.2.2 协议执行（任务清单 → §6.2.2 单脚本交付 → PR → 人类合并；checklist 含双设备 Live Sim Review 与 §4.6.7–4.6.10 UIAutomation 契约），**不经 `/ui-bootstrap-build-echo`**（该命令为 Phase 3 专用，校验 `current_phase == "3"` 精确匹配；见 `README.md`、`command-compatibility.md`）
 - **UI-adjacent Core 接线的受控例外**：§4 的「受保护内容（只读）」保持 Core 只读基线；`3F.0` 人类合并后，standing authority 允许在**任务穷尽式 Files 清单内**修改 UI-adjacent Core 接线文件（如 3F.7 的默认 live adapter 接线），超出任务明示范围仍须停止升级为独立决策
 - **测试**：每个 Phase 3F UI 任务的单元/集成测试位于 `EchoTests/Phase3F/`（如 `3F.7_UIToCoreIntegrationTests.swift`），UI 旅程测试在 `EchoUITests` 套件；阶段集成测试为 `EchoTests/Phase3F/Phase3FIntegrationTests.swift`
 - **验证**：Phase 3F UI 交付仍需**双设备 Live Simulator Review**（iPhone 17 Pro iOS 26.5 主审查 + iPhone 16 Pro iOS 18.x 最低版本审查），并生成**无媒体 manifest**（`visualMediaCaptured: false`），不创建或持久化 screenshot/video

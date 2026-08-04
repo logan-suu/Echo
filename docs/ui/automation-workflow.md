@@ -155,6 +155,6 @@ selected → repo_discovery → materialize_structure → readiness_check
 
 - **phase 为字符串**：`docs/05-planning/task-status.json` 的 `phase_order` / `current_phase` 均为字符串，包含 `"3F"`（`["1","2","3","3F","4","5"]`）。任务账本桥接（§7）不假设 phase ID 为数值
 - **UI 模式匹配精确 `"3"`**：`/init-session-echo`、`/next-task-echo` 的 UI 分支仅在 `current_phase == "3"` 时进入；`current_phase == "3F"` 时按通用流程运行
-- **Phase 3F UI 任务经 `/ui-bootstrap-build-echo` 执行**：Phase 3F UI 任务（3F.7 UI→Core 全域接线、3F.8 Awakening、3F.9 Translation/Creation、3F.10 i18n/accessibility/errors）在适用处走本工作流状态机；非 UI 的 Phase 3F 任务（3F.1–3F.6、3F.11）走通用流程
+- **Phase 3F UI 任务按 canonical plan §7 + §6.2.2 执行**：Phase 3F UI 任务（3F.7 UI→Core 全域接线、3F.8 Awakening、3F.9 Translation/Creation、3F.10 i18n/accessibility/errors）与其余 3F 任务一样走任务清单 → §6.2.2 单脚本交付（含双设备 Live Sim Review 与 §4.6.7–4.6.10 UIAutomation 契约），**不经 `/ui-bootstrap-build-echo`**（Phase 3 专用）；非 UI 的 Phase 3F 任务（3F.1–3F.6、3F.11）同样走 §7 协议
 - **同一设计 profile 与规则**：Phase 3F UI 工作延续已批准的 `echo-memory-canvas` 配置；状态机（§1）、批准点（§2 双设备 Live Simulator Review）、重试/停止（§5）、恢复（§6）、任务账本桥接（§7）、试点评分（§8）规则不变
 - **测试与证据**：每个 Phase 3F UI 任务配套 `EchoTests/Phase3F/` 测试套件与 `EchoUITests` 旅程套件（阶段集成测试 `EchoTests/Phase3F/Phase3FIntegrationTests.swift`）；交付批准仍要求双设备 Live Simulator Review（iPhone 17 Pro iOS 26.5 + iPhone 16 Pro iOS 18.x），manifest 的 `visualMediaCaptured` 必须为 `false`（不创建或持久化 screenshot/video）
