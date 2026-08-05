@@ -13,6 +13,7 @@
 
 import UIKit
 import Photos
+import PhotosUI
 
 /// Echo 应用代理 — 负责后台任务注册与生命周期管理
 /// 后台任务包括：定时扫描、数据同步、索引构建（US-SYS-001）
@@ -22,6 +23,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     private var syncPipeline: SyncPipeline?
     /// Share 队列摄入管线（ADR-008 §决策-3）— 持有防释放
     private var ingestPipeline: IngestPipeline?
+    /// PhotoKit 来源适配器（iOS 26 limited 选择器主动弹出）— 持有防释放
+    private var photoSourceAdapter: PhotoKitSourceAdapter?
 
     func application(
         _ application: UIApplication,
@@ -31,6 +34,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ = AppComposition.shared
         Task { @MainActor in
             await configureSources()
+        }
+        // iOS 26 limited 适配：系统不再自动弹照片选择器，回前台时主动呈现（3F.2 review fix）
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.presentLimitedLibraryPickerIfNeeded()
+            }
         }
         return true
     }
@@ -71,5 +84,40 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         )
         ingestPipeline = ingest
         _ = try? await ingest.drainSharedImports(from: .shared)
+
+        // PhotoKit 来源适配器（iOS 26 limited 选择器主动弹出；3F.2 review fix）
+        photoSourceAdapter = PhotoKitSourceAdapter(
+            library: RealPhotoLibrary(),
+            privacyActor: composition.privacyActor,
+            configuration: .production
+        )
+    }
+
+    /// iOS 26 limited 适配：授权为 limited 且尚无已选照片时，主动呈现系统照片选择器
+    /// （iOS 26 起系统在点「Limit Access」后不再自动弹出，需 App 调用 presentLimitedLibraryPicker）。
+    ///
+    /// 仅在 iOS 26+ 生效：iOS 18/19 系统会自动弹出选择器，若在此主动调用会叠弹第二个，
+    /// 且用户选照片后 becomeActive 时资产已非空，本检查天然返回 false。
+    @MainActor
+    private func presentLimitedLibraryPickerIfNeeded() async {
+        guard #available(iOS 26, *) else { return }
+        guard let adapter = photoSourceAdapter else { return }
+        guard await adapter.shouldPresentLimitedLibraryPicker() else { return }
+        guard let rootVC = await Self.keyWindowRootViewController() else { return }
+        await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: rootVC)
+        await adapter.markLimitedLibraryPickerPresented()
+    }
+
+    /// 获取当前活跃 window 的 rootViewController（presentLimitedLibraryPicker 需要 presenter）。
+    @MainActor
+    private static func keyWindowRootViewController() -> UIViewController? {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene,
+                  windowScene.activationState == .foregroundActive else { continue }
+            for window in windowScene.windows where window.isKeyWindow {
+                return window.rootViewController
+            }
+        }
+        return nil
     }
 }

@@ -176,7 +176,12 @@ public struct RealPhotoLibrary: PhotoLibraryServing {
 /// - 排除项过滤（US-SRC-008 AC-4）
 /// - 本地已下载资源检测（US-SRC-001 AC-6）
 /// - `.dataSourceConnected` 审计（US-SRC-001 AC-5）
+/// - iOS 26 limited 适配：系统不再自动弹出照片选择器，App 需主动
+///   `presentLimitedLibraryPicker`（ADR-008 §决策-1 补充，3F.2 review 发现）
 public actor PhotoKitSourceAdapter {
+
+    /// limited 选择器已弹出标记 key（iOS 26 适配；避免每次回前台重复弹出）
+    internal nonisolated static let limitedPickerPresentedKey = "photoKit.limitedPickerPresented"
 
     private let library: any PhotoLibraryServing
     private let privacyActor: PrivacyActor
@@ -230,6 +235,30 @@ public actor PhotoKitSourceAdapter {
     public func isLocallyAvailable(assetId: String) async -> Bool {
         guard await canReadAssets() else { return false }
         return await library.isAssetDownloaded(assetId)
+    }
+
+    // MARK: - iOS 26 Limited Library Picker (3F.2 review fix)
+
+    /// iOS 26 起系统在 limited 授权后不再自动弹出照片选择器，App 需主动调用
+    /// `PHPhotoLibrary.presentLimitedLibraryPicker(from:)` 让用户选择可访问照片。
+    ///
+    /// - Returns: `true` 当授权为 limited、当前无任何已选照片、且此前未主动弹出过选择器。
+    ///   三者同时满足才需要 App 呈现选择器（iOS 18 及以下系统自动弹，此判定保持 false）。
+    public func shouldPresentLimitedLibraryPicker() async -> Bool {
+        let access = await library.currentAccess()
+        guard access == .limited else { return false }
+        guard await library.allAssetReferences().isEmpty else { return false }
+        return !UserDefaults.standard.bool(forKey: Self.limitedPickerPresentedKey)
+    }
+
+    /// 标记 limited 选择器已主动弹出（避免每次回前台重复弹出）。
+    public func markLimitedLibraryPickerPresented() {
+        UserDefaults.standard.set(true, forKey: Self.limitedPickerPresentedKey)
+    }
+
+    /// 重置 limited 选择器弹出标记（测试用）。
+    internal func resetLimitedLibraryPickerFlag() {
+        UserDefaults.standard.removeObject(forKey: Self.limitedPickerPresentedKey)
     }
 
     // MARK: - Audit (US-SRC-001 AC-5)

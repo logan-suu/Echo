@@ -332,6 +332,56 @@ struct RealDataSourcesTests {
         #expect(await revokedAdapter.fetchAllAssets().isEmpty)
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // iOS 26 limited picker 适配（3F.2 review fix）
+    // ══════════════════════════════════════════════════════════════
+
+    @Test("limited with no selected photos needs picker (iOS 26)")
+    func test_photoKit_limitedNeedsPicker() async throws {
+        let adapter = PhotoKitSourceAdapter(
+            library: FakePhotoLibrary(access: .limited, assets: [], downloaded: [])
+        )
+        await adapter.resetLimitedLibraryPickerFlag()
+        #expect(await adapter.shouldPresentLimitedLibraryPicker() == true)
+    }
+
+    @Test("limited with selected photos does not need picker")
+    func test_photoKit_limitedWithSelectionSkipsPicker() async throws {
+        let assets = [PhotoAssetReference(assetId: "a1", mediaType: "image", creationDate: nil, modificationDate: nil)]
+        let adapter = PhotoKitSourceAdapter(
+            library: FakePhotoLibrary(access: .limited, assets: assets, downloaded: [])
+        )
+        await adapter.resetLimitedLibraryPickerFlag()
+        #expect(await adapter.shouldPresentLimitedLibraryPicker() == false)
+    }
+
+    @Test("authorized/denied access never triggers picker")
+    func test_photoKit_nonLimitedSkipsPicker() async throws {
+        let authorized = PhotoKitSourceAdapter(
+            library: FakePhotoLibrary(access: .authorized, assets: [], downloaded: [])
+        )
+        await authorized.resetLimitedLibraryPickerFlag()
+        #expect(await authorized.shouldPresentLimitedLibraryPicker() == false)
+
+        let denied = PhotoKitSourceAdapter(
+            library: FakePhotoLibrary(access: .denied, assets: [], downloaded: [])
+        )
+        await denied.resetLimitedLibraryPickerFlag()
+        #expect(await denied.shouldPresentLimitedLibraryPicker() == false)
+    }
+
+    @Test("picker flag is one-shot (mark prevents repeat)")
+    func test_photoKit_pickerFlagOneShot() async throws {
+        let adapter = PhotoKitSourceAdapter(
+            library: FakePhotoLibrary(access: .limited, assets: [], downloaded: [])
+        )
+        await adapter.resetLimitedLibraryPickerFlag()
+        #expect(await adapter.shouldPresentLimitedLibraryPicker() == true)
+        await adapter.markLimitedLibraryPickerPresented()
+        #expect(await adapter.shouldPresentLimitedLibraryPicker() == false)
+        await adapter.resetLimitedLibraryPickerFlag()
+    }
+
     @Test("dataSourceConnected audit records sourceType and itemCount (US-SRC-001 AC-5)")
     func test_photoKit_dataSourceConnectedAudit() async throws {
         let privacy = makePrivacy()
