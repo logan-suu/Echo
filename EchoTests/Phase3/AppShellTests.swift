@@ -115,3 +115,35 @@ struct AppViewModelTests {
         #expect(viewModel.selectedTab == .settings)
     }
 }
+
+// MARK: - AppComposition Tests (3F.1)
+
+@MainActor
+struct AppCompositionStateTests {
+
+    @Test("AppStartupState exposes all unavailable states")
+    func testStartupState_enumCases() async throws {
+        let all: [AppStartupState] = [
+            .idle,
+            .bootstrapping,
+            .requiresConsent,
+            .consentDeclined,
+            .ready,
+            .modelUnavailable,
+            .routeUnavailable,
+            .indexUnavailable,
+            .purgeBlocked,
+            .bootstrapFailed,
+        ]
+        #expect(Set(all.map(String.init(describing:))).count == 10)
+    }
+
+    @Test("AppComposition declares dependency graph without side effects")
+    func testAppComposition_dependencyGraph() async throws {
+        let composition = AppComposition()
+        #expect(composition.databaseManager === DatabaseManager.shared)
+        #expect(composition.privacyActor === PrivacyActor.shared)
+        #expect(composition.startupState == .idle)
+        // 不调用 bootstrap()，避免 consent gate 启用影响共享单例
+    }
+}

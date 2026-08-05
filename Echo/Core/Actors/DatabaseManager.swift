@@ -139,10 +139,22 @@ public actor DatabaseManager {
             CREATE INDEX IF NOT EXISTS idx_auditlog_timestamp ON AuditLog(timestamp)
             """)
         // v2 schema migration: add video-specific audit fields (US-ING-005 AC-5, Task 2.4)
-        // Idempotent: silently skip if columns already exist (SQLite rejects duplicate ADD COLUMN)
-        try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN frameCount INTEGER")
-        try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN audioTranscriptLength INTEGER")
-        try? execute(sql: "ALTER TABLE AuditLog ADD COLUMN hasAudio INTEGER")
+        // Idempotent via PRAGMA table_info guard; migration errors propagate instead of
+        // being silently swallowed (a failed ALTER leaves the schema inconsistent).
+        let auditColumns = try columnNames(in: "AuditLog")
+        if !auditColumns.contains("frameCount") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN frameCount INTEGER")
+        }
+        if !auditColumns.contains("audioTranscriptLength") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN audioTranscriptLength INTEGER")
+        }
+        if !auditColumns.contains("hasAudio") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN hasAudio INTEGER")
+        }
+        // v4 schema migration (3F.1): add hash-only content column (AGENTS.md §5.4)
+        if !auditColumns.contains("contentHash") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN contentHash TEXT")
+        }
         // UserPolicy persistence table
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS UserPolicyStore (
@@ -230,7 +242,40 @@ public actor DatabaseManager {
                 updatedAt REAL NOT NULL
             )
             """)
+        // 同意状态表 (3F.1, ADR-007 §决策-2): deny-by-default 同意版本与时间戳持久化
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS ConsentStore (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                hasConsented INTEGER NOT NULL DEFAULT 0,
+                consentVersion INTEGER NOT NULL DEFAULT 1,
+                consentedAt REAL,
+                policyVersion INTEGER NOT NULL DEFAULT 1,
+                updatedAt REAL NOT NULL
+            )
+            """)
     }
+
+    // MARK: - Transaction Support (3F.1, ADR-007 §决策-3)
+
+    /// 开启事务（用于事务性撤回/清除）
+    public func beginTransaction() throws {
+        try execute(sql: "BEGIN TRANSACTION")
+    }
+
+    /// 提交事务
+    public func commitTransaction() throws {
+        try execute(sql: "COMMIT")
+    }
+
+    /// 回滚事务
+    public func rollbackTransaction() throws {
+        try execute(sql: "ROLLBACK")
+    }
+
+    // MARK: - Database URL
+
+    /// SQLite 数据库文件 URL（测试/审计用，NSFileProtectionComplete 校验）
+    public nonisolated var databaseURL: URL { dbURL }
 
     // MARK: - Generic SQL Execution
 
@@ -272,6 +317,12 @@ public actor DatabaseManager {
             throw DatabaseError.writeFailed(operation: "step", underlying: NSError(domain: "sqlite3", code: -1, userInfo: [NSLocalizedDescriptionKey: msg]))
         }
         return sqlite3_changes(db)
+    }
+
+    /// Return the current column names of a table (used for idempotent ALTER migrations).
+    func columnNames(in table: String) throws -> [String] {
+        let rows = try executeQuery(sql: "PRAGMA table_info(\(table))", bindings: [])
+        return rows.compactMap { $0["name"]?.stringValue }
     }
 
     func executeQuery(sql: String, bindings: [DBBinding]) throws -> [[String: DBValue]] {

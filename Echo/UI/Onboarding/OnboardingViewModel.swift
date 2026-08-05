@@ -6,13 +6,14 @@
 //            docs/ui/echo-memory-canvas-style.md §15 (引导流程), §3.3 (Task surfaces),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.11 - 引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载
+//       3F.1 - 同意持久化接线 (ADR-007 §决策-2, US-PRV-008 AC-4)
 // AC 覆盖: US-PRV-008 AC-1 ✅ (隐私摘要), AC-2 ✅ (摘要含目的/方式/种类/保留期限/本地处理声明),
 //          AC-3 ✅ (同意/拒绝同等醒目), AC-4 🔶 (Settings 撤回同意入口, UI 切片留待 Settings 页集成),
 //          AC-5 🔶 (撤回=注销流程, Core Phase 3.9), US-SRC-001 AC-6 ✅ (iCloud 提示 + Open Settings 意图),
 //          US-SYN-001 AC-2 ✅ (zh-Hans/en-US 选择 + 繁体映射提示), 首次模型加载 ✅ (fixture 驱动 determinate 进度)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约), §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
-// 生成时间: 2026-08-03
+// 生成时间: 2026-08-03, 2026-08-04 (Task 3F.1)
 // ==========================================
 
 import SwiftUI
@@ -35,8 +36,8 @@ import Foundation
 ///
 /// ## 职责 (docs/ui/architecture.md §7.1)
 /// - 状态映射: fixture 载荷 → UI 步骤
-/// - Intent 转发: 同意/拒绝/授权/跳过/选语言/开始加载 → 后续 Core 调用 (🔮 Phase 3.9 PrivacyActor/UserPolicy)
-/// - 🔮 Phase 3.9: PrivacyActor.updatePolicy + UserPolicyStore 持久化; ModelLoaderActor 真实进度
+/// - Intent 转发: 同意/拒绝/授权/跳过/选语言/开始加载 → Core 调用
+/// - 3F.1: 同意持久化经 consentStore (ADR-007 §决策-2, US-PRV-008 AC-4)
 @MainActor
 @Observable
 final class OnboardingViewModel {
@@ -107,24 +108,35 @@ final class OnboardingViewModel {
     /// 是否已请求打开系统设置 (US-SRC-001 AC-6)
     private(set) var openSettingsRequested = false
 
-    /// 模拟模型加载延迟 — 测试可注入 0 使加载立即完成 (fixture 模式)
+    /// Whether consent has been persisted (3F.1, US-PRV-008 AC-4)
+    private(set) var consentPersisted = false
+
+    /// Whether consent persistence failed (write errors surfaced for a retry UI)
+    private(set) var consentPersistFailed = false
+
+    /// Simulated model load delay - tests inject 0 to complete loading instantly (fixture mode)
     private let loadDelayNanoseconds: UInt64
 
-    /// 模型加载 Task
+    /// Model loading task
     private var loadTask: Task<Void, Never>?
 
-    /// UI 切片模式 fixture 注入源
+    /// Fixture injection source for the UI-slice mode
     private var stubFixture: OnboardingFixture?
+
+    /// Consent store actor (3F.1 production wiring; nil in fixture/test mode)
+    private let consentStore: ConsentStoreActor?
 
     // MARK: - Initialization
 
-    /// 初始化 OnboardingViewModel。
+    /// Initialize OnboardingViewModel.
     ///
-    /// - Parameter loadDelayNanoseconds: 模拟模型加载总耗时。
-    ///   测试注入 0 使加载立即完成；默认 3s 模拟首次模型加载耗时
-    ///   (10 次进度 tick, 每次 300ms)。
-    init(loadDelayNanoseconds: UInt64 = 3_000_000_000) {
+    /// - Parameter loadDelayNanoseconds: simulated first-model-load duration;
+    ///   tests inject 0 for instant completion; default 3s (10 ticks, 300ms each).
+    /// - Parameter consentStore: consent store actor (3F.1 production wiring, default nil).
+    init(loadDelayNanoseconds: UInt64 = 3_000_000_000,
+         consentStore: ConsentStoreActor? = nil) {
         self.loadDelayNanoseconds = loadDelayNanoseconds
+        self.consentStore = consentStore
     }
 
     // MARK: - Actions
@@ -137,15 +149,38 @@ final class OnboardingViewModel {
 
     /// Step 2: 同意隐私政策 → 进入权限序列 (US-PRV-008 AC-3)。
     ///
-    /// 🔮 Phase 3.9: PrivacyActor.updatePolicy(authorizedSourceTypes:) 持久化同意。
+    /// 3F.1: 若已注入 consentStore，同意持久化到 ConsentStore (US-PRV-008 AC-4)。
+    /// 3F.1 修复: 生产路径无权限源 (permissionSteps 为空) 时跳过 permissions 直接进语言选择，
+    /// 避免 TabView 渲染 EmptyView 页导致引导流程卡死。
     func acceptPrivacy() {
         guard viewState == .privacyConsent else { return }
-        viewState = .permissions(0)
+        if let consentStore {
+            Task {
+                do {
+                    try await consentStore.acceptConsent(consentVersion: 1, policyVersion: 1)
+                    consentPersisted = true
+                } catch {
+                    // Never swallow: mark persistence failure so the UI can surface a retry path
+                    consentPersistFailed = true
+                }
+            }
+        }
+        if permissionSteps.isEmpty {
+            // Production path has no permission source: skip permissions and go straight to language selection
+            viewState = .language
+            // Cross-page TabView jumps may skip languagePage.onAppear; initialize the default language eagerly
+            applyDefaultLanguage()
+        } else {
+            viewState = .permissions(0)
+        }
     }
 
     /// Step 2: 拒绝隐私政策 → declined 退出态 (US-PRV-008 AC-3)。
+    ///
+    /// 3F.1: 拒绝不入库（保持 deny-by-default 未同意状态）。
     func declinePrivacy() {
         guard viewState == .privacyConsent else { return }
+        consentPersisted = false
         viewState = .declined
     }
 
@@ -225,7 +260,11 @@ final class OnboardingViewModel {
     ///
     /// 🔮 Phase 3.9: ModelLoaderActor 真实加载进度。当前 fixture 模式模拟 determinate 进度。
     func beginLoad() {
-        guard case .language = viewState, selectedLanguage != nil else { return }
+        guard case .language = viewState else { return }
+        // Fallback: cross-page jumps may skip the onAppear initialization, so set the
+        // default language here before Continue can be used
+        if selectedLanguage == nil { applyDefaultLanguage() }
+        guard selectedLanguage != nil else { return }
         viewState = .modelLoading(0.0)
         startModelLoad()
     }

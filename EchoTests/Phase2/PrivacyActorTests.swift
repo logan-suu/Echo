@@ -29,6 +29,8 @@ struct PrivacyActorTests {
         // Clean audit logs and policy from previous runs
         try await db.execute(sql: "DELETE FROM AuditLog")
         try await db.execute(sql: "DELETE FROM UserPolicyStore")
+        // 3F.1: 确保同意闸门关闭，保持 legacy 授权行为（3F.1 测试可能启用后残留）
+        await sut.disableConsentEnforcement()
         // Reset to known defaults
         try await sut.updatePolicy(UserPolicy(
             preferredLanguage: "zh-Hans",
@@ -473,11 +475,82 @@ struct PrivacyActorTests {
             "excludedWritten": .int(0),
             "sourceLanguage": .text("zh-Hans"),
             "elapsedMs": .int(200),
+            "contentHash": .text("abc123"),
         ]
         let entry = AuditLogEntry.fromRow(row)
         #expect(entry != nil)
         #expect(entry?.eventType == .reauthorized)
         #expect(entry?.policyVersion == 3)
         #expect(entry?.sourceType == "photo")
+        #expect(entry?.contentHash == "abc123")
+    }
+
+    // MARK: - 3F.1: Consent Gate (ADR-007 §决策-2)
+
+    @Test("enableConsentEnforcement without consent denies validate")
+    func test_consentGate_deniesWhenNotConsented() async throws {
+        // 使用隔离实例，避免 consent gate 状态泄漏到共享单例（并行套件安全）
+        let gateSut = PrivacyActor(db: db)
+        await gateSut.enableConsentEnforcement(consentStore: ConsentStoreActor(db: db, privacyActor: gateSut))
+        try await ConsentStoreActor(db: db, privacyActor: gateSut).revokeConsent(boundary: .full)
+
+        let checkpoint = await gateSut.validate(operation: .search, traceID: "cg-1", sourceTypes: ["photo"])
+        #expect(checkpoint.decision == .denied)
+        await gateSut.disableConsentEnforcement()
+    }
+
+    @Test("disableConsentEnforcement restores legacy allow behavior")
+    func test_consentGate_disableRestoresLegacy() async throws {
+        let gateSut = PrivacyActor(db: db)
+        await gateSut.enableConsentEnforcement(consentStore: ConsentStoreActor(db: db, privacyActor: gateSut))
+        try await ConsentStoreActor(db: db, privacyActor: gateSut).revokeConsent(boundary: .full)
+        await gateSut.disableConsentEnforcement()
+
+        let checkpoint = await gateSut.validate(operation: .search, traceID: "cg-2", sourceTypes: ["photo"])
+        #expect(checkpoint.isAllowed == true)
+    }
+
+    // MARK: - 3F.1: New Audit Events + hash-only content
+
+    @Test("3F.1 audit events are Codable round-trip")
+    func test_3f1_auditEvents_codable() throws {
+        let events: [AuditEvent] = [
+            .consentAccepted,
+            .consentRevoked,
+            .purgeCompleted,
+            .purgeFailed,
+            .retentionPolicyEvaluated,
+        ]
+        for event in events {
+            let data = try JSONEncoder().encode(event)
+            let decoded = try JSONDecoder().decode(AuditEvent.self, from: data)
+            #expect(decoded == event)
+        }
+    }
+
+    @Test("writeAuditLog with content stores only the hash")
+    func test_writeAuditLog_hashOnly() async throws {
+        let content = "private-memory-text"
+        try await sut.writeAuditLog(
+            eventType: .memoryIngested,
+            traceID: "hash-only-1",
+            policyVersion: 1,
+            content: content
+        )
+        let logs = try await sut.fetchAuditLogs(limit: 100)
+        let entry = logs.first { $0.traceID == "hash-only-1" }
+        #expect(entry != nil)
+        #expect(entry?.contentHash == AuditContentHasher.sha256Hex(content))
+        #expect(entry?.contentHash != content)
+    }
+
+    @Test("evaluateRetentionPolicy writes retentionPolicyEvaluated audit")
+    func test_evaluateRetentionPolicy() async throws {
+        try await sut.evaluateRetentionPolicy(traceID: "ret-policy-1")
+        let logs = try await sut.fetchAuditLogs(eventType: .retentionPolicyEvaluated)
+        let entry = logs.first { $0.traceID == "ret-policy-1" }
+        #expect(entry != nil)
+        #expect(entry?.success == true)
+        #expect(entry?.contentHash == AuditContentHasher.sha256Hex(#"{"mediaExempt":true,"textExempt":true,"autoExpiry":false}"#))
     }
 }

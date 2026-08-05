@@ -2,9 +2,10 @@
 // 文件: AppViewModel.swift
 // 对应规格: AGENTS.md §8.1 (ViewModel 契约), docs/ui/architecture.md §6 (ViewModel 契约)
 // 任务: 3.0 - App Shell: TabView + NavigationStack + DI 注入
-// AC 覆盖: App Shell 依赖注入容器，selectedTab 状态管理
+//       3F.1 - Production composition (ADR-007 §决策-1/2)
+// AC 覆盖: App Shell 依赖注入容器, selectedTab 状态管理, startupState 透传
 // 架构约束: 遵循 AGENTS.md §8.1 (ViewModel 契约: @MainActor + @Observable + state enum), §10.1 (ViewModels 目录)
-// 生成时间: 2026-07-26
+// 生成时间: 2026-07-26, 2026-08-04 (Task 3F.1)
 // ==========================================
 
 import SwiftUI
