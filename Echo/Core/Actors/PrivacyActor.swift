@@ -288,8 +288,10 @@ public actor PrivacyActor {
         await ensurePolicyLoaded()
 
         // deny-by-default 同意闸门 (3F.1, ADR-007 §决策-2)
-        // 仅 .denied 短路：未同意时拒绝一切业务访问并写拒绝审计 (AC-6 decision=.denied)；
-        // .allowed 时继续落入 per-source 授权检查（US-PRV-001），避免绕过数据源授权与审计事件语义错乱。
+        // deny-by-default consent gate (3F.1, ADR-007 §决策-2).
+        // Only .denied short-circuits: not-consented rejects all business access and
+        // writes a denial audit (AC-6 decision=.denied). .allowed falls through to the
+        // per-source authorization check (US-PRV-001) so the gate never bypasses it.
         if let consentDecision = await consentDecision(), consentDecision == .denied {
             let checkpoint = PrivacyCheckpoint(
                 traceID: traceID,

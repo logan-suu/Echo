@@ -46,7 +46,6 @@ enum AppTab: String, CaseIterable, Sendable {
 ///
 /// ## 职责
 /// - selectedTab: 根标签页切换状态
-/// - startupState: 透传 AppComposition 启动状态（3F.1）
 /// - 不保存第二份领域真相
 /// - 不直接访问 Core Actor
 @MainActor
@@ -57,11 +56,6 @@ final class AppViewModel {
 
     /// 当前选中的标签页
     var selectedTab: AppTab = .home
-
-    // MARK: - Startup State (3F.1)
-
-    /// 启动状态透传 — 由 AppComposition 驱动 (ADR-007 §决策-5)
-    var startupState: AppStartupState = .idle
 
     // MARK: - UI State
 
@@ -104,10 +98,5 @@ final class AppViewModel {
     /// 切换标签页
     func selectTab(_ tab: AppTab) {
         selectedTab = tab
-    }
-
-    /// 更新启动状态 (3F.1) — 由 AppRootView 从 composition 同步
-    func updateStartupState(_ state: AppStartupState) {
-        startupState = state
     }
 }

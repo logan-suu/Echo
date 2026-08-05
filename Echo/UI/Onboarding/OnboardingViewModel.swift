@@ -108,29 +108,31 @@ final class OnboardingViewModel {
     /// 是否已请求打开系统设置 (US-SRC-001 AC-6)
     private(set) var openSettingsRequested = false
 
-    /// 同意是否已持久化 (3F.1, US-PRV-008 AC-4)
+    /// Whether consent has been persisted (3F.1, US-PRV-008 AC-4)
     private(set) var consentPersisted = false
 
-    /// 模拟模型加载延迟 — 测试可注入 0 使加载立即完成 (fixture 模式)
+    /// Whether consent persistence failed (write errors surfaced for a retry UI)
+    private(set) var consentPersistFailed = false
+
+    /// Simulated model load delay - tests inject 0 to complete loading instantly (fixture mode)
     private let loadDelayNanoseconds: UInt64
 
-    /// 模型加载 Task
+    /// Model loading task
     private var loadTask: Task<Void, Never>?
 
-    /// UI 切片模式 fixture 注入源
+    /// Fixture injection source for the UI-slice mode
     private var stubFixture: OnboardingFixture?
 
-    /// 同意存储 actor（3F.1 生产接线；fixture/测试模式可为 nil）
+    /// Consent store actor (3F.1 production wiring; nil in fixture/test mode)
     private let consentStore: ConsentStoreActor?
 
     // MARK: - Initialization
 
-    /// 初始化 OnboardingViewModel。
+    /// Initialize OnboardingViewModel.
     ///
-    /// - Parameter loadDelayNanoseconds: 模拟模型加载总耗时。
-    ///   测试注入 0 使加载立即完成；默认 3s 模拟首次模型加载耗时
-    ///   (10 次进度 tick, 每次 300ms)。
-    /// - Parameter consentStore: 同意存储 actor（3F.1 生产接线，默认 nil）。
+    /// - Parameter loadDelayNanoseconds: simulated first-model-load duration;
+    ///   tests inject 0 for instant completion; default 3s (10 ticks, 300ms each).
+    /// - Parameter consentStore: consent store actor (3F.1 production wiring, default nil).
     init(loadDelayNanoseconds: UInt64 = 3_000_000_000,
          consentStore: ConsentStoreActor? = nil) {
         self.loadDelayNanoseconds = loadDelayNanoseconds
@@ -154,14 +156,19 @@ final class OnboardingViewModel {
         guard viewState == .privacyConsent else { return }
         if let consentStore {
             Task {
-                try? await consentStore.acceptConsent(consentVersion: 1, policyVersion: 1)
-                consentPersisted = true
+                do {
+                    try await consentStore.acceptConsent(consentVersion: 1, policyVersion: 1)
+                    consentPersisted = true
+                } catch {
+                    // Never swallow: mark persistence failure so the UI can surface a retry path
+                    consentPersistFailed = true
+                }
             }
         }
         if permissionSteps.isEmpty {
-            // 生产路径无权限源: 跳过 permissions 直接进语言选择
+            // Production path has no permission source: skip permissions and go straight to language selection
             viewState = .language
-            // TabView 跨页跳转时 languagePage.onAppear 可能不触发，显式初始化默认语言
+            // Cross-page TabView jumps may skip languagePage.onAppear; initialize the default language eagerly
             applyDefaultLanguage()
         } else {
             viewState = .permissions(0)
@@ -254,7 +261,8 @@ final class OnboardingViewModel {
     /// 🔮 Phase 3.9: ModelLoaderActor 真实加载进度。当前 fixture 模式模拟 determinate 进度。
     func beginLoad() {
         guard case .language = viewState else { return }
-        // 兜底: 跨页跳转可能未触发 onAppear 初始化，点 Continue 时补设默认语言
+        // Fallback: cross-page jumps may skip the onAppear initialization, so set the
+        // default language here before Continue can be used
         if selectedLanguage == nil { applyDefaultLanguage() }
         guard selectedLanguage != nil else { return }
         viewState = .modelLoading(0.0)

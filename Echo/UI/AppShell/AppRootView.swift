@@ -37,51 +37,61 @@ struct AppRootView: View {
     /// 应用自有 composition root (3F.1)
     @State private var composition = AppComposition.shared
 
-    /// 引导流程 ViewModel — 首次启动五步引导 (Task 3.11)
-    /// 3F.1 修复: 注入 composition.consentStore，同意即时持久化 (US-PRV-008 AC-4)
+    /// Onboarding ViewModel - first-launch flow (Task 3.11).
+    /// 3F.1 fix: inject composition.consentStore so Agree persists consent immediately (US-PRV-008 AC-4)
     @State private var onboardingViewModel = OnboardingViewModel(consentStore: AppComposition.shared.consentStore)
 
-    /// 引导流程是否展示 (fullScreenCover, echo-memory-canvas §15.1)
+    /// Whether onboarding is presented (fullScreenCover, echo-memory-canvas §15.1)
     @State private var isOnboardingPresented = false
 
-    /// 首次出现标记 — 控制 fixture 注入仅执行一次
+    /// First-appear flag - controls one-shot fixture injection
     @State private var hasHandledLaunchArguments = false
+
+    /// Consent save failed on onboarding completion (surfaced instead of silently proceeding)
+    @State private var consentPersistError = false
 
     // MARK: - Body
 
     var body: some View {
         Group {
-            switch composition.startupState {
-            case .requiresConsent:
-                onboardingGate
+            if consentPersistError {
+                // Consent write failed on onboarding completion: surface instead of silently proceeding
+                unavailableGate(title: "Consent Not Saved",
+                                message: "Your consent could not be saved. Restart Echo to try again.")
+            } else {
+                switch composition.startupState {
+                case .requiresConsent:
+                    onboardingGate
 
-            case .consentDeclined:
-                // 拒绝同意 = 终态：显示拒绝占位而非引导 cover（避免 Close 后 cover 死循环重现）
-                unavailableGate(title: "Consent Declined",
-                                message: "Echo cannot process your memories without consent. Reopen Echo to review the privacy policy.")
+                case .consentDeclined:
+                    // Declined consent is terminal: show a denial placeholder instead of
+                    // re-presenting the onboarding cover (avoids the Close dead-loop)
+                    unavailableGate(title: "Consent Declined",
+                                    message: "Echo cannot process your memories without consent. Reopen Echo to review the privacy policy.")
 
-            case .modelUnavailable:
-                unavailableGate(title: "Models Unavailable",
-                                message: "Required models could not be loaded. Reinstall Echo to restore them.")
+                case .modelUnavailable:
+                    unavailableGate(title: "Models Unavailable",
+                                    message: "Required models could not be loaded. Reinstall Echo to restore them.")
 
-            case .routeUnavailable:
-                unavailableGate(title: "Search Unavailable",
-                                message: "The active index route is unavailable.")
+                case .routeUnavailable:
+                    unavailableGate(title: "Search Unavailable",
+                                    message: "The active index route is unavailable.")
 
-            case .indexUnavailable:
-                unavailableGate(title: "Index Unavailable",
-                                message: "Memory index is not ready yet.")
+                case .indexUnavailable:
+                    unavailableGate(title: "Index Unavailable",
+                                    message: "Memory index is not ready yet.")
 
-            case .purgeBlocked:
-                unavailableGate(title: "Action Blocked",
-                                message: "The previous cleanup did not complete. Try again.")
+                case .purgeBlocked:
+                    unavailableGate(title: "Action Blocked",
+                                    message: "The previous cleanup did not complete. Try again.")
 
-            case .bootstrapFailed:
-                unavailableGate(title: "Startup Failed",
-                                message: "Echo could not initialize its local storage. Reinstall Echo or restart the device.")
+                case .bootstrapFailed:
+                    unavailableGate(title: "Startup Failed",
+                                    message: "Echo could not initialize its local storage. Reinstall Echo or restart the device.")
 
-            default:
-                mainTabs
+                default:
+                    mainTabs
+                }
             }
         }
         .tint(Color.accentColor)
@@ -98,24 +108,20 @@ struct AppRootView: View {
         }
         .onAppear {
             handleFirstAppear()
-            viewModel.updateStartupState(composition.startupState)
-        }
-        .onChange(of: composition.startupState) { _, newState in
-            viewModel.updateStartupState(newState)
         }
     }
 
     // MARK: - Onboarding Gate
 
-    /// deny-by-default：未同意时展示引导 (US-PRV-008)。
-    /// 生产路径经 EchoApp.task bootstrap 后进入此分支；测试用 `-ui-fixture onboarding-*` 直达。
+    /// deny-by-default: show onboarding while consent is required (US-PRV-008).
+    /// Production reaches this branch via EchoApp.task bootstrap; tests use `-ui-fixture onboarding-*`.
     @ViewBuilder
     private var onboardingGate: some View {
         Color.clear
             .onAppear { isOnboardingPresented = true }
     }
 
-    /// 不可用启动态占位（ADR-007 §决策-5）
+    /// Unavailable startup state placeholder (ADR-007 §决策-5)
     @ViewBuilder
     private func unavailableGate(title: String, message: String) -> some View {
         VStack(spacing: 16) {
@@ -133,10 +139,15 @@ struct AppRootView: View {
         }
     }
 
-    /// 引导完成后同步同意状态到 composition (US-PRV-008 AC-4)
+    /// Sync consent into composition when onboarding completes (US-PRV-008 AC-4)
     private func handleOnboardingCompleted() {
         Task {
-            try? await composition.acceptConsent(consentVersion: 1, policyVersion: 1)
+            do {
+                try await composition.acceptConsent(consentVersion: 1, policyVersion: 1)
+            } catch {
+                // Never swallow: surface the failed consent save instead of proceeding silently
+                consentPersistError = true
+            }
         }
     }
 

@@ -169,14 +169,15 @@ final class SettingsViewModel {
         }
     }
 
-    /// 请求撤回同意（显示二次确认，US-PRV-008 AC-4/AC-5）
+    /// Request consent revocation (shows a second confirmation, US-PRV-008 AC-4/AC-5)
     func requestRevokeConsent() {
         showRevokeConsentConfirmation = true
     }
 
-    /// 确认撤回同意 = 注销清除（US-PRV-008 AC-5, ADR-007 §决策-3）
+    /// Confirm consent revocation = account wipe (US-PRV-008 AC-5, ADR-007 §决策-3)
     func confirmRevokeConsent() async {
         showRevokeConsentConfirmation = false
+        state = .loading
         guard let composition else {
             state = .error(.l2Recoverable("Consent revocation is unavailable"))
             return
@@ -185,6 +186,8 @@ final class SettingsViewModel {
             let result = try await composition.revokeConsent(boundary: .full)
             if result.blocked {
                 state = .error(.l3Blocking("Cleanup did not complete. Please retry."))
+            } else {
+                await loadSettings()
             }
         } catch {
             state = .error(.l3Blocking(error.localizedDescription))

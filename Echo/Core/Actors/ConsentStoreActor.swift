@@ -47,22 +47,22 @@ public actor ConsentStoreActor {
     /// 测试用故障注入：acceptConsent 写库失败（非生产路径）
     internal var injectedConsentWriteFault = false
 
-    /// 清除故障注入点
+    /// Purge fault injection point
     internal enum PurgeFault: Sendable {
         case failBeforeCommit
     }
 
-    /// 同意写库注入错误（测试专用）
+    /// Injected consent-write error (test-only)
     internal enum ConsentWriteError: Error {
         case injectedWriteFault
     }
 
-    /// 注入/清除清除故障（测试专用；actor 隔离所以经方法访问）
+    /// Inject/clear the purge fault (test-only; actor isolation so accessed via methods)
     internal func setPurgeFault(_ fault: PurgeFault?) {
         injectedPurgeFault = fault
     }
 
-    /// 注入/清除同意写库故障（测试专用）
+    /// Inject/clear the consent-write fault (test-only)
     internal func setConsentWriteFault(_ enabled: Bool) {
         injectedConsentWriteFault = enabled
     }
@@ -132,7 +132,8 @@ public actor ConsentStoreActor {
                 .double(Date().timeIntervalSince1970),
             ]
         )
-        // 持久化成功后才更新内存状态，避免写库失败时内存/SQLite 发散
+        // Update in-memory state only after the write succeeds, so a failed write
+        // cannot diverge memory from SQLite
         state = newState
         try? await privacy.writeAuditLog(
             eventType: .consentAccepted,
@@ -155,8 +156,8 @@ public actor ConsentStoreActor {
 
         try await db.beginTransaction()
         do {
-            // 记录撤回动作审计（full purge 时随 AuditLog 自擦除，符合 US-PRV-005 AC-7；
-            // 部分清除边界时保留，记录撤回事件）
+            // Record the revocation audit (self-erased with AuditLog on full purge per
+            // US-PRV-005 AC-7; kept on partial boundaries to preserve the revocation event)
             try? await privacy.writeAuditLog(
                 eventType: .consentRevoked,
                 traceID: traceID,
@@ -207,7 +208,8 @@ public actor ConsentStoreActor {
             }
 
             try await db.commitTransaction()
-            // 事务成功提交后才重置内存状态，回滚时保持与 SQLite 一致（不发散）
+            // Reset in-memory state only after the transaction commits, so a rollback
+            // keeps memory consistent with SQLite (no divergence)
             state = .notConsented
             return PurgeResult(success: true, blocked: false, affectedCount: affected)
         } catch {

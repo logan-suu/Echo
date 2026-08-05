@@ -88,27 +88,29 @@ public final class AppComposition {
     /// 4. 启用同意闸门（生产 deny-by-default）
     /// 5. 确定启动状态
     public func bootstrap() async {
+        // Idempotence guard: a second call must not re-open the DB or leak the prior connection handle
+        guard startupState == .idle else { return }
         startupState = .bootstrapping
         do {
             try await databaseManager.open()
             try await consentStore.loadState()
             try await privacyActor.loadPolicy()
-            // UI 测试/预览 (DEBUG only)：-ui-skip-consent 跳过 deny-by-default 门控，
-            // 直接进入主界面（fixture 驱动的 XCUITest 依赖无门控启动路径）
+            // UI tests/previews (DEBUG only): -ui-skip-consent bypasses the deny-by-default
+            // gate and lands in .ready (fixture-driven XCUITest relies on the ungated path)
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ui-skip-consent") {
                 startupState = .ready
                 return
             }
             #endif
-            // 生产装配启用 deny-by-default 同意闸门
+            // Production wiring enables the deny-by-default consent gate
             await privacyActor.enableConsentEnforcement(consentStore: consentStore)
 
             let consented = await consentStore.hasConsented()
             startupState = consented ? .ready : .requiresConsent
         } catch {
-            // 数据库打开/同意/策略加载失败（L3）：进入独立 bootstrapFailed 状态，
-            // 与 purge 失败 (purgeBlocked) 语义分离，避免 UI 误显示"上次清除未完成"。
+            // DB open / consent / policy load failure (L3): enter a dedicated bootstrapFailed
+            // state, separated from purge failures so the UI does not misreport "cleanup incomplete"
             startupState = .bootstrapFailed
         }
     }

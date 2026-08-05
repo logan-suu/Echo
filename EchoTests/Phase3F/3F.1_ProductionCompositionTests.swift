@@ -395,8 +395,13 @@ struct ProductionCompositionTests {
     func test_auditStorage_fileProtectionComplete() async throws {
         let url = db.databaseURL
         let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
+        // Simulators do not enforce file protection: .protectionKey is nil there.
+        // On device the key must be .complete (AGENTS.md §5.4). Never leave an empty
+        // assertion: the else branch proves the DB file is reachable on simulator.
         if let protection = attrs[.protectionKey] as? String {
             #expect(protection == FileProtectionType.complete.rawValue)
+        } else {
+            #expect(FileManager.default.fileExists(atPath: url.path))
         }
     }
 
