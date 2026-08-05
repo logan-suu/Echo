@@ -74,15 +74,19 @@ public struct ChangeCoalescer: Sendable {
 
 // MARK: - PhotoKit Change Observer
 
-/// PhotoKit 相册变更观察者（US-SRC-012 AC-1）— 薄 Photos 边界，无实例可变状态。
+/// PhotoKit photo-library change observer (US-SRC-012 AC-1) — thin Photos boundary,
+/// no mutable instance state.
 ///
-/// - 实现 `PHPhotoLibraryChangeObserver`，在 `photoLibraryDidChange` 中提取
-///   新增/修改/删除资产的 localIdentifier，构建 `[ChangeEvent]` 批内去重后投递
-/// - 全部成员 `nonisolated`：可在 SyncPipeline actor（非 MainActor）中安全构造与注册
-/// - 投递闭包为 `@Sendable` 值类型，不携带可变 PHAsset 引用
-/// - 被监控的 pre-change fetch result 缓存在独立 @MainActor 单例（`MonitoredFetchResult`），
-///   避免 observer 实例持有 @MainActor 状态（Swift 6 下 nonisolated 回调捕获 self 会报
-///   sending data race，CI Xcode 16.4 验证）
+/// - Implements `PHPhotoLibraryChangeObserver`; `photoLibraryDidChange` extracts
+///   inserted/changed/removed asset localIdentifiers, builds `[ChangeEvent]`, dedupes,
+///   then delivers
+/// - All members `nonisolated`: safely constructed and registered from the
+///   SyncPipeline actor (non-MainActor)
+/// - Delivery closure is a `@Sendable` value type carrying only value-type ChangeEvents
+/// - The monitored pre-change fetch result is cached in a dedicated @MainActor singleton
+///   (`MonitoredFetchResult`), avoiding instance @MainActor state (Swift 6 rejects
+///   nonisolated callbacks capturing self with a sending data race; verified on CI
+///   Xcode 16.4)
 public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserver {
 
     /// 变更事件投递闭包（@Sendable 值类型，只携带值类型 ChangeEvent）
@@ -100,17 +104,18 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
 
     // MARK: - PHPhotoLibraryChangeObserver
 
-    /// PhotoKit 回调（系统保证主线程投递）：提取变更标识符 → 构建事件 → 批内去重 → 投递。
+    /// PhotoKit 回调：提取变更标识符 → 构建事件 → 批内去重 → 投递。
     ///
-    /// PHPhotoLibraryChangeObserver 回调在主线程，用 MainActor.assumeIsolated 同步访问
-    /// 缓存的 pre-change fetch result；闭包只引用 @MainActor 静态单例，不捕获 self，
-    /// 满足 Swift 6 严格并发（CI Xcode 16.4 -strict-concurrency=complete）。
+    /// Apple 文档确认 `photoLibraryDidChange` 在**任意后台队列**调用（非主线程），
+    /// 因此不能用 `MainActor.assumeIsolated`（非主线程会 trap）。改用
+    /// `Task { @MainActor in }` 异步跳转；闭包只捕获 Sendable 局部常量
+    /// （deliver 闭包 + coalescer），不捕获 self（NSObject 非 Sendable），
+    /// 满足 Xcode 16.4 Swift 6 严格并发。
     public nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
-        // 提取局部常量，使 assumeIsolated 闭包完全不捕获 self（NSObject 子类 non-Sendable，
-        // Xcode 16.4 Swift 6 下捕获 self 报 sending data race）
+        // 提取局部常量，使 Task 闭包完全不捕获 self
         let deliver = onPhotoLibraryChange
         let coalescer = self.coalescer
-        MainActor.assumeIsolated {
+        Task { @MainActor in
             guard let identifiers = MonitoredFetchResult.assetIdentifiers(from: changeInstance)
             else { return }
             let events = ChangeEventBuilder.events(
@@ -145,24 +150,26 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
 
 // MARK: - Monitored Fetch Result
 
-/// 被监控的 pre-change fetch result 缓存（CodeRabbit #2）。
+/// Cache of the monitored pre-change fetch result (CodeRabbit #2).
 ///
-/// `PHChange.changeDetails(for:)` 必须接收变更前的 fetch result 才会返回差异；
-/// 每次新建 fresh result 会令系统认为"无变化"而丢失 ChangeEvent（US-SRC-012 AC-1）。
-/// PHFetchResult 非 Sendable，缓存在 @MainActor 单例（回调保证主线程，同步访问安全）；
-/// observer 保持无实例状态，避免 nonisolated 回调捕获 self 的 Swift 6 data race。
+/// `PHChange.changeDetails(for:)` only returns a delta for the fetch result that
+/// represents the pre-change state; passing a fresh result makes the system report
+/// "no changes" and drop the ChangeEvent (US-SRC-012 AC-1). PHFetchResult is
+/// non-Sendable, so it is cached in a @MainActor singleton; the observer keeps no
+/// instance state to avoid Swift 6 data-race diagnostics on nonisolated callbacks.
 @MainActor
 internal enum MonitoredFetchResult {
     private static var result: PHFetchResult<PHAsset>?
 
-    /// 注册时种子化（MainActor 上下文调用）。
+    /// Seeds the monitored result (call from MainActor context).
     static func seed(_ fetchResult: PHFetchResult<PHAsset>) {
         result = fetchResult
     }
 
-    /// 从 PHChange 提取资产新增/修改/删除的 localIdentifier 数组（主线程调用）。
+    /// Extracts inserted/changed/removed asset localIdentifiers from PHChange (MainActor).
     ///
-    /// 使用缓存的 pre-change fetch result；首次无缓存时用 fresh result 并降级为 nil。
+    /// Uses the cached pre-change fetch result; falls back to a fresh result only when
+    /// not yet seeded (and degrades to nil).
     static func assetIdentifiers(from changeInstance: PHChange)
         -> (inserted: [String], changed: [String], removed: [String])? {
         let fetch = result ?? PHAsset.fetchAssets(with: nil)

@@ -457,12 +457,13 @@ public actor SyncPipeline {
             Task { await self.processPhotoChanges(events) }
         })
         photoObserver = observer
-        // 种子化 pre-change fetch result（CodeRabbit #2）：changeDetails(for:) 必须接收
-        // 变更前的 result 才会返回差异；fresh result 会令系统认为无变化而丢失 ChangeEvent
         Task { @MainActor in
+            // 种子化必须在 register 之前完成（CodeRabbit #2/#6）：changeDetails(for:) 必须
+            // 接收变更前的 result；若 seed 晚于 register，首个 change 事件会因 fresh result
+            // 被系统判定"无变化"而丢失（US-SRC-012 AC-1）
             MonitoredFetchResult.seed(PHAsset.fetchAssets(with: nil))
+            PHPhotoLibrary.shared().register(observer)
         }
-        PHPhotoLibrary.shared().register(observer)
     }
 
     /// 处理相册变更事件：窗口内去重（ADR-008 §决策-1）后驱动增量同步（AC-4）。

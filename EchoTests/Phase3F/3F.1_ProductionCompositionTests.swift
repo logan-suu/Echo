@@ -84,8 +84,9 @@ struct ProductionCompositionTests {
     @Test("awaitBootstrapCompletion waits for a concurrent bootstrap to finish (3F.2 race fix)")
     func test_awaitBootstrapCompletion_waitsForConcurrentBootstrap() async throws {
         let composition = makeComposition()
-        // 并发启动两个 bootstrap：第二个因幂等 guard 立即返回（startupState 仍是 .bootstrapping 时），
-        // 但 awaitBootstrapCompletion 必须等到真正的 bootstrap 完成（requiresConsent）。
+        // Start two bootstraps concurrently: the second returns immediately via the
+        // idempotence guard (startupState still .bootstrapping), but
+        // awaitBootstrapCompletion must wait for the real bootstrap to finish.
         async let first: Void = composition.bootstrap()
         await composition.awaitBootstrapCompletion()
         _ = await first
