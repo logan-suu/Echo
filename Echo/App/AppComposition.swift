@@ -115,6 +115,17 @@ public final class AppComposition {
         }
     }
 
+    /// 等待 bootstrap 真正完成（供 AppDelegate 来源装配等待）。
+    ///
+    /// 3F.2 review fix: `bootstrap()` 的幂等 guard 使并发调用者在 `.bootstrapping` 时立即返回，
+    /// AppDelegate.configureSources 可能在 bootstrap 完成前检查 startupState 而被拦截
+    /// （observer 永不注册 → 照片授权弹窗不出现）。等待 startupState 离开 idle/bootstrapping 即可。
+    public func awaitBootstrapCompletion() async {
+        while startupState == .idle || startupState == .bootstrapping {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+    }
+
     /// 用户同意后更新启动状态（US-PRV-008）
     public func acceptConsent(consentVersion: Int, policyVersion: Int) async throws {
         try await consentStore.acceptConsent(consentVersion: consentVersion, policyVersion: policyVersion)

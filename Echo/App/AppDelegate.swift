@@ -58,11 +58,29 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     private func configureSources() async {
         let composition = AppComposition.shared
         await composition.bootstrap()
+        // 3F.2 review fix: bootstrap() 幂等 guard 使并发调用立即返回，等待真正完成
+        // 后再检查 startupState，避免 observer 因竞态永不注册（照片授权弹窗不出现）
+        await composition.awaitBootstrapCompletion()
+        // 3F.2 review fix #3: 首次启动时 bootstrap 落在 .requiresConsent（deny-by-default），
+        // 若立即 return 则 observer 永不注册；等待用户在 Onboarding 完成同意（→ .ready）再装配。
+        // 拒绝同意（.consentDeclined）或不可用终态会退出等待。
+        while composition.startupState == .requiresConsent {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
         guard composition.startupState == .ready
                 || composition.startupState == .modelUnavailable
                 || composition.startupState == .indexUnavailable else {
             return
         }
+
+        // PhotoKit 来源适配器（iOS 26 limited 选择器主动弹出；3F.2 review fix）。
+        // 提前创建：didBecomeActive 在用户点 Limit Access 后立即触发，若 adapter 晚于
+        // 队列排空才创建，选择器会延迟出现（与 iOS 18 系统即时自动弹不一致）。
+        photoSourceAdapter = PhotoKitSourceAdapter(
+            library: RealPhotoLibrary(),
+            privacyActor: composition.privacyActor,
+            configuration: .production
+        )
 
         // 相册变更监听（US-SRC-012 AC-1, ADR-008 §决策-1）
         let vectorStore = VectorStoreActor(dimension: 512)
@@ -85,12 +103,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         ingestPipeline = ingest
         _ = try? await ingest.drainSharedImports(from: .shared)
 
-        // PhotoKit 来源适配器（iOS 26 limited 选择器主动弹出；3F.2 review fix）
-        photoSourceAdapter = PhotoKitSourceAdapter(
-            library: RealPhotoLibrary(),
-            privacyActor: composition.privacyActor,
-            configuration: .production
-        )
+        // 兜底补弹：didBecomeActive 可能早于本方法执行（configureSources 异步），
+        // 此处确保装配完成后仍未弹出时补一次（3F.2 review fix #2）
+        await presentLimitedLibraryPickerIfNeeded()
     }
 
     /// iOS 26 limited 适配：授权为 limited 且尚无已选照片时，主动呈现系统照片选择器

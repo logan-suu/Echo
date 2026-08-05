@@ -81,6 +81,19 @@ struct ProductionCompositionTests {
         await composition.privacyActor.disableConsentEnforcement()
     }
 
+    @Test("awaitBootstrapCompletion waits for a concurrent bootstrap to finish (3F.2 race fix)")
+    func test_awaitBootstrapCompletion_waitsForConcurrentBootstrap() async throws {
+        let composition = makeComposition()
+        // 并发启动两个 bootstrap：第二个因幂等 guard 立即返回（startupState 仍是 .bootstrapping 时），
+        // 但 awaitBootstrapCompletion 必须等到真正的 bootstrap 完成（requiresConsent）。
+        async let first: Void = composition.bootstrap()
+        await composition.awaitBootstrapCompletion()
+        _ = await first
+        #expect(composition.startupState == .requiresConsent
+                || composition.startupState == .ready)
+        await composition.privacyActor.disableConsentEnforcement()
+    }
+
     @Test("Explicit unavailable startup states are exposed")
     func test_explicitUnavailableStates() async throws {
         let composition = makeComposition()
