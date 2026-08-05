@@ -109,9 +109,12 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
 
     // MARK: - PHPhotoLibraryChangeObserver
 
-    /// PhotoKit 回调（主线程）：提取变更标识符 → 构建事件 → 批内去重 → 投递。
+    /// PhotoKit 回调（系统保证主线程投递）：提取变更标识符 → 构建事件 → 批内去重 → 投递。
+    ///
+    /// PHPhotoLibraryChangeObserver 回调在主线程，@MainActor 的 assetIdentifiers 可直接调用，
+    /// 无需 Task 跳转（避免 nonisolated 上下文捕获 self 的 data race，CI Xcode 16.4 报错）。
     public nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             guard let identifiers = self.assetIdentifiers(from: changeInstance) else { return }
             _ = self.consumeForTesting(
                 inserted: identifiers.inserted,
