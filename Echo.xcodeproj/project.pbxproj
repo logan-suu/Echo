@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		2365044C3016658C00B33DEE /* ProximaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 231256F12FE983AE0065B780 /* ProximaKit */; };
 		2365044D3016658C00B33DEE /* ProximaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 231256F22FE983AE0065B780 /* ProximaKit */; };
+		A15D637813B928F69A31298A /* PhotosUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1E12386D4393BEE278F45E8 /* PhotosUI.framework */; };
+
 		2A3F0200000000000000C1A1 /* SharedImportEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3F0200000000000000A6A1 /* SharedImportEnvelope.swift */; };
 		2A3F0200000000000000C2A1 /* SharedImportQueueActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3F0200000000000000A7A1 /* SharedImportQueueActor.swift */; };
 /* End PBXBuildFile section */
@@ -43,6 +45,7 @@
 		231256D62FE983AF0065B780 /* EchoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EchoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A3F0200000000000000A1A1 /* EchoShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = EchoShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A3F0200000000000000A2A1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "EchoShareExtension/Info.plist"; sourceTree = "<group>"; };
+		F1E12386D4393BEE278F45E8 /* PhotosUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhotosUI.framework; path = System/Library/Frameworks/PhotosUI.framework; sourceTree = SDKROOT; };
 		2A3F0200000000000000A3A1 /* EchoShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "EchoShareExtension/EchoShareExtension.entitlements"; sourceTree = "<group>"; };
 		2A3F0200000000000000A4A1 /* Echo-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Echo/Config/Echo-Info.plist"; sourceTree = "<group>"; };
 		2A3F0200000000000000A5A1 /* Echo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Echo/Config/Echo.entitlements"; sourceTree = "<group>"; };
@@ -122,6 +125,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2365044C3016658C00B33DEE /* ProximaKit in Frameworks */,
+				A15D637813B928F69A31298A /* PhotosUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
