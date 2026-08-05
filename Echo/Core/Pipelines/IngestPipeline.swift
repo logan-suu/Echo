@@ -748,6 +748,15 @@ public actor IngestPipeline {
         from queue: SharedImportQueueActor,
         traceID: String = UUID().uuidString
     ) async throws -> SharedImportDrainResult {
+        // PrivacyCheckpoint 总闸（§7.1 R-006）：Pipeline actor 方法入口必须校验 consent 门；
+        // 不传 sourceTypes（来源授权由逐封 ingestShared 的 per-source 校验决定，更严格）。
+        let checkpoint = await privacyActor.validate(
+            operation: .ingest,
+            traceID: traceID
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
         let recovered = try await queue.recoverInterrupted()
         let envelopes = try await queue.pendingEnvelopes()
         var processed = 0

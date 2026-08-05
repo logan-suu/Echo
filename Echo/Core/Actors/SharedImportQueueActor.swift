@@ -105,6 +105,12 @@ public actor SharedImportQueueActor {
             try fileManager.moveItem(at: tmpURL, to: pendingURL)
         } catch {
             try? fileManager.removeItem(at: tmpURL)
+            // 跨进程竞态（ADR-008 §决策-4 去重）：App 与 Extension 是两个进程，actor 串行化
+            // 不跨进程。若另一进程刚完成同 dedupeKey 的入队，moveItem 会因目标已存在而失败，
+            // 此时应按"重复投递"返回 false 而非抛错（pr-review DEF 修复）。
+            if fileManager.fileExists(atPath: pendingURL.path) {
+                return false
+            }
             throw error
         }
         return true

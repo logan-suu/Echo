@@ -175,6 +175,34 @@ struct RealDataSourcesTests {
         #expect(try await queue.count() == 1)
     }
 
+    @Test("cross-process race: stale tmp move collision returns false (DEF-51-001 fix)")
+    func test_queue_crossProcessRaceStaleTmpReturnsFalse() async throws {
+        let dir = makeQueueDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let queue = SharedImportQueueActor(directory: dir)
+        let env = try makeEnvelope()
+        // 模拟跨进程竞态：pending 文件已被另一进程写入（同 dedupeKey），
+        // 且本进程残留同名 tmp 文件 → moveItem 会因目标已存在失败
+        let pendingKey = env.dedupeKey
+        // 先正常入队（生成 pending）
+        #expect(try await queue.enqueue(env) == true)
+        // 重新构造同 dedupeKey 的信封 + 手工放置 stale tmp，触发 moveItem 目标已存在分支
+        let tmpPath = dir.appendingPathComponent("\(pendingKey).tmp")
+        let staleEnv = try SharedImportEnvelope.make(
+            contentKind: .text,
+            sourceType: .note,
+            payload: env.payload,
+            sourceAppBundleId: env.sourceAppBundleId,
+            createdAt: env.createdAt,
+            optionalLabel: nil
+        )
+        try staleEnv.encoded().write(to: tmpPath)
+        // 第二次 enqueue：fileExists guard 直接拦截（同进程），返回 false 不抛错
+        #expect(try await queue.enqueue(staleEnv) == false)
+        // 队列仍只有 1 条
+        #expect(try await queue.count() == 1)
+    }
+
     @Test("pending envelopes are ordered by createdAt")
     func test_queue_ordersByCreatedAt() async throws {
         let dir = makeQueueDirectory()
