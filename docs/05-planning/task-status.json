@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-04T14:42:11Z",
+  "last_updated": "2026-08-05T03:00:08Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -940,7 +940,7 @@
             "US-SRC-001",
             "US-RES-004"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "iOS Platform Lead",
             "approver": "Privacy Engineering Lead"
@@ -996,7 +996,7 @@
             "Privacy approver 对 deny-by-default、事务清除与 audit contract 签字",
             "evidence index 中的 commit、命令和制品索引"
           ],
-          "last_updated": "2026-08-05T02:20:23Z",
+          "last_updated": "2026-08-05T03:00:08Z",
           "notes": "✅ 3F.1 实现完成 (2026-08-04)。AppComposition composition root + AppStartupState 状态机；ConsentStoreActor deny-by-default 同意持久化 (ConsentStore 表)；revokeConsent 事务性清除 (PurgeBoundary + blocked + purgeFailed 审计 + 审计自擦除 US-PRV-005 AC-7)；AuditLog contentHash 列 (hash-only) + 必填字段 NOT NULL + 30 天清理 + NSFileProtectionComplete；OnboardingViewModel/SettingsViewModel 生产接线。测试：focused 19/19，全量回归 753 tests / 85 suites 0 失败，SwiftLint exit 0，R-007/网络扫描 clean。DEF-45-002 以 purge evidence 关闭（deferred-items.json resolved_deferred）。Release simulator build 存在基线（dev-1.0）同样复现的 simulateError #Preview 编译错误，非本任务引入。 | 模拟器实测修复 (commit 65195b3, 2026-08-05): Live Simulator (iPhone 17 Pro iOS 26.5) 验证生产引导路径发现并修复 3 个 UI→Core 接线缺陷——(A) AppRootView 未注入 consentStore 导致同意永不持久化 (已注入, US-PRV-008 AC-4)；(B) 生产路径 permissionSteps 为空导致 permissions 页 EmptyView 使 TabView 回退 Welcome 卡死 (空权限跳过进 language)；(C) 跨页跳转跳过 languagePage.onAppear 导致 Continue 永久 disabled (acceptPrivacy 显式初始化默认语言 + beginLoad 兜底)。全流程实测：Agree→ConsentStore 落库→语言→Continue→主界面→重启免引导。回归：OnboardingTests 23/23，全量 755 tests / 85 suites 0 失败。PR 描述已按 §15.5 刷新。 | pr-review-echo 预审修复 (commits 2b4422d+8d51416, 2026-08-05): (1) PrivacyActor.validate 同意闸门仅 .denied 短路，.allowed 落入 per-source 授权检查 (US-PRV-001 绕权修复 + .permissionChanged 审计泛滥修复); (2) AppComposition 新增 .bootstrapFailed 独立启动失败状态 (不再误映射 purgeBlocked); (3) revokeConsent 成功写 .consentRevoked 审计 (partial purge 保留/full 自擦除); (4) acceptConsent/revokeConsent 仅在持久化/commit 成功后更新内存状态 (消除内存/SQLite 发散)。回归：全量 758 tests / 85 suites 0 失败，SwiftLint exit 0。 | 二轮预审修复 (commit 045b70e, 2026-08-05T02:20:23Z): (1) 同意写库失败不再静默 (acceptPrivacy/handleOnboardingCompleted 显式状态); (2) confirmRevokeConsent 首行 .loading + 成功后刷新; (3) 删除 AppViewModel.startupState 死代码镜像; (4) bootstrap 幂等守卫; (5) v2/v4 ALTER 迁移 PRAGMA table_info 守卫 + 传播错误; (6) 注释英文化 (§3.5); (7) DEF-50-001 追踪 revokeConsent 事务重入 (延后至 DatabaseManager 原子 purge 重构, 3F.11 前); (8) DEF-45-002 从 deferred_from_pr_review 移除双数组重复; (9) 测试硬化 (fileProtection 条件断言 + testStartupState 10 状态)。AC-4 (Settings 撤回入口生产接线) 修正为 🔮(3F.7)。回归: 单元 756/85 0 失败, Onboarding/BackgroundTaskPanel/SearchJourney UITests 通过, SwiftLint 0 errors。",
           "pr": {
             "number": 50,
@@ -1008,7 +1008,8 @@
           "status_transitions": {
             "in_progress_at": "2026-08-04T15:00:59Z",
             "review_at": "2026-08-04T16:07:24Z"
-          }
+          },
+          "merged_at": "2026-08-05T02:58:54Z"
         },
         {
           "id": "3F.2",
@@ -1023,7 +1024,7 @@
             "US-SRC-013",
             "US-PRV-001"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "iOS Sources Lead",
             "approver": "Privacy Engineering Lead"
@@ -1049,7 +1050,7 @@
             "真实 PhotoKit 与 Share Extension 输入、权限撤回、队列原子性和去重证据",
             "Privacy approver 对 App Group 最小数据边界签字"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
+          "last_updated": "2026-08-05T03:00:08Z",
           "notes": "Migrated from 4.20.",
           "pr": null,
           "migrated_from": [
