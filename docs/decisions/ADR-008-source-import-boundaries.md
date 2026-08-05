@@ -48,3 +48,14 @@
 - `docs/05-planning/phase3f-execution-plan.md` §4.6.2（3F.2 文档合同）、§4.6.7（3F.7 迁移安全子契约）
 - AGENTS.md R-002/R-003、D-002/D-003
 - ADR-010（canonical generation 生命周期与迁移发布）
+
+## 实现证据（3F.2，2026-08-05）
+
+- **决策-1 PhotoKit 授权与变更观察**：`Echo/Core/Sources/PhotoKitSourceAdapter.swift`（全授权状态处理 + 每次读取实时校验授权，撤回立即停止）+ `Echo/Core/Sources/PhotoKitChangeObserver.swift`（`PHPhotoLibraryChangeObserver` 批内去重，跨投递窗口去重于 `SyncPipeline.processPhotoChanges`，ADR-008 决策-1 变更去重）。
+- **决策-2 Share-only 用户中介**：`EchoShareExtension/ShareViewController.swift`（`ShareContentExtractor` 拒绝不支持类型；`NSExtensionPointIdentifier=com.apple.share-services` 预览确认后入队）。
+- **决策-3 App Group 信封与原子队列**：`Echo/Core/Models/SharedImportEnvelope.swift` + `Echo/Core/Actors/SharedImportQueueActor.swift`（文件原子入队、`dedupeKey` 重复拒绝、`begin/finish/rollback` + `recoverInterrupted` 恰好一次）；App/Extension 共享 `group.com.echo.Echo`（`Echo/Config/Echo.entitlements`、`EchoShareExtension/EchoShareExtension.entitlements`）。
+- **决策-4 去重键与来源身份**：`SharedImportEnvelope.dedupeKey = SHA-256(sourceType|contentKind|payload)`，跨投递稳定，跨来源区分。
+- **决策-5 权限撤回**：`PhotoKitSourceAdapter.canReadAssets()` 每次读取前实时校验（测试 `test_photoKit_revocationStopsReads`）。
+- **决策-7 最小数据边界**：信封仅最小字段（不存原文件全文）；`Echo-Info.plist` 含 `NSPhotoLibraryUsageDescription`。
+- **审计**：`.shareExtensionImported`（US-SRC-003 AC-4）新增于 `Echo/Core/Models/AuditEvent.swift`，`appBundleId|contentType` 以 hash-only 写入（AGENTS.md §5.4）。
+- 测试：`EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift` 29 项；全量回归 785 tests / 86 suites 0 失败。

@@ -52,6 +52,13 @@ struct IngestPipelineTextTests {
         try await db.open()
         try await db.execute(sql: "DELETE FROM AuditLog")
         try await db.execute(sql: "DELETE FROM UserPolicyStore")
+        // 3F.1+ suites may write ConsentStore (deny-by-default gate) first;
+        // this suite must clear it or residual consent makes privacyActor.validate deny
+        // (CI test-order pollution)
+        try await db.execute(sql: "DELETE FROM ConsentStore")
+        // Also clear the shared singleton's in-memory enforcement state (Xcode 16.4 CI
+        // suite ordering differs)
+        await privacyActor.disableConsentEnforcement()
         try await privacyActor.updatePolicy(UserPolicy(
             preferredLanguage: "zh-Hans",
             authorizedSourceTypes: ["note", "voice", "photo", "video"],

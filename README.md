@@ -25,6 +25,8 @@ Echo 是一款**完全离线**的端侧 AI 记忆助手。它自动索引你的 
 > 📌 **目标态**：AI 模型随 App 安装包分发、运行时无网络请求（R-005 红线）。当前推理层为 Stub/Scaffold，模型工件接入见修复计划 R-3/R-4 与 Phase 3F 任务 3F.3（原 4.21/4.22）。
 >
 > 📌 **当前状态**：核心架构（Actor 隔离、认知管线、隐私校验、反馈学习）已实现并通过测试；AI 推理层（E5/SigLIP2/Whisper）为 Stub/Scaffold，模型工件接入见修复计划 Phase R-3/R-4 与 Phase 3F 任务 3F.3。数据源接入遵循 R-5.2 决策（Photos 自动 + 备忘录/语音备忘录 Share 分享）。
+>
+> 📌 **3F.2 已交付（2026-08-05）**：真实来源边界——`PhotoKitSourceAdapter`（授权状态机 + 撤回即停 + 本地仅下载策略 + `.dataSourceConnected` 审计）、`PhotoKitChangeObserver`（变更去重）、`EchoShareExtension` target（Share 预览确认 → App Group 信封原子入队）、`SharedImportQueueActor`（去重 + 恰好一次消费，App 重启恢复）、`IngestPipeline.ingestShared`/`drainSharedImports`（R-006 + ExcludedAssets fail-closed + hash-only `.shareExtensionImported` 审计）。App/Extension 共享 `group.com.echo.Echo` App Group。真实模型工件推理（E5/SigLIP2/Whisper）由 3F.3 接入；真实来源 E2E 证据于 3F.11 no-fixture 门禁验证。
 
 ---
 

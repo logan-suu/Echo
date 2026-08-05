@@ -695,6 +695,36 @@
       ],
       "tracking_status": "open",
       "recheck_trigger": "Phase 3F integration scan"
+    },
+    {
+      "id": "DEF-51-001",
+      "pr": 51,
+      "title": "AppDelegate 创建孤儿 VectorStoreActor（第二依赖图）",
+      "severity": "🟡",
+      "location": "Echo/App/AppDelegate.swift:86 (configureSources)",
+      "reason": "configureSources 新建独立 VectorStoreActor + SyncPipeline + IngestPipeline，未注册进 AppComposition 唯一依赖图（ADR-007 §决策-1）也未走 GenerationRegistryActor（AGENTS.md §5.1）。当前 E5 模型未接入（3F.3）embed 抛错回滚、无实际数据写入；3F.3 模型就绪后 drainSharedImports 会把分享内容写入孤儿内存 store，检索侧读不到、重启即丢（静默数据丢失路径）。修复依赖 3F.4/3F.5 的 generation 生命周期与生产摄入重构，本次 PR 硬改会造成半成品。",
+      "defer_to": "3F.5 生产摄入时经 GenerationRegistryActor 获取活跃代 store 重接；在此之前 drainSharedImports 保持 fail-closed（embed 抛错回滚）",
+      "deferred_at": "2026-08-05"
+    },
+    {
+      "id": "DEF-51-002",
+      "pr": 51,
+      "title": "语音摄入：信封 payload 为扩展沙盒临时文件 URL，消费时失效；ASR 契约（PHAsset ID）与 payload（文件 URL）语义不符",
+      "severity": "🟡",
+      "location": "EchoShareExtension/ShareViewController.swift:114-120 (loadFileURL) + IngestPipeline.ingestSharedAudio (transcribe(audioTrackAssetId: envelope.payload))",
+      "reason": "音频分享的信封 payload 存的是扩展进程沙盒内临时文件 URL（ADR-008 §决策-7 未把文件拷入 App Group 持久化），App 稍后消费时该 URL 已失效；且 ASREngineProtocol.transcribe 入参契约是 PHAsset.localIdentifier，与文件 URL 语义不符。语音摄入即使 Whisper（3F.3）就绪也无法成功。修复需在分享侧把文件复制到 App Group 容器持久定位符 + 调整 ASR 契约（3F.3 接入 Whisper 时一并设计），本次 PR 修复会造成跨任务契约反复。AC 表 US-SRC-001 voice 行已降级为 🔮。",
+      "defer_to": "3F.3（Whisper 接入时重设计 ASR 文件输入契约）+ 3F.5（生产摄入接管文件分享持久化）",
+      "deferred_at": "2026-08-05"
+    },
+    {
+      "id": "DEF-51-003",
+      "pr": 51,
+      "title": "Share Extension note/voice 来源标记不可达（host app bundle ID 无公开 API）",
+      "severity": "🟡",
+      "location": "EchoShareExtension/ShareViewController.swift:168 (extractAndPreview: Bundle.main.bundleIdentifier)",
+      "reason": "Bundle.main.bundleIdentifier 在扩展进程内返回扩展自身 ID（com.echo.Echo.ShareExtension），永远不等于 com.apple.mobilenotes/VoiceMemos → note/voice 来源分支永不命中，备忘录/语音分享恒被标记 thirdParty（US-SRC-001 来源标记不精确）。iOS 26 SDK 无公开 API 获取 host app bundle ID（NSExtensionContext 无 hostIdentifier 公开属性）。修复需 3F.5 引入 host 识别方案（如 LSApplicationProxy 或分享确认 UI 让用户选择来源），本次 PR 无法用公开 API 修复。",
+      "defer_to": "3F.5（与 DEF-51-002 合并：语音摄入 + 来源标记一起按 host 识别方案处理）",
+      "deferred_at": "2026-08-05"
     }
   ]
 }

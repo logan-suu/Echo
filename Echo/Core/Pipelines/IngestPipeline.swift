@@ -46,6 +46,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
     case audioTranscriptionFailed(underlying: Error)
     /// 文本输入为空（US-ING-001 AC-2：原始文本必须有效）
     case emptyText
+    /// Share 分享内容类型当前不受摄入支持（图片/文件分享由 3F.5 生产摄入处理）
+    case unsupportedSharedContent(kind: String)
 
     /// L1~L4 错误分级
     public nonisolated var errorLevel: Int {
@@ -61,6 +63,7 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case .tooManyFrames:              return 2  // L2 可恢复（调用方传入超限帧数）
         case .audioTranscriptionFailed:               return 2  // L2 可恢复（ASR 模型未加载等）
         case .emptyText:                              return 2  // L2 可恢复（调用方传入非法参数）
+        case .unsupportedSharedContent:               return 2  // L2 可恢复（调用方传入非法参数）
         }
     }
 
@@ -88,6 +91,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
             return "Audio transcription failed: \(error.localizedDescription)"
         case .emptyText:
             return "Text input is empty or whitespace-only"
+        case .unsupportedSharedContent(let kind):
+            return "Unsupported shared content kind: \(kind)"
         }
     }
 
@@ -105,6 +110,7 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case (.tooManyFrames(let a), .tooManyFrames(let b)): return a == b
         case (.audioTranscriptionFailed, .audioTranscriptionFailed): return true
         case (.emptyText, .emptyText): return true
+        case (.unsupportedSharedContent(let a), .unsupportedSharedContent(let b)): return a == b
         default: return false
         }
     }
@@ -672,5 +678,242 @@ public actor IngestPipeline {
         )
 
         return memory
+    }
+
+    // MARK: - Shared Import Ingestion (3F.2, ADR-008 §决策-2/3)
+
+    /// 摄入一封 App Group 分享信封（US-SRC-001/003 — share-only 用户中介）。
+    ///
+    /// **流程**（对应 ADR-008 §决策-2/3）：
+    /// 1. PrivacyCheckpoint：按信封来源类型校验授权（note/voice/thirdParty）
+    /// 2. ExcludedAssets：按 `dedupeKey` 校验（fail-closed，US-SRC-008 AC-4）
+    /// 3. 内容分支：
+    ///    - text/url → `embedText`（备忘录/第三方文本）
+    ///    - audio → `transcribe` → `embedText`（语音备忘录转写）
+    ///    - image/file → 抛出 `.unsupportedSharedContent`（3F.5 生产摄入接管）
+    /// 4. 审计 `.shareExtensionImported`（US-SRC-003 AC-4：appBundleId + contentType，hash-only）
+    ///
+    /// - Parameter envelope: App Group 分享信封
+    /// - Returns: 摄入完成的 MemoryEntry（assetId = envelope.dedupeKey）
+    /// - Throws: `IngestError` 按 L1~L4 分级
+    public func ingestShared(
+        _ envelope: SharedImportEnvelope,
+        traceID: String = UUID().uuidString
+    ) async throws -> MemoryEntry {
+        let startTime = Date()
+
+        // Step 1: PrivacyCheckpoint (R-006) — 按信封来源类型校验
+        let sourceTypes = [envelope.sourceType.rawValue]
+        let checkpoint = await privacyActor.validate(
+            operation: .ingest,
+            traceID: traceID,
+            sourceTypes: sourceTypes
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+
+        // Step 2: ExcludedAssets check (US-SRC-008 AC-4) — fail-closed
+        do {
+            if try await excludedAssets.contains(assetId: envelope.dedupeKey) {
+                throw IngestError.assetExcluded(assetId: envelope.dedupeKey)
+            }
+        } catch let error as IngestError {
+            throw error
+        } catch {
+            throw IngestError.excludedAssetsLookupFailed(underlying: error)
+        }
+
+        // Step 3: 内容分支
+        switch envelope.contentKind {
+        case .text, .url:
+            return try await ingestSharedText(
+                envelope, checkpointPolicyVersion: checkpoint.policyVersion, startTime: startTime, traceID: traceID
+            )
+        case .audio:
+            return try await ingestSharedAudio(
+                envelope, checkpointPolicyVersion: checkpoint.policyVersion, startTime: startTime, traceID: traceID
+            )
+        case .image, .file:
+            // 图片/文件分享的提取与推理由 3F.5 生产摄入接管（本任务聚焦队列与来源边界）
+            throw IngestError.unsupportedSharedContent(kind: envelope.contentKind.rawValue)
+        }
+    }
+
+    /// 队列排空：恢复中断 → 逐个 开始→摄入→完成，恰好一次处理（ADR-008 §决策-3）。
+    ///
+    /// - Parameter queue: App Group 分享队列
+    /// - Returns: 处理/失败/恢复计数
+    public func drainSharedImports(
+        from queue: SharedImportQueueActor,
+        traceID: String = UUID().uuidString
+    ) async throws -> SharedImportDrainResult {
+        // PrivacyCheckpoint 总闸（§7.1 R-006）：Pipeline actor 方法入口必须校验 consent 门；
+        // 不传 sourceTypes（来源授权由逐封 ingestShared 的 per-source 校验决定，更严格）。
+        let checkpoint = await privacyActor.validate(
+            operation: .ingest,
+            traceID: traceID
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+        let recovered = try await queue.recoverInterrupted()
+        let envelopes = try await queue.pendingEnvelopes()
+        var processed = 0
+        var failed = 0
+        for envelope in envelopes {
+            guard let started = try await queue.beginProcessing(for: envelope.dedupeKey) else { continue }
+            do {
+                _ = try await ingestShared(started, traceID: traceID)
+                try await queue.finishProcessing(for: envelope.dedupeKey)
+                processed += 1
+            } catch {
+                try? await queue.rollbackProcessing(for: envelope.dedupeKey)
+                failed += 1
+            }
+        }
+        return SharedImportDrainResult(
+            processed: processed,
+            failed: failed,
+            recovered: recovered
+        )
+    }
+
+    // MARK: - Shared Import Helpers
+
+    private func ingestSharedText(
+        _ envelope: SharedImportEnvelope,
+        checkpointPolicyVersion: Int,
+        startTime: Date,
+        traceID: String
+    ) async throws -> MemoryEntry {
+        let trimmed = envelope.payload.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw IngestError.emptyText }
+
+        let rawEmbedding: [Float]
+        do {
+            rawEmbedding = try await embedder.embedText(envelope.payload)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+        let padded = zeroPad(rawEmbedding)
+        let memory = MemoryEntry(
+            assetId: envelope.dedupeKey,
+            embedding: padded,
+            sourceType: envelope.sourceType.rawValue,
+            timestamp: envelope.createdAt,
+            exifMetadata: nil,
+            privacyBlurApplied: false,
+            traceID: traceID,
+            originalText: envelope.payload
+        )
+        try await writeSharedMemory(memory, embedding: padded)
+        await writeShareExtensionAudit(
+            envelope,
+            policyVersion: checkpointPolicyVersion,
+            startTime: startTime,
+            traceID: traceID
+        )
+        return memory
+    }
+
+    private func ingestSharedAudio(
+        _ envelope: SharedImportEnvelope,
+        checkpointPolicyVersion: Int,
+        startTime: Date,
+        traceID: String
+    ) async throws -> MemoryEntry {
+        guard let asr = asrEngine else {
+            throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
+        }
+        let transcript: String
+        do {
+            transcript = try await asr.transcribe(audioTrackAssetId: envelope.payload)
+        } catch {
+            throw IngestError.audioTranscriptionFailed(underlying: error)
+        }
+        let rawEmbedding: [Float]
+        do {
+            rawEmbedding = try await embedder.embedText(transcript)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+        let padded = zeroPad(rawEmbedding)
+        let memory = MemoryEntry(
+            assetId: envelope.dedupeKey,
+            embedding: padded,
+            sourceType: envelope.sourceType.rawValue,
+            timestamp: envelope.createdAt,
+            exifMetadata: nil,
+            privacyBlurApplied: false,
+            traceID: traceID,
+            originalText: transcript
+        )
+        try await writeSharedMemory(memory, embedding: padded)
+        await writeShareExtensionAudit(
+            envelope,
+            policyVersion: checkpointPolicyVersion,
+            startTime: startTime,
+            traceID: traceID
+        )
+        return memory
+    }
+
+    private func writeSharedMemory(_ memory: MemoryEntry, embedding: [Float]) async throws {
+        let metadata: Data
+        do {
+            metadata = try memory.encodeMetadata()
+        } catch {
+            throw IngestError.metadataEncodingFailed(underlying: error)
+        }
+        do {
+            try await vectorStore.ingest(vector: embedding, id: memory.id, metadata: metadata)
+        } catch {
+            throw IngestError.vectorStoreWriteFailed(underlying: error)
+        }
+    }
+
+    /// 审计 `.shareExtensionImported`（US-SRC-003 AC-4：appBundleId + contentType，hash-only）。
+    private func writeShareExtensionAudit(
+        _ envelope: SharedImportEnvelope,
+        policyVersion: Int,
+        startTime: Date,
+        traceID: String
+    ) async {
+        let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        // AGENTS.md §5.4 hash-only：content 在写入前被哈希，不含原文
+        try? await privacyActor.writeAuditLog(
+            eventType: .shareExtensionImported,
+            traceID: traceID,
+            policyVersion: policyVersion,
+            success: true,
+            sourceType: envelope.sourceType.rawValue,
+            affectedCount: 1,
+            excludedWritten: false,
+            elapsedMs: elapsedMs,
+            content: "appBundleId=\(envelope.sourceAppBundleId)|contentType=\(envelope.contentKind.rawValue)"
+        )
+    }
+
+    private func zeroPad(_ embedding: [Float]) -> [Float] {
+        if embedding.count < 512 {
+            return embedding + Array(repeating: 0.0, count: 512 - embedding.count)
+        }
+        return embedding
+    }
+}
+
+// MARK: - Shared Import Drain Result
+
+/// 队列排空结果（ADR-008 §决策-3 恰好一次处理计数）
+public struct SharedImportDrainResult: Sendable, Equatable {
+    public nonisolated let processed: Int
+    public nonisolated let failed: Int
+    public nonisolated let recovered: Int
+
+    public nonisolated init(processed: Int = 0, failed: Int = 0, recovered: Int = 0) {
+        self.processed = processed
+        self.failed = failed
+        self.recovered = recovered
     }
 }

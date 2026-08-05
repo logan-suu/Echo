@@ -509,7 +509,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
 
 #### 4.6.2 3F.2 文档合同
 
-- **Operation:** Update. **Exact paths:** `README.md`; `docs/01-spec/用户故事与验收标准规格书.md`; `docs/02-architecture/架构设计文档.md`; `docs/02-architecture/数据流全链路技术说明文档.md`; `docs/decisions/ADR-008-source-import-boundaries.md`; `docs/05-planning/phase3f-execution-plan.md`; `docs/05-planning/phase3f-evidence-index.md`; `docs/05-planning/task-status.json`; `docs/05-planning/deferred-items.json`. **Required delta:** Record PhotoKit authorization/change observation, share-only Notes/Voice path, App Group envelope, dedupe, exclusions, audit, revocation, test and PR evidence. **Acceptance check:** ADR types and entitlement paths match implementation, real-source evidence resolves, and ledgers parse. **Owner:** iOS Sources Lead. **Approver:** Privacy Engineering Lead.
+- **Operation:** Update. **Exact paths:** `README.md`; `docs/01-spec/用户故事与验收标准规格书.md`; `docs/02-architecture/架构设计文档.md`; `docs/02-architecture/数据流全链路技术说明文档.md`; `docs/decisions/ADR-008-source-import-boundaries.md`; `docs/05-planning/phase3f-execution-plan.md`; `docs/05-planning/phase3f-evidence-index.md`; `docs/05-planning/task-status.json`; `docs/05-planning/deferred-items.json`; `Echo/Core/Models/AuditEvent.swift`. **Required delta:** Record PhotoKit authorization/change observation, share-only Notes/Voice path, App Group envelope, dedupe, exclusions, audit (`.shareExtensionImported` event added in `Echo/Core/Models/AuditEvent.swift`, US-SRC-003 AC-4), revocation, test and PR evidence. **Acceptance check:** ADR types and entitlement paths match implementation, real-source evidence resolves, and ledgers parse. **Owner:** iOS Sources Lead. **Approver:** Privacy Engineering Lead.
 - **Operation:** Read-only. **Exact path:** `docs/05-planning/phase3f-story-matrix.md`. **Required delta:** None. **Acceptance check:** No diff. **Owner:** iOS Sources Lead. **Approver:** Product and Architecture Lead for a scope-change PR.
 
 #### 4.6.3 3F.3 文档合同
@@ -1306,7 +1306,7 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 
 **Files**
 
-- Modify: `Echo.xcodeproj/project.pbxproj`; `Echo/App/AppDelegate.swift`; `Echo/Core/Pipelines/SyncPipeline.swift`; `Echo/Core/Pipelines/IngestPipeline.swift`.
+- Modify: `Echo.xcodeproj/project.pbxproj`; `Echo/App/AppDelegate.swift`; `Echo/Core/Pipelines/SyncPipeline.swift`; `Echo/Core/Pipelines/IngestPipeline.swift`; `Echo/Core/Models/AuditEvent.swift` (新增 `.shareExtensionImported` 审计事件, US-SRC-003 AC-4).
 - Create: `Echo/Config/Echo-Info.plist`; `Echo/Config/Echo.entitlements`; `Echo/Core/Sources/PhotoKitSourceAdapter.swift`; `Echo/Core/Sources/PhotoKitChangeObserver.swift`; `Echo/Core/Models/SharedImportEnvelope.swift`; `Echo/Core/Actors/SharedImportQueueActor.swift`; `EchoShareExtension/ShareViewController.swift`; `EchoShareExtension/Info.plist`; `EchoShareExtension/EchoShareExtension.entitlements`; `EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift`.
 - Test/extend: `EchoTests/Phase2/SyncPipelineTests.swift`, `EchoTests/Phase2/IngestPipelineImageTests.swift`, `EchoTests/Phase2/2.5_IngestPipelineTextTests.swift`.
 - Modify documentation/planning: `README.md`; `docs/01-spec/用户故事与验收标准规格书.md`; `docs/02-architecture/架构设计文档.md`; `docs/02-architecture/数据流全链路技术说明文档.md`; `docs/decisions/ADR-008-source-import-boundaries.md`; `docs/05-planning/phase3f-execution-plan.md`; `docs/05-planning/phase3f-evidence-index.md`; `docs/05-planning/task-status.json`; `docs/05-planning/deferred-items.json`.

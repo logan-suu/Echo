@@ -206,6 +206,14 @@ public actor SyncPipeline {
     /// 当前同步中锁定的内存 ID 集合（AC-6: 防止并发编辑）
     private var lockedMemoryIds: Set<String> = []
 
+    /// 相册变更观察者（US-SRC-012 AC-1, ADR-008 §决策-1）— 由 PHPhotoLibrary 注册，Actor 持有引用防止释放
+    private var photoObserver: PhotoKitChangeObserver?
+
+    /// 跨投递变更去重窗口内的已投递键（`assetId|changeType` → 投递时间，ADR-008 §决策-1）
+    private var recentChangeKeys: [String: Date] = [:]
+    /// 去重窗口（秒）
+    private nonisolated let changeDedupeWindow: TimeInterval = 2.0
+
     // MARK: - Initialization
 
     public init(
@@ -436,14 +444,45 @@ public actor SyncPipeline {
 
     // MARK: - Change Detection (AC-1, AC-2)
 
-    /// 注册相册变更监听（AC-1: PHPhotoLibraryChangeObserver）
+    /// 注册相册变更监听（AC-1: PHPhotoLibraryChangeObserver, ADR-008 §决策-1 变更去重）。
     ///
     /// 调用此方法后，当用户在系统相册中编辑照片/视频时，
-    /// 会通过 `PHPhotoLibraryChangeObserver` 协议收到变更通知。
-    public nonisolated func registerPhotoLibraryObserver() {
-        // PHPhotoLibraryChangeObserver 在 ViewModel/AppDelegate 层注册，
-        // Pipeline 提供数据签名，实际注册由调用方通过 PHPhotoLibrary.shared().register(self) 完成。
-        // 此方法为文档化入口，实际 observer 实现在 SyncViewModel 层（Phase 3）。
+    /// `PhotoKitChangeObserver` 收到变更通知，经批内去重后投递给 `processPhotoChanges`
+    /// （跨投递窗口去重），最终驱动 `sync(changes:)` 增量替换。
+    /// 使用方（AppDelegate 启动装配）持有此 Pipeline 引用即可；observer 由 Actor 持有，防止被系统释放。
+    /// 注册相册变更监听（AC-1: PHPhotoLibraryChangeObserver, ADR-008 §决策-1 变更去重）。
+    ///
+    /// 调用此方法后，当用户在系统相册中编辑照片/视频时，
+    /// `PhotoKitChangeObserver` 收到变更通知，经批内去重后投递给 `processPhotoChanges`
+    /// （跨投递窗口去重），最终驱动 `sync(changes:)` 增量替换。
+    /// 使用方（AppDelegate 启动装配）持有此 Pipeline 引用即可；observer 由 Actor 持有，防止被系统释放。
+    ///
+    /// 保持 actor 方法（非 @MainActor）：PHPhotoLibrary.registerChangeObserver 不需主线程
+    /// （ObjC 头），observer 不外发跨隔离域；MonitoredFetchResult 的 seed 由
+    /// `photoLibraryDidChange` 首次回调时在 MainActor 懒加载（避免同步 seed 的隔离冲突）。
+    public func registerPhotoLibraryObserver() {
+        guard photoObserver == nil else { return }
+        let observer = PhotoKitChangeObserver(onPhotoLibraryChange: { [weak self] events in
+            guard let self else { return }
+            Task { await self.processPhotoChanges(events) }
+        })
+        photoObserver = observer
+        PHPhotoLibrary.shared().register(observer)
+    }
+
+    /// 处理相册变更事件：窗口内去重（ADR-008 §决策-1）后驱动增量同步（AC-4）。
+    private func processPhotoChanges(_ events: [ChangeEvent]) async {
+        let now = Date()
+        recentChangeKeys = recentChangeKeys.filter { now.timeIntervalSince($0.value) < changeDedupeWindow }
+        var deduped: [ChangeEvent] = []
+        for event in events {
+            let key = "\(event.assetId)|\(event.changeType.rawValue)"
+            if recentChangeKeys[key] != nil { continue }
+            recentChangeKeys[key] = now
+            deduped.append(event)
+        }
+        guard !deduped.isEmpty else { return }
+        _ = try? await sync(changes: deduped)
     }
 
     // MARK: - Auto-sync Toggle (AC-3, AC-8)

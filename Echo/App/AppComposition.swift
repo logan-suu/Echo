@@ -115,6 +115,23 @@ public final class AppComposition {
         }
     }
 
+    /// Waits for bootstrap to actually finish (for AppDelegate source wiring).
+    ///
+    /// 3F.2 review fix: `bootstrap()`'s idempotence guard returns immediately for concurrent
+    /// callers while state is `.bootstrapping`, so AppDelegate.configureSources could check
+    /// startupState too early and get intercepted (observer never registered, photo auth
+    /// prompt never shown). Waits until startupState leaves idle/bootstrapping.
+    public func awaitBootstrapCompletion() async {
+        while startupState == .idle || startupState == .bootstrapping {
+            // 显式处理取消：Task.sleep 抛出 CancellationError 时退出，避免 try? 吞错后忙等
+            do {
+                try await Task.sleep(for: .milliseconds(25))
+            } catch {
+                return
+            }
+        }
+    }
+
     /// 用户同意后更新启动状态（US-PRV-008）
     public func acceptConsent(consentVersion: Int, policyVersion: Int) async throws {
         try await consentStore.acceptConsent(consentVersion: consentVersion, policyVersion: policyVersion)

@@ -64,6 +64,8 @@ public enum AuditEvent: String, Sendable, Codable {
     case purgeFailed
     /// 记忆永久保留策略评估 (US-PRV-006 AC-6)
     case retentionPolicyEvaluated
+    /// Share Extension 显式分享摄入 (US-SRC-003 AC-4: 含 appBundleId + contentType)
+    case shareExtensionImported
 }
 
 // MARK: - Audit Log Entry
