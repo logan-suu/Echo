@@ -162,47 +162,74 @@ Add the production app composition root, deny-by-default consent, transactional 
 ## Entry: 3F.2 — PhotoKit、Share Extension 与真实来源
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: `3F.2` / commit at delivery / `feature/phase3f-real-data-sources-3F.2` / created at delivery
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: `in_progress` at `2026-08-05T03:02:00Z`; pre-delivery `review` transition at `2026-08-05T05:30:00Z`
+- Quoted AC and architecture constraints: US-SRC-001 AC-1 (PHAsset PhotoKit 读取 + Share-only 备忘录/语音), AC-5 (.dataSourceConnected sourceType+itemCount), AC-6 (isNetworkAccessAllowed=false 仅本地已下载); US-SRC-003 AC-1 (文本/图片/链接/文件), AC-2 (导入前预览确认), AC-4 (.shareExtensionImported appBundleId+contentType); US-SRC-008 AC-4 (排除项不重新导入); US-SRC-012 AC-1 (PHPhotoLibraryChangeObserver + 变更去重); ADR-008 §决策-1 (PhotoKit 授权与变更观察), §决策-2 (Share-only 用户中介 + 拒绝不支持类型), §决策-3 (App Group 信封 + SharedImportQueueActor 原子入队 + 恰好一次), §决策-4 (稳定来源身份 + dedupe key), §决策-5 (权限撤回停止读取), §决策-7 (最小数据边界); AGENTS.md §5.2/§5.4
+- RED test command and observed failure: `xcodebuild test ... -only-testing:EchoTests/RealDataSourcesTests` — 新 suite 首次编译失败（类型不存在，RED 成立）；随后 concurrency 编译错误逐项修复
+- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/RealDataSourcesTests` — 29/29 passed
+- Cumulative test command / exit / passed count: `xcodebuild test ... -only-testing:EchoTests` — 785 tests / 86 suites, 0 failures, exit 0
+- Release simulator and device commands / exits: Release simulator build fails on pre-existing non-DEBUG-gated `simulateError` in `#Preview` blocks (CreationView/MemoryDetailView/SearchView) — identical failure on `dev-1.0` base, out of 3F.2 Files scope (documented in 3F.1 entry)
+- Static/privacy/model/compliance commands / exits: SwiftLint exit 0 on new files (0 serious; remaining warnings match base patterns); R-007/network scan clean; task-status.json + deferred-items.json JSON valid; both `Echo` and `EchoShareExtension` targets build (Debug) exit 0, extension embedded in `Echo.app/PlugIns/EchoShareExtension.appex` with App Group entitlement `group.com.echo.Echo` on both targets (Simulated xcent verified)
+- Production path exercised: consent-gated AppDelegate source wiring (`configureSources` only when startupState ready/modelUnavailable/indexUnavailable); PhotoKit observer registration forwards deduped `ChangeEvent`s to `SyncPipeline.sync`; shared-import queue drained via `IngestPipeline.drainSharedImports` exactly once (recoverInterrupted → begin → ingest → finish; failure rolls back for retry). Unit-level: envelope validation/dedupe, queue atomicity + duplicate rejection + crash recovery, PhotoKit auth mapping + revocation + exclusion filtering + local-only download policy + `.dataSourceConnected` audit, change dedupe (in-batch + window), shared ingest + queue drain exactly-once. Physical-device limited-library / real share-sheet traces deferred to the 3F.11 no-fixture E2E gate.
+- Files and documentation changed: per `§7` 3F.2 Files list (Modify project.pbxproj/AppDelegate/SyncPipeline/IngestPipeline/AuditEvent; Create Echo/Config/Echo-Info.plist + Echo.entitlements + SharedImportEnvelope + SharedImportQueueActor + PhotoKitSourceAdapter + PhotoKitChangeObserver + EchoShareExtension target (ShareViewController/Info.plist/entitlements) + 3F.2_RealDataSourcesTests; docs/planning/evidence/deferred updates)
+- Deferred items closed or created, with evidence links: none created; no DEF closed by this task
+- Known risks that do not weaken an in-scope gate: PhotoKit real-source ingestion requires simulator seeded-photos / physical-device limited-library evidence at the 3F.11 no-fixture E2E gate; production share-sheet import end-to-end (real Notes/Voice share) also exercised at 3F.11; model artifacts for E5/SigLIP2/Whisper land in 3F.3 so shared/photo ingestion currently embeds with scaffold services (fails at embed stage and rolls back — exactly-once preserved)
 
 <!-- PR-BODY:3F.2:START -->
 ## Overview
-<fill with the completed task overview>
+Add real production data sources: a PhotoKit source adapter (full authorization-state handling, immediate stop-on-revocation, local-only download policy, `.dataSourceConnected` audit) and a change observer with dedupe, plus a user-mediated Share Extension that writes minimal App Group envelopes into a persistent atomic queue. `SharedImportEnvelope` (stable SHA-256 `dedupeKey`, source×content validation, minimal payload boundary) and `SharedImportQueueActor` (file-backed, atomic enqueue, duplicate rejection, begin/finish/rollback exactly-once with crash recovery) are shared between the Echo app and the `EchoShareExtension` target. `IngestPipeline.ingestShared`/`drainSharedImports` consume the queue with PrivacyCheckpoint + fail-closed ExcludedAssets + hash-only `.shareExtensionImported` audit. AppDelegate wires the sources behind the deny-by-default consent gate.
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task ID: 3F.2 — PhotoKit、Share Extension 与真实来源
+- Stories: US-SRC-001, US-SRC-003, US-SRC-004, US-SRC-005, US-SRC-008, US-SRC-012, US-SRC-013, US-PRV-001
+- Documents: docs/decisions/ADR-008-source-import-boundaries.md; docs/01-spec/用户故事与验收标准规格书.md; docs/05-planning/phase3f-execution-plan.md §4.6.2/§6.1/§6.2
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| US-SRC-001 AC-1 | PHAsset 读取 + 备忘录/语音 Share-only | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | PhotoKitSourceAdapter, PhotoKitChangeObserver, EchoShareExtension/ShareViewController.swift | ✅ |
+| US-SRC-001 AC-5 | `.dataSourceConnected` audit (sourceType+itemCount) | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | PhotoKitSourceAdapter.recordDataSourceConnected | ✅ |
+| US-SRC-001 AC-6 | Only local-downloaded assets (`isNetworkAccessAllowed=false`) | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | PhotoFetchConfiguration.production + RealPhotoLibrary | ✅ |
+| US-SRC-003 AC-1/AC-2 | Share text/url/audio/image/file; preview-confirm | EchoShareExtension/ShareViewController.swift | ShareContentExtractor + preview UI | ✅ (UI slice) |
+| US-SRC-003 AC-4 | `.shareExtensionImported` audit (appBundleId+contentType, hash-only) | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | AuditEvent.shareExtensionImported + IngestPipeline.writeShareExtensionAudit | ✅ |
+| US-SRC-008 AC-4 | Excluded items never re-imported | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | IngestPipeline.ingestShared fail-closed + PhotoKitSourceAdapter.importableReferences | ✅ |
+| US-SRC-012 AC-1 | PHPhotoLibraryChangeObserver → ChangeEvent + dedupe | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | PhotoKitChangeObserver + SyncPipeline.processPhotoChanges | ✅ |
+| ADR-008 决策-2 | Share-only user mediation; reject unsupported types | EchoShareExtension/ShareViewController.swift | ShareContentExtractor rejects unknown types | ✅ |
+| ADR-008 决策-3 | App Group envelope; atomic queue; exactly-once | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | SharedImportQueueActor + IngestPipeline.drainSharedImports | ✅ |
+| ADR-008 决策-4 | Stable source identity + dedupe key | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | SharedImportEnvelope.dedupeKey | ✅ |
+| ADR-008 决策-5 | Revocation stops reads immediately | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | PhotoKitSourceAdapter re-checks access per read | ✅ |
+| ADR-008 决策-7 | Minimal data boundary (no original file full text in queue) | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | SharedImportEnvelope minimal fields | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- Focused: `xcodebuild test ... -only-testing:EchoTests/RealDataSourcesTests` — 29/29 passed.
+- Cumulative: `xcodebuild test ... -only-testing:EchoTests` — 785 tests / 86 suites, 0 failures, exit 0.
+- Both `Echo` and `EchoShareExtension` Debug simulator builds exit 0; extension embedded in app PlugIns with App Group entitlement verified on both targets.
+- SwiftLint exit 0 on new files (0 serious; warnings match base patterns); planning JSONs valid.
+- Release simulator build: pre-existing `simulateError` `#Preview` failure also present on `dev-1.0` base (out of scope, documented in 3F.1).
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- Created: Echo/Config/Echo-Info.plist, Echo/Config/Echo.entitlements, Echo/Core/Models/SharedImportEnvelope.swift, Echo/Core/Actors/SharedImportQueueActor.swift, Echo/Core/Sources/PhotoKitSourceAdapter.swift, Echo/Core/Sources/PhotoKitChangeObserver.swift, EchoShareExtension/{ShareViewController.swift, Info.plist, EchoShareExtension.entitlements}, EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift.
+- Modified: Echo.xcodeproj/project.pbxproj (new EchoShareExtension target + embed phase + entitlements), Echo/App/AppDelegate.swift (source wiring), Echo/Core/Pipelines/SyncPipeline.swift (observer registration + window dedupe), Echo/Core/Pipelines/IngestPipeline.swift (ingestShared/drainSharedImports), Echo/Core/Models/AuditEvent.swift (.shareExtensionImported).
+- Ledger: task-status.json 3F.2 in_progress→review; execution-plan §4.6.2/§Files synced (AuditEvent.swift added); evidence index filled; ADR-008 unchanged (already accepted).
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- Real PhotoKit ingestion and real share-sheet import require simulator-seeded-photo / physical-device limited-library evidence at the 3F.11 no-fixture E2E gate.
+- E5/SigLIP2/Whisper artifacts land in 3F.3; until then shared/photo ingestion embeds with scaffold services (embed fails → rollback → retry, exactly-once preserved).
+- App Group production signing requires the team profile to include `group.com.echo.Echo` at release (3F.11 signing gate).
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+- None created by 3F.2. No DEF closed.
+- Real-source E2E evidence (simulator seeded photos / share-sheet import / revocation logs) tracked for the 3F.11 gate.
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- All new Actor methods (SharedImportQueueActor, PhotoKitSourceAdapter, IngestPipeline.ingestShared/drainSharedImports) enforce PrivacyCheckpoint at entry or are service actors whose callers enforce it (R-006); no `@unchecked Sendable`, `nonisolated(unsafe)`, Combine, or `Task.detached`.
+- Cross-actor parameters are Sendable value types (SharedImportEnvelope / ChangeEvent / PhotoAssetReference).
+- Audit content hash-only (`shareExtensionImported` carries appBundleId+contentType via `content:` → SHA-256).
+- ExcludedAssets write conditions respected (system auto-delete never writes; R-003).
+- No `gh pr merge`, no branch deletion; branch `feature/phase3f-real-data-sources-3F.2` preserved.
+- Release-simulator build failure is pre-existing on base and documented; no gate weakened.
 <!-- PR-BODY:3F.2:END -->
 
 ---
