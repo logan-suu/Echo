@@ -55,6 +55,8 @@ struct IngestPipelineTextTests {
         // 3F.1+ 套件可能先写 ConsentStore（deny-by-default gate 启用），
         // 本套件必须清理，否则残留 consent 会让 privacyActor.validate 拒绝（CI 顺序污染）
         try await db.execute(sql: "DELETE FROM ConsentStore")
+        // 同步清理 shared 单例的 in-memory enforcement 状态（Xcode 16.4 CI 执行顺序不同）
+        await privacyActor.disableConsentEnforcement()
         try await privacyActor.updatePolicy(UserPolicy(
             preferredLanguage: "zh-Hans",
             authorizedSourceTypes: ["note", "voice", "photo", "video"],
