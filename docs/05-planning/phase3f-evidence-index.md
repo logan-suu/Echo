@@ -116,6 +116,7 @@ Add the production app composition root, deny-by-default consent, transactional 
 - Documents: docs/decisions/ADR-007-production-composition-consent.md; docs/01-spec/用户故事与验收标准规格书.md; AGENTS.md §5.4; docs/05-planning/phase3f-execution-plan.md §4.6.1/§6.1/§6.2
 
 ## AC Coverage
+
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
 | ADR-007 决策-1 | App-owned composition root + startup state machine | EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift, EchoTests/Phase3/AppShellTests.swift | Echo/App/AppComposition.swift | ✅ |
