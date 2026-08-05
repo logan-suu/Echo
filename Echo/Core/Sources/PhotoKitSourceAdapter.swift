@@ -8,7 +8,8 @@
 // 任务: 3F.2 - PhotoKit、Share Extension 与真实来源
 // AC 覆盖: US-SRC-001 AC-1 (PHAsset 读取图片/视频), AC-5 (.dataSourceConnected 审计 sourceType+itemCount),
 //          AC-6 (仅处理已下载本地资源 — isNetworkAccessAllowed=false), AC-3 (支持"仅授权部分相册"),
-//          US-SRC-008 AC-4 (排除项不重新导入), ADR-008 §决策-1/5 (全授权状态 + 撤回立即停止)
+//          US-SRC-008 AC-4 (排除项不重新导入), ADR-008 §决策-1/5 (全授权状态 + 撤回立即停止),
+//          iOS 26 fix (limited 选择器主动弹出 — shouldPresentLimitedLibraryPicker, 3F.2 review)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §7.3 (审计事件), R-001/R-005 (零网络),
 //            R-007 (禁止 unchecked Sendable)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
