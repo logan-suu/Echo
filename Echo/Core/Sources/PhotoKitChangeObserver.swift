@@ -107,10 +107,10 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
     /// PhotoKit 回调：提取变更标识符 → 构建事件 → 批内去重 → 投递。
     ///
     /// Apple 文档确认 `photoLibraryDidChange` 在**任意后台队列**调用（非主线程），
-    /// 因此不能用 `MainActor.assumeIsolated`（非主线程会 trap）。改用
-    /// `Task { @MainActor in }` 异步跳转；闭包只捕获 Sendable 局部常量
-    /// （deliver 闭包 + coalescer），不捕获 self（NSObject 非 Sendable），
-    /// 满足 Xcode 16.4 Swift 6 严格并发。
+    /// 不能用 `MainActor.assumeIsolated`（非主线程会 trap）。MonitoredFetchResult 是
+    /// @MainActor 单例（PHFetchResult 非 Sendable），故用 `Task { @MainActor }` 跳转；
+    /// 闭包只捕获 Sendable 局部常量（deliver + coalescer），不捕获 self
+    /// （NSObject 非 Sendable），满足 Xcode 16.4 Swift 6 严格并发。
     public nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
         // 提取局部常量，使 Task 闭包完全不捕获 self
         let deliver = onPhotoLibraryChange
@@ -154,26 +154,31 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
 ///
 /// `PHChange.changeDetails(for:)` only returns a delta for the fetch result that
 /// represents the pre-change state; passing a fresh result makes the system report
-/// "no changes" and drop the ChangeEvent (US-SRC-012 AC-1). PHFetchResult is
-/// non-Sendable, so it is cached in a @MainActor singleton; the observer keeps no
-/// instance state to avoid Swift 6 data-race diagnostics on nonisolated callbacks.
+/// "no changes" and drop the ChangeEvent (US-SRC-012 AC-1).
+///
+/// Threading: PHFetchResult is not Sendable, so this is a @MainActor singleton;
+/// seeding is a plain assignment and `PHAsset.fetchAssets` is thread-safe, so the
+/// caller may seed from any thread. `assetIdentifiers` is only ever invoked from
+/// `photoLibraryDidChange`, which hops to MainActor via Task.
+/// (Swift 6 rejects nonisolated static mutable state and NSLock-held globals;
+/// @MainActor isolation is the only compliant storage — CI Xcode 16.4 verified.)
 @MainActor
 internal enum MonitoredFetchResult {
     private static var result: PHFetchResult<PHAsset>?
 
-    /// Seeds the monitored result (call from MainActor context).
-    static func seed(_ fetchResult: PHFetchResult<PHAsset>) {
-        result = fetchResult
-    }
-
-    /// Extracts inserted/changed/removed asset localIdentifiers from PHChange (MainActor).
+    /// Extracts inserted/changed/removed asset localIdentifiers from PHChange.
     ///
-    /// Uses the cached pre-change fetch result; falls back to a fresh result only when
-    /// not yet seeded (and degrades to nil).
+    /// Lazily seeds the pre-change fetch result on first callback (CodeRabbit #2/#6):
+    /// `changeDetails(for:)` must receive a result captured before the change; a fresh
+    /// result makes the system report "no changes" and drop the event. Called from
+    /// `photoLibraryDidChange` on MainActor (via Task).
     static func assetIdentifiers(from changeInstance: PHChange)
         -> (inserted: [String], changed: [String], removed: [String])? {
-        let fetch = result ?? PHAsset.fetchAssets(with: nil)
-        guard let details = changeInstance.changeDetails(for: fetch) else { return nil }
+        if result == nil {
+            result = PHAsset.fetchAssets(with: nil)
+        }
+        guard let fetch = result,
+              let details = changeInstance.changeDetails(for: fetch) else { return nil }
         result = details.fetchResultAfterChanges
         return (
             inserted: details.insertedObjects.map(\.localIdentifier),

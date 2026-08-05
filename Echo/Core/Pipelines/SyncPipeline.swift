@@ -450,6 +450,16 @@ public actor SyncPipeline {
     /// `PhotoKitChangeObserver` 收到变更通知，经批内去重后投递给 `processPhotoChanges`
     /// （跨投递窗口去重），最终驱动 `sync(changes:)` 增量替换。
     /// 使用方（AppDelegate 启动装配）持有此 Pipeline 引用即可；observer 由 Actor 持有，防止被系统释放。
+    /// 注册相册变更监听（AC-1: PHPhotoLibraryChangeObserver, ADR-008 §决策-1 变更去重）。
+    ///
+    /// 调用此方法后，当用户在系统相册中编辑照片/视频时，
+    /// `PhotoKitChangeObserver` 收到变更通知，经批内去重后投递给 `processPhotoChanges`
+    /// （跨投递窗口去重），最终驱动 `sync(changes:)` 增量替换。
+    /// 使用方（AppDelegate 启动装配）持有此 Pipeline 引用即可；observer 由 Actor 持有，防止被系统释放。
+    ///
+    /// 保持 actor 方法（非 @MainActor）：PHPhotoLibrary.registerChangeObserver 不需主线程
+    /// （ObjC 头），observer 不外发跨隔离域；MonitoredFetchResult 的 seed 由
+    /// `photoLibraryDidChange` 首次回调时在 MainActor 懒加载（避免同步 seed 的隔离冲突）。
     public func registerPhotoLibraryObserver() {
         guard photoObserver == nil else { return }
         let observer = PhotoKitChangeObserver(onPhotoLibraryChange: { [weak self] events in
@@ -457,13 +467,7 @@ public actor SyncPipeline {
             Task { await self.processPhotoChanges(events) }
         })
         photoObserver = observer
-        Task { @MainActor in
-            // 种子化必须在 register 之前完成（CodeRabbit #2/#6）：changeDetails(for:) 必须
-            // 接收变更前的 result；若 seed 晚于 register，首个 change 事件会因 fresh result
-            // 被系统判定"无变化"而丢失（US-SRC-012 AC-1）
-            MonitoredFetchResult.seed(PHAsset.fetchAssets(with: nil))
-            PHPhotoLibrary.shared().register(observer)
-        }
+        PHPhotoLibrary.shared().register(observer)
     }
 
     /// 处理相册变更事件：窗口内去重（ADR-008 §决策-1）后驱动增量同步（AC-4）。
