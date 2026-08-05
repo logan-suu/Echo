@@ -168,7 +168,7 @@ Add the production app composition root, deny-by-default consent, transactional 
 - Pre-delivery task status and transition evidence: `in_progress` at `2026-08-05T03:02:00Z`; pre-delivery `review` transition at `2026-08-05T05:30:00Z`
 - Quoted AC and architecture constraints: US-SRC-001 AC-1 (PHAsset PhotoKit 读取 + Share-only 备忘录/语音), AC-5 (.dataSourceConnected sourceType+itemCount), AC-6 (isNetworkAccessAllowed=false 仅本地已下载); US-SRC-003 AC-1 (文本/图片/链接/文件), AC-2 (导入前预览确认), AC-4 (.shareExtensionImported appBundleId+contentType); US-SRC-008 AC-4 (排除项不重新导入); US-SRC-012 AC-1 (PHPhotoLibraryChangeObserver + 变更去重); ADR-008 §决策-1 (PhotoKit 授权与变更观察), §决策-2 (Share-only 用户中介 + 拒绝不支持类型), §决策-3 (App Group 信封 + SharedImportQueueActor 原子入队 + 恰好一次), §决策-4 (稳定来源身份 + dedupe key), §决策-5 (权限撤回停止读取), §决策-7 (最小数据边界); AGENTS.md §5.2/§5.4
 - RED test command and observed failure: `xcodebuild test ... -only-testing:EchoTests/RealDataSourcesTests` — 新 suite 首次编译失败（类型不存在，RED 成立）；随后 concurrency 编译错误逐项修复
-- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/RealDataSourcesTests` — 29/29 passed
+- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/RealDataSourcesTests` — 33/33 passed (4 new iOS 26 limited-picker cases from Live Review fixes)
 - Cumulative test command / exit / passed count: `xcodebuild test ... -only-testing:EchoTests` — 785 tests / 86 suites, 0 failures, exit 0
 - Release simulator and device commands / exits: Release simulator build fails on pre-existing non-DEBUG-gated `simulateError` in `#Preview` blocks (CreationView/MemoryDetailView/SearchView) — identical failure on `dev-1.0` base, out of 3F.2 Files scope (documented in 3F.1 entry)
 - Static/privacy/model/compliance commands / exits: SwiftLint exit 0 on new files (0 serious; remaining warnings match base patterns); R-007/network scan clean; task-status.json + deferred-items.json JSON valid; both `Echo` and `EchoShareExtension` targets build (Debug) exit 0, extension embedded in `Echo.app/PlugIns/EchoShareExtension.appex` with App Group entitlement `group.com.echo.Echo` on both targets (Simulated xcent verified)
@@ -199,11 +199,12 @@ Add real production data sources: a PhotoKit source adapter (full authorization-
 | ADR-008 决策-2 | Share-only user mediation; reject unsupported types | EchoShareExtension/ShareViewController.swift | ShareContentExtractor rejects unknown types | ✅ |
 | ADR-008 决策-3 | App Group envelope; atomic queue; exactly-once | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | SharedImportQueueActor + IngestPipeline.drainSharedImports | ✅ |
 | ADR-008 决策-4 | Stable source identity + dedupe key | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | SharedImportEnvelope.dedupeKey | ✅ |
+| ADR-008 决策-1 (iOS 26 fix) | Limited auth no longer auto-presents picker; app presents it proactively | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | PhotoKitSourceAdapter.shouldPresentLimitedLibraryPicker + AppDelegate didBecomeActive observer | ✅ |
 | ADR-008 决策-5 | Revocation stops reads immediately | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | PhotoKitSourceAdapter re-checks access per read | ✅ |
 | ADR-008 决策-7 | Minimal data boundary (no original file full text in queue) | EchoTests/Phase3F/3F.2_RealDataSourcesTests.swift | SharedImportEnvelope minimal fields | ✅ |
 
 ## Testing
-- Focused: `xcodebuild test ... -only-testing:EchoTests/RealDataSourcesTests` — 29/29 passed.
+- Focused: `xcodebuild test ... -only-testing:EchoTests/RealDataSourcesTests` — 33/33 passed (4 new iOS 26 limited-picker cases from Live Review fixes).
 - Cumulative: `xcodebuild test ... -only-testing:EchoTests` — 785 tests / 86 suites, 0 failures, exit 0.
 - Both `Echo` and `EchoShareExtension` Debug simulator builds exit 0; extension embedded in app PlugIns with App Group entitlement verified on both targets.
 - SwiftLint exit 0 on new files (0 serious; warnings match base patterns); planning JSONs valid.

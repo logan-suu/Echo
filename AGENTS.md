@@ -544,6 +544,7 @@ let checkpoint = await PrivacyActor.shared.validate(
 | `.imageIngested`                  | 图片摄入                 | privacyBlurApplied=false                                  |
 | `.videoIngested`                  | 视频摄入                 | frameCount, audioTranscriptLength, hasAudio               |
 | `.voiceIngested`                  | 语音转写摄入             | transcriptModelVersion                                    |
+| `.shareExtensionImported`         | Share Extension 分享摄入 | appBundleId, contentType（均经哈希，仅 contentHash 落库） |
 | `.memoryDeleted`                  | 记忆删除                 | preservedOriginal, excludedAssetWritten                   |
 | `.cascadeDeleteFromOriginal`      | 原始文件级联清除         | assetId, memoryId, excludedAutoCleaned                    |
 | `.memoryEdited`                   | 手动编辑记忆             | editedFields, reindexed, conflictResolvedWith             |
