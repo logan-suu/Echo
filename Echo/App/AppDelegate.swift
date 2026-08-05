@@ -56,6 +56,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     /// - 推理服务（E5/SigLIP2/Whisper）为运行时服务实现，模型工件由 3F.3 接入；
     ///   当前未加载模型时摄入在嵌入阶段失败并回滚，3F.3 接入后自动产生真实向量
     private func configureSources() async {
+        // 单元/UI 测试宿主（XCTest）跳过生产来源装配：PhotoKit observer 注册会触发照片
+        // 授权弹窗，遮挡 fixture 驱动的 XCUITest 界面（3F.2 review 发现，CreationUITests 失败）
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
         let composition = AppComposition.shared
         await composition.bootstrap()
         // 3F.2 review fix: bootstrap() 幂等 guard 使并发调用立即返回，等待真正完成
