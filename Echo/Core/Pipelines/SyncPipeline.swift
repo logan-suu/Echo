@@ -457,6 +457,11 @@ public actor SyncPipeline {
             Task { await self.processPhotoChanges(events) }
         })
         photoObserver = observer
+        // 种子化 pre-change fetch result（CodeRabbit #2）：changeDetails(for:) 必须接收
+        // 变更前的 result 才会返回差异；fresh result 会令系统认为无变化而丢失 ChangeEvent
+        Task { @MainActor in
+            observer.seedMonitoredFetchResult(PHAsset.fetchAssets(with: nil))
+        }
         PHPhotoLibrary.shared().register(observer)
     }
 

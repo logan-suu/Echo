@@ -165,6 +165,10 @@ final class ShareViewController: UIViewController {
             return
         }
         let providers = item.attachments ?? []
+        // CodeRabbit #5: Bundle.main.bundleIdentifier 在扩展进程内返回扩展自身 ID
+        // （com.echo.Echo.ShareExtension），iOS 公开 API 无 host app bundle ID 获取方式，
+        // 故 note/voice 来源标记在此不可达（恒为 thirdParty）。host 识别并入 3F.5
+        // （DEF-51-002/DEF-51-003 合并处理）。
         let host = Bundle.main.bundleIdentifier ?? ""
         Task {
             do {

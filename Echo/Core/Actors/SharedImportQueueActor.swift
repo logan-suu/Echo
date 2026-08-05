@@ -81,6 +81,8 @@ public actor SharedImportQueueActor {
         case pending = "json"
         /// 处理中：`<key>.processing`（原子 rename 自 pending）
         case processing = "processing"
+        /// 损坏（不可解码）：`<key>.corrupted`（终止态，recoverInterrupted 不再恢复）
+        case corrupted = "corrupted"
     }
 
     private func url(for key: String, state: QueueState) -> URL {
@@ -144,8 +146,16 @@ public actor SharedImportQueueActor {
         guard fileManager.fileExists(atPath: pending.path) else { return nil }
         let processing = url(for: dedupeKey, state: .processing)
         try fileManager.moveItem(at: pending, to: processing)
-        let data = try Data(contentsOf: processing)
-        return try SharedImportEnvelope.decode(data)
+        do {
+            let data = try Data(contentsOf: processing)
+            return try SharedImportEnvelope.decode(data)
+        } catch {
+            // 不可解码信封必须进入终止态：移出 pending/processing 循环，
+            // 否则 recoverInterrupted 每次启动恢复 → 永久卡死（CodeRabbit #1）
+            let corrupted = url(for: dedupeKey, state: .corrupted)
+            try? fileManager.moveItem(at: processing, to: corrupted)
+            throw error
+        }
     }
 
     /// 处理成功：删除 processing 记录（恰好一次完成）。

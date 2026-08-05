@@ -86,6 +86,12 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
     public nonisolated let onPhotoLibraryChange: (@Sendable ([ChangeEvent]) -> Void)?
     private nonisolated let coalescer: ChangeCoalescer
 
+    /// 被监控的 pre-change fetch result（PHChange.changeDetails(for:) 必须传入变更前的结果，
+    /// 每次新建 fresh result 会令系统认为"无变化"而丢失 ChangeEvent，CodeRabbit #2）。
+    /// PHFetchResult 非 Sendable，仅在主线程（photoLibraryDidChange 回调线程）访问。
+    @MainActor
+    private var monitoredFetchResult: PHFetchResult<PHAsset>?
+
     public nonisolated init(
         onPhotoLibraryChange: (@Sendable ([ChangeEvent]) -> Void)? = nil,
         coalescer: ChangeCoalescer = ChangeCoalescer()
@@ -95,16 +101,24 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
         super.init()
     }
 
+    /// 注册时种子化被监控的 fetch result（MainActor 上下文调用）。
+    @MainActor
+    public func seedMonitoredFetchResult(_ result: PHFetchResult<PHAsset>) {
+        monitoredFetchResult = result
+    }
+
     // MARK: - PHPhotoLibraryChangeObserver
 
     /// PhotoKit 回调（主线程）：提取变更标识符 → 构建事件 → 批内去重 → 投递。
     public nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
-        guard let identifiers = Self.assetIdentifiers(from: changeInstance) else { return }
-        _ = consumeForTesting(
-            inserted: identifiers.inserted,
-            changed: identifiers.changed,
-            removed: identifiers.removed
-        )
+        Task { @MainActor in
+            guard let identifiers = self.assetIdentifiers(from: changeInstance) else { return }
+            _ = self.consumeForTesting(
+                inserted: identifiers.inserted,
+                changed: identifiers.changed,
+                removed: identifiers.removed
+            )
+        }
     }
 
     /// 处理资产标识符变更（内部可测试入口；photoLibraryDidChange 提取后调用）。
@@ -130,10 +144,14 @@ public final class PhotoKitChangeObserver: NSObject, PHPhotoLibraryChangeObserve
     ///
     /// PHChange 无法在测试中构造，故提取逻辑保持在此（薄 Photos 边界），
     /// 可测试的纯映射在 ChangeEventBuilder / consumeForTesting。
-    private nonisolated static func assetIdentifiers(from changeInstance: PHChange)
+    /// 使用缓存的 pre-change fetch result（CodeRabbit #2）：changeDetails(for:) 必须
+    /// 接收变更前的 fetch result 才会返回差异；首次无缓存时用 fresh result 并降级为 nil。
+    @MainActor
+    private func assetIdentifiers(from changeInstance: PHChange)
         -> (inserted: [String], changed: [String], removed: [String])? {
-        let fetch = PHAsset.fetchAssets(with: nil)
+        let fetch = monitoredFetchResult ?? PHAsset.fetchAssets(with: nil)
         guard let details = changeInstance.changeDetails(for: fetch) else { return nil }
+        monitoredFetchResult = details.fetchResultAfterChanges
         return (
             inserted: details.insertedObjects.map(\.localIdentifier),
             changed: details.changedObjects.map(\.localIdentifier),

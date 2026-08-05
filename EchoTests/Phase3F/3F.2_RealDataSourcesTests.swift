@@ -268,6 +268,34 @@ struct RealDataSourcesTests {
         #expect(pending.first?.payload == "持久化内容")
     }
 
+    @Test("undecodable envelope moves to corrupted terminal state (CodeRabbit #1)")
+    func test_queue_undecodableGoesCorrupted() async throws {
+        let dir = makeQueueDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let queue = SharedImportQueueActor(directory: dir)
+        let env = try makeEnvelope()
+        try await queue.enqueue(env)
+
+        // 篡改 pending 文件为非法 JSON → beginProcessing 解码失败
+        let pendingPath = dir.appendingPathComponent("\(env.dedupeKey).json")
+        try Data("not-valid-json{{{".utf8).write(to: pendingPath)
+
+        do {
+            _ = try await queue.beginProcessing(for: env.dedupeKey)
+            Issue.record("expected beginProcessing to throw on undecodable envelope")
+        } catch {
+            #expect(error is DecodingError || error is Swift.DecodingError)
+        }
+        // 信封进入 corrupted 终止态：不再出现在 pending，recoverInterrupted 也不恢复
+        #expect(try await queue.pendingEnvelopes().isEmpty)
+        let recovered = try await queue.recoverInterrupted()
+        #expect(recovered == 0)
+        #expect(try await queue.pendingEnvelopes().isEmpty)
+        // corrupted 文件保留（诊断用）
+        let corruptedPath = dir.appendingPathComponent("\(env.dedupeKey).corrupted")
+        #expect(FileManager.default.fileExists(atPath: corruptedPath.path))
+    }
+
     @Test("rollback keeps the delivery for a later retry")
     func test_queue_rollbackProcessing() async throws {
         let dir = makeQueueDirectory()
