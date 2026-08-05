@@ -1057,7 +1057,13 @@
             "in_progress_at": "2026-08-05T03:02:00Z",
             "review_at": "2026-08-05T05:30:00Z"
           },
-          "pr": null,
+          "pr": {
+            "number": 51,
+            "url": "https://github.com/logan-suu/Echo/pull/51",
+            "head": "feature/phase3f-real-data-sources-3F.2",
+            "base": "dev-1.0",
+            "created_at": "2026-08-05T05:40:00Z"
+          },
           "migrated_from": [
             "4.20"
           ]
