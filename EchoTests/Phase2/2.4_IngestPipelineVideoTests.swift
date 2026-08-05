@@ -56,6 +56,9 @@ struct IngestPipelineVideoTests {
         try await db.execute(sql: "DELETE FROM AuditLog")
         try await db.execute(sql: "DELETE FROM UserPolicyStore")
         try await db.execute(sql: "DELETE FROM ExcludedAssets")
+        // 3F.1+ 套件可能先写 ConsentStore（deny-by-default gate 启用），
+        // 本套件必须清理，否则残留 consent 会让 privacyActor.validate 拒绝（CI 顺序污染）
+        try await db.execute(sql: "DELETE FROM ConsentStore")
         // Ensure photo and video data sources are authorized
         try await privacyActor.updatePolicy(UserPolicy(
             preferredLanguage: "zh-Hans",
