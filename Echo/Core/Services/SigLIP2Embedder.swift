@@ -93,10 +93,10 @@ public actor SigLIP2Embedder: EmbedderProtocol {
         }
 
         // 2. 等比缩放（aspect-fit 到 256×256），保持宽高比
-        let resized = aspectFitCGImage(cgImage, maxDimension: 256)
+        let resized = try aspectFitCGImage(cgImage, maxDimension: 256)
 
         // 3. Center crop 到 224×224
-        let cropped = centerCropCGImage(resized, to: Self.cropSize)
+        let cropped = try centerCropCGImage(resized, to: Self.cropSize)
 
         // 4. 归一化
         return try normalizeCGImage(cropped)
@@ -105,12 +105,12 @@ public actor SigLIP2Embedder: EmbedderProtocol {
     // MARK: - Core Graphics Utilities
 
     /// 等比缩放（aspect-fit），保持宽高比，长边缩放到 maxDimension。
-    private nonisolated func aspectFitCGImage(_ image: CGImage, maxDimension: CGFloat) -> CGImage {
+    private nonisolated func aspectFitCGImage(_ image: CGImage, maxDimension: CGFloat) throws -> CGImage {
         let width = CGFloat(image.width)
         let height = CGFloat(image.height)
         let scale = min(maxDimension / width, maxDimension / height)
         let targetSize = CGSize(width: width * scale, height: height * scale)
-        let context = CGContext(
+        guard let context = CGContext(
             data: nil,
             width: Int(targetSize.width.rounded()),
             height: Int(targetSize.height.rounded()),
@@ -118,20 +118,28 @@ public actor SigLIP2Embedder: EmbedderProtocol {
             bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
+        ) else {
+            throw EmbedderError.preprocessingFailed(reason: "Failed to create resize context")
+        }
         context.interpolationQuality = .high
         context.draw(image, in: CGRect(origin: .zero, size: targetSize))
-        return context.makeImage()!
+        guard let resized = context.makeImage() else {
+            throw EmbedderError.preprocessingFailed(reason: "Failed to make resized image")
+        }
+        return resized
     }
 
-    private nonisolated func centerCropCGImage(_ image: CGImage, to size: CGSize) -> CGImage {
+    private nonisolated func centerCropCGImage(_ image: CGImage, to size: CGSize) throws -> CGImage {
         let cropRect = CGRect(
             x: (CGFloat(image.width) - size.width) / 2,
             y: (CGFloat(image.height) - size.height) / 2,
             width: size.width,
             height: size.height
         )
-        return image.cropping(to: cropRect)!
+        guard let cropped = image.cropping(to: cropRect) else {
+            throw EmbedderError.preprocessingFailed(reason: "Failed to center-crop image")
+        }
+        return cropped
     }
 
     private nonisolated func normalizeCGImage(_ image: CGImage) throws -> [Float] {

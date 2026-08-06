@@ -113,10 +113,6 @@ public actor CoreMLInferenceAdapter {
             let config = MLModelConfiguration()
             config.computeUnits = .cpuOnly
             let model = try await MLModel.load(contentsOf: compiledURL, configuration: config)
-            for (k, v) in model.modelDescription.inputDescriptionsByName {
-            }
-            for (k, v) in model.modelDescription.outputDescriptionsByName {
-            }
             cachedModel = model
         } catch {
             throw InferenceError.modelLoadFailed(
@@ -193,11 +189,6 @@ public actor CoreMLInferenceAdapter {
                     try array.withUnsafeMutableBytes { (raw: UnsafeMutableRawBufferPointer, _) in
                         let bp = raw.bindMemory(to: Int32.self)
                         for (i, v) in ids.enumerated() { bp[i] = v }
-                    }
-                    var readback = [Int32](repeating: 0, count: ids.count)
-                    try array.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
-                        let bp = raw.bindMemory(to: Int32.self)
-                        for i in 0..<ids.count { readback[i] = bp[i] }
                     }
                 case .floatArray(let floats):
                     array = try MLMultiArray(

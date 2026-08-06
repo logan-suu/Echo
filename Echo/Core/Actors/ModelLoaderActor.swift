@@ -240,11 +240,16 @@ public actor ModelLoaderActor {
 
     /// 各模型的加载状态（Actor-isolated 可变状态）
     private var modelStates: [ModelType: ModelLoadState]
+    /// 审计写入依赖（AC-8：`.modelLoadFailed` / `.modelLoadRetrySuccess`）
+    private let privacyActor: PrivacyActor
 
     // MARK: - Initialization (ACT-005: 同步初始化)
 
     /// 创建 ModelLoaderActor，所有模型初始状态为 `.notLoaded`。
-    public init() {
+    ///
+    /// - Parameter privacyActor: 审计写入依赖（默认共享实例）
+    public init(privacyActor: PrivacyActor = .shared) {
+        self.privacyActor = privacyActor
         var states: [ModelType: ModelLoadState] = [:]
         for type in ModelType.allCases {
             states[type] = .notLoaded
@@ -289,6 +294,18 @@ public actor ModelLoaderActor {
     ///   - error: 底层加载错误（映射为 L3 阻断）
     public func reportModelLoadFailed(_ modelType: ModelType, error: ModelLoadError) {
         modelStates[modelType] = .failed(error)
+        // AC-8: 审计 — .modelLoadFailed(modelName, error, recoveryMethod=systemSettings)
+        let traceID = "model-load-\(modelType.modelName)-\(UUID().uuidString.prefix(8))"
+        Task {
+            try? await privacyActor.writeAuditLog(
+                eventType: .modelLoadFailed,
+                traceID: traceID,
+                policyVersion: 1,
+                success: false,
+                sourceType: modelType.modelName,
+                content: error.localizedDescription
+            )
+        }
     }
 
     /// 获取所有模型的整体状态摘要（AC-5, AC-7）。
@@ -334,7 +351,18 @@ public actor ModelLoaderActor {
                 resourceName: modelType.resourceIdentifier
             )
             modelStates[modelType] = .failed(error)
-            // TODO (Phase 2): Audit @ PrivacyActor — .modelLoadFailed(modelName, error, recoveryMethod=systemSettings)
+            // AC-8: 审计 — .modelLoadFailed(modelName, error, recoveryMethod=systemSettings)
+            let traceID = "model-load-\(modelType.modelName)-\(UUID().uuidString.prefix(8))"
+            Task {
+                try? await privacyActor.writeAuditLog(
+                    eventType: .modelLoadFailed,
+                    traceID: traceID,
+                    policyVersion: 1,
+                    success: false,
+                    sourceType: modelType.modelName,
+                    content: error.localizedDescription
+                )
+            }
             return .failed(error)
         }
 
@@ -373,7 +401,18 @@ public actor ModelLoaderActor {
                 underlying: error
             )
             modelStates[modelType] = .failed(loadError)
-            // TODO (Phase 2): Audit @ PrivacyActor — .modelLoadFailed(modelName, error, recoveryMethod=systemSettings)
+            // AC-8: 审计 — .modelLoadFailed(modelName, error, recoveryMethod=systemSettings)
+            let traceID = "model-load-\(modelType.modelName)-\(UUID().uuidString.prefix(8))"
+            Task {
+                try? await privacyActor.writeAuditLog(
+                    eventType: .modelLoadFailed,
+                    traceID: traceID,
+                    policyVersion: 1,
+                    success: false,
+                    sourceType: modelType.modelName,
+                    content: loadError.localizedDescription
+                )
+            }
             return .failed(loadError)
         }
     }
@@ -420,7 +459,16 @@ public actor ModelLoaderActor {
 
         // AC-8: 审计 — 重试成功
         if case .loaded = result {
-            // TODO (Phase 2): Audit @ PrivacyActor — .modelLoadRetrySuccess
+            let traceID = "model-retry-\(modelType.modelName)-\(UUID().uuidString.prefix(8))"
+            Task {
+                try? await privacyActor.writeAuditLog(
+                    eventType: .modelLoadRetrySuccess,
+                    traceID: traceID,
+                    policyVersion: 1,
+                    success: true,
+                    sourceType: modelType.modelName
+                )
+            }
         }
 
         return result
