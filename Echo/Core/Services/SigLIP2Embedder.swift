@@ -77,38 +77,50 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - Image Preprocessing
 
-    /// 图像预处理：resize → center crop → normalize。
+    /// 图像预处理：方向矫正 → resize → center crop → normalize。
     ///
     /// SigLIP2 要求 224×224 输入，归一化 mean=[0.5,0.5,0.5] std=[0.5,0.5,0.5]。
+    ///
+    /// DEF-34-004 修复：
+    /// 1. 尊重 `image.imageOrientation`（EXIF 方向），避免旋转后语义错误
+    /// 2. 等比缩放（aspect-fit）后 center crop，避免强制拉伸破坏宽高比
+    /// 3. 显式设置 bitmap 字节序为 big-endian RGB，避免通道错乱
     nonisolated func preprocess(_ image: UIImage) throws -> [Float] {
-        guard let cgImage = image.cgImage else {
+        // 1. 应用图像方向，产出标准方向位图
+        let oriented = image.applyingTransformToOrientation()
+        guard let cgImage = oriented.cgImage else {
             throw EmbedderError.preprocessingFailed(reason: "No CGImage available")
         }
 
-        // Resize to 256×256
-        let resized = resizeCGImage(cgImage, to: Self.inputSize)
+        // 2. 等比缩放（aspect-fit 到 256×256），保持宽高比
+        let resized = aspectFitCGImage(cgImage, maxDimension: 256)
 
-        // Center crop to 224×224
+        // 3. Center crop 到 224×224
         let cropped = centerCropCGImage(resized, to: Self.cropSize)
 
-        // Convert to normalized float array
+        // 4. 归一化
         return try normalizeCGImage(cropped)
     }
 
     // MARK: - Core Graphics Utilities
 
-    private nonisolated func resizeCGImage(_ image: CGImage, to size: CGSize) -> CGImage {
+    /// 等比缩放（aspect-fit），保持宽高比，长边缩放到 maxDimension。
+    private nonisolated func aspectFitCGImage(_ image: CGImage, maxDimension: CGFloat) -> CGImage {
+        let width = CGFloat(image.width)
+        let height = CGFloat(image.height)
+        let scale = min(maxDimension / width, maxDimension / height)
+        let targetSize = CGSize(width: width * scale, height: height * scale)
         let context = CGContext(
             data: nil,
-            width: Int(size.width),
-            height: Int(size.height),
+            width: Int(targetSize.width.rounded()),
+            height: Int(targetSize.height.rounded()),
             bitsPerComponent: 8,
             bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )!
         context.interpolationQuality = .high
-        context.draw(image, in: CGRect(origin: .zero, size: size))
+        context.draw(image, in: CGRect(origin: .zero, size: targetSize))
         return context.makeImage()!
     }
 
@@ -129,6 +141,7 @@ public actor SigLIP2Embedder: EmbedderProtocol {
         let bytesPerRow = width * bytesPerPixel
         var pixelData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
 
+        // DEF-34-004: 显式 big-endian 无预乘字节序，保证 RGB 通道与模型输入一致
         guard let context = CGContext(
             data: &pixelData,
             width: width,
@@ -136,7 +149,7 @@ public actor SigLIP2Embedder: EmbedderProtocol {
             bitsPerComponent: 8,
             bytesPerRow: bytesPerRow,
             space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
         ) else {
             throw EmbedderError.preprocessingFailed(reason: "Failed to create CGContext")
         }
@@ -155,5 +168,39 @@ public actor SigLIP2Embedder: EmbedderProtocol {
             }
         }
         return result
+    }
+}
+
+// MARK: - UIImage Orientation Helper
+
+extension UIImage {
+    /// 应用 EXIF 方向变换，返回标准方向（.up）的 UIImage。
+    ///
+    /// 通过 CIImage 的 oriented(for:) 重绘，正确处理旋转与镜像，
+    /// 供模型预处理消费（DEF-34-004 修复：不忽略 imageOrientation）。
+    nonisolated func applyingTransformToOrientation() -> UIImage {
+        guard imageOrientation != .up else { return self }
+        let ciImage = CIImage(image: self) ?? CIImage(cgImage: cgImage!)
+        let oriented = ciImage.oriented(forExifOrientation: Int32(Self.cgOrientation(imageOrientation).rawValue))
+        let context = CIContext(options: [.useSoftwareRenderer: false])
+        guard let cg = context.createCGImage(oriented, from: oriented.extent) else {
+            return self
+        }
+        return UIImage(cgImage: cg, scale: scale, orientation: .up)
+    }
+
+    /// 映射 UIImage.Orientation → CGImagePropertyOrientation。
+    nonisolated private static func cgOrientation(_ o: UIImage.Orientation) -> CGImagePropertyOrientation {
+        switch o {
+        case .up: return .up
+        case .upMirrored: return .upMirrored
+        case .down: return .down
+        case .downMirrored: return .downMirrored
+        case .left: return .left
+        case .leftMirrored: return .leftMirrored
+        case .right: return .right
+        case .rightMirrored: return .rightMirrored
+        @unknown default: return .up
+        }
     }
 }

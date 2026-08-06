@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.0",
-  "_last_updated": "2026-08-05",
+  "_last_updated": "2026-08-06",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -111,6 +111,24 @@
       "story": "US-PRV-008",
       "resolution": "CLOSED by 3F.1 with purge evidence: ConsentStoreActor persists consent to SQLite ConsentStore (deny-by-default, ADR-007 §决策-2); OnboardingViewModel.acceptPrivacy/declinePrivacy wired to consentStore; AppComposition bootstrap enables production consent gate; SettingsViewModel revoke = transactional purge (US-PRV-008 AC-5) with blocked+purgeFailed audit on failure. See EchoTests/Phase3F/3F.1_ProductionCompositionTests.swift, EchoTests/Phase3/OnboardingTests.swift, EchoTests/Phase3/SettingsViewModelTests.swift.",
       "resolved_at": "2026-08-04"
+    },
+    {
+      "id": "DEF-34-003",
+      "story": "US-RES-004",
+      "resolution": "CLOSED by 3F.3 with loader state report: ModelLoaderActor.reportModelLoaded/reportModelLoadFailed; E5Embedder.resolveAdapter reports .loaded/.failed after Core ML load so AC-5/AC-7 UI and audit reflect real state. See EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (LoaderStateReport) + Echo/Core/Actors/ModelLoaderActor.swift.",
+      "resolved_at": "2026-08-06"
+    },
+    {
+      "id": "DEF-34-004",
+      "story": "US-ING-004, US-ING-005",
+      "resolution": "CLOSED by 3F.3 with scaffold fixes: SigLIP2Embedder preprocess respects UIImage.imageOrientation, aspect-fit then center-crop (no stretch), explicit big-endian RGB bitmap; WhisperASREngine PCM uses 32-bit float (BitDepth 32 + IsFloat) and validates reader.status==.completed. See EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (SigLIP2Preprocessing) + Echo/Core/Services/SigLIP2Embedder.swift, WhisperASREngine.swift.",
+      "resolved_at": "2026-08-06"
+    },
+    {
+      "id": "DEF-35-001",
+      "story": "US-RES-004",
+      "resolution": "PARTIAL by 3F.3: SHA-256 checksums pinned in Scripts/model_checksums.sha256, prepare_models.sh --verify-only exit 0 (100% artifacts + tokenizer). Upstream immutable commit-hash pinning remains TODO in prepare_models.sh (E5_REVISION/SIGLIP2_REVISION = main) until network-resolvable; documented in model-provenance-register §1.1/§3.1.",
+      "resolved_at": "2026-08-06"
     }
   ],
   "phase_integration_scan_rules": {
@@ -176,7 +194,7 @@
       "reason": "embedder 通过 getModelBundleURL 自行加载 MLModel 后，ModelLoaderActor 的 modelStates 仍报 .notLoaded，导致 AC-5/AC-7 降级 UI 与审计失真。需设计 embedder→ModelLoaderActor 状态回报机制。",
       "defer_to": "R-3 模型文件就绪后（E5/SigLIP2/Whisper 接入时）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-06",
       "owners": [
         "AI",
         "Release"
@@ -187,8 +205,11 @@
       "acceptance_evidence": [
         "loader 状态、预处理/PCM、revision/hash/license/SBOM"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "closed",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "closed_at": "2026-08-06",
+      "closed_by_task": "3F.3",
+      "closure_evidence": "ModelLoaderActor.reportModelLoaded/reportModelLoadFailed + E5Embedder state report; EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (LoaderStateReport suite)"
     },
     {
       "id": "DEF-34-004",
@@ -199,7 +220,7 @@
       "reason": "SigLIP2: preprocess 忽略 UIImage.imageOrientation + 强制拉伸破坏宽高比 + 未设 bitmap 字节序。Whisper: AVLinearPCMBitDepthKey:16 + IsFloatKey:true 不匹配（应改 32-bit float）+ 不校验 reader.status==.completed。均为 scaffold 代码，接入真实工件前必须修复。",
       "defer_to": "R-3 工件接入时（Core ML 转换 / whisper.cpp 集成）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-06",
       "owners": [
         "AI",
         "Release"
@@ -210,8 +231,11 @@
       "acceptance_evidence": [
         "loader 状态、预处理/PCM、revision/hash/license/SBOM"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "closed",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "closed_at": "2026-08-06",
+      "closed_by_task": "3F.3",
+      "closure_evidence": "SigLIP2Embedder preprocess: orientation normalize + aspect-fit + big-endian RGB (noneSkipLast); WhisperASREngine: 32-bit float PCM + reader.status==.completed check"
     },
     {
       "id": "DEF-35-001",
@@ -222,7 +246,7 @@
       "reason": "E5_REVISION 和 SIGLIP2_REVISION 当前为可变 ref 'main'。完全可复现需固定为不可变 commit hash。R-4 范围内以 TODO 标记接受，SHA256 校验已提供完整性保障。",
       "defer_to": "模型工件正式接入时（确定稳定 revision 后固定）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-06",
       "owners": [
         "AI",
         "Release"
@@ -233,8 +257,9 @@
       "acceptance_evidence": [
         "loader 状态、预处理/PCM、revision/hash/license/SBOM"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "partial",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "partial_note": "SHA-256 pinned in Scripts/model_checksums.sha256 (verified 2026-08-06 via prepare_models.sh --verify-only, exit 0, 100%). Upstream immutable commit-hash pinning (E5_REVISION/SIGLIP2_REVISION = main) remains TODO until network-resolvable; recorded in model-provenance-register §1.1/§3.1."
     },
     {
       "id": "DEF-35-002",

@@ -46,42 +46,35 @@ public actor ModelLoaderActor {
 
     /// Echo 内置的所有模型类型。
     ///
-    /// 共 6 个模型文件，与 `ModelBundleTests.swift` 中的 `ExpectedModels.all` 保持同步。
+    /// v6.0 生产模型集（3F.3，ADR-009）：E5 文本嵌入、SigLIP2 视觉嵌入、Whisper ASR。
+    /// MobileCLIP-B（商业许可阻断）与 SenseVoice（FunASR 自定义条款）已退役移除。
+    /// 与 `Scripts/prepare_models.sh` v6.0 与 `model-provenance-register.md` 保持一致。
     /// - 模型文件随 App 安装包分发（AC-1），运行时不可切换（AC-6）
     /// - 扩展名仅 `.mlmodelc` 或 `.gguf`（AC-1）
     public enum ModelType: String, CaseIterable, Sendable {
-        /// MobileCLIP-B LT 图像编码器（286MB）
-        case mobileCLIPImage
-        /// MobileCLIP-B LT 文本编码器（286MB 同包）
-        case mobileCLIPText
-        /// multilingual-e5-small 文本嵌入（224MB）
+        /// multilingual-e5-small 文本嵌入（224MB Core ML）
         case multilingualE5Small
-        /// SenseVoice Small INT8 Core ML（373MB 一部分）
-        case senseVoiceInt8
-        /// SenseVoice 预处理模型
-        case senseVoicePreprocessor
-        /// SenseVoice Small Q4_K GGUF（373MB 一部分）
-        case senseVoiceGGUF
+        /// SigLIP2-B/32 视觉嵌入（PyTorch 转换源 → Core ML，3F.3）
+        case siglip2Vision
+        /// Whisper tiny ASR（~39MB GGUF Q5_1，R-5.4 批准）
+        case whisperTiny
 
         // MARK: Bundle Resource Info
 
         /// Bundle 中的资源名称（不含扩展名）
         public nonisolated var resourceName: String {
             switch self {
-            case .mobileCLIPImage:       return "MobileCLIP-B-lt_image"
-            case .mobileCLIPText:        return "MobileCLIP-B-lt_text"
-            case .multilingualE5Small:   return "MultilingualE5Small"
-            case .senseVoiceInt8:        return "SenseVoiceSmall_int8"
-            case .senseVoicePreprocessor: return "SenseVoicePreprocessor"
-            case .senseVoiceGGUF:        return "sensevoice-small-q4_k"
+            case .multilingualE5Small: return "MultilingualE5Small"
+            case .siglip2Vision:       return "SigLIP2BasePatch32"
+            case .whisperTiny:         return "whisper-tiny-q5_1"
             }
         }
 
         /// 文件扩展名
         public nonisolated var fileExtension: String {
             switch self {
-            case .senseVoiceGGUF: return "gguf"
-            default:              return "mlmodelc"
+            case .whisperTiny: return "gguf"
+            default:           return "mlmodelc"
             }
         }
 
@@ -275,6 +268,27 @@ public actor ModelLoaderActor {
     /// Embedder/ASR 用此 URL 自行加载 MLModel（MLModel 非 Sendable，不能跨 Actor 返回）。
     public func getModelBundleURL(_ modelType: ModelType) -> URL? {
         modelType.bundleURL
+    }
+
+    // MARK: - Embedder State Report (DEF-34-003, 3F.3)
+
+    /// Embedder/ASR 自行加载成功后回报状态（DEF-34-003）。
+    ///
+    /// embedder 通过 `getModelBundleURL` 自行加载 MLModel 后，必须调用本方法，
+    /// 使 `modelStates` 与真实加载结果一致（否则 AC-5/AC-7 降级 UI 与审计失真）。
+    ///
+    /// - Parameter modelType: 已成功加载的模型类型
+    public func reportModelLoaded(_ modelType: ModelType) {
+        modelStates[modelType] = .loaded
+    }
+
+    /// Embedder/ASR 自行加载失败后回报状态（DEF-34-003）。
+    ///
+    /// - Parameters:
+    ///   - modelType: 加载失败的模型类型
+    ///   - error: 底层加载错误（映射为 L3 阻断）
+    public func reportModelLoadFailed(_ modelType: ModelType, error: ModelLoadError) {
+        modelStates[modelType] = .failed(error)
     }
 
     /// 获取所有模型的整体状态摘要（AC-5, AC-7）。

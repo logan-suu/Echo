@@ -7,12 +7,13 @@
     "privacyConsent": "agreed",
     "permissionStepIndex": "complete",
     "language": "zh-Hans | en-US",
-    "modelLoadProgress": "1.0"
+    "modelLoadProgress": "1.0 (all bundled artifacts verified: checksum + reference output, model-provenance-register)"
   },
   "allowedActions": [],
   "expectedSemantics": {
     "onboardingDone": "Onboarding cover dismissed; AppRootView reveals Home tab (main app)",
-    "policyPersisted": "privacyConsent + preferredLanguage + authorizedSourceTypes recorded (🔮 Phase 3.9 PrivacyActor write)"
+    "policyPersisted": "privacyConsent + preferredLanguage + authorizedSourceTypes recorded (🔮 Phase 3.9 PrivacyActor write)",
+    "completion": "Completion follows verified artifact checksum + reference-output success; production code cannot reach a fixture"
   },
   "version": "1.0.0"
 }

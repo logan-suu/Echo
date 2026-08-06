@@ -11,9 +11,15 @@
     "privacyConsent": "agreed",
     "permissionStepIndex": "complete",
     "selectedLanguage": "en-US",
-    "modelLoadProgress": 0.0,
-    "loadingLabel": "Loading models…"
+    "modelLoadProgress": 0.42,
+    "loadingLabel": "Loading models…",
+    "modelLoadState": "loading",
+    "loadedModelCount": 1,
+    "totalModelCount": 3
   },
-  "controlledVariables": ["modelLoadProgress"],
+  "controlledVariables": [
+    "modelLoadProgress",
+    "modelLoadState"
+  ],
   "version": "1.0.0"
 }

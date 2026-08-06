@@ -1,25 +1,21 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
-  "fixtureId": "onboarding-completed",
+  "fixtureId": "onboarding-model-load-error",
   "schemaVersion": "1.0.0",
   "locale": "en-US",
   "theme": "light",
   "dynamicTypeSize": "Large",
   "surfaceFamily": "task",
   "payload": {
-    "currentStep": "completed",
+    "currentStep": "modelLoading",
     "privacyConsent": "agreed",
     "permissionStepIndex": "complete",
     "selectedLanguage": "en-US",
-    "modelLoadProgress": 1.0,
-    "modelLoadState": "loaded",
-    "loadedModelCount": 3,
-    "totalModelCount": 3
+    "modelLoadState": "failed",
+    "failedModelName": "MultilingualE5Small.mlmodelc",
+    "recoveryMethod": "systemSettings",
+    "loadingLabel": "Model load failed. Retry reloads local files only."
   },
-  "controlledVariables": [
-    "currentStep",
-    "modelLoadProgress",
-    "modelLoadState"
-  ],
+  "controlledVariables": ["modelLoadState", "failedModelName"],
   "version": "1.0.0"
 }

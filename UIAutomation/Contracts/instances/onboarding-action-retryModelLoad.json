@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.retryModelLoad",
+  "source": "user",
+  "targetIntent": "onboarding.retryModelLoad",
+  "expectedOutcome": "modelLoadError/modelUnavailable -> modelLoading with determinate progress; reloads only local bundle artifacts (US-RES-004 AC-3)",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

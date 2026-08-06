@@ -1,25 +1,21 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
-  "fixtureId": "onboarding-completed",
+  "fixtureId": "onboarding-model-unavailable",
   "schemaVersion": "1.0.0",
   "locale": "en-US",
   "theme": "light",
   "dynamicTypeSize": "Large",
   "surfaceFamily": "task",
   "payload": {
-    "currentStep": "completed",
+    "currentStep": "modelLoading",
     "privacyConsent": "agreed",
     "permissionStepIndex": "complete",
     "selectedLanguage": "en-US",
-    "modelLoadProgress": 1.0,
-    "modelLoadState": "loaded",
-    "loadedModelCount": 3,
-    "totalModelCount": 3
+    "modelLoadState": "unavailable",
+    "failedModelName": "all",
+    "recoveryMethod": "systemSettings",
+    "loadingLabel": "Models unavailable. FTS5 keyword search remains available."
   },
-  "controlledVariables": [
-    "currentStep",
-    "modelLoadProgress",
-    "modelLoadState"
-  ],
+  "controlledVariables": ["modelLoadState"],
   "version": "1.0.0"
 }

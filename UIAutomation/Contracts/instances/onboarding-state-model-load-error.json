@@ -1,0 +1,22 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "modelLoadError",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "modelLoading",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "complete",
+    "language": "zh-Hans | en-US",
+    "modelLoadState": "failed (corrupt or missing artifact)",
+    "recoveryMethod": "systemSettings"
+  },
+  "allowedActions": ["onboarding.retryModelLoad", "onboarding.openSettings"],
+  "expectedSemantics": {
+    "title": "'Function limited' / '功能受限' banner (US-RES-004 AC-7)",
+    "errorDetail": "modelName + artifact hash failure, no network download offered (R-005)",
+    "repairEntry": "Open Settings button (UIApplication.openSettingsURLString, US-RES-004 AC-7)",
+    "retryButton": "Manual 'Retry Load' — only reloads local bundle artifacts, no auto-retry timer (US-RES-004 AC-3)",
+    "offlineHint": "Optional hint: retry needs no network but requires app file integrity (US-RES-004 AC-4)"
+  },
+  "version": "1.0.0"
+}

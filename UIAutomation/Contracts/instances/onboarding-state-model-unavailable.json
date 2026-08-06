@@ -1,0 +1,22 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "modelUnavailable",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "modelLoading",
+    "privacyConsent": "agreed",
+    "permissionStepIndex": "complete",
+    "language": "zh-Hans | en-US",
+    "modelLoadState": "unavailable (all artifacts missing or not loadable)",
+    "recoveryMethod": "systemSettings"
+  },
+  "allowedActions": ["onboarding.retryModelLoad", "onboarding.openSettings"],
+  "expectedSemantics": {
+    "title": "'Function unavailable' / '功能不可用' state (US-RES-004 AC-7)",
+    "errorDetail": "No model loaded; app can still browse with FTS5 keyword fallback (US-RES-004 AC-5)",
+    "repairEntry": "Open Settings button (UIApplication.openSettingsURLString)",
+    "retryButton": "Manual 'Retry Load' — no automatic retry, no network request (US-RES-004 AC-3)",
+    "noModelSwitching": "No 'switch to another model' alternative offered (US-RES-004 AC-6)"
+  },
+  "version": "1.0.0"
+}

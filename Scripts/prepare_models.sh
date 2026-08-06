@@ -145,6 +145,7 @@ download_e5() {
     if [ -d "$emb" ] && [ "$MODE" != "generate" ]; then
         log_info "  Already present — verifying checksum"
         verify_or_record "$emb/Manifest.json" || return 1
+        verify_or_record "$MODELS_DIR/tokenizer.json" || return 1
         return 0
     fi
 
@@ -167,11 +168,17 @@ for item in os.listdir(path):
         shutil.copytree(os.path.join(path, item), dst)
         print(f'  MultilingualE5Small.mlpackage')
         found = True
+    if item == 'tokenizer.json':
+        dst = os.path.join(target, 'tokenizer.json')
+        shutil.copyfile(os.path.join(path, item), dst)
+        print(f'  tokenizer.json')
+        found = True
 shutil.rmtree(os.path.join(target, '_tmp'), ignore_errors=True)
 sys.exit(0 if found else 1)
 " 2>&1 || { log_error "E5 download failed"; return 1; }
 
     verify_or_record "$emb/Manifest.json" || return 1
+    verify_or_record "$MODELS_DIR/tokenizer.json" || return 1
 }
 
 # ==========================================

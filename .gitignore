@@ -30,6 +30,9 @@ Echo/Resources/Models/*.mlmodelc/
 Echo/Resources/Models/*.mlpackage/
 Echo/Resources/Models/*.gguf
 Echo/Resources/Models/*.aimodel/
+Echo/Resources/Models/tokenizer.json
+Echo/Resources/Models/*.safetensors
+Echo/Resources/Models/**/*.safetensors
 # Keep .gitkeep to preserve directory structure
 !Echo/Resources/Models/.gitkeep
 

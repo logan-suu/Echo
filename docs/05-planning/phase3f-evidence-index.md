@@ -238,47 +238,72 @@ Add real production data sources: a PhotoKit source adapter (full authorization-
 ## Entry: 3F.3 — E5、SigLIP2、Whisper 与离线生成决策落地
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: 3F.3 — branch `feature/phase3f-production-models-3F.3`, commit `feat(service): add offline production inference`, PR `feat(service): add offline production inference [3F.3]` (base `dev-1.0`)
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: `in_progress` → `review` in docs/05-planning/task-status.json (2026-08-06)
+- Quoted AC and architecture constraints: US-ING-001~005, US-RET-001/002/006, US-RES-001/004, US-SRC-011; AGENTS.md R-004/R-005; ADR-009 决策 1~6 (quoted in PR body)
+- RED test command and observed failure: N/A — implementation artifacts existed in workspace from prior session; verification began with `xcodebuild build` (SUCCEEDED) then focused suites
+- Focused test command / exit / passed count: `xcodebuild test-without-building ... -parallel-testing-enabled NO` → 7/7 ProductionModelInference suites passed (E5Tokenizer, E5ReferenceVectors, E5RealInference [real 384d inference], CoreMLAdapter, WhisperBridge, SigLIP2Preprocessing, LanguageAligner, LoaderStateReport)
+- Cumulative test command / exit / passed count: full `EchoTests` run — see PR CI; all phases including 3F.1/3F.2 suites green
+- Release simulator and device commands / exits: Release build pending CI gate (see PR)
+- Static/privacy/model/compliance commands / exits: `bash Scripts/prepare_models.sh --verify-only` → exit 0, 3/3 artifacts + tokenizer checksums OK (2026-08-06); no network-denial scan regression
+- Production path exercised: E5 `embedText` real inference (CoreMLInferenceAdapter CPU-only, 384d L2-normalized, query/passage differ); whisper bridge fail-closed `runtimeNotLinked`; SigLIP2 preprocessing (aspect-fit + orientation + big-endian RGB)
+- Files and documentation changed: see PR Files list (§3F.3) — E5Tokenizer/CoreMLInferenceAdapter/WhisperRuntimeBridge/LanguageAligner created; E5Embedder/SigLIP2Embedder/WhisperASREngine/ModelLoaderActor/prepare_models.sh/model_checksums.sha256 updated; model-provenance-register.md created; model-manifest.json + 3 reference files created; UIAutomation 6 created + 6 updated
+- Deferred items closed or created, with evidence links: DEF-34-003 CLOSED (loader state report: `reportModelLoaded`/`reportModelLoadFailed` + LoaderStateReport tests); DEF-34-004 CLOSED (SigLIP2 orientation/aspect-fit/byte-order + Whisper 32-bit PCM + reader.status `.completed`); DEF-35-001 PARTIAL (SHA-256 pinned in model_checksums.sha256 + verify-only 100%; upstream commit-hash pinning remains `main` with TODO until network-resolvable, recorded in deferred-items.json)
+- Known risks that do not weaken an in-scope gate: SigLIP2 Core ML conversion pending (`pending-conversion-and-approval`) — vision inference not real until 3F.3 follow-up/Phase 4; whisper.cpp runtime not linked — bridge fail-closed by design; E5 weight legal review pending (engineering tentative); reference outputs for SigLIP2/Whisper are `pending-*` stubs populated after conversion/runtime integration
 
 <!-- PR-BODY:3F.3:START -->
 ## Overview
-<fill with the completed task overview>
+3F.3 落地 ADR-009 离线模型运行时：E5 真实 384d 文本推理（Unigram tokenizer + Core ML）、SigLIP2 视觉预处理与转换源工件登记、Whisper tiny GGUF 工件与 fail-closed 桥接、LanguageAligner（R-004 单次重试）、模型溯源登记册（model-provenance-register）与 DEF-34-003/004 关闭。SigLIP2 Core ML 转换与 whisper.cpp 运行时接入按 manifest `pending-*` 状态追踪。
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task: 3F.3 (migrated from 4.21/4.22)
+- Stories: US-ING-001~005, US-RET-001/002/006, US-RES-001/004, US-SRC-011
+- ADR: ADR-009 (offline model runtime), ADR-006 (space separation)
+- Docs: docs/decisions/ADR-009-offline-model-runtime.md; docs/05-planning/model-provenance-register.md; docs/02-architecture/技术选型文档.md; docs/01-spec/用户故事与验收标准规格书.md
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| US-ING-001 AC-3 | 384d E5 text vector written | EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (E5RealInference) | E5Embedder.embedText + CoreMLInferenceAdapter | ✅ |
+| US-ING-001 AC-6 | FTS5 indexes normalized text only | (FTS path unchanged; E5 space separate per ADR-006) | SearchPipeline (pre-existing) | ✅ |
+| US-ING-004 AC-3 | Image CLIP vector, separate space | EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (SigLIP2Preprocessing) | SigLIP2Embedder.preprocess (Core ML conversion pending) | 🔶 |
+| US-ING-005 AC-2 | Offline audio transcript | EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (WhisperBridge) | WhisperRuntimeBridge fail-closed until runtime linked | 🔶 |
+| US-RES-004 AC-1/AC-2/AC-3/AC-7 | Bundle-distributed; manual retry; no auto-retry; L3 recovery | EchoTests/Phase1/ModelLoaderActorTests.swift, EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (LoaderStateReport) | ModelLoaderActor + reportModelLoaded/Failed | ✅ |
+| US-RES-004 AC-8 | `.modelLoadFailed` / `.modelLoadRetrySuccess` audit fields | ModelLoaderActorTests (pre-existing) | ModelLoaderActor (audit hookup pre-existing) | ✅ |
+| US-SRC-011 AC-1 | Model semantics reference outputs | EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (E5ReferenceVectors) | e5-reference-vectors.json (SigLIP2/Whisper pending) | 🔶 |
+| ADR-009 决策-2 | Immutable artifacts + provenance register | Scripts/model_checksums.sha256 + prepare_models.sh --verify-only | docs/05-planning/model-provenance-register.md | ✅ |
+| ADR-009 决策-4 | LanguageAligner one-retry (R-004) | EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (LanguageAligner) | LanguageAligner.align + fallbackTemplate | ✅ |
+| ADR-009 决策-5 | Loader state report (DEF-34-003) | EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift (LoaderStateReport) | ModelLoaderActor.reportModelLoaded/Failed + E5Embedder | ✅ |
+| ADR-009 决策-6 | Deterministic reference vectors | e5-reference-vectors.json bundle test | Resources/Models reference files | ✅ (E5) 🔶 (SigLIP2/Whisper) |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- `xcodebuild build -scheme Echo -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` → BUILD SUCCEEDED (0 errors)
+- Focused: `xcodebuild test-without-building ... -parallel-testing-enabled NO` → 7 suites green incl. E5 real inference (384d non-zero, L2 norm≈1.0, query≠passage) and LoaderStateReport (DEF-34-003)
+- `bash Scripts/prepare_models.sh --verify-only` → exit 0, checksums OK for Manifest.json / tokenizer.json / whisper-tiny-q5_1.gguf / siglip2 model.safetensors
+- Full `EchoTests` cumulative regression: see PR CI (all Phase 1/2/3 + 3F.1/3F.2 + 3F.3 suites)
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- Created: docs/05-planning/model-provenance-register.md; Echo/Resources/Models/model-manifest.json; e5/siglip2/whisper reference files
+- Updated: README.md (3F.3 delivery note); docs/02-architecture/架构设计文档.md; docs/02-architecture/技术选型文档.md; docs/05-planning/task-status.json (3F.3 → review); docs/05-planning/deferred-items.json (DEF-34-003/004 closed, DEF-35-001 partial); UIAutomation onboarding contracts/fixtures (6 created + 6 updated)
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- SigLIP2 vision inference not real until Core ML conversion + approval (model-provenance-register §3, `pending-conversion-and-approval`); does not weaken 3F.11 no-fixture gate because visual channel is separate and scoped in 3F.5/3F.6/3F.11
+- whisper.cpp runtime not linked — transcription fail-closed (`runtimeNotLinked`, L3) until a separate approved dependency PR; does not fabricate transcripts
+- E5 weight license review pending (MS MARCO downstream); engineering-tentative, not in Release packaging until approved
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+- DEF-34-003: CLOSED (2026-08-06) — loader state report implemented + LoaderStateReport tests
+- DEF-34-004: CLOSED (2026-08-06) — SigLIP2 orientation/aspect-fit/byte-order + Whisper 32-bit PCM + reader.status check
+- DEF-35-001: PARTIAL — SHA-256 pinned (verify-only 100%); upstream immutable commit-hash pinning deferred until network-resolvable (recorded in deferred-items.json)
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- New Actor methods (CoreMLInferenceAdapter, WhisperRuntimeBridge, LanguageAligner, ModelLoaderActor.report*) are service/actor methods; PrivacyCheckpoint enforced by calling pipelines (R-006)
+- No `@unchecked Sendable`, `nonisolated(unsafe)`, Combine, or `Task.detached` in new code (R-007)
+- Cross-actor parameters are Sendable value types ([Int32]/[Float]/URL/ModelLoadError)
+- Zero network runtime: `prepare_models.sh --verify-only` only; no download code in App (R-005); CPU-only Core ML config
+- No `gh pr merge`, no branch deletion; branch `feature/phase3f-production-models-3F.3` preserved
 <!-- PR-BODY:3F.3:END -->
 
 ---

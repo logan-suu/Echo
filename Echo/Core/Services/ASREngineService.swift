@@ -2,14 +2,14 @@
 // 文件: ASREngineService.swift
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-ING-005 (视频音频转写)
 //            docs/02-architecture/数据流全链路技术说明文档.md §3.2 (视频摄入音频转写)
-// 任务: 2.4 - IngestPipeline：视频摄入（AC-2: SenseVoice 离线转写）
-// AC 覆盖: US-ING-005 AC-2 (SenseVoice 离线转录音频轨道)
+// 任务: 2.4 - IngestPipeline：视频摄入（AC-2: 离线转写）
+// AC 覆盖: US-ING-005 AC-2 (离线转录音频轨道)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (禁止网络下载),
 //           R-007 (禁止 unchecked Sendable)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// TODO (Phase 2, Future Task): 实现真实 SenseVoice Small Core ML 推理（含音频预处理、
-//   VAD 语音端点检测、CTC 解码）。当前 Stub 提供固定转写文本，供 IngestPipeline 测试；
-//   真实推理在 SenseVoice 模型 I/O 接口确认后接入。
+// 3F.3 (2026-08-06): SenseVoice（FunASR 自定义条款）退役，ASR 由 WhisperASREngine (R-3.3) 提供。
+//   whisper.cpp 运行时接入前 fail-closed（WhisperRuntimeBridge.runtimeNotLinked，L3）。
+//   当前 Stub 保留供 IngestPipeline 测试。
 // 生成时间: 2026-07-11
 // ==========================================
 
@@ -19,7 +19,7 @@ import Foundation
 
 /// 离线语音转写协议 — 抽象 ASR 引擎，支持依赖注入与测试 Mock。
 ///
-/// AC-2 (US-ING-005): 通过 SenseVoice 离线转录音频轨道为文本。
+/// AC-2 (US-ING-005): 通过 Whisper tiny（whisper.cpp）离线转录音频轨道为文本。
 /// 协议设计为 Sendable（非 Actor），以便测试 Mock 无需 Actor 隔离。
 public protocol ASREngineProtocol: Sendable {
     /// 对视频音频轨道进行离线语音转写。
@@ -34,7 +34,7 @@ public protocol ASREngineProtocol: Sendable {
 
 /// ASR 引擎统一错误类型
 public enum ASREngineError: Error, LocalizedError, Sendable, Equatable {
-    /// SenseVoice 模型尚未加载（L3 阻断）
+    /// 转写模型尚未加载（L3 阻断）
     case modelNotLoaded
     /// 音频轨道提取或转写过程失败
     case transcriptionFailed(reason: String)
@@ -44,7 +44,7 @@ public enum ASREngineError: Error, LocalizedError, Sendable, Equatable {
     public var errorDescription: String? {
         switch self {
         case .modelNotLoaded:
-            return "SenseVoice model not loaded — 请在「设置」中重试模型加载"
+            return "ASR model not loaded — 请在「设置」中重试模型加载"
         case .transcriptionFailed(let reason):
             return "Audio transcription failed: \(reason)"
         case .noSpeechDetected:
@@ -58,7 +58,7 @@ public enum ASREngineError: Error, LocalizedError, Sendable, Equatable {
 /// Stub ASR 引擎 — 返回固定转写文本或指定文本，用于 Pipeline 测试。
 ///
 /// 该实现不依赖 Core ML 或 PHPhotoLibrary，纯逻辑验证 IngestPipeline 视频摄入流程正确性。
-/// 真实 SenseVoice Small 推理由未来的 `SenseVoiceASREngine` Actor 实现。
+/// 真实转写由 `WhisperASREngine` + `WhisperRuntimeBridge`（R-3.3，whisper.cpp 接入后）实现。
 public actor StubASREngine: ASREngineProtocol {
 
     /// 预设的转写文本（测试可控）

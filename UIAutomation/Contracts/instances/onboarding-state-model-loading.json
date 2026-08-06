@@ -7,13 +7,13 @@
     "privacyConsent": "agreed",
     "permissionStepIndex": "complete",
     "language": "zh-Hans | en-US",
-    "modelLoadProgress": "0.0..1.0 (determinate)"
+    "modelLoadProgress": "0.0..1.0 (determinate, ModelLoaderActor.overallStatus loadedCount/allModelsCount)"
   },
   "allowedActions": [],
   "expectedSemantics": {
     "progress": "Determinate ProgressView(value:total:) + 'Loading models…' (echo-memory-canvas §15.6)",
     "announcement": "Progress changes announced; no cancel (first-launch blocking state)",
-    "autoTransition": "Transitions to completed when progress reaches 1.0 (fixture-driven; real ModelLoaderActor Phase 3.9)"
+    "autoTransition": "Transitions to completed when progress reaches 1.0; transitions to modelLoadError/modelUnavailable on L3 failure (3F.3, US-RES-004)"
   },
   "version": "1.0.0"
 }
