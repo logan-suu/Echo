@@ -1129,7 +1129,7 @@
           ],
           "last_updated": "2026-08-06T14:42:11Z",
           "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json.",
-          "pr": null,
+          "pr": "https://github.com/logan-suu/Echo/pull/52",
           "migrated_from": [
             "4.21",
             "4.22"
