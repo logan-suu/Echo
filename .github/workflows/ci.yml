@@ -216,8 +216,6 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             -parallel-testing-enabled NO \
             -skip-testing:EchoTests/ModelBundleTests \
-            -skip-testing:EchoTests/ProductionModelInferenceTests.E5Tokenizer \
-            -skip-testing:EchoTests/ProductionModelInferenceTests.E5RealInference \
             2>&1 | tee test.log
         env:
           NSUnbufferedIO: YES
