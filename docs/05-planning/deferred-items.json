@@ -136,7 +136,7 @@
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
     "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
-    "check_pr_review_deferred": "逐条检查 deferred_from_pr_review 数组——对应 PR 是否已合并？defer_to 条件是否已满足（如工件已接入）？若已解决则移至 resolved_deferred。"
+    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10"
   },
   "deferred_from_pr_review": [
     {
@@ -750,6 +750,16 @@
       "reason": "Bundle.main.bundleIdentifier 在扩展进程内返回扩展自身 ID（com.echo.Echo.ShareExtension），永远不等于 com.apple.mobilenotes/VoiceMemos → note/voice 来源分支永不命中，备忘录/语音分享恒被标记 thirdParty（US-SRC-001 来源标记不精确）。iOS 26 SDK 无公开 API 获取 host app bundle ID（NSExtensionContext 无 hostIdentifier 公开属性）。修复需 3F.5 引入 host 识别方案（如 LSApplicationProxy 或分享确认 UI 让用户选择来源），本次 PR 无法用公开 API 修复。",
       "defer_to": "3F.5（与 DEF-51-002 合并：语音摄入 + 来源标记一起按 host 识别方案处理）",
       "deferred_at": "2026-08-05"
+    },
+    {
+      "id": "DEF-52-001",
+      "pr": 52,
+      "title": "LanguageAligner.fallbackTemplate 硬编码中/英文案未走 String Catalog",
+      "severity": "🟡",
+      "location": "Echo/Core/Services/LanguageAligner.swift:132-136",
+      "reason": "fallbackTemplate 直接返回硬编码中文/英文字符串，违反 AGENTS.md §11.4（硬编码语言字符串 → String Catalog）与 §6.4（降级提示走 String Catalog）。当前功能正确（跟随 preferredLanguage），仅本地化载体问题。",
+      "defer_to": "3F.10 (i18n / localization task)",
+      "deferred_at": "2026-08-06"
     }
   ]
 }
