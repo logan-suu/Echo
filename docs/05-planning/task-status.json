@@ -1144,7 +1144,7 @@
             "US-SRC-011",
             "US-RET-001"
           ],
-          "status": "ready",
+          "status": "review",
           "owner": {
             "implementation": "On-device ML Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1175,8 +1175,12 @@
             "四类门禁：法律（LICENSE/NOTICE/哈希）、转换一致性、Echo 数据集实机评测、实体设备资源门禁",
             "SigLIP2Embedder 真实 embedImage 推理（768d，独立 vision generation）"
           ],
-          "last_updated": "2026-08-07T00:00:00Z",
-          "notes": "从 3F.3 拆分：3F.3 交付转换源（model.safetensors）与预处理；本任务完成 Core ML 转换、参考向量验证与真实视觉推理。ADR-009 决策 1（空间分离）与决策 2（未获批模型不进打包）管辖。",
+          "last_updated": "2026-08-07T08:45:00Z",
+          "notes": "从 3F.3 拆分：3F.3 交付转换源（model.safetensors）与预处理；本任务完成 Core ML 转换、参考向量验证与真实视觉推理。ADR-009 决策 1（空间分离）与决策 2（未获批模型不进打包）管辖。\n✅ 3F.3a 实现完成 (2026-08-07)。SigLIP2Embedder.embedImage 真实 Core ML 推理（PHAsset→UIImage→preprocess→MLModel.prediction→768d L2归一化）。Scripts/convert_siglip2.py（PyTorch→coremltools 转换管线+参考向量生成）。model-manifest.json SigLIP2 条目 provenance 更新（pending-conversion-and-approval→pending-approval）。siglip2-reference-vectors.json schema 就绪（5个solid-color参考样本待回填）。model-provenance-register.md §3 更新（转换lineage+推理接入+参考输出）。model_checksums.sha256 SigLIP2条目。全量回归 847 tests / 100 suites 0 失败。新增 3F.3a_SigLIP2ConversionTests.swift 6 test suites（BundlePresence/ReferenceVectors/RealInference/FourGates/ConversionScript/ModelLoaderIntegration）。DEF-34-004 预处理缺陷修复完整性保留。实际 .mlmodelc 需运行 convert_siglip2.py 生成；参考向量回填 + 审批留待后续。",
+          "status_transitions": {
+            "in_progress_at": "2026-08-07T08:30:00Z",
+            "review_at": "2026-08-07T08:45:00Z"
+          },
           "pr": null
         },
         {

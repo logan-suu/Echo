@@ -40,18 +40,22 @@
       "modelId": "siglip2-base-patch32-256-v1",
       "revision": "main",
       "artifactHash": "7d241bb3becad218f211f480487f491df4f8c0a472ecf7afdec5615815a301f1",
-      "artifactFile": "siglip2-base-patch32-256-model.safetensors",
+      "artifactFile": "SigLIP2BasePatch32.mlmodelc",
+      "convertSourceFile": "siglip2-base-patch32-256-model.safetensors",
+      "convertSourceHash": "7d241bb3becad218f211f480487f491df4f8c0a472ecf7afdec5615815a301f1",
+      "convertScript": "Scripts/convert_siglip2.py",
       "licenseId": "apache-2.0",
       "runtime": "coreML",
       "tokenizer": null,
       "promptTemplate": null,
-      "pooling": "none",
-      "normalization": "none",
+      "pooling": "cls",
+      "normalization": "l2",
       "dimension": 768,
-      "quantization": null,
+      "quantization": "fp16",
       "source": "google/siglip2-base-patch32-256",
       "referenceVectors": "siglip2-reference-vectors.json",
-      "provenance": "pending-conversion-and-approval"
+      "conversionLineage": "Google SigLIP2-B/32 (Apache-2.0) → PyTorch checkpoint → coremltools convert → Xcode coremlcompiler compile → SigLIP2BasePatch32.mlmodelc",
+      "provenance": "pending-approval"
     }
   ]
 }

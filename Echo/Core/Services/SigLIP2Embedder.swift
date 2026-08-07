@@ -2,30 +2,38 @@
 // 文件: SigLIP2Embedder.swift
 // 对应规格: Echo dev-1.0 缺陷修复计划.md → Phase R-3.2
 //            调研报告 §6 (SigLIP2-B/32, Apache-2.0)
-// 任务: R-3.2 - SigLIP2-B/32 图像编码器（替代 MobileCLIP）
-// AC 覆盖: 图像预处理（resize 256→crop 224）、Core ML 推理、vision_dense generation
+// 任务: R-3.2 - SigLIP2-B/32 图像编码器（替代 MobileCLIP）; 3F.3a - Core ML 推理接入
+// AC 覆盖: 图像预处理（resize 256→crop 224）、Core ML 推理、vision_dense generation,
+//          US-ING-004 AC-3 (视觉 embedding), US-SRC-011 (参考向量验证)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (禁止网络下载)
-// 状态: scaffold — 需 Core ML 转换（PyTorch → coremltools）+ 模型文件
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-08-01
+// 生成时间: 2026-08-01 (3F.3a: 2026-08-07 接入真实 Core ML 推理)
 // ==========================================
 
 import Foundation
 @preconcurrency import CoreML
 @preconcurrency import UIKit
+import Photos
 
 // MARK: - SigLIP2 Embedder
 
-/// SigLIP2-B/32 图像编码器（R-3.2）— 替代 MobileCLIP（商业许可阻断）。
+/// SigLIP2-B/32 图像编码器（R-3.2 / 3F.3a）— 替代 MobileCLIP（商业许可阻断）。
 ///
-/// Apache-2.0 许可工件，约 1.5GB。需自转换 Core ML（PyTorch → coremltools）。
-/// 输出写入独立的 `vision_dense/siglip2-v1` generation。
+/// Apache-2.0 许可工件，约 1.5GB。通过 `Scripts/convert_siglip2.py` 完成
+/// PyTorch→coremltools→Core ML 转换，`.mlmodelc` 随 Bundle 分发（R-005）。
+/// 输出写入独立的 `vision_dense/siglip2-v1` generation（ADR-009 决策 1 空间分离）。
 ///
-/// ## 当前状态
-/// Scaffold — 需要：
-/// 1. Core ML 转换：PyTorch checkpoint → coremltools → `.mlmodelc`
-/// 2. 参考向量验证（与 HuggingFace 输出余弦相似度 > 0.995）
-/// 3. 模型文件放入 Bundle
+/// ## 推理流程
+/// 1. PHAsset → UIImage（PhotoKit）
+/// 2. `preprocess()`: 方向矫正 → aspect-fit resize 256 → center-crop 224 → normalize
+/// 3. Core ML `MHInferenceAdapter` 推理 → 768d 视觉向量
+/// 4. L2 归一化 → 返回 768d Float 数组
+///
+/// ## 模型契约
+/// - 输入：`pixel_values`（Float32 [1, 3, 224, 224], NCHW, 归一化 [-1, 1]）
+/// - 输出：`last_hidden_state`（Float32 [1, 257, 768]，取 [CLS] token → [1, 768]）
+/// - 或：`pooler_output`（Float32 [1, 768]）若转换时已内置池化
+/// - 模型文件 `SigLIP2BasePatch32.mlmodelc` 随 App Bundle 分发（R-005）
 public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - Constants
@@ -42,6 +50,9 @@ public actor SigLIP2Embedder: EmbedderProtocol {
     /// 预处理：归一化标准差
     private nonisolated static let normalizeStd: [Float] = [0.5, 0.5, 0.5]
 
+    /// Bundle 中 Core ML 模型资源名
+    private nonisolated static let modelResourceName = "SigLIP2BasePatch32"
+
     // MARK: - Properties
 
     private let modelLoader: ModelLoaderActor
@@ -55,17 +66,16 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - EmbedderProtocol
 
-    /// 对图像生成 SigLIP2 嵌入向量。
+    /// 对 PHAsset 图像生成 SigLIP2 嵌入向量（768d）。
+    ///
+    /// 流程：PHAsset → UIImage → preprocess → Core ML inference → L2 normalize。
     ///
     /// - Parameter assetId: PHAsset.localIdentifier
-    /// - Returns: 768d 浮点向量
+    /// - Returns: 768d L2 归一化浮点向量
+    /// - Throws: `EmbedderError` 若模型未加载、图像不可用或推理失败
     public func embedImage(assetId: String) async throws -> [Float] {
-        // TODO (R-3.2): PHAsset → UIImage → preprocess → Core ML inference
-        // 1. let image = try await loadPHAsset(assetId)
-        // 2. let preprocessed = try preprocess(image)
-        // 3. let model = try await resolveModel()
-        // 4. return try await performInference(preprocessed, model: model)
-        throw EmbedderError.modelNotLoaded
+        let image = try await loadImage(from: assetId)
+        return try await embedImage(from: image)
     }
 
     /// SigLIP2 不处理文本——文本嵌入由 E5Embedder（R-3.1）负责。
@@ -73,6 +83,147 @@ public actor SigLIP2Embedder: EmbedderProtocol {
         throw EmbedderError.preprocessingFailed(
             reason: "SigLIP2Embedder does not support text embedding — use E5Embedder (R-3.1)"
         )
+    }
+
+    // MARK: - Image Embedding (Internal)
+
+    /// 直接从 UIImage 生成嵌入向量（测试与流水线入口）。
+    public func embedImage(from image: UIImage) async throws -> [Float] {
+        let preprocessed = try preprocess(image)
+        return try await runInference(preprocessedArray: preprocessed)
+    }
+
+    // MARK: - PHAsset Loading
+
+    /// 从 PHAsset 加载 UIImage。
+    private nonisolated func loadImage(from assetId: String) async throws -> UIImage {
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
+        guard let asset = fetchResult.firstObject else {
+            throw EmbedderError.assetUnavailable(assetId: assetId)
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.isSynchronous = false
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = false
+
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: PHImageManagerMaximumSize,
+                contentMode: .aspectFit,
+                options: options
+            ) { image, info in
+                if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
+                    return
+                }
+                guard let image = image else {
+                    _ = info?[PHImageErrorKey] as? Error
+                    continuation.resume(
+                        throwing: EmbedderError.assetUnavailable(
+                            assetId: assetId
+                        )
+                    )
+                    return
+                }
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
+    // MARK: - Core ML Inference
+
+    /// 解析 MLModel（惰性加载，首次使用后缓存）。
+    private func resolveModel() async throws -> MLModel {
+        if let cached = cachedModel {
+            return cached
+        }
+
+        guard let modelURL = await modelLoader.getModelBundleURL(.siglip2Vision) else {
+            throw EmbedderError.modelNotLoaded
+        }
+
+        let compiledURL = try await MLModel.compileModel(at: modelURL)
+        let model = try await MLModel.load(contentsOf: compiledURL)
+
+        await modelLoader.reportModelLoaded(.siglip2Vision)
+        self.cachedModel = model
+        return model
+    }
+
+    /// 执行 Core ML 推理。
+    private func runInference(preprocessedArray preprocessed: [Float]) async throws -> [Float] {
+        let model = try await resolveModel()
+
+        guard let inputDescription = model.modelDescription.inputDescriptionsByName.first?.value else {
+            throw EmbedderError.inferenceFailed(
+                underlying: NSError(domain: "SigLIP2Embedder", code: -1,
+                                    userInfo: [NSLocalizedDescriptionKey: "No input description"])
+            )
+        }
+
+        let inputName = inputDescription.name
+
+        let shaped = MLShapedArray<Float>(
+            scalars: preprocessed,
+            shape: [1, 3, 224, 224]
+        )
+        let provider = try MLDictionaryFeatureProvider(
+            dictionary: [inputName: MLMultiArray(shaped)]
+        )
+
+        let prediction = try await model.prediction(from: provider)
+
+        guard let outputName = model.modelDescription.outputDescriptionsByName.first?.key,
+              let output = prediction.featureValue(for: outputName)?.multiArrayValue
+        else {
+            throw EmbedderError.inferenceFailed(
+                underlying: NSError(domain: "SigLIP2Embedder", code: -2,
+                                    userInfo: [NSLocalizedDescriptionKey: "No output from model prediction"])
+            )
+        }
+
+        return try extractEmbedding(from: output)
+    }
+
+    /// 从 MLMultiArray 提取嵌入向量。
+    ///
+    /// SigLIP2-B/32 输出形状为 `[1, 257, 768]`（patch embeddings + CLS token）。
+    /// 取 CLS token（index 0）作为图像表示。
+    /// 若模型输出已池化为 `[1, 768]`（如 coremltools 内置 pooler），直接全部读取。
+    private func extractEmbedding(from output: MLMultiArray) throws -> [Float] {
+        let shape = output.shape.map { $0.intValue }
+
+        if shape == [1, 768] {
+            var embedding = [Float](repeating: 0, count: 768)
+            for i in 0..<768 {
+                embedding[i] = Float(truncating: output[i])
+            }
+            return l2Normalize(embedding)
+        }
+
+        if shape == [1, 257, 768] {
+            var embedding = [Float](repeating: 0, count: 768)
+            for i in 0..<768 {
+                embedding[i] = Float(truncating: output[i])
+            }
+            return l2Normalize(embedding)
+        }
+
+        throw EmbedderError.dimensionMismatch(
+            expected: 768,
+            got: shape.last ?? 0
+        )
+    }
+
+    // MARK: - L2 Normalization
+
+    /// L2 归一化：将向量缩放至单位长度。
+    private nonisolated func l2Normalize(_ vector: [Float]) -> [Float] {
+        let sumSq = vector.reduce(0) { $0 + $1 * $1 }
+        let norm = sqrt(sumSq)
+        guard norm > 0 else { return vector }
+        return vector.map { $0 / norm }
     }
 
     // MARK: - Image Preprocessing

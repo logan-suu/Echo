@@ -75,7 +75,7 @@ struct ModelBundleTests {
         let models = try #require(json["models"] as? [[String: Any]])
         let siglip2 = try #require(models.first { ($0["modelId"] as? String)?.contains("siglip2") == true })
         let provenance = try #require(siglip2["provenance"] as? String)
-        #expect(provenance == "pending-conversion-and-approval",
-                "SigLIP2 must be registered as pending-conversion until Core ML conversion completes")
+        #expect(provenance == "pending-approval",
+                "SigLIP2 provenance must be 'pending-approval' after 3F.3a conversion pipeline ready")
     }
 }

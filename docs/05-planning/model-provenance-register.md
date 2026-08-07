@@ -104,20 +104,30 @@
 | **Revision** | `main`（可变 ref，SHA-256 锁定内容完整性） |
 | **Bundle 文件** | `siglip2-base-patch32-256/model.safetensors`（PyTorch 转换源） |
 | **SHA-256** | `7d241bb3becad218f211f480487f491df4f8c0a472ecf7afdec5615815a301f1` |
-| **运行时** | 目标 Core ML（`.mlmodelc`，`SigLIP2Embedder`）；当前为 PyTorch 转换源，Core ML 转换 pending |
-| **转换 lineage** | Google SigLIP2-B/32（Apache-2.0）→ PyTorch checkpoint → coremltools 转换（未完成）→ Xcode 编译（未完成） |
+| **运行时** | Core ML（`.mlmodelc`，`SigLIP2Embedder`）；3F.3a 转换管线就绪（`Scripts/convert_siglip2.py`），推理接入完成 |
+| **转换 lineage** | Google SigLIP2-B/32（Apache-2.0）→ PyTorch checkpoint → coremltools convert → Xcode coremlcompiler compile → `SigLIP2BasePatch32.mlmodelc` |
 | **运行时许可证** | Apache-2.0 |
 | **NOTICE** | 见 §4 |
 | **SBOM** | 见 §4 |
-| **商业分发处置** | ⚠️ 转换源（`pending-conversion-and-approval`）；Core ML 转换完成 + 参考向量验证（余弦 >0.995）+ 审批后方可打包 |
+| **商业分发处置** | ⚠️ `pending-approval`（3F.3a 转换完成 + 推理接入 + 参考向量 schema 就绪；需参考向量回填 + 审批后方可进入 Release 打包） |
 | **审批人/日期** | 待 Model Legal and Privacy Approver 批准 |
 
-### 3.2 参考输出
+### 3.2 推理接入（3F.3a）
+
+| 字段 | 值 |
+|------|-----|
+| **接入状态** | `SigLIP2Embedder.embedImage` 真实 Core ML 推理（`SigLIP2BasePatch32.mlmodelc` → 768d L2 归一化） |
+| **预处理** | 方向矫正 → aspect-fit 256 → center-crop 224 → normalize（mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5]） |
+| **推理适配** | MLModel.prediction（pixel_values → last_hidden_state → CLS token → L2 normalize） |
+| **错误处理** | 模型未加载 → `EmbedderError.modelNotLoaded` (L3)；推理失败 → `EmbedderError.inferenceFailed` |
+| **审计** | 通过 `ModelLoaderActor.reportModelLoaded(.siglip2Vision)` 回报状态 |
+
+### 3.3 参考输出
 
 | 字段 | 值 |
 |------|-----|
 | **文件** | `Echo/Resources/Models/siglip2-reference-vectors.json` |
-| **内容** | 状态 `pending-conversion`（Core ML 转换管线就绪后回填 768d 参考向量） |
+| **内容** | Schema 就绪（5 个 solid-color reference samples，embedding 字段待 `convert_siglip2.py` 运行后回填） |
 | **用途** | US-SRC-011 model semantics；Golden 验证在 Phase 4 4.1 |
 
 ---
@@ -148,3 +158,4 @@
 | 日期 | 变更 | 执行人 |
 |------|------|--------|
 | 2026-08-06 | 初始登记：E5/Whisper/SigLIP2 三工件 + tokenizer 附属件 | On-device ML Lead |
+| 2026-08-07 | 3F.3a: Core ML 转换管线（`convert_siglip2.py`）+ `SigLIP2Embedder` 真实推理接入 + 参考向量 schema 就绪 + provenance 模型更新 | On-device ML Lead |
