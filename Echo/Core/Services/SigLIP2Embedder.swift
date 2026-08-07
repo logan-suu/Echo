@@ -43,14 +43,14 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     /// 预处理：输入尺寸
     private nonisolated static let inputSize = CGSize(width: 256, height: 256)
-    /// 预处理：center crop 尺寸
-    private nonisolated static let cropSize = CGSize(width: 224, height: 224)
+    /// 预处理：center crop 尺寸（siglip2-base-patch32-256 输入即 256×256）
+    private nonisolated static let cropSize = CGSize(width: 256, height: 256)
     /// 预处理：归一化均值
     private nonisolated static let normalizeMean: [Float] = [0.5, 0.5, 0.5]
     /// 预处理：归一化标准差
     private nonisolated static let normalizeStd: [Float] = [0.5, 0.5, 0.5]
 
-    /// Bundle 中 Core ML 模型资源名
+    /// Bundle 中 Core ML 模型资源名（siglip2-base-patch32-256，输入 256×256，输出 768d）
     private nonisolated static let modelResourceName = "SigLIP2BasePatch32"
 
     // MARK: - Properties
@@ -134,6 +134,11 @@ public actor SigLIP2Embedder: EmbedderProtocol {
     // MARK: - Core ML Inference
 
     /// 解析 MLModel（惰性加载，首次使用后缓存）。
+    ///
+    /// `.mlmodelc` 是已编译模型，直接 `MLModel.load`；`MLModel.compileModel`
+    /// 仅用于未编译的 `.mlpackage`（E5 路径）。对 `.mlmodelc` 调用
+    /// `compileModel` 会导致 Core ML 尝试重新编译而报
+    /// "A valid manifest does not exist" 错误（3F.3a 实测）。
     private func resolveModel() async throws -> MLModel {
         if let cached = cachedModel {
             return cached
@@ -143,8 +148,15 @@ public actor SigLIP2Embedder: EmbedderProtocol {
             throw EmbedderError.modelNotLoaded
         }
 
-        let compiledURL = try await MLModel.compileModel(at: modelURL)
-        let model = try await MLModel.load(contentsOf: compiledURL)
+        let config = MLModelConfiguration()
+        config.computeUnits = .cpuOnly
+        let model: MLModel
+        if modelURL.pathExtension == "mlpackage" {
+            let compiledURL = try await MLModel.compileModel(at: modelURL)
+            model = try await MLModel.load(contentsOf: compiledURL, configuration: config)
+        } else {
+            model = try await MLModel.load(contentsOf: modelURL, configuration: config)
+        }
 
         await modelLoader.reportModelLoaded(.siglip2Vision)
         self.cachedModel = model
@@ -166,7 +178,7 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
         let shaped = MLShapedArray<Float>(
             scalars: preprocessed,
-            shape: [1, 3, 224, 224]
+            shape: [1, 3, 256, 256]
         )
         let provider = try MLDictionaryFeatureProvider(
             dictionary: [inputName: MLMultiArray(shaped)]
@@ -188,32 +200,22 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     /// 从 MLMultiArray 提取嵌入向量。
     ///
-    /// SigLIP2-B/32 输出形状为 `[1, 257, 768]`（patch embeddings + CLS token）。
-    /// 取 CLS token（index 0）作为图像表示。
-    /// 若模型输出已池化为 `[1, 768]`（如 coremltools 内置 pooler），直接全部读取。
+    /// SigLIP2-B/32-256 Core ML 输出形状为 `[1, 768]`（probe token 池化 + L2 归一化）。
     private func extractEmbedding(from output: MLMultiArray) throws -> [Float] {
         let shape = output.shape.map { $0.intValue }
 
-        if shape == [1, 768] {
-            var embedding = [Float](repeating: 0, count: 768)
-            for i in 0..<768 {
-                embedding[i] = Float(truncating: output[i])
-            }
-            return l2Normalize(embedding)
+        guard shape == [1, 768] else {
+            throw EmbedderError.dimensionMismatch(
+                expected: 768,
+                got: shape.last ?? 0
+            )
         }
 
-        if shape == [1, 257, 768] {
-            var embedding = [Float](repeating: 0, count: 768)
-            for i in 0..<768 {
-                embedding[i] = Float(truncating: output[i])
-            }
-            return l2Normalize(embedding)
+        var embedding = [Float](repeating: 0, count: 768)
+        for i in 0..<768 {
+            embedding[i] = Float(truncating: output[i])
         }
-
-        throw EmbedderError.dimensionMismatch(
-            expected: 768,
-            got: shape.last ?? 0
-        )
+        return l2Normalize(embedding)
     }
 
     // MARK: - L2 Normalization
@@ -228,9 +230,9 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - Image Preprocessing
 
-    /// 图像预处理：方向矫正 → resize → center crop → normalize。
+    /// 图像预处理：方向矫正 → aspect-fit resize 256 → center-crop 256 → normalize。
     ///
-    /// SigLIP2 要求 224×224 输入，归一化 mean=[0.5,0.5,0.5] std=[0.5,0.5,0.5]。
+    /// SigLIP2-B/32-256 要求 256×256 输入，归一化 mean=[0.5,0.5,0.5] std=[0.5,0.5,0.5]。
     ///
     /// DEF-34-004 修复：
     /// 1. 尊重 `image.imageOrientation`（EXIF 方向），避免旋转后语义错误

@@ -133,14 +133,32 @@ struct SigLIP2ReferenceVectorTests {
 
         let embedder = SigLIP2Embedder()
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256))
-        _ = renderer.image { ctx in
+        let image = renderer.image { ctx in
             UIColor.blue.setFill()
             ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
         }
 
-        let embedding = try await embedder.embedImage(assetId: "test-cosine")
+        let embedding = try await embedder.embedImage(from: image)
         #expect(embedding.count == 768)
         #expect(!embedding.allSatisfy { $0 == 0.0 }, "Real inference must produce non-zero embedding")
+
+        // US-SRC-011: Core ML 运行时输出必须与 PyTorch 参考向量余弦相似度 > 0.995
+        guard let url = Bundle.main.url(forResource: "siglip2-reference-vectors", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let samples = dict["samples"] as? [[String: Any]]
+        else {
+            Issue.record("siglip2-reference-vectors.json not found or invalid")
+            return
+        }
+        guard let blueRef = samples.first(where: { ($0["label"] as? String) == "solid_blue_224" }),
+              let refEmbedding = blueRef["embedding"] as? [Double]
+        else {
+            Issue.record("solid_blue_224 reference embedding missing — run Scripts/convert_siglip2.py first")
+            return
+        }
+        let cosine = cosineSimilarity(embedding, refEmbedding)
+        #expect(cosine > 0.995, "Core ML output vs PyTorch reference cosine must exceed 0.995, got \(cosine)")
     }
 }
 
@@ -221,7 +239,7 @@ struct SigLIP2RealInferenceTests {
             ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
         }
         let floats = try embedder.preprocess(image)
-        #expect(floats.count == 224 * 224 * 3)
+        #expect(floats.count == 256 * 256 * 3)
 
         for v in floats {
             #expect(v >= -1.1 && v <= 1.1, "Preprocessed values should be in normalized range, got \(v)")
@@ -421,6 +439,18 @@ struct SigLIP2ModelLoaderIntegrationTests {
 }
 
 // MARK: - Helpers
+
+private func cosineSimilarity(_ a: [Float], _ b: [Double]) -> Double {
+    guard a.count == b.count, !a.isEmpty else { return 0 }
+    var dot = 0.0, normA = 0.0, normB = 0.0
+    for i in 0..<a.count {
+        dot += Double(a[i]) * b[i]
+        normA += Double(a[i]) * Double(a[i])
+        normB += b[i] * b[i]
+    }
+    guard normA > 0, normB > 0 else { return 0 }
+    return dot / (sqrt(normA) * sqrt(normB))
+}
 
 private func directorySize(at url: URL) -> UInt64 {
     guard let enumerator = FileManager.default.enumerator(

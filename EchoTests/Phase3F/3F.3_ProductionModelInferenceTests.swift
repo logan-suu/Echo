@@ -294,8 +294,8 @@ struct SigLIP2PreprocessingTests {
         }
         let embedder = SigLIP2Embedder()
         let floats = try embedder.preprocess(image)
-        // 224x224x3 = 150528
-        #expect(floats.count == 224 * 224 * 3)
+        // 256x256x3 = 196608（siglip2-base-patch32-256 模型输入 256×256）
+        #expect(floats.count == 256 * 256 * 3)
     }
 
     @Test("orientation helper normalizes .right orientation")

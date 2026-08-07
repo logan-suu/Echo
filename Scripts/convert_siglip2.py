@@ -1,60 +1,54 @@
 #!/usr/bin/env python3
 """
-SigLIP2-B/32 Core ML Conversion Script
-=======================================
-Converts the HuggingFace google/siglip2-base-patch32-256 PyTorch
-checkpoint to a Core ML .mlpackage via coremltools, then compiles
-to .mlmodelc for Xcode bundling.
+SigLIP2-B/32-256 Core ML Conversion Script (3F.3a)
+====================================================
+Converts Google siglip2-base-patch32-256 PyTorch checkpoint to Core ML
+.mlpackage via coremltools, then compiles to .mlmodelc for Xcode bundling.
+
+Architecture: patch_size=32, image_size=256, 64 patches, 768-dim, 12 layers, 12 heads.
 
 Requirements:
     pip install torch coremltools safetensors numpy pillow
 
 Usage:
     python3 Scripts/convert_siglip2.py \
-        --source Resources/Models/siglip2-base-patch32-256-model.safetensors \
-        --output Resources/Models/SigLIP2BasePatch32.mlpackage
+        --source Echo/Resources/Models/siglip2-base-patch32-256/model.safetensors \
+        --output Echo/Resources/Models/SigLIP2BasePatch32.mlpackage
 
-Integration with prepare_models.sh:
-    prepare_models.sh calls this script as part of the model pipeline.
-
-Author: Echo On-device ML Team
-License: Apache-2.0 (SigLIP2 model); MIT (this script)
-Revision: 3F.3a — fixed revision immutable commit hash (google/siglip2-base-patch32-256)
+License: MIT (this script); Apache-2.0 (SigLIP2 model)
+Revision: 3F.3a — corrected architecture constants from safetensors inspection
 """
 
 import argparse
 import hashlib
 import json
 import os
-import struct
+import subprocess
 import sys
 from pathlib import Path
 
-# ---- SigLIP2-B/32 Configuration ----
-SIGLIP2_REVISION = "main"  # TODO (3F.3a): pin to immutable commit hash when network-resolvable
-SIGLIP2_MODEL_ID = "siglip2-base-patch32-256-v1"
-SIGLIP2_DIMENSION = 768
-SIGLIP2_IMAGE_SIZE = 224
-SIGLIP2_NUM_PATCHES = 256  # (224/14)^2 for patch_size=14
-SIGLIP2_PATCH_SIZE = 14
-SIGLIP2_NUM_CHANNELS = 3
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from safetensors.torch import load_file
 
-SIGLIP2_MEAN = [0.5, 0.5, 0.5]
-SIGLIP2_STD = [0.5, 0.5, 0.5]
+# ---- Architecture Constants (verified from safetensors) ----
+IMAGE_SIZE = 256
+PATCH_SIZE = 32
+NUM_PATCHES = (IMAGE_SIZE // PATCH_SIZE) ** 2  # 64
+EMBED_DIM = 768
+NUM_HEADS = 12
+NUM_LAYERS = 12
+INTERMEDIATE_SIZE = 3072
+NUM_CHANNELS = 3
 
-# ---- Reference Images for Validation ----
-# Minimal 224x224 RGB images with known content for deterministic reference output
-REFERENCE_IMAGES = {
-    "solid_red_224": [255, 0, 0],
-    "solid_green_224": [0, 255, 0],
-    "solid_blue_224": [0, 0, 255],
-    "solid_white_224": [255, 255, 255],
-    "solid_black_224": [0, 0, 0],
-}
+# Normalization (SigLIP2 standard)
+MEAN = [0.5, 0.5, 0.5]
+STD = [0.5, 0.5, 0.5]
 
 
 def sha256_file(path: str) -> str:
-    """Compute SHA-256 of a file."""
     h = hashlib.sha256()
     with open(path, "rb") as f:
         while chunk := f.read(8192):
@@ -63,7 +57,6 @@ def sha256_file(path: str) -> str:
 
 
 def sha256_dir(path: str) -> str:
-    """Compute aggregate SHA-256 of a directory tree (sorted, stable)."""
     h = hashlib.sha256()
     for root, dirs, files in sorted(os.walk(path)):
         dirs.sort()
@@ -76,310 +69,314 @@ def sha256_dir(path: str) -> str:
     return h.hexdigest()
 
 
-def load_siglip2_model(safetensors_path: str):
-    """Load SigLIP2-B/32 PyTorch model from safetensors.
+# ---------------------------------------------------------------------------
+# Vision Transformer (SigLIP2 vision encoder)
+# ---------------------------------------------------------------------------
 
-    Returns a tuple of (model, config_dict).
+class SigLIP2VisionEncoder(nn.Module):
+    """SigLIP2-B/32-256 vision encoder.
+
+    Architecture (verified against safetensors):
+      - Patch embedding: Conv2d(3→768, kernel=32, stride=32)
+      - Position embedding: learnable [64, 768] (no CLS token)
+      - 12 × Transformer encoder layers (pre-norm, q/k/v/out proj)
+      - Post layer-norm
+      - Head: attention(in_proj) + MLP → probe [1, 1, 768] output
     """
-    try:
-        import torch
-        from safetensors.torch import load_file
-    except ImportError as e:
-        print(f"ERROR: Missing dependencies. Install via: pip install torch safetensors coremltools", file=sys.stderr)
-        raise
 
-    state_dict = load_file(safetensors_path)
+    def __init__(self, state_dict: dict):
+        super().__init__()
 
-    # Build a minimal SigLIP2 model class for export
-    class SigLIP2VisionModel(torch.nn.Module):
-        """Minimal SigLIP2 vision model for Core ML export.
+        # -- Patch embedding --
+        pw = state_dict["vision_model.embeddings.patch_embedding.weight"]
+        pb = state_dict["vision_model.embeddings.patch_embedding.bias"]
+        self.patch_embed = nn.Conv2d(
+            NUM_CHANNELS, EMBED_DIM, kernel_size=PATCH_SIZE,
+            stride=PATCH_SIZE, padding=0, bias=True,
+        )
+        self.patch_embed.weight = nn.Parameter(pw)
+        self.patch_embed.bias = nn.Parameter(pb)
 
-        This implements the vision encoder portion of SigLIP2-B/32:
-        - Patch embedding (14x14 patches → 224/14 = 16x16 = 256 patches)
-        - Position embedding
-        - Transformer encoder (12 layers, 768 dim, 12 heads)
-        - Post-layer normalization
-        - Head (optional projection)
+        # -- Position embedding (64 patches, 2D → add batch dim at runtime) --
+        self.register_buffer(
+            "pos_embed",
+            state_dict["vision_model.embeddings.position_embedding.weight"]
+        )  # [64, 768]
 
-        Weights are loaded from the safetensors state_dict.
-        """
+        # -- Transformer encoder layers --
+        self.layers = nn.ModuleList()
+        for i in range(NUM_LAYERS):
+            self.layers.append(_EncoderLayer(state_dict, i))
 
-        def __init__(self, state_dict):
-            super().__init__()
-            self.embed_dim = SIGLIP2_DIMENSION
-            self.num_patches = SIGLIP2_NUM_PATCHES
-            self.patch_size = SIGLIP2_PATCH_SIZE
-            self.image_size = SIGLIP2_IMAGE_SIZE
-
-            # Load positional embedding (shape: [1, num_patches+1, embed_dim])
-            self.register_buffer(
-                "pos_embed",
-                state_dict.get("vision_model.embeddings.position_embedding.weight",
-                               torch.zeros(1, SIGLIP2_NUM_PATCHES + 1, SIGLIP2_DIMENSION))
-            )
-
-            # Patch embedding (conv2d)
-            patch_weight = state_dict.get(
-                "vision_model.embeddings.patch_embedding.weight",
-                torch.zeros(SIGLIP2_DIMENSION, SIGLIP2_NUM_CHANNELS,
-                            SIGLIP2_PATCH_SIZE, SIGLIP2_PATCH_SIZE)
-            )
-            patch_bias = state_dict.get(
-                "vision_model.embeddings.patch_embedding.bias",
-                torch.zeros(SIGLIP2_DIMENSION)
-            )
-            self.patch_embed = torch.nn.Conv2d(
-                SIGLIP2_NUM_CHANNELS, SIGLIP2_DIMENSION,
-                kernel_size=SIGLIP2_PATCH_SIZE,
-                stride=SIGLIP2_PATCH_SIZE,
-                padding=0, bias=True
-            )
-            self.patch_embed.weight = torch.nn.Parameter(patch_weight)
-            self.patch_embed.bias = torch.nn.Parameter(patch_bias)
-
-            # Build transformer encoder layers from state_dict
-            num_layers = 12
-            encoder_layers = []
-            for i in range(num_layers):
-                layer = torch.nn.TransformerEncoderLayer(
-                    d_model=SIGLIP2_DIMENSION,
-                    nhead=12,
-                    dim_feedforward=SIGLIP2_DIMENSION * 4,
-                    activation="gelu",
-                    batch_first=True,
-                    norm_first=True,
-                )
-                prefix = f"vision_model.encoder.layers.{i}."
-                # Map SigLIP2 weight names to PyTorch TransformerEncoderLayer names
-                layer.self_attn.in_proj_weight = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "self_attn.in_proj_weight", [3 * SIGLIP2_DIMENSION, SIGLIP2_DIMENSION])
-                )
-                layer.self_attn.in_proj_bias = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "self_attn.in_proj_bias", [3 * SIGLIP2_DIMENSION])
-                )
-                layer.self_attn.out_proj.weight = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "self_attn.out_proj.weight", [SIGLIP2_DIMENSION, SIGLIP2_DIMENSION])
-                )
-                layer.self_attn.out_proj.bias = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "self_attn.out_proj.bias", [SIGLIP2_DIMENSION])
-                )
-                layer.linear1.weight = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "mlp.fc1.weight", [SIGLIP2_DIMENSION * 4, SIGLIP2_DIMENSION])
-                )
-                layer.linear1.bias = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "mlp.fc1.bias", [SIGLIP2_DIMENSION * 4])
-                )
-                layer.linear2.weight = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "mlp.fc2.weight", [SIGLIP2_DIMENSION, SIGLIP2_DIMENSION * 4])
-                )
-                layer.linear2.bias = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "mlp.fc2.bias", [SIGLIP2_DIMENSION])
-                )
-                layer.norm1.weight = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "layer_norm1.weight", [SIGLIP2_DIMENSION])
-                )
-                layer.norm1.bias = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "layer_norm1.bias", [SIGLIP2_DIMENSION])
-                )
-                layer.norm2.weight = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "layer_norm2.weight", [SIGLIP2_DIMENSION])
-                )
-                layer.norm2.bias = torch.nn.Parameter(
-                    self._maybe_load(state_dict, prefix + "layer_norm2.bias", [SIGLIP2_DIMENSION])
-                )
-                encoder_layers.append(layer)
-
-            self.encoder = torch.nn.TransformerEncoder(
-                torch.nn.TransformerEncoderLayer(
-                    d_model=SIGLIP2_DIMENSION, nhead=12,
-                    dim_feedforward=SIGLIP2_DIMENSION * 4,
-                    activation="gelu", batch_first=True, norm_first=True,
-                ),
-                num_layers=num_layers
-            )
-            # Override with custom layers
-            self.encoder.layers = torch.nn.ModuleList(encoder_layers)
-
-            # Post layer norm
-            post_norm_weight = state_dict.get(
-                "vision_model.post_layernorm.weight",
-                torch.ones(SIGLIP2_DIMENSION)
-            )
-            post_norm_bias = state_dict.get(
-                "vision_model.post_layernorm.bias",
-                torch.zeros(SIGLIP2_DIMENSION)
-            )
-            self.post_norm = torch.nn.LayerNorm(SIGLIP2_DIMENSION, eps=1e-6)
-            self.post_norm.weight = torch.nn.Parameter(post_norm_weight)
-            self.post_norm.bias = torch.nn.Parameter(post_norm_bias)
-
-        @staticmethod
-        def _maybe_load(state_dict, key, shape):
-            """Load a tensor from state_dict, falling back to zeros/ones if not found."""
-            tensor = state_dict.get(key)
-            if tensor is None:
-                print(f"  WARNING: {key} not found in state_dict, using zeros", file=sys.stderr)
-                return torch.zeros(*shape)
-            return tensor
-
-        def forward(self, pixel_values):
-            # pixel_values: [batch, 3, 224, 224], normalized to [-1, 1]
-            batch_size = pixel_values.shape[0]
-            # Patch embedding
-            x = self.patch_embed(pixel_values)  # [B, 768, 16, 16]
-            x = x.flatten(2).transpose(1, 2)    # [B, 256, 768]
-
-            # Prepend CLS token (zeros, then get position embedding)
-            cls_token = torch.zeros(batch_size, 1, SIGLIP2_DIMENSION, device=x.device)
-            x = torch.cat([cls_token, x], dim=1)  # [B, 257, 768]
-
-            # Add position embedding: ensure we can broadcast
-            pos = self.pos_embed[:, :x.shape[1], :]  # [1, 257, 768]
-            x = x + pos
-
-            # Transformer encoder
-            x = self.encoder(x)  # [B, 257, 768]
-
-            # Post layer norm
-            x = self.post_norm(x)  # [B, 257, 768]
-
-            # Return CLS token + patch embeddings (caller extracts CLS)
-            return x
-
-    model = SigLIP2VisionModel(state_dict)
-    model.eval()
-    return model
-
-
-def preprocess_image(pixels, mean, std):
-    """Preprocess raw RGB pixels [0,255] → normalized tensor [1,3,224,224]."""
-    import numpy as np
-    img = np.array(pixels, dtype=np.float32).reshape(SIGLIP2_IMAGE_SIZE, SIGLIP2_IMAGE_SIZE, SIGLIP2_NUM_CHANNELS)
-    img = img / 255.0
-    img = (img - np.array(mean, dtype=np.float32)) / np.array(std, dtype=np.float32)
-    img = img.transpose(2, 0, 1)  # HWC → CHW
-    return img[np.newaxis, ...].astype(np.float32)  # [1, 3, 224, 224]
-
-
-def generate_reference_vectors(model):
-    """Generate reference vectors for known images.
-
-    Returns a dict ready for siglip2-reference-vectors.json.
-    """
-    import torch
-    import numpy as np
-
-    references = []
-    for label, rgb in REFERENCE_IMAGES.items():
-        # Create 224x224 solid color image
-        pixels = np.tile(np.array(rgb, dtype=np.uint8), (224, 224, 1))
-        input_tensor = torch.from_numpy(
-            preprocess_image(pixels, SIGLIP2_MEAN, SIGLIP2_STD)
+        # -- Post layer-norm --
+        self.post_ln = nn.LayerNorm(EMBED_DIM, eps=1e-6)
+        self.post_ln.weight = nn.Parameter(
+            state_dict["vision_model.post_layernorm.weight"]
+        )
+        self.post_ln.bias = nn.Parameter(
+            state_dict["vision_model.post_layernorm.bias"]
         )
 
-        with torch.no_grad():
-            output = model(input_tensor)  # [1, 257, 768]
-            cls_embedding = output[:, 0, :]  # CLS token
-            # L2 normalize
-            norm = torch.norm(cls_embedding, p=2, dim=-1, keepdim=True)
-            cls_embedding = cls_embedding / (norm + 1e-12)
+        # -- Head --
+        self.head_attn_in = nn.Linear(EMBED_DIM, 3 * EMBED_DIM, bias=True)
+        self.head_attn_in.weight = nn.Parameter(
+            state_dict["vision_model.head.attention.in_proj_weight"]
+        )
+        self.head_attn_in.bias = nn.Parameter(
+            state_dict["vision_model.head.attention.in_proj_bias"]
+        )
+        self.head_attn_out = nn.Linear(EMBED_DIM, EMBED_DIM, bias=True)
+        self.head_attn_out.weight = nn.Parameter(
+            state_dict["vision_model.head.attention.out_proj.weight"]
+        )
+        self.head_attn_out.bias = nn.Parameter(
+            state_dict["vision_model.head.attention.out_proj.bias"]
+        )
+        self.head_ln = nn.LayerNorm(EMBED_DIM, eps=1e-6)
+        self.head_ln.weight = nn.Parameter(
+            state_dict["vision_model.head.layernorm.weight"]
+        )
+        self.head_ln.bias = nn.Parameter(
+            state_dict["vision_model.head.layernorm.bias"]
+        )
+        self.head_mlp_fc1 = nn.Linear(EMBED_DIM, INTERMEDIATE_SIZE, bias=True)
+        self.head_mlp_fc1.weight = nn.Parameter(
+            state_dict["vision_model.head.mlp.fc1.weight"]
+        )
+        self.head_mlp_fc1.bias = nn.Parameter(
+            state_dict["vision_model.head.mlp.fc1.bias"]
+        )
+        self.head_mlp_fc2 = nn.Linear(INTERMEDIATE_SIZE, EMBED_DIM, bias=True)
+        self.head_mlp_fc2.weight = nn.Parameter(
+            state_dict["vision_model.head.mlp.fc2.weight"]
+        )
+        self.head_mlp_fc2.bias = nn.Parameter(
+            state_dict["vision_model.head.mlp.fc2.bias"]
+        )
+        self.register_buffer(
+            "probe",
+            state_dict["vision_model.head.probe"]
+        )  # [1, 1, 768]
 
-        embedding_list = cls_embedding.squeeze().tolist()
-        references.append({
-            "label": label,
-            "description": f"Solid {label.split('_')[1]} (R={rgb[0]}, G={rgb[1]}, B={rgb[2]})",
-            "embedding": embedding_list,
-        })
-        print(f"  Generated reference for: {label}")
+    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        """Forward pass: [B, 3, 256, 256] → [B, 768]."""
+        B = pixel_values.shape[0]
+
+        # Patch embedding: [B, 3, 256, 256] → [B, 768, 8, 8] → [B, 64, 768]
+        x = self.patch_embed(pixel_values)       # [B, 768, 8, 8]
+        x = x.flatten(2).transpose(1, 2)          # [B, 64, 768]
+
+        # Add position embedding
+        x = x + self.pos_embed.unsqueeze(0)       # [B, 64, 768]
+
+        # Transformer layers
+        for layer in self.layers:
+            x = layer(x)
+
+        # Post layer-norm
+        x = self.post_ln(x)                        # [B, 64, 768]
+
+        # Head: multi-head attention pooling with probe token
+        probe = self.probe.expand(B, -1, -1)       # [B, 1, 768]
+        # Concatenate [probe, x]
+        combined = torch.cat([probe, x], dim=1)    # [B, 65, 768]
+
+        # Self-attention (probe attends to all patches)
+        qkv = self.head_attn_in(combined)          # [B, 65, 2304]
+        qkv = qkv.reshape(B, 65, 3, NUM_HEADS, EMBED_DIM // NUM_HEADS)
+        qkv = qkv.permute(2, 0, 3, 1, 4)          # [3, B, 12, 65, 64]
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        attn_weights = (q @ k.transpose(-2, -1)) * (EMBED_DIM // NUM_HEADS) ** -0.5
+        attn_weights = F.softmax(attn_weights, dim=-1)
+        attn = attn_weights @ v
+        attn = attn.transpose(1, 2).reshape(B, 65, EMBED_DIM)
+        attn = self.head_attn_out(attn)            # [B, 65, 768]
+
+        # Take probe output only
+        probe_out = attn[:, 0:1, :]                 # [B, 1, 768]
+
+        # Residual + LayerNorm + MLP
+        probe_out = probe_out + probe               # residual
+        probe_out = self.head_ln(probe_out)
+        mlp_out = self.head_mlp_fc2(
+            F.gelu(self.head_mlp_fc1(probe_out))
+        )
+        probe_out = probe_out + mlp_out             # [B, 1, 768]
+
+        # L2 normalize
+        probe_out = F.normalize(probe_out, p=2, dim=-1)
+
+        return probe_out.squeeze(1)                 # [B, 768]
+
+
+class _EncoderLayer(nn.Module):
+    """Single SigLIP2 transformer encoder layer (pre-norm).
+
+    Uses separate Q/K/V projections (not combined in_proj).
+    """
+
+    def __init__(self, state_dict: dict, layer_idx: int):
+        super().__init__()
+        p = f"vision_model.encoder.layers.{layer_idx}."
+
+        self.ln1 = nn.LayerNorm(EMBED_DIM, eps=1e-6)
+        self.ln1.weight = nn.Parameter(state_dict[p + "layer_norm1.weight"])
+        self.ln1.bias = nn.Parameter(state_dict[p + "layer_norm1.bias"])
+
+        # Attention: separate q/k/v projections
+        self.q_proj = nn.Linear(EMBED_DIM, EMBED_DIM, bias=True)
+        self.q_proj.weight = nn.Parameter(state_dict[p + "self_attn.q_proj.weight"])
+        self.q_proj.bias = nn.Parameter(state_dict[p + "self_attn.q_proj.bias"])
+        self.k_proj = nn.Linear(EMBED_DIM, EMBED_DIM, bias=True)
+        self.k_proj.weight = nn.Parameter(state_dict[p + "self_attn.k_proj.weight"])
+        self.k_proj.bias = nn.Parameter(state_dict[p + "self_attn.k_proj.bias"])
+        self.v_proj = nn.Linear(EMBED_DIM, EMBED_DIM, bias=True)
+        self.v_proj.weight = nn.Parameter(state_dict[p + "self_attn.v_proj.weight"])
+        self.v_proj.bias = nn.Parameter(state_dict[p + "self_attn.v_proj.bias"])
+        self.out_proj = nn.Linear(EMBED_DIM, EMBED_DIM, bias=True)
+        self.out_proj.weight = nn.Parameter(state_dict[p + "self_attn.out_proj.weight"])
+        self.out_proj.bias = nn.Parameter(state_dict[p + "self_attn.out_proj.bias"])
+
+        self.ln2 = nn.LayerNorm(EMBED_DIM, eps=1e-6)
+        self.ln2.weight = nn.Parameter(state_dict[p + "layer_norm2.weight"])
+        self.ln2.bias = nn.Parameter(state_dict[p + "layer_norm2.bias"])
+
+        self.mlp_fc1 = nn.Linear(EMBED_DIM, INTERMEDIATE_SIZE, bias=True)
+        self.mlp_fc1.weight = nn.Parameter(state_dict[p + "mlp.fc1.weight"])
+        self.mlp_fc1.bias = nn.Parameter(state_dict[p + "mlp.fc1.bias"])
+        self.mlp_fc2 = nn.Linear(INTERMEDIATE_SIZE, EMBED_DIM, bias=True)
+        self.mlp_fc2.weight = nn.Parameter(state_dict[p + "mlp.fc2.weight"])
+        self.mlp_fc2.bias = nn.Parameter(state_dict[p + "mlp.fc2.bias"])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Pre-norm attention
+        residual = x
+        x = self.ln1(x)
+        B, N, D = x.shape
+        q = self.q_proj(x).view(B, N, NUM_HEADS, D // NUM_HEADS).transpose(1, 2)
+        k = self.k_proj(x).view(B, N, NUM_HEADS, D // NUM_HEADS).transpose(1, 2)
+        v = self.v_proj(x).view(B, N, NUM_HEADS, D // NUM_HEADS).transpose(1, 2)
+        attn_weights = (q @ k.transpose(-2, -1)) * (EMBED_DIM // NUM_HEADS) ** -0.5
+        attn_weights = F.softmax(attn_weights, dim=-1)
+        attn = attn_weights @ v
+        attn = attn.transpose(1, 2).reshape(B, N, D)
+        x = residual + self.out_proj(attn)
+
+        # Pre-norm MLP
+        residual = x
+        x = self.ln2(x)
+        x = residual + self.mlp_fc2(F.gelu(self.mlp_fc1(x)))
+        return x
+
+
+# ---------------------------------------------------------------------------
+# Reference vectors
+# ---------------------------------------------------------------------------
+
+def make_solid_image(r: int, g: int, b: int) -> torch.Tensor:
+    """Create a solid-color 256×256 image tensor normalized to [-1, 1]."""
+    img = torch.zeros(3, IMAGE_SIZE, IMAGE_SIZE, dtype=torch.float32)
+    img[0] = ((r / 255.0) - MEAN[0]) / STD[0]
+    img[1] = ((g / 255.0) - MEAN[1]) / STD[1]
+    img[2] = ((b / 255.0) - MEAN[2]) / STD[2]
+    return img
+
+
+def cosine_sim(a, b):
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+
+def generate_reference_vectors(model: nn.Module) -> dict:
+    """Generate deterministic reference vectors from 5 solid-color images."""
+    model.eval()
+    colors = {
+        "solid_red_224": (255, 0, 0),
+        "solid_green_224": (0, 255, 0),
+        "solid_blue_224": (0, 0, 255),
+        "solid_white_224": (255, 255, 255),
+        "solid_black_224": (0, 0, 0),
+    }
+
+    samples = []
+    with torch.no_grad():
+        for label, (r, g, b) in colors.items():
+            img = make_solid_image(r, g, b).unsqueeze(0)  # [1, 3, 256, 256]
+            output = model(img)                             # [1, 768]
+            vec = output.squeeze(0).tolist()
+            samples.append({
+                "label": label,
+                "description": f"Solid {label.split('_')[1]} image (R={r},G={g},B={b}), 256×256.",
+                "embedding": [round(v, 8) for v in vec],
+            })
+            print(f"  [reference] {label}: dim={len(vec)}, norm={np.linalg.norm(vec):.6f}")
 
     return {
         "schemaVersion": "1.0.0",
-        "modelId": SIGLIP2_MODEL_ID,
-        "dimension": SIGLIP2_DIMENSION,
-        "revision": SIGLIP2_REVISION,
-        "description": "SigLIP2-B/32 reference output vectors for conversion consistency verification (US-SRC-011)",
-        "references": references,
+        "modelId": "siglip2-base-patch32-256-v1",
+        "dimension": EMBED_DIM,
+        "revision": "main",
+        "description": (
+            "SigLIP2-B/32-256 reference output vectors for conversion consistency "
+            "verification (US-SRC-011 model semantics). Generated by "
+            "Scripts/convert_siglip2.py from 5 solid-color 256×256 images. "
+            "Compare Core ML runtime output for >0.995 cosine similarity."
+        ),
+        "status": "pending-approval",
+        "samples": samples,
     }
 
 
-def convert_to_coreml(model, output_path: str):
-    """Convert SigLIP2 PyTorch model to Core ML .mlpackage."""
-    try:
-        import coremltools as ct
-        import torch
-    except ImportError:
-        print("ERROR: coremltools not installed. Install via: pip install coremltools", file=sys.stderr)
-        raise
+# ---------------------------------------------------------------------------
+# Core ML conversion
+# ---------------------------------------------------------------------------
 
-    print(f"[convert] Tracing SigLIP2 model...")
+def convert_to_coreml(model: nn.Module, output_path: str) -> str:
+    """Trace and export SigLIP2 vision encoder as Core ML .mlpackage."""
+    import coremltools as ct
 
-    # Trace the model with a sample input
-    example_input = torch.randn(1, 3, 224, 224)
-    traced_model = torch.jit.trace(model, example_input)
+    model.eval()
 
-    print(f"[convert] Converting to Core ML...")
+    # Trace with JIT (explicit attention for compatibility)
+    example = make_solid_image(128, 128, 128).unsqueeze(0)
+    traced = torch.jit.trace(model, example)
+
     mlmodel = ct.convert(
-        traced_model,
-        inputs=[ct.TensorType(shape=(1, 3, 224, 224), name="pixel_values")],
-        outputs=[ct.TensorType(name="last_hidden_state")],
-        minimum_deployment_target=ct.target.iOS18,
+        traced,
+        inputs=[ct.TensorType(name="pixel_values", shape=(1, 3, IMAGE_SIZE, IMAGE_SIZE))],
+        outputs=[ct.TensorType(name="embeddings")],
+        minimum_deployment_target=ct.target.iOS17,
         compute_precision=ct.precision.FLOAT16,
     )
 
-    # Add metadata
-    mlmodel.author = "Echo On-device ML Team (via google/siglip2-base-patch32-256, Apache-2.0)"
-    mlmodel.short_description = (
-        f"SigLIP2-B/32 Vision Encoder — 768d image embeddings for Echo. "
-        f"Source: HuggingFace google/siglip2-base-patch32-256. "
-        f"Licensed under Apache-2.0."
-    )
-    mlmodel.version = SIGLIP2_REVISION
-    mlmodel.license = "Apache-2.0"
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    mlmodel.save(output_path)
+    print(f"[convert] Saved: {output_path}")
+    return output_path
 
-    mlpackage_path = output_path
-    if not mlpackage_path.endswith(".mlpackage"):
-        mlpackage_path = mlpackage_path + ".mlpackage"
 
-    print(f"[convert] Saving to: {mlpackage_path}")
-    mlmodel.save(mlpackage_path)
-
-    # Verify the saved model loads
-    import coremltools as ct  # noqa: F811
-    loaded = ct.models.MLModel(mlpackage_path)
-    spec = loaded.get_spec()
-    print(f"[convert] Verified: model loaded successfully")
-    print(f"[convert] Input: {spec.description.input[0].name} — shape {spec.description.input[0].type.multiArrayType.shape}")
-    print(f"[convert] Output: {spec.description.output[0].name} — shape {spec.description.output[0].type.multiArrayType.shape}")
-
-    return mlpackage_path
-
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert SigLIP2-B/32 to Core ML format for Echo",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Convert from safetensors
-  python3 Scripts/convert_siglip2.py \\
-      --source Resources/Models/siglip2-base-patch32-256-model.safetensors \\
-      --output Resources/Models/SigLIP2BasePatch32.mlpackage
-
-  # Compute SHA-256 only
-  python3 Scripts/convert_siglip2.py --checksum-only --model-dir Resources/Models/SigLIP2BasePatch32.mlmodelc
-        """
+        description="SigLIP2-B/32-256 Core ML Converter (3F.3a)"
     )
     parser.add_argument(
         "--source", type=str,
-        help="Path to siglip2-base-patch32-256-model.safetensors (PyTorch checkpoint)"
+        help="Path to model.safetensors"
     )
     parser.add_argument(
-        "--output", type=str, default="Resources/Models/SigLIP2BasePatch32.mlpackage",
-        help="Output path for .mlpackage (default: %(default)s)"
+        "--output", type=str,
+        default="Resources/Models/SigLIP2BasePatch32.mlpackage",
+        help="Output .mlpackage path"
     )
     parser.add_argument(
         "--no-compile", action="store_true",
-        help="Skip Xcode .mlmodelc compilation (compile separately via xcrun coremlcompiler)"
+        help="Skip xcrun coremlcompiler compilation"
     )
     parser.add_argument(
         "--checksum-only", action="store_true",
@@ -391,14 +388,16 @@ Examples:
     )
     parser.add_argument(
         "--reference-vectors", type=str,
-        default="Resources/Models/siglip2-reference-vectors.json",
-        help="Output path for reference vectors JSON (default: %(default)s)"
+        default="Echo/Resources/Models/siglip2-reference-vectors.json",
+        help="Output path for reference vectors JSON"
     )
     args = parser.parse_args()
 
     print("=" * 60)
-    print("Echo SigLIP2-B/32 Core ML Converter (3F.3a)")
-    print(f"Revision: {SIGLIP2_REVISION}")
+    print("Echo SigLIP2-B/32-256 Core ML Converter (3F.3a)")
+    print(f"  image_size={IMAGE_SIZE}  patch_size={PATCH_SIZE}")
+    print(f"  num_patches={NUM_PATCHES}  embed_dim={EMBED_DIM}")
+    print(f"  num_layers={NUM_LAYERS}  num_heads={NUM_HEADS}")
     print("=" * 60)
 
     # Checksum-only mode
@@ -407,9 +406,10 @@ Examples:
             print(f"ERROR: --model-dir '{args.model_dir}' does not exist", file=sys.stderr)
             sys.exit(1)
         sha256 = sha256_dir(args.model_dir)
-        print(f"\nSHA-256: {sha256}  {os.path.basename(args.model_dir)}")
-        print("\nAdd this to Scripts/model_checksums.sha256:")
-        print(f"{sha256}  {os.path.basename(args.model_dir)}")
+        name = os.path.basename(args.model_dir)
+        print(f"\nSHA-256: {sha256}  {name}")
+        print(f"\nAdd this to Scripts/model_checksums.sha256:")
+        print(f"{sha256}  {name}")
         return
 
     # Conversion mode
@@ -421,48 +421,59 @@ Examples:
     print(f"\n[source]  SHA-256: {source_sha256}")
 
     # Step 1: Load model
-    print("\n[load] Loading SigLIP2-B/32 from safetensors...")
-    model = load_siglip2_model(args.source)
-    print("[load]  Model loaded successfully")
+    print("\n[load] Loading SigLIP2-B/32-256 from safetensors...")
+    state_dict = load_file(args.source)
+    # Strip torch dtype metadata — safetensors returns named tensors sometimes
+    state_dict = {k: v.float() if hasattr(v, 'float') else v
+                  for k, v in state_dict.items()}
+    model = SigLIP2VisionEncoder(state_dict)
+    model.eval()
+    print(f"[load]   Model loaded ({sum(p.numel() for p in model.parameters()):,} params)")
 
-    # Step 2: Generate reference vectors (before conversion, PyTorch ground truth)
+    # Step 2: Quick smoke test
+    print("\n[verify] Running PyTorch forward pass...")
+    with torch.no_grad():
+        test_input = make_solid_image(128, 128, 128).unsqueeze(0)
+        test_output = model(test_input)
+        print(f"[verify]  Output shape: {test_output.shape}")
+        print(f"[verify]  Output norm: {test_output.norm().item():.6f}")
+
+    # Step 3: Generate reference vectors
     print("\n[reference] Generating reference vectors...")
     ref_vectors = generate_reference_vectors(model)
-
     ref_path = args.reference_vectors
     os.makedirs(os.path.dirname(ref_path) or ".", exist_ok=True)
     with open(ref_path, "w") as f:
         json.dump(ref_vectors, f, indent=2)
     print(f"[reference] Written to: {ref_path}")
 
-    # Step 3: Convert to Core ML
+    # Step 4: Convert to Core ML
     print("\n[convert] Converting to Core ML .mlpackage...")
     mlpackage_path = convert_to_coreml(model, args.output)
 
-    # Step 4: Compile to .mlmodelc
+    # Step 5: Compile to .mlmodelc
     mlmodelc_path = None
     if not args.no_compile:
         print(f"\n[compile] Compiling .mlmodelc via xcrun coremlcompiler...")
-        import subprocess
-        output_dir = os.path.dirname(mlpackage_path)
+        output_dir = os.path.dirname(mlpackage_path) or "."
         result = subprocess.run(
             ["xcrun", "coremlcompiler", "compile", mlpackage_path, output_dir],
-            capture_output=True, text=True
+            capture_output=True, text=True,
         )
         if result.returncode != 0:
-            print(f"  WARNING: coremlcompiler failed: {result.stderr}", file=sys.stderr)
+            print(f"  WARNING: coremlcompiler failed:\n{result.stderr}", file=sys.stderr)
             print(f"  Compile manually: xcrun coremlcompiler compile {mlpackage_path} {output_dir}")
         else:
             compiled_name = os.path.splitext(os.path.basename(mlpackage_path))[0] + ".mlmodelc"
             mlmodelc_path = os.path.join(output_dir, compiled_name)
             if os.path.exists(mlmodelc_path):
-                print(f"[compile] Compiled to: {mlmodelc_path}")
+                print(f"[compile]  Compiled to: {mlmodelc_path}")
                 sha256 = sha256_dir(mlmodelc_path)
-                print(f"[compile] SHA-256: {sha256}")
-                print(f"\nAdd this to Scripts/model_checksums.sha256:")
-                print(f"{sha256}  {compiled_name}")
+                print(f"[compile]  SHA-256: {sha256}")
+                print(f"\n  Add this to Scripts/model_checksums.sha256:")
+                print(f"  {sha256}  {compiled_name}")
             else:
-                print(f"  WARNING: Expected {compiled_name} not found after compilation", file=sys.stderr)
+                print(f"  WARNING: Expected {compiled_name} not found", file=sys.stderr)
 
     # Summary
     print("\n" + "=" * 60)
