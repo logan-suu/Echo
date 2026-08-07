@@ -11,7 +11,7 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | US-SRC-007 | 3F.7 | Encrypted user-mediated migration package export/import, Finder/iTunes encrypted local-backup restore, merge/conflict/integrity/reingest/ExcludedAssets behavior and live Settings integration. Not deferred. |
 | US-SRC-009 | 3F.7, 3F.10 | Specification merged into US-SYS-001 with every original AC retained; 3F.7 owns live data-overview service, JSON export and Settings integration; 3F.10 owns production error, localization and accessibility behavior. Not deferred. |
 | US-SRC-010 | 3F.6, 3F.8, 3F.11 | 3F.6 owns the search contract, 3F.8 owns HealthKit-backed system adaptation, 3F.11 owns no-fixture production E2E. Not deferred. |
-| US-SRC-011 | 3F.3, 3F.6, 4.1 | 3F.3 owns model semantics, 3F.6 owns subjective ranking and feedback behavior, Phase 4 4.1 owns Golden validation. Not deferred. |
+| US-SRC-011 | 3F.3, 3F.3a, 3F.3b, 3F.6, 4.1 | 3F.3 owns E5 model semantics; 3F.3a owns SigLIP2 reference vectors; 3F.3b owns Whisper reference transcripts; 3F.6 owns subjective ranking and feedback behavior; Phase 4 4.1 owns Golden validation. Not deferred. |
 | US-AWK-004 | DEF-001 | Approved product deferral (Widget / Live Activity). Counts toward the matrix only through the approved record. |
 | US-AWK-006 | DEF-002 | Approved product deferral (Siri Shortcuts / App Intents). Counts toward the matrix only through the approved record. |
 
@@ -45,14 +45,14 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | SRC-008 | Partial | 3F.2, 4.2, 4.5 | ExcludedAssets actor has isolated behavior/tests; management, paging, source checks, reimport, and default production integration are incomplete. |
 | SRC-009 | Stub | 3F.7, 3F.10 | Settings displays fabricated counts/model states from SettingsFixtureLoader. |
 | SRC-010 | Absent/unmapped | 3F.6, 3F.8, 3F.11 | No intent parser or multi-source retrieval path. |
-| SRC-011 | Absent/unmapped | 3F.3, 3F.6, 4.1 | No working vision embedding or subjective-query Golden dataset. |
+| SRC-011 | Absent/unmapped | 3F.3, 3F.3a, 3F.3b, 3F.6, 4.1 | No working vision embedding or subjective-query Golden dataset. 3F.3a/3F.3b backfill reference vectors/transcripts. |
 | SRC-012 | Partial | 3F.2, 3F.5, 4.2, 4.5 | SyncPipeline has callable isolated logic, but no registered observers, BG task, source acquisition, or default composition; Notes path conflicts with share-only rule. |
 | SRC-013 | Stub | 3F.2, 3F.5, 4.2 | Result surface exists but no production change detector/update flow. |
 | ING-001 | Impossible/spec-invalid | 3F.0, 3F.3, 3F.5, 4.2 | Requires automatic system Notes reads via non-public/nonexistent NoteStore/MKMapItem path and conflicts with SRC-001 share-only route. |
 | ING-002 | Impossible/spec-invalid | 3F.0, 3F.3, 3F.5, 4.2 | Inherits ING-001's unsupported automatic Notes acquisition requirement. |
-| ING-003 | Impossible/spec-invalid | 3F.0, 3F.3, 3F.5, 4.2 | Automatic Voice Memos reading conflicts with the specified share-only public route. |
-| ING-004 | Impossible/spec-invalid | 3F.0, 3F.3, 3F.5, 4.2 | Some ingest AC code is tested with StubEmbedder, but required direct text/vision-space alignment conflicts with the mandated E5/CLIP split. |
-| ING-005 | Partial | 3F.3, 3F.5, 4.2 | Video pipeline code and isolated tests exist, but actual asset acquisition and Whisper/SigLIP inference are scaffolded/unreachable. |
+| ING-003 | Impossible/spec-invalid | 3F.0, 3F.3, 3F.3b, 3F.5, 4.2 | Automatic Voice Memos reading conflicts with the specified share-only public route. 3F.3b owns whisper.cpp real transcription. |
+| ING-004 | Impossible/spec-invalid | 3F.0, 3F.3, 3F.3a, 3F.5, 4.2 | Some ingest AC code is tested with StubEmbedder, but required direct text/vision-space alignment conflicts with the mandated E5/CLIP split. 3F.3a owns SigLIP2 Core ML conversion and real vision inference. |
+| ING-005 | Partial | 3F.3, 3F.3a, 3F.3b, 3F.5, 4.2 | Video pipeline code and isolated tests exist, but actual asset acquisition and Whisper/SigLIP inference are scaffolded/unreachable. 3F.3a/3F.3b provide real vision/audio inference. |
 | ING-006 | Absent/unmapped | 3F.4, 3F.5, 4.2 | No canonical transactional vector/text/FTS commit, fault-injection rollback, or transaction audit path. |
 | RET-001 | Partial | 3F.3, 3F.6, 4.1, 4.2, 4.3 | Search pipeline and stub-backed tests implement ranking/audit fields; default app injects no pipeline, E5 returns zeros, and no Cross-Encoder/Golden Recall gate exists. |
 | RET-002 | Partial | 3F.3, 3F.6, 4.1, 4.2 | Same isolated stub-backed path as RET-001; no real bilingual embedding evidence. |

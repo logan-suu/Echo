@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.0",
-  "_last_updated": "2026-08-06",
+  "_last_updated": "2026-08-07",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -136,7 +136,7 @@
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
     "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
-    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10"
+    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction"
   },
   "deferred_from_pr_review": [
     {
@@ -739,7 +739,11 @@
       "location": "EchoShareExtension/ShareViewController.swift:114-120 (loadFileURL) + IngestPipeline.ingestSharedAudio (transcribe(audioTrackAssetId: envelope.payload))",
       "reason": "音频分享的信封 payload 存的是扩展进程沙盒内临时文件 URL（ADR-008 §决策-7 未把文件拷入 App Group 持久化），App 稍后消费时该 URL 已失效；且 ASREngineProtocol.transcribe 入参契约是 PHAsset.localIdentifier，与文件 URL 语义不符。语音摄入即使 Whisper（3F.3）就绪也无法成功。修复需在分享侧把文件复制到 App Group 容器持久定位符 + 调整 ASR 契约（3F.3 接入 Whisper 时一并设计），本次 PR 修复会造成跨任务契约反复。AC 表 US-SRC-001 voice 行已降级为 🔮。",
       "defer_to": "3F.3（Whisper 接入时重设计 ASR 文件输入契约）+ 3F.5（生产摄入接管文件分享持久化）",
-      "deferred_at": "2026-08-05"
+      "deferred_at": "2026-08-05",
+      "target_tasks": [
+        "3F.3b",
+        "3F.5"
+      ]
     },
     {
       "id": "DEF-51-003",
@@ -760,6 +764,16 @@
       "reason": "fallbackTemplate 直接返回硬编码中文/英文字符串，违反 AGENTS.md §11.4（硬编码语言字符串 → String Catalog）与 §6.4（降级提示走 String Catalog）。当前功能正确（跟随 preferredLanguage），仅本地化载体问题。",
       "defer_to": "3F.10 (i18n / localization task)",
       "deferred_at": "2026-08-06"
+    },
+    {
+      "id": "DEF-53-001",
+      "pr": 53,
+      "title": "evidence-index.md 新任务条目触发的 markdownlint MD024/MD058（重复二级标题、AC 表缺空行）",
+      "severity": "🟡",
+      "location": "docs/05-planning/phase3f-evidence-index.md:357,361-407（3F.3a/3F.3b 条目）",
+      "reason": "CodeRabbit 提示 MD024（重复标题）与 MD058（表格空行）。驳回：仓库无 .markdownlint 配置、CI 无 markdown 检查门禁；重复二级标题是全部 14 个 task 条目统一采用的模板结构（Entry: X + Phase 3F Task Evidence + PR-BODY 各节），本次新增条目与既有 3F.0-3F.3 条目格式一致，非本次回归。",
+      "defer_to": "引入 markdownlint 门禁并统一重构 evidence-index 模板时",
+      "deferred_at": "2026-08-07"
     }
   ]
 }

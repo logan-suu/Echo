@@ -84,7 +84,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
 
 ### 4.2 任务记录
 
-`3F.0` 在人类显式授权的隔离 bootstrap branch 内把以下 12 个完整对象原子写入 `docs/05-planning/task-status.json`；这些对象在写入前不被视为已存在的 ledger tasks，`3F.0` 也不经过普通 `ready → in_progress` 选择。初始原子写入必须把 `3F.0.status` 设为 `in_progress`，其余 3F.1 至 3F.11 保持 `backlog`。`documents_required` 与 §4.6 同名任务合同的全部 Exact paths 集合完全相等；任何 tracked path 增删都必须同时修改两处。当前指令及其 Appendix C 是 `3F.0` 的内嵌 bootstrap content，不是 Exact path，也不进入 `documents_required` 或 Files 集合。显示对象中的 `last_updated: null` 是 JSON-safe invalid sentinel，不得写入最终 ledger；3F.0 在同一原子写入中把 12 个 sentinel 全部替换为同一个实际 UTC RFC 3339 时间，替换不完整则写入失败。docs-only 实现和验证完成后，3F.0 在 §6.2.2 前把自身从 `in_progress` 改为 `review` 并写新的实际 UTC 时间；安全敏感任务的 `owner` 同时写实现 owner 与强制 approver。以下 fenced blocks 各自是合法 JSON 数组；按出现顺序连接其数组元素，得到唯一的 12-record Phase 3F record set。
+`3F.0` 在人类显式授权的隔离 bootstrap branch 内把以下 12 个完整对象原子写入 `docs/05-planning/task-status.json`；这些对象在写入前不被视为已存在的 ledger tasks，`3F.0` 也不经过普通 `ready → in_progress` 选择。初始原子写入必须把 `3F.0.status` 设为 `in_progress`，其余 3F.1 至 3F.11 保持 `backlog`。`documents_required` 与 §4.6 同名任务合同的全部 Exact paths 集合完全相等；任何 tracked path 增删都必须同时修改两处。当前指令及其 Appendix C 是 `3F.0` 的内嵌 bootstrap content，不是 Exact path，也不进入 `documents_required` 或 Files 集合。显示对象中的 `last_updated: null` 是 JSON-safe invalid sentinel，不得写入最终 ledger；3F.0 在同一原子写入中把 12 个 sentinel 全部替换为同一个实际 UTC RFC 3339 时间，替换不完整则写入失败。docs-only 实现和验证完成后，3F.0 在 §6.2.2 前把自身从 `in_progress` 改为 `review` 并写新的实际 UTC 时间；安全敏感任务的 `owner` 同时写实现 owner 与强制 approver。以下 fenced blocks 各自是合法 JSON 数组；按出现顺序连接其数组元素，得到唯一的 Phase 3F record set（3F.0 bootstrap 原子写入 12 条；2026-08-07 拆分 3F.3 新增 3F.3a/3F.3b，当前为 14 条）。3F.3a/3F.3b 两条记录的 `last_updated` 由拆分规划 PR 一并替换为实际 UTC 时间，非 3F.0 sentinel 替换范围。
 
 ```
 [
@@ -137,6 +137,24 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
 "last_updated": null, "notes": "Migrated from 4.21 and 4.22; ADR-009 governs.", "pr": null, "migrated_from": ["4.21", "4.22"]
   },
   {
+    "id": "3F.3a", "title": "SigLIP2 Core ML 转换与视觉推理接入",
+    "story": ["US-ING-004", "US-SRC-011", "US-RET-001"],
+    "status": "ready", "owner": {"implementation": "On-device ML Lead", "approver": "Model Legal and Privacy Approver"},
+    "documents_required": ["README.md", "docs/02-architecture/架构设计文档.md", "docs/02-architecture/技术选型文档.md", "docs/02-architecture/数据流全链路技术说明文档.md", "docs/03-implementation/双语言实现说明文档.md", "docs/03-implementation/开发避坑与关键注意点手册.md", "docs/decisions/ADR-009-offline-model-runtime.md", "docs/05-planning/model-provenance-register.md", "docs/05-planning/phase3f-execution-plan.md", "docs/05-planning/phase3f-story-matrix.md", "docs/05-planning/phase3f-evidence-index.md", "docs/05-planning/task-status.json", "docs/05-planning/deferred-items.json"],
+"dependencies": ["3F.0", "3F.3"], "test_file": "EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift",
+    "acceptance_evidence": ["PyTorch→Core ML 转换 lineage + 固定 revision + SHA-256 登记（model-provenance-register §3）", "参考向量余弦相似度 > 0.995 验证（siglip2-reference-vectors.json 回填）", "四类门禁：法律、转换一致性、Echo 数据集实机评测、实体设备资源门禁", "SigLIP2Embedder 真实 embedImage 推理（768d，独立 vision generation）"],
+"last_updated": null, "notes": "Split from 3F.3: 3F.3 delivers conversion source + preprocessing; this task completes Core ML conversion, reference-vector validation and real vision inference. ADR-009 decisions 1/2 govern.", "pr": null
+  },
+  {
+    "id": "3F.3b", "title": "whisper.cpp 运行时接入与真实转写",
+    "story": ["US-ING-003", "US-ING-005", "US-SRC-011"],
+    "status": "ready", "owner": {"implementation": "On-device ML Lead", "approver": "Model Legal and Privacy Approver"},
+    "documents_required": ["README.md", "docs/02-architecture/架构设计文档.md", "docs/02-architecture/技术选型文档.md", "docs/02-architecture/数据流全链路技术说明文档.md", "docs/03-implementation/双语言实现说明文档.md", "docs/03-implementation/开发避坑与关键注意点手册.md", "docs/decisions/ADR-009-offline-model-runtime.md", "docs/05-planning/model-provenance-register.md", "docs/05-planning/phase3f-execution-plan.md", "docs/05-planning/phase3f-story-matrix.md", "docs/05-planning/phase3f-evidence-index.md", "docs/05-planning/task-status.json", "docs/05-planning/deferred-items.json"],
+"dependencies": ["3F.0", "3F.3"], "test_file": "EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift",
+    "acceptance_evidence": ["whisper.cpp 依赖白名单审批（AGENTS.md §2.2）+ SBOM/NOTICE/许可证登记", "NativeWhisperCInterop 实现（whisper_init_from_file + whisper_full），替代 UnavailableWhisperCInterop", "真实 16kHz mono PCM 转写，whisper-reference-transcripts.json 回填（CER/WER 阈值）", "GGUF SHA-256 与 model-provenance-register §2 一致性验证"],
+"last_updated": null, "notes": "Split from 3F.3: 3F.3 delivers GGUF artifact + fail-closed bridge; this task introduces whisper.cpp runtime (§2.2 whitelist approval), C interop and real transcription. Closes DEF-51-002 ASR contract.", "pr": null
+  },
+  {
     "id": "3F.4", "title": "Canonical storage 与 generation 生命周期",
     "story": ["US-ING-006", "US-PRV-004", "US-PRV-006", "US-PRV-007", "US-AWK-007", "US-FBK-001", "US-FBK-002", "US-FBK-003"],
     "status": "backlog", "owner": {"implementation": "Storage Architecture Lead", "approver": "Privacy Engineering Lead"},
@@ -152,7 +170,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
     "story": ["US-ING-001", "US-ING-002", "US-ING-003", "US-ING-004", "US-ING-005", "US-ING-006", "US-SRC-012", "US-SRC-013", "US-SYS-001", "US-RES-001", "US-RES-002", "US-RES-003", "US-RES-004"],
     "status": "backlog", "owner": {"implementation": "Ingestion Lead", "approver": "Architecture Lead"},
     "documents_required": ["README.md", "docs/02-architecture/架构设计文档.md", "docs/02-architecture/数据流全链路技术说明文档.md", "docs/03-implementation/开发避坑与关键注意点手册.md", "docs/decisions/ADR-011-task-progress-boundary.md", "docs/05-planning/phase3f-execution-plan.md", "docs/05-planning/phase3f-story-matrix.md", "docs/05-planning/phase3f-evidence-index.md", "docs/05-planning/task-status.json", "docs/05-planning/deferred-items.json"],
-"dependencies": ["3F.2", "3F.3", "3F.4"], "test_file": "EchoTests/Phase3F/3F.5_ProductionIngestionTests.swift",
+"dependencies": ["3F.2", "3F.3", "3F.3a", "3F.3b", "3F.4"], "test_file": "EchoTests/Phase3F/3F.5_ProductionIngestionTests.swift",
     "acceptance_evidence": ["四类真实来源 trace、canonical/vector/FTS 计数、取消重启恢复与 rollback 证据"],
 "last_updated": null, "notes": "ADR-011 governs task progress.", "pr": null
   },
@@ -192,7 +210,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
     "story": ["US-DIS-002", "US-SYN-001", "US-SYN-002", "US-SYN-003", "US-SYN-004", "US-SYN-005", "US-SYN-006", "US-SYN-007", "US-SYN-008"],
     "status": "backlog", "owner": {"implementation": "Language and Creation Lead", "approver": "Model Legal and Privacy Approver"},
     "documents_required": ["README.md", "docs/ui/echo-memory-canvas-style.md", "docs/01-spec/用户故事与验收标准规格书.md", "docs/02-architecture/架构设计文档.md", "docs/02-architecture/数据流全链路技术说明文档.md", "docs/03-implementation/双语言实现说明文档.md", "docs/decisions/ADR-009-offline-model-runtime.md", "docs/decisions/ADR-013-creation-export-boundary.md", "docs/ui/testing-and-artifacts.md", "docs/ui/echo-readiness.md", "docs/05-planning/phase3f-execution-plan.md", "docs/05-planning/phase3f-story-matrix.md", "docs/05-planning/phase3f-evidence-index.md", "docs/05-planning/task-status.json", "docs/05-planning/deferred-items.json", "UIAutomation/Contracts/instances/translation-surface.json", "UIAutomation/Contracts/instances/translation-journey-basic.json", "UIAutomation/Contracts/instances/translation-state-original.json", "UIAutomation/Contracts/instances/translation-state-translating.json", "UIAutomation/Contracts/instances/translation-state-translated.json", "UIAutomation/Contracts/instances/translation-state-cached.json", "UIAutomation/Contracts/instances/translation-state-low-confidence.json", "UIAutomation/Contracts/instances/translation-state-error.json", "UIAutomation/Contracts/instances/translation-action-toggle.json", "UIAutomation/Contracts/instances/translation-action-retry.json", "UIAutomation/Contracts/instances/creation-surface.json", "UIAutomation/Contracts/instances/creation-journey-generate-save-basic.json", "UIAutomation/Contracts/instances/creation-journey-prompt-edit-confirm.json", "UIAutomation/Contracts/instances/creation-state-idle.json", "UIAutomation/Contracts/instances/creation-state-empty.json", "UIAutomation/Contracts/instances/creation-state-generating.json", "UIAutomation/Contracts/instances/creation-state-generated.json", "UIAutomation/Contracts/instances/creation-state-saving.json", "UIAutomation/Contracts/instances/creation-state-saved.json", "UIAutomation/Contracts/instances/creation-state-error.json", "UIAutomation/Contracts/instances/creation-action-select-template.json", "UIAutomation/Contracts/instances/creation-action-edit-prompt.json", "UIAutomation/Contracts/instances/creation-action-confirm-prompt.json", "UIAutomation/Contracts/instances/creation-action-reset-prompt.json", "UIAutomation/Contracts/instances/creation-action-generate.json", "UIAutomation/Contracts/instances/creation-action-retry.json", "UIAutomation/Contracts/instances/creation-action-copy.json", "UIAutomation/Contracts/instances/creation-action-export.json", "UIAutomation/Contracts/instances/creation-action-share.json", "UIAutomation/Contracts/instances/creation-action-save-to-notes.json", "UIAutomation/Fixtures/translation/translation-zh-en-high.json", "UIAutomation/Fixtures/translation/translation-zh-en-low.json", "UIAutomation/Fixtures/translation/translation-zh-en-cached.json", "UIAutomation/Fixtures/translation/translation-error.json", "UIAutomation/Fixtures/creation/creation-idle.json", "UIAutomation/Fixtures/creation/creation-empty.json", "UIAutomation/Fixtures/creation/creation-prompt-draft.json", "UIAutomation/Fixtures/creation/creation-generated-report.json", "UIAutomation/Fixtures/creation/creation-generated-letter.json", "UIAutomation/Fixtures/creation/creation-saved.json", "UIAutomation/Fixtures/creation/creation-error.json", "UIAutomation/Contracts/instances/translation-state-availability-checking.json", "UIAutomation/Contracts/instances/translation-state-unavailable.json", "UIAutomation/Contracts/instances/translation-journey-availability-fallback.json", "UIAutomation/Fixtures/translation/translation-availability-checking.json", "UIAutomation/Fixtures/translation/translation-unavailable.json"],
-"dependencies": ["3F.0", "3F.3", "3F.4", "3F.6", "3F.7"], "test_file": "EchoTests/Phase3F/3F.9_TranslationCreationTests.swift",
+"dependencies": ["3F.0", "3F.3", "3F.3a", "3F.3b", "3F.4", "3F.6", "3F.7"], "test_file": "EchoTests/Phase3F/3F.9_TranslationCreationTests.swift",
     "acceptance_evidence": ["Apple Translation availability、uncertain fallback、七天 cache 与重启证据", "grounded anchors、Markdown/PDF/share 与模型分发批准"],
 "last_updated": null, "notes": "Scope follows the human-approved 3F.0 LLM decision.", "pr": null
   }
@@ -211,7 +229,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
     "id": "3F.11", "title": "Production E2E 与 Phase 4 准入门禁", "story": ["3F.11", "US-SRC-010"],
     "status": "backlog", "owner": {"implementation": "Release Quality Lead", "approver": "Release Manager and Privacy Engineering Lead"},
     "documents_required": ["AGENTS.md", "README.md", "CHANGELOG.md", "docs/INDEX.md", "docs/01-spec/用户故事与验收标准规格书.md", "docs/02-architecture/架构设计文档.md", "docs/02-architecture/技术选型文档.md", "docs/02-architecture/数据流全链路技术说明文档.md", "docs/03-implementation/双语言实现说明文档.md", "docs/03-implementation/开发避坑与关键注意点手册.md", "docs/05-planning/开发计划安排文档.md", "docs/05-planning/app-store-privacy-disclosure.md", "docs/05-planning/model-provenance-register.md", "docs/05-planning/phase3f-execution-plan.md", "docs/05-planning/phase3f-story-matrix.md", "docs/05-planning/phase3f-release-checklist.md", "docs/05-planning/phase3f-evidence-index.md", "docs/05-planning/task-status.json", "docs/05-planning/deferred-items.json", "docs/ui/testing-and-artifacts.md", "docs/decisions/ADR-014-release-compliance-boundary.md"],
-    "dependencies": ["3F.1", "3F.2", "3F.3", "3F.4", "3F.5", "3F.6", "3F.7", "3F.8", "3F.9", "3F.10"],
+    "dependencies": ["3F.1", "3F.2", "3F.3", "3F.3a", "3F.3b", "3F.4", "3F.5", "3F.6", "3F.7", "3F.8", "3F.9", "3F.10"],
     "test_file": "EchoTests/Phase3F/Phase3FIntegrationTests.swift",
 "acceptance_evidence": ["全部 Release、测试、coverage、模型、隐私、合规、签名与 no-fixture E2E 预合并证据", "US-SRC-010 no-fixture search-to-HealthKit E2E", "Echo and EchoShareExtension per-target security/compliance reports", "3F.7 migration-security per-test revalidation and Security/Privacy/Architecture approver record", "P0=0、P1=0 与 Release Manager/Privacy gate approver 签字", "不包含 merge SHA 或 Phase 4 已解锁声明的 pre-merge evidence index"],
 "last_updated": null, "notes": "Finalizes pre-merge evidence only; a human-triggered finalizer records merge SHA and unlocks Phase 4.", "pr": null
@@ -224,7 +242,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
 - `US-SRC-007`: owned by `3F.7` for encrypted user-mediated migration package export/import, Finder/iTunes encrypted local-backup restore, merge/conflict/integrity/reingest/ExcludedAssets behavior and live Settings integration.
 - `US-SRC-009`: specification is merged into `US-SYS-001` with every original AC retained; owned jointly by `3F.7` for the live data-overview service, JSON export and Settings integration and `3F.10` for production error, localization and accessibility behavior. It is not deferred.
 - `US-SRC-010`: owned by `3F.6` for the search contract, `3F.8` for HealthKit-backed system adaptation, and `3F.11` for no-fixture production E2E. It is not deferred.
-- `US-SRC-011`: owned by `3F.3` for model semantics, `3F.6` for subjective ranking and feedback behavior, and Phase 4 `4.1` for Golden validation. It is not deferred.
+- `US-SRC-011`: owned by `3F.3` for model semantics (E5 reference outputs), `3F.3a` for SigLIP2 reference-vector verification, `3F.3b` for Whisper reference-transcript verification, `3F.6` for subjective ranking and feedback behavior, and Phase 4 `4.1` for Golden validation. It is not deferred.
 - `US-AWK-004` and `US-AWK-006`: remain the two explicit approved product deferrals represented by `DEF-001` and `DEF-002`; they count toward the 66-story matrix only through those approved records and are not silently absorbed into another task.
 - `3F.0` must materialize these ownership rows in `docs/05-planning/phase3f-story-matrix.md`; the matrix gate passes only when all 66 unique story IDs have at least one explicit owner or an approved non-v1 removal record. These four stories may not use the deferral path.
 
@@ -1347,6 +1365,52 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 
 **Expected evidence:** Bundle count 100% of revised manifest; hashes and licenses; non-zero deterministic E5 vector; SigLIP2 reference tolerance; real audio transcript; US-SRC-011 model-semantics trace; corrupt-model L3 recovery; zero network requests; optional LLM/aligner proof only when approved.
 
+### 3F.3a: SigLIP2 Core ML 转换与视觉推理接入
+
+> 从 3F.3 拆分（2026-08-07 规划变更）：3F.3 交付 SigLIP2 转换源（model.safetensors）与预处理修复；本任务完成 PyTorch→Core ML 转换、参考向量验证与真实视觉推理。ADR-009 决策 1（空间分离）与决策 2（未获批模型不进打包）管辖。
+
+**Files**
+
+- Modify: `Echo/Core/Services/SigLIP2Embedder.swift`; `Echo/Core/Actors/ModelLoaderActor.swift`; `Echo/Core/Actors/ModelManifestActor.swift`; `Echo/Core/Models/ModelManifest.swift`; `Echo.xcodeproj/project.pbxproj`; `Scripts/prepare_models.sh`; `Scripts/model_checksums.sha256`; `Echo/Resources/Models/model-manifest.json`; `Echo/Resources/Models/siglip2-reference-vectors.json`.
+- Create: `Scripts/convert_siglip2.py`（PyTorch→coremltools 转换脚本）; `EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift`.
+- Test/extend: `EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift`（SigLIP2Preprocessing/RealInference）; `EchoTests/Phase1/ModelBundleTests.swift`.
+- Modify documentation/planning: `README.md`; `docs/02-architecture/技术选型文档.md`; `docs/02-architecture/数据流全链路技术说明文档.md`; `docs/03-implementation/双语言实现说明文档.md`; `docs/03-implementation/开发避坑与关键注意点手册.md`; `docs/decisions/ADR-009-offline-model-runtime.md`; `docs/05-planning/model-provenance-register.md`; `docs/05-planning/phase3f-execution-plan.md`; `docs/05-planning/phase3f-evidence-index.md`; `docs/05-planning/task-status.json`; `docs/05-planning/deferred-items.json`.
+- Read-only documentation: `docs/05-planning/phase3f-story-matrix.md`.
+
+**Interfaces**
+
+- Consumes: `SigLIP2Embedder`（R-3.2 预处理）; `model-provenance-register.md` §3 转换源登记; ADR-009 决策 1/2.
+- Produces: `SigLIP2BasePatch32.mlmodelc` 随包分发; 真实 768d 视觉嵌入（`vision_dense` 独立 generation）; `siglip2-reference-vectors.json` 回填确定性参考.
+
+**AC/spec inputs:** US-ING-004 AC-3, US-RET-001（视觉通道）, US-SRC-011 model semantics, R-5.1 四类门禁（法律、转换一致性、Echo 数据集实机评测、实体设备资源门禁）.
+
+☐ Write failing conversion-source, reference-vector tolerance (>0.995 cosine), real-vision-inference, four-gate and bundle-presence tests. ☐ Set `FOCUSED_SUITE=EchoTests/SigLIP2ConversionTests` and run the complete §6.1 focused command. Confirm RED against missing `.mlmodelc`. ☐ Implement `Scripts/convert_siglip2.py`（coremltools 转换，固定 revision，输出不可变工件 + SHA-256）; wire `SigLIP2Embedder.embedImage` to real Core ML inference; verify reference vectors against HuggingFace outputs. ☐ Pass four gates: legal（LICENSE/NOTICE/哈希登记）、conversion consistency（cosine >0.995）、Echo dataset device evaluation、physical-device resource gate. ☐ Run focused tests, model regressions, all `EchoTests`, Release builds, checksum/SBOM/license and network-denial gates. ☐ Complete every operation and acceptance check in §4.6.3a; update evidence index and model-provenance-register §3（`pending-conversion-and-approval` → approved）. Before §6.2.2, populate this task's exact §11.1 PR-body marker block, remove placeholders, pass extraction validation. ☐ Prepare registered worktree/branch `feature/phase3f-siglip2-conversion-3F.3a` through §6.2.1; run the single §6.2.2 script with commit `feat(service): add SigLIP2 core ML vision inference` and PR `feat(service): add SigLIP2 core ML vision inference [3F.3a]`.
+
+**Expected evidence:** converted `.mlmodelc` in bundle; SHA-256 in model_checksums.sha256 + provenance register; reference-vector cosine >0.995; real 768d non-zero vision embedding; four-gate approval record; zero network requests.
+
+### 3F.3b: whisper.cpp 运行时接入与真实转写
+
+> 从 3F.3 拆分（2026-08-07 规划变更）：3F.3 交付 GGUF 工件与 fail-closed 桥接（`WhisperRuntimeBridge.runtimeNotLinked`）；本任务引入 whisper.cpp 运行时（AGENTS.md §2.2 白名单审批）、实现 C 互操作与真实转写。关闭 DEF-51-002 ASR 契约。
+
+**Files**
+
+- Modify: `Echo/Core/Services/WhisperRuntimeBridge.swift`; `Echo/Core/Services/WhisperASREngine.swift`; `Echo/Core/Actors/ModelLoaderActor.swift`; `Echo.xcodeproj/project.pbxproj`; `Package.swift`（或 SPM 依赖清单，需 §2.2 白名单）; `Scripts/model_checksums.sha256`; `Echo/Resources/Models/whisper-reference-transcripts.json`.
+- Create: `Echo/Core/Services/NativeWhisperCInterop.swift`（whisper_init_from_file + whisper_full 实现）; `EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift`.
+- Test/extend: `EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift`（WhisperBridge）; `EchoTests/Phase2/2.5_IngestPipelineTextTests.swift`.
+- Modify documentation/planning: `README.md`; `docs/02-architecture/技术选型文档.md`; `docs/02-architecture/数据流全链路技术说明文档.md`; `docs/03-implementation/双语言实现说明文档.md`; `docs/03-implementation/开发避坑与关键注意点手册.md`; `docs/decisions/ADR-009-offline-model-runtime.md`; `docs/05-planning/model-provenance-register.md`; `docs/05-planning/phase3f-execution-plan.md`; `docs/05-planning/phase3f-evidence-index.md`; `docs/05-planning/task-status.json`; `docs/05-planning/deferred-items.json`.
+- Read-only documentation: `docs/05-planning/phase3f-story-matrix.md`.
+
+**Interfaces**
+
+- Consumes: `WhisperRuntimeBridge`（R-3.3 桥接）; GGUF 工件（model-provenance-register §2）; ADR-009 决策 2/3.
+- Produces: whisper.cpp 静态库随包链接; `NativeWhisperCInterop` 真实转写; `whisper-reference-transcripts.json` 回填（CER/WER 阈值）; DEF-51-002 ASR 文件输入契约重设计.
+
+**AC/spec inputs:** US-ING-003 AC-1（转写）, US-ING-005 AC-2（视频音频转写）, US-SRC-011 model semantics, R-5.4（tiny 批准）, AGENTS.md §2.2（依赖白名单）.
+
+☐ Write failing runtime-linked, real-transcript, reference-CER/WER, GGUF-hash and DEF-51-002 contract tests. ☐ Set `FOCUSED_SUITE=EchoTests/WhisperRuntimeTests` and run the complete §6.1 focused command. Confirm RED against `runtimeNotLinked`. ☐ Obtain §2.2 dependency whitelist approval for whisper.cpp; add SPM/static-library dependency with SBOM/NOTICE/license registration. ☐ Implement `NativeWhisperCInterop`（Sendable-safe C 包装，禁止 `nonisolated(unsafe)`）; wire `WhisperRuntimeBridge.transcribe` to real inference; backfill reference transcripts with CER/WER verification. ☐ Run focused tests, model regressions, all `EchoTests`, Release builds, checksum/SBOM/license and network-denial gates. ☐ Complete every operation and acceptance check in §4.6.3b; update evidence index and model-provenance-register §2（`pending-runtime-integration` → approved）. Before §6.2.2, populate this task's exact §11.1 PR-body marker block, remove placeholders, pass extraction validation. ☐ Prepare registered worktree/branch `feature/phase3f-whisper-runtime-3F.3b` through §6.2.1; run the single §6.2.2 script with commit `feat(service): link whisper.cpp real transcription` and PR `feat(service): link whisper.cpp real transcription [3F.3b]`.
+
+**Expected evidence:** whisper.cpp linked and loaded in bundle; real transcript from 16kHz mono PCM; reference-transcript CER/WER within threshold; GGUF SHA-256 verified; DEF-51-002 ASR 文件输入契约重设计关闭（App Group 持久化生产者路径由 3F.5 完成并验证 E2E）; zero network requests.
+
 ### 3F.4: Canonical storage 与 generation 生命周期
 
 **Files**
@@ -1380,12 +1444,12 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 
 **Interfaces**
 
-- Consumes: current `ingestImage/video/text/voice`, real source/model services, canonical repository, active routes, approved TaskQueue, ProgressActor and PrivacyActor.
+- Consumes: current `ingestImage/video/text/voice`, real source/model services (E5 from 3F.3; SigLIP2 real vision from 3F.3a; Whisper real transcription from 3F.3b), canonical repository, active routes, approved TaskQueue, ProgressActor and PrivacyActor.
 - Produces: canonical/generation ingestion result with trace/audit/progress, cancellation/resume and classified L1-L4 failures.
 
 **AC/spec inputs:** US-ING-001/002/003/004/005/006, US-SRC-012/013, US-SYS-001, US-RES-001/002/003/004.
 
-☐ Write failing no-stub tests for one real photo, video, shared text and shared audio; add OCR/frame/audio, cancel/resume, disk-full, corrupt-model and rollback cases. ☐ Set `FOCUSED_SUITE=EchoTests/ProductionIngestionTests` and run the complete §6.1 focused command. Confirm RED. ☐ Implement one source at a time through extraction→inference→canonical transaction→generation indexes→audit/progress. ☐ Ensure every Pipeline entry begins with PrivacyCheckpoint and every long write runs through TaskQueue with persisted ProgressActor state. ☐ Run focused, all ingest/Phase2 integration, cumulative, Release and static/privacy tests. ☐ Complete every operation and acceptance check in §4.6.5 and update the existing evidence index in the same PR. Before §6.2.2, populate this task's exact §11.1 PR-body marker block from real results, remove every placeholder, and pass extraction validation. ☐ Prepare registered worktree/branch `feature/phase3f-production-ingestion-3F.5` through §6.2.1 and use its printed path for every later command; after implementation and verification, run the single §6.2.2 script with commit `feat(pipeline): add production ingestion` and PR `feat(pipeline): add production ingestion [3F.5]`.
+☐ Write failing no-stub tests for one real photo, video, shared text and shared audio (real vision/audio inference supplied by 3F.3a/3F.3b, which 3F.5 depends on); add OCR/frame/audio, cancel/resume, disk-full, corrupt-model and rollback cases. ☐ Set `FOCUSED_SUITE=EchoTests/ProductionIngestionTests` and run the complete §6.1 focused command. Confirm RED. ☐ Implement one source at a time through extraction→inference→canonical transaction→generation indexes→audit/progress. ☐ Ensure every Pipeline entry begins with PrivacyCheckpoint and every long write runs through TaskQueue with persisted ProgressActor state. ☐ Run focused, all ingest/Phase2 integration, cumulative, Release and static/privacy tests. ☐ Complete every operation and acceptance check in §4.6.5 and update the existing evidence index in the same PR. Before §6.2.2, populate this task's exact §11.1 PR-body marker block from real results, remove every placeholder, and pass extraction validation. ☐ Prepare registered worktree/branch `feature/phase3f-production-ingestion-3F.5` through §6.2.1 and use its printed path for every later command; after implementation and verification, run the single §6.2.2 script with commit `feat(pipeline): add production ingestion` and PR `feat(pipeline): add production ingestion [3F.5]`.
 
 **Expected evidence:** four real-source traces sharing trace IDs; canonical/vector/FTS counts; cancel/relaunch/resume; fault rollback; no `StubEmbedder`/`StubASR` in production proof.
 

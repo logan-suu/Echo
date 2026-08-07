@@ -57,7 +57,7 @@ Define and freeze the Phase 3F scope, ledger, story matrix, evidence index, ADRs
 - `python3 -m json.tool docs/05-planning/task-status.json` — exit 0.
 - `python3 -m json.tool docs/05-planning/deferred-items.json` — exit 0.
 - `python3 -m json.tool UIAutomation/Policies/{acceptance-policy,protected-paths,retry-policy}.json` — exit 0.
-- Invariant review of the diff: 72 unique task ids, every dependency exists, dependency graph acyclic, phase previous/next links consistent, integration task ids resolve, Phase 4 fully `backlog` and locked behind `3F.11`, migration records present (`4.20→3F.2`, `4.21/4.22→3F.3`, `4.12/4.13/4.23/4.24/4.25→5.6..5.10`, `5.5→5.11`), story matrix gate 66/66.
+- Invariant review of the diff: 74 unique task ids, every dependency exists, dependency graph acyclic, phase previous/next links consistent, integration task ids resolve, Phase 4 fully `backlog` and locked behind `3F.11`, migration records present (`4.20→3F.2`, `4.21/4.22→3F.3`, `3F.3a/3F.3b` split from `3F.3` on 2026-08-07, `4.12/4.13/4.23/4.24/4.25→5.6..5.10`, `5.5→5.11`), story matrix gate 66/66.
 - Existing CI (`.github/workflows/ci.yml`) is untouched by this PR.
 
 ## Documentation and Ledger
@@ -305,6 +305,106 @@ Add real production data sources: a PhotoKit source adapter (full authorization-
 - Zero network runtime: `prepare_models.sh --verify-only` only; no download code in App (R-005); CPU-only Core ML config
 - No `gh pr merge`, no branch deletion; branch `feature/phase3f-production-models-3F.3` preserved
 <!-- PR-BODY:3F.3:END -->
+
+---
+
+## Entry: 3F.3a — SigLIP2 Core ML 转换与视觉推理接入
+
+> Split from 3F.3 (2026-08-07 planning change): 3F.3 delivers conversion source + preprocessing; 3F.3a completes Core ML conversion, reference-vector validation and real vision inference. ADR-009 decisions 1/2 govern.
+
+## Phase 3F Task Evidence
+- Task / commit / branch / PR:
+- Registered worktree path / ownership / clean rebase result: n/a — plain branch in main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
+- Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
+- Pre-delivery task status and transition evidence:
+- Quoted AC and architecture constraints:
+- RED test command and observed failure:
+- Focused test command / exit / passed count:
+- Cumulative test command / exit / passed count:
+- Release simulator and device commands / exits:
+- Static/privacy/model/compliance commands / exits:
+- Production path exercised:
+- Files and documentation changed:
+- Deferred items closed or created, with evidence links:
+- Known risks that do not weaken an in-scope gate:
+
+<!-- PR-BODY:3F.3a:START -->
+## Overview
+<fill with the completed task overview>
+
+## Related Specs
+<fill with exact task, story, AC, ADR, and document references>
+
+## AC Coverage
+| AC # | Spec Summary | Test File | Implementation | Status |
+| --- | --- | --- | --- | --- |
+| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+
+## Testing
+<fill with exact commands, exits, counts, and evidence links>
+
+## Documentation and Ledger
+<fill with exact documentation and ledger changes>
+
+## Risks
+<fill with verified risks or an explicit evidence-backed none statement>
+
+## Deferred Items
+<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+
+## Self-Check
+<fill with completed security, privacy, scope, and delivery checks>
+<!-- PR-BODY:3F.3a:END -->
+
+---
+
+## Entry: 3F.3b — whisper.cpp 运行时接入与真实转写
+
+> Split from 3F.3 (2026-08-07 planning change): 3F.3 delivers GGUF artifact + fail-closed bridge; 3F.3b introduces whisper.cpp runtime (§2.2 whitelist approval), C interop and real transcription. Closes DEF-51-002 ASR contract.
+
+## Phase 3F Task Evidence
+- Task / commit / branch / PR:
+- Registered worktree path / ownership / clean rebase result: n/a — plain branch in main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
+- Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
+- Pre-delivery task status and transition evidence:
+- Quoted AC and architecture constraints:
+- RED test command and observed failure:
+- Focused test command / exit / passed count:
+- Cumulative test command / exit / passed count:
+- Release simulator and device commands / exits:
+- Static/privacy/model/compliance commands / exits:
+- Production path exercised:
+- Files and documentation changed:
+- Deferred items closed or created, with evidence links:
+- Known risks that do not weaken an in-scope gate:
+
+<!-- PR-BODY:3F.3b:START -->
+## Overview
+<fill with the completed task overview>
+
+## Related Specs
+<fill with exact task, story, AC, ADR, and document references>
+
+## AC Coverage
+| AC # | Spec Summary | Test File | Implementation | Status |
+| --- | --- | --- | --- | --- |
+| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+
+## Testing
+<fill with exact commands, exits, counts, and evidence links>
+
+## Documentation and Ledger
+<fill with exact documentation and ledger changes>
+
+## Risks
+<fill with verified risks or an explicit evidence-backed none statement>
+
+## Deferred Items
+<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+
+## Self-Check
+<fill with completed security, privacy, scope, and delivery checks>
+<!-- PR-BODY:3F.3b:END -->
 
 ---
 

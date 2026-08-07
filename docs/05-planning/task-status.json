@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-05T17:37:00Z",
+  "last_updated": "2026-08-07T00:00:00Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -1051,7 +1051,7 @@
             "真实 PhotoKit 与 Share Extension 输入、权限撤回、队列原子性和去重证据",
             "Privacy approver 对 App Group 最小数据边界签字"
           ],
-  "last_updated": "2026-08-07T03:22:45Z",
+          "last_updated": "2026-08-07T03:22:45Z",
           "notes": "✅ 3F.2 实现完成 (2026-08-05)。PhotoKitSourceAdapter (全授权状态处理 + MainActor.run SDK 边界 + 撤回停止读取 + dataSourceConnected 审计 + AC-6 仅本地已下载) + PhotoKitChangeObserver (批内去重 + SyncPipeline 窗口去重) + SharedImportEnvelope (ADR-008 §决策-3/4/7: App Group 最小字段 + 稳定 dedupeKey + 来源×内容组合校验) + SharedImportQueueActor (文件原子入队 + 去重 + begin/finish/rollback + recoverInterrupted 恰好一次) + EchoShareExtension target (ShareViewController 预览确认 + 拒绝不支持类型 + App Group 入队, 嵌入 Echo.app/PlugIns) + Echo.entitlements/EchoShareExtension.entitlements App Group group.com.echo.Echo + Echo-Info.plist (NSPhotoLibraryUsageDescription) + IngestPipeline.ingestShared/drainSharedImports (R-006 checkpoint + ExcludedAssets fail-closed + .shareExtensionImported hash-only 审计) + AppDelegate 来源装配 (deny-by-default gate)。测试：focused 29/29 (RealDataSourcesTests)，全量回归 785 tests / 86 suites 0 失败，Release 基线 simulateError 错误为 dev-1.0 既有（3F.1 已记录，非本任务引入），SwiftLint 0 serious。Privacy approver 对 App Group 最小数据边界尚未签字。\n[iOS 26 fix 2026-08-05] 双设备 Live Review 发现：iOS 26.5 点 Limit Access 后系统不再自动弹出照片选择器（iOS 18.2 仍自动弹）。修复：PhotoKitSourceAdapter.shouldPresentLimitedLibraryPicker()（limited + 0 张选中 + 未弹过 → true）+ AppDelegate didBecomeActive observer（#available(iOS 26, *) 门控，避免 iOS 18/19 叠弹）+ markLimitedLibraryPickerPresented 一次性标记。新增 4 用例，focused 33/33 通过。commit 43e3046 已 push PR #51，PR 描述已刷新。\n[Live Review 2026-08-05 补充] 双设备审核后修复 5 项：(1) iOS 26 limited 选择器主动弹出（presentLimitedLibraryPicker + #available(iOS 26,*) 门控，commit 43e3046）；(2) didBecomeActive 与 adapter 创建竞态 → 装配后补弹（commit 01fd70b）；(3) bootstrap 幂等 guard + deny-by-default 导致 fresh install observer 未注册 → awaitBootstrapCompletion + 等待 requiresConsent（commit 01fd70b）；(4) PhotosUI.framework 未链接 → presentLimitedLibraryPicker SIGABRT（unrecognized selector）→ pbxproj 链接修复（commit 516eb60）；(5) Share Extension 因缺 NSExtensionActivationRule 不显示于 Share Sheet → Info.plist 补全（commit 516eb60）。验证：双模拟器（17 Pro iOS 26.5 / 16 Pro iOS 18.2）Live 通过——授权弹窗/选择器时序、Share 摄入、跨设备 dedupeKey 稳定、队列恰好一次回滚（嵌入失败为 3F.3 前 stub 预期）。\n[pr-review 2026-08-05] 预审 6 项：无 🔴 红线违规。修复 4 项（commit 42d1f0a + 530b3be）：Issue-3 跨进程入队竞态（moveItem 目标已存在改判重复返回 false）+ 新增测试；Issue-4 drainSharedImports 入口 PrivacyCheckpoint 总闸（consent 门，逐封保留 per-source 校验）；Issue-5 证据索引 29→33 回刷；Issue-6 AGENTS.md §7.3 补录 .shareExtensionImported。延后 2 项写入 deferred-items.json：DEF-51-001（孤儿 VectorStoreActor → 3F.5 GenerationRegistry 重接，3F.3 模型就绪前保持 fail-closed）、DEF-51-002（语音临时 URL + ASR 契约语义不符 → 3F.3/3F.5，AC 表 voice 行降级 🔮）。全量回归 791 tests：27 失败为既有基线（Phase2 2.4/2.5 privacyDenied，3F.1 consent 门未适配旧测试，stash 对比确认非本 PR 引入）。focused 34/34 通过。\n✅ 合并完成：PR #51 merged by logan-suu at 2026-08-05T17:36:21Z (merge commit a39ba60)。DEF-51-001/002/003 已追踪于 deferred-items.json （DEF-51-001/003 → 3F.5 生产摄入时扫描，DEF-51-002 → 3F.3/3F.5 时扫描），本次合并未解决任何延期项。",
           "status_transitions": {
             "in_progress_at": "2026-08-05T03:02:00Z",
@@ -1137,6 +1137,92 @@
           ]
         },
         {
+          "id": "3F.3a",
+          "title": "SigLIP2 Core ML 转换与视觉推理接入",
+          "story": [
+            "US-ING-004",
+            "US-SRC-011",
+            "US-RET-001"
+          ],
+          "status": "ready",
+          "owner": {
+            "implementation": "On-device ML Lead",
+            "approver": "Model Legal and Privacy Approver"
+          },
+          "documents_required": [
+            "README.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/技术选型文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/双语言实现说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-009-offline-model-runtime.md",
+            "docs/05-planning/model-provenance-register.md",
+            "docs/05-planning/phase3f-execution-plan.md",
+            "docs/05-planning/phase3f-story-matrix.md",
+            "docs/05-planning/phase3f-evidence-index.md",
+            "docs/05-planning/task-status.json",
+            "docs/05-planning/deferred-items.json"
+          ],
+          "dependencies": [
+            "3F.0",
+            "3F.3"
+          ],
+          "test_file": "EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift",
+          "acceptance_evidence": [
+            "PyTorch→Core ML 转换 lineage + 固定 revision + SHA-256 登记（model-provenance-register §3）",
+            "参考向量余弦相似度 > 0.995 验证（siglip2-reference-vectors.json 回填）",
+            "四类门禁：法律（LICENSE/NOTICE/哈希）、转换一致性、Echo 数据集实机评测、实体设备资源门禁",
+            "SigLIP2Embedder 真实 embedImage 推理（768d，独立 vision generation）"
+          ],
+          "last_updated": "2026-08-07T00:00:00Z",
+          "notes": "从 3F.3 拆分：3F.3 交付转换源（model.safetensors）与预处理；本任务完成 Core ML 转换、参考向量验证与真实视觉推理。ADR-009 决策 1（空间分离）与决策 2（未获批模型不进打包）管辖。",
+          "pr": null
+        },
+        {
+          "id": "3F.3b",
+          "title": "whisper.cpp 运行时接入与真实转写",
+          "story": [
+            "US-ING-003",
+            "US-ING-005",
+            "US-SRC-011"
+          ],
+          "status": "ready",
+          "owner": {
+            "implementation": "On-device ML Lead",
+            "approver": "Model Legal and Privacy Approver"
+          },
+          "documents_required": [
+            "README.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/技术选型文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/双语言实现说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-009-offline-model-runtime.md",
+            "docs/05-planning/model-provenance-register.md",
+            "docs/05-planning/phase3f-execution-plan.md",
+            "docs/05-planning/phase3f-story-matrix.md",
+            "docs/05-planning/phase3f-evidence-index.md",
+            "docs/05-planning/task-status.json",
+            "docs/05-planning/deferred-items.json"
+          ],
+          "dependencies": [
+            "3F.0",
+            "3F.3"
+          ],
+          "test_file": "EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift",
+          "acceptance_evidence": [
+            "whisper.cpp 依赖白名单审批（AGENTS.md §2.2）+ SBOM/NOTICE/许可证登记",
+            "NativeWhisperCInterop 实现（whisper_init_from_file + whisper_full），替代 UnavailableWhisperCInterop",
+            "真实 16kHz mono PCM 转写，whisper-reference-transcripts.json 回填（CER/WER 阈值）",
+            "GGUF SHA-256 与 model-provenance-register §2 一致性验证"
+          ],
+          "last_updated": "2026-08-07T00:00:00Z",
+          "notes": "从 3F.3 拆分：3F.3 交付 GGUF 工件与 fail-closed 桥接（WhisperRuntimeBridge.runtimeNotLinked）；本任务引入 whisper.cpp 运行时（需 §2.2 白名单审批）、实现 C 互操作与真实转写。关闭 DEF-51-002 的 ASR 契约。",
+          "pr": null
+        },
+        {
           "id": "3F.4",
           "title": "Canonical storage 与 generation 生命周期",
           "story": [
@@ -1217,6 +1303,8 @@
           "dependencies": [
             "3F.2",
             "3F.3",
+            "3F.3a",
+            "3F.3b",
             "3F.4"
           ],
           "test_file": "EchoTests/Phase3F/3F.5_ProductionIngestionTests.swift",
@@ -1594,6 +1682,8 @@
           "dependencies": [
             "3F.0",
             "3F.3",
+            "3F.3a",
+            "3F.3b",
             "3F.4",
             "3F.6",
             "3F.7"
@@ -1728,6 +1818,8 @@
             "3F.1",
             "3F.2",
             "3F.3",
+            "3F.3a",
+            "3F.3b",
             "3F.4",
             "3F.5",
             "3F.6",

@@ -288,7 +288,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | **阶段 1** | 6月15日 - 7月12日   | 基础设施搭建   |
 | **阶段 2** | 7月13日 - 9月20日   | 核心认知管线   |
 | **阶段 3** | 7月26日 - 10月18日  | UI 与集成（13 个任务，44 个故事）— UI 与可注入交互切片完成，不代表生产功能完成 |
-| **阶段 3F** | 2026-08 启动        | 功能完成与生产集成（12 个任务 3F.0..3F.11，Phase 4 唯一入口 3F.11） |
+| **阶段 3F** | 2026-08 启动        | 功能完成与生产集成（14 个任务 3F.0..3F.11 + 3F.3a/3F.3b，Phase 4 唯一入口 3F.11） |
 | **阶段 4** | 11月16日 - 12月15日 | 质量保障与发布（锁定在 3F.11 之后，未开始） |
 | **阶段 5** | 并行                | 创新工具预研   |
 
@@ -304,11 +304,13 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 
 > **3F.1 已交付（2026-08-04）**：生产 composition root（`Echo/App/AppComposition.swift`）+ deny-by-default 同意（`ConsentStoreActor`，版本与时间戳持久化）+ 事务性撤回/清除（`PurgeBoundary`，失败进 blocked 并写审计）+ 审计存储契约（必填字段 / hash-only `contentHash` / 30 天清理 / NSFileProtectionComplete）+ 显式启动状态（`requiresConsent` / `ready` / `modelUnavailable` / `routeUnavailable` / `indexUnavailable` / `purgeBlocked`）。无 CloudKit。
 
-**12 个任务（3F.0..3F.11）**：
+**14 个任务（3F.0..3F.11 + 3F.3a/3F.3b）**：
 - **3F.0** 规格、范围、账本与接口冻结（docs-only bootstrap）
 - **3F.1** Production composition、首次启动、同意与隐私
 - **3F.2** PhotoKit、Share Extension 与真实来源
-- **3F.3** E5、SigLIP2、Whisper 与离线生成决策落地
+- **3F.3** E5、SigLIP2、Whisper 与离线生成决策落地（E5 真实推理；SigLIP2/Whisper 工件 + fail-closed 桥接）
+- **3F.3a** SigLIP2 Core ML 转换与视觉推理接入（2026-08-07 拆分自 3F.3）
+- **3F.3b** whisper.cpp 运行时接入与真实转写（2026-08-07 拆分自 3F.3）
 - **3F.4** Canonical storage 与 generation 生命周期
 - **3F.5** Production ingestion
 - **3F.6** Production search 与 feedback
