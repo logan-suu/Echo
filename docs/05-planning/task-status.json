@@ -1051,7 +1051,7 @@
             "真实 PhotoKit 与 Share Extension 输入、权限撤回、队列原子性和去重证据",
             "Privacy approver 对 App Group 最小数据边界签字"
           ],
-          "last_updated": "2026-08-05T17:37:00Z",
+  "last_updated": "2026-08-07T03:22:45Z",
           "notes": "✅ 3F.2 实现完成 (2026-08-05)。PhotoKitSourceAdapter (全授权状态处理 + MainActor.run SDK 边界 + 撤回停止读取 + dataSourceConnected 审计 + AC-6 仅本地已下载) + PhotoKitChangeObserver (批内去重 + SyncPipeline 窗口去重) + SharedImportEnvelope (ADR-008 §决策-3/4/7: App Group 最小字段 + 稳定 dedupeKey + 来源×内容组合校验) + SharedImportQueueActor (文件原子入队 + 去重 + begin/finish/rollback + recoverInterrupted 恰好一次) + EchoShareExtension target (ShareViewController 预览确认 + 拒绝不支持类型 + App Group 入队, 嵌入 Echo.app/PlugIns) + Echo.entitlements/EchoShareExtension.entitlements App Group group.com.echo.Echo + Echo-Info.plist (NSPhotoLibraryUsageDescription) + IngestPipeline.ingestShared/drainSharedImports (R-006 checkpoint + ExcludedAssets fail-closed + .shareExtensionImported hash-only 审计) + AppDelegate 来源装配 (deny-by-default gate)。测试：focused 29/29 (RealDataSourcesTests)，全量回归 785 tests / 86 suites 0 失败，Release 基线 simulateError 错误为 dev-1.0 既有（3F.1 已记录，非本任务引入），SwiftLint 0 serious。Privacy approver 对 App Group 最小数据边界尚未签字。\n[iOS 26 fix 2026-08-05] 双设备 Live Review 发现：iOS 26.5 点 Limit Access 后系统不再自动弹出照片选择器（iOS 18.2 仍自动弹）。修复：PhotoKitSourceAdapter.shouldPresentLimitedLibraryPicker()（limited + 0 张选中 + 未弹过 → true）+ AppDelegate didBecomeActive observer（#available(iOS 26, *) 门控，避免 iOS 18/19 叠弹）+ markLimitedLibraryPickerPresented 一次性标记。新增 4 用例，focused 33/33 通过。commit 43e3046 已 push PR #51，PR 描述已刷新。\n[Live Review 2026-08-05 补充] 双设备审核后修复 5 项：(1) iOS 26 limited 选择器主动弹出（presentLimitedLibraryPicker + #available(iOS 26,*) 门控，commit 43e3046）；(2) didBecomeActive 与 adapter 创建竞态 → 装配后补弹（commit 01fd70b）；(3) bootstrap 幂等 guard + deny-by-default 导致 fresh install observer 未注册 → awaitBootstrapCompletion + 等待 requiresConsent（commit 01fd70b）；(4) PhotosUI.framework 未链接 → presentLimitedLibraryPicker SIGABRT（unrecognized selector）→ pbxproj 链接修复（commit 516eb60）；(5) Share Extension 因缺 NSExtensionActivationRule 不显示于 Share Sheet → Info.plist 补全（commit 516eb60）。验证：双模拟器（17 Pro iOS 26.5 / 16 Pro iOS 18.2）Live 通过——授权弹窗/选择器时序、Share 摄入、跨设备 dedupeKey 稳定、队列恰好一次回滚（嵌入失败为 3F.3 前 stub 预期）。\n[pr-review 2026-08-05] 预审 6 项：无 🔴 红线违规。修复 4 项（commit 42d1f0a + 530b3be）：Issue-3 跨进程入队竞态（moveItem 目标已存在改判重复返回 false）+ 新增测试；Issue-4 drainSharedImports 入口 PrivacyCheckpoint 总闸（consent 门，逐封保留 per-source 校验）；Issue-5 证据索引 29→33 回刷；Issue-6 AGENTS.md §7.3 补录 .shareExtensionImported。延后 2 项写入 deferred-items.json：DEF-51-001（孤儿 VectorStoreActor → 3F.5 GenerationRegistry 重接，3F.3 模型就绪前保持 fail-closed）、DEF-51-002（语音临时 URL + ASR 契约语义不符 → 3F.3/3F.5，AC 表 voice 行降级 🔮）。全量回归 791 tests：27 失败为既有基线（Phase2 2.4/2.5 privacyDenied，3F.1 consent 门未适配旧测试，stash 对比确认非本 PR 引入）。focused 34/34 通过。\n✅ 合并完成：PR #51 merged by logan-suu at 2026-08-05T17:36:21Z (merge commit a39ba60)。DEF-51-001/002/003 已追踪于 deferred-items.json （DEF-51-001/003 → 3F.5 生产摄入时扫描，DEF-51-002 → 3F.3/3F.5 时扫描），本次合并未解决任何延期项。",
           "status_transitions": {
             "in_progress_at": "2026-08-05T03:02:00Z",
@@ -1072,6 +1072,7 @@
         {
           "id": "3F.3",
           "title": "E5、SigLIP2、Whisper 与离线生成决策落地",
+          "merged_at": "2026-08-07T03:21:09Z",
           "story": [
             "US-ING-001",
             "US-ING-002",
@@ -1085,7 +1086,7 @@
             "US-RES-004",
             "US-SRC-011"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "On-device ML Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1127,8 +1128,8 @@
             "US-SRC-011 model-semantics reference outputs",
             "参考输出、损坏恢复与零网络证据"
           ],
-          "last_updated": "2026-08-06T14:42:11Z",
-          "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. PR #52 review fixes (2026-08-06): CI skip for model-dependent suites, AC-8 audit wiring via PrivacyActor.writeAuditLog, dead-code removal, forced-unwrap guards. DEF-52-001 (LanguageAligner hardcoded strings) deferred to 3F.10. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json.",
+          "last_updated": "2026-08-07T03:22:45Z",
+          "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. PR #52 review fixes (2026-08-06): CI skip for model-dependent suites, AC-8 audit wiring via PrivacyActor.writeAuditLog, dead-code removal, forced-unwrap guards. DEF-52-001 (LanguageAligner hardcoded strings) deferred to 3F.10. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json. PR #52 merged 2026-08-07.",
           "pr": "https://github.com/logan-suu/Echo/pull/52",
           "migrated_from": [
             "4.21",
@@ -1148,7 +1149,7 @@
             "US-FBK-002",
             "US-FBK-003"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "Storage Architecture Lead",
             "approver": "Privacy Engineering Lead"
