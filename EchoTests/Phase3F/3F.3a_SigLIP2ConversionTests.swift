@@ -221,7 +221,7 @@ struct SigLIP2RealInferenceTests {
         #expect(e1 == e2, "Identical input must produce identical embedding")
     }
 
-    @Test("embedImage throws modelNotLoaded when .mlmodelc absent")
+    @Test("embedImage throws when .mlmodelc absent")
     func test_embedImage_throwsWhenModelAbsent() async {
         let embedder = SigLIP2Embedder()
         if siglip2MLModelCAvailable() { return }
@@ -244,6 +244,36 @@ struct SigLIP2RealInferenceTests {
         for v in floats {
             #expect(v >= -1.1 && v <= 1.1, "Preprocessed values should be in normalized range, got \(v)")
         }
+    }
+
+    // C1 回归（PR review）：非方形图片（真实照片 4:3/3:4）不得崩溃
+    @Test("preprocess of non-square image yields exactly 3x256x256 (C1 regression)")
+    func test_preprocess_nonSquareImage() async throws {
+        let embedder = SigLIP2Embedder()
+        // 4:3 横图（真实照片常见比例）
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 300))
+        let landscape = renderer.image { ctx in
+            UIColor.orange.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 400, height: 300))
+        }
+        let floats = try embedder.preprocess(landscape)
+        #expect(floats.count == 256 * 256 * 3,
+                "Non-square preprocessing must produce exactly 3x256x256, got \(floats.count)")
+    }
+
+    // C1 回归（PR review）：非方形图片完整推理不得崩溃
+    @Test("embedImage of non-square image produces 768d embedding (C1 regression)")
+    func test_embedImage_nonSquareImage() async throws {
+        guard siglip2MLModelCAvailable() else { return }
+
+        let embedder = SigLIP2Embedder()
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 300))
+        let landscape = renderer.image { ctx in
+            UIColor.orange.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 400, height: 300))
+        }
+        let embedding = try await embedder.embedImage(from: landscape)
+        #expect(embedding.count == 768, "Non-square image must produce 768d embedding")
     }
 }
 

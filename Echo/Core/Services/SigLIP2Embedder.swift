@@ -17,22 +17,21 @@ import Photos
 
 // MARK: - SigLIP2 Embedder
 
-/// SigLIP2-B/32 图像编码器（R-3.2 / 3F.3a）— 替代 MobileCLIP（商业许可阻断）。
+/// SigLIP2-B/32-256 图像编码器（R-3.2 / 3F.3a）— 替代 MobileCLIP（商业许可阻断）。
 ///
-/// Apache-2.0 许可工件，约 1.5GB。通过 `Scripts/convert_siglip2.py` 完成
+/// Apache-2.0 许可工件，约 180MB（.mlmodelc）。通过 `Scripts/convert_siglip2.py` 完成
 /// PyTorch→coremltools→Core ML 转换，`.mlmodelc` 随 Bundle 分发（R-005）。
 /// 输出写入独立的 `vision_dense/siglip2-v1` generation（ADR-009 决策 1 空间分离）。
 ///
 /// ## 推理流程
 /// 1. PHAsset → UIImage（PhotoKit）
-/// 2. `preprocess()`: 方向矫正 → aspect-fit resize 256 → center-crop 224 → normalize
-/// 3. Core ML `MHInferenceAdapter` 推理 → 768d 视觉向量
+/// 2. `preprocess()`: 方向矫正 → aspect-fit resize（最短边 256）→ center-crop 256 → normalize
+/// 3. Core ML 推理 → 768d 视觉向量
 /// 4. L2 归一化 → 返回 768d Float 数组
 ///
 /// ## 模型契约
-/// - 输入：`pixel_values`（Float32 [1, 3, 224, 224], NCHW, 归一化 [-1, 1]）
-/// - 输出：`last_hidden_state`（Float32 [1, 257, 768]，取 [CLS] token → [1, 768]）
-/// - 或：`pooler_output`（Float32 [1, 768]）若转换时已内置池化
+/// - 输入：`pixel_values`（Float32 [1, 3, 256, 256], NCHW, 归一化 [-1, 1]）
+/// - 输出：`embeddings`（Float16 [1, 768]，probe-token attention pooling + L2 归一化）
 /// - 模型文件 `SigLIP2BasePatch32.mlmodelc` 随 App Bundle 分发（R-005）
 public actor SigLIP2Embedder: EmbedderProtocol {
 
@@ -117,12 +116,15 @@ public actor SigLIP2Embedder: EmbedderProtocol {
                 if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
                     return
                 }
-                guard let image = image else {
-                    _ = info?[PHImageErrorKey] as? Error
+                if (info?[PHImageCancelledKey] as? Bool) == true {
                     continuation.resume(
-                        throwing: EmbedderError.assetUnavailable(
-                            assetId: assetId
-                        )
+                        throwing: EmbedderError.assetUnavailable(assetId: assetId)
+                    )
+                    return
+                }
+                guard let image = image else {
+                    continuation.resume(
+                        throwing: EmbedderError.assetUnavailable(assetId: assetId)
                     )
                     return
                 }
@@ -151,11 +153,23 @@ public actor SigLIP2Embedder: EmbedderProtocol {
         let config = MLModelConfiguration()
         config.computeUnits = .cpuOnly
         let model: MLModel
-        if modelURL.pathExtension == "mlpackage" {
-            let compiledURL = try await MLModel.compileModel(at: modelURL)
-            model = try await MLModel.load(contentsOf: compiledURL, configuration: config)
-        } else {
-            model = try await MLModel.load(contentsOf: modelURL, configuration: config)
+        do {
+            if modelURL.pathExtension == "mlpackage" {
+                let compiledURL = try await MLModel.compileModel(at: modelURL)
+                model = try await MLModel.load(contentsOf: compiledURL, configuration: config)
+            } else {
+                model = try await MLModel.load(contentsOf: modelURL, configuration: config)
+            }
+        } catch {
+            await modelLoader.reportModelLoadFailed(
+                .siglip2Vision,
+                error: .loadFailed(
+                    modelName: "SigLIP2",
+                    resourceName: modelURL.lastPathComponent,
+                    underlying: error
+                )
+            )
+            throw EmbedderError.modelNotLoaded
         }
 
         await modelLoader.reportModelLoaded(.siglip2Vision)
@@ -167,14 +181,15 @@ public actor SigLIP2Embedder: EmbedderProtocol {
     private func runInference(preprocessedArray preprocessed: [Float]) async throws -> [Float] {
         let model = try await resolveModel()
 
-        guard let inputDescription = model.modelDescription.inputDescriptionsByName.first?.value else {
+        // 显式命名输入/输出（convert_siglip2.py 固定契约），避免字典无序 .first
+        let inputName = "pixel_values"
+        let outputName = "embeddings"
+        guard model.modelDescription.inputDescriptionsByName[inputName] != nil else {
             throw EmbedderError.inferenceFailed(
                 underlying: NSError(domain: "SigLIP2Embedder", code: -1,
-                                    userInfo: [NSLocalizedDescriptionKey: "No input description"])
+                                    userInfo: [NSLocalizedDescriptionKey: "Input '\(inputName)' not found"])
             )
         }
-
-        let inputName = inputDescription.name
 
         let shaped = MLShapedArray<Float>(
             scalars: preprocessed,
@@ -186,12 +201,10 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
         let prediction = try await model.prediction(from: provider)
 
-        guard let outputName = model.modelDescription.outputDescriptionsByName.first?.key,
-              let output = prediction.featureValue(for: outputName)?.multiArrayValue
-        else {
+        guard let output = prediction.featureValue(for: outputName)?.multiArrayValue else {
             throw EmbedderError.inferenceFailed(
                 underlying: NSError(domain: "SigLIP2Embedder", code: -2,
-                                    userInfo: [NSLocalizedDescriptionKey: "No output from model prediction"])
+                                    userInfo: [NSLocalizedDescriptionKey: "Output '\(outputName)' not found"])
             )
         }
 
@@ -257,11 +270,16 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - Core Graphics Utilities
 
-    /// 等比缩放（aspect-fit），保持宽高比，长边缩放到 maxDimension。
+    /// 等比缩放（aspect-fit），保持宽高比，**最短边**缩放到 maxDimension。
+    ///
+    /// 用 `max(scaleW, scaleH)` 保证缩放后最短边恰好为 maxDimension、
+    /// 长边 ≥ maxDimension，使后续 center-crop(maxDimension) 永不越界。
+    /// （若用 `min` 则短边 < maxDimension，crop 越界返回交集，
+    /// 输出非 3×256×256，`MLShapedArray` scalars 数量不匹配 → 崩溃。C1 修复。）
     private nonisolated func aspectFitCGImage(_ image: CGImage, maxDimension: CGFloat) throws -> CGImage {
         let width = CGFloat(image.width)
         let height = CGFloat(image.height)
-        let scale = min(maxDimension / width, maxDimension / height)
+        let scale = max(maxDimension / width, maxDimension / height)
         let targetSize = CGSize(width: width * scale, height: height * scale)
         guard let context = CGContext(
             data: nil,
@@ -283,12 +301,14 @@ public actor SigLIP2Embedder: EmbedderProtocol {
     }
 
     private nonisolated func centerCropCGImage(_ image: CGImage, to size: CGSize) throws -> CGImage {
-        let cropRect = CGRect(
-            x: (CGFloat(image.width) - size.width) / 2,
-            y: (CGFloat(image.height) - size.height) / 2,
-            width: size.width,
-            height: size.height
-        )
+        // 整数坐标 + clamp，保证输出恒为 size（浮点 cropRect 取整会导致 256×257 等错位尺寸，C1）
+        let imageW = image.width
+        let imageH = image.height
+        let cropW = Int(size.width)
+        let cropH = Int(size.height)
+        let x = min(max(0, (imageW - cropW) / 2), max(0, imageW - cropW))
+        let y = min(max(0, (imageH - cropH) / 2), max(0, imageH - cropH))
+        let cropRect = CGRect(x: x, y: y, width: min(cropW, imageW - x), height: min(cropH, imageH - y))
         guard let cropped = image.cropping(to: cropRect) else {
             throw EmbedderError.preprocessingFailed(reason: "Failed to center-crop image")
         }

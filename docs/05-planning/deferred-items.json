@@ -136,7 +136,7 @@
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
     "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
-    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction"
+    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release"
   },
   "deferred_from_pr_review": [
     {
@@ -773,6 +773,16 @@
       "location": "docs/05-planning/phase3f-evidence-index.md:357,361-407（3F.3a/3F.3b 条目）",
       "reason": "CodeRabbit 提示 MD024（重复标题）与 MD058（表格空行）。驳回：仓库无 .markdownlint 配置、CI 无 markdown 检查门禁；重复二级标题是全部 14 个 task 条目统一采用的模板结构（Entry: X + Phase 3F Task Evidence + PR-BODY 各节），本次新增条目与既有 3F.0-3F.3 条目格式一致，非本次回归。",
       "defer_to": "引入 markdownlint 门禁并统一重构 evidence-index 模板时",
+      "deferred_at": "2026-08-07"
+    },
+    {
+      "id": "DEF-54-001",
+      "pr": 54,
+      "title": "SigLIP2 模型依赖测试在 CI 中静默跳过（无 .mlmodelc）",
+      "severity": "🟡",
+      "location": "EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift（siglip2MLModelCAvailable() guard 分支）",
+      "reason": "US-SRC-011 cosine>0.995 与 US-ING-004 AC-3 真实推理测试在 CI 无 .mlmodelc 时直接 return 通过（ADR-009 决策 2：未获批模型不进打包）。属合理门控，但存在假阳性通过风险。本地已验证（含 5 个参考向量 cosine >0.995 + 非方形图回归），最终门禁由 3F.11 no-fixture E2E 覆盖。",
+      "defer_to": "模型获批进入 Release 打包（provenance approved）后，移除 CI skip guard 并纳入 CI 门禁",
       "deferred_at": "2026-08-07"
     }
   ]
