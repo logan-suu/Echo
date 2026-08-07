@@ -3,7 +3,7 @@
   "actionId": "onboarding.beginLoad",
   "source": "user",
   "targetIntent": "onboarding.beginModelLoad",
-  "expectedOutcome": "language -> modelLoading step with determinate progress",
+  "expectedOutcome": "language -> modelLoading with determinate progress from ModelLoaderActor; failure lands in modelLoadError/modelUnavailable (3F.3)",
   "requiresConfirmation": false,
   "version": "1.0.0"
 }

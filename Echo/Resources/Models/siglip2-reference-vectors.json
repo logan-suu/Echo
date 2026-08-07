@@ -1,0 +1,6 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "SigLIP2-B/32 reference vectors (US-SRC-011 model semantics). Requires PyTorch→Core ML conversion + reference vector computation; pending conversion pipeline + approval.",
+  "status": "pending-conversion",
+  "samples": []
+}

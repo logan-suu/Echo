@@ -1085,7 +1085,7 @@
             "US-RES-004",
             "US-SRC-011"
           ],
-          "status": "ready",
+          "status": "review",
           "owner": {
             "implementation": "On-device ML Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1127,9 +1127,9 @@
             "US-SRC-011 model-semantics reference outputs",
             "参考输出、损坏恢复与零网络证据"
           ],
-          "last_updated": "2026-08-04T14:42:11Z",
-          "notes": "Migrated from 4.21 and 4.22; ADR-009 governs.",
-          "pr": null,
+          "last_updated": "2026-08-06T14:42:11Z",
+          "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. PR #52 review fixes (2026-08-06): CI skip for model-dependent suites, AC-8 audit wiring via PrivacyActor.writeAuditLog, dead-code removal, forced-unwrap guards. DEF-52-001 (LanguageAligner hardcoded strings) deferred to 3F.10. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json.",
+          "pr": "https://github.com/logan-suu/Echo/pull/52",
           "migrated_from": [
             "4.21",
             "4.22"

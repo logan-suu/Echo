@@ -86,7 +86,7 @@ public actor WhisperASREngine: ASREngineProtocol {
             AVFormatIDKey: kAudioFormatLinearPCM,
             AVSampleRateKey: Self.sampleRate,
             AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMBitDepthKey: 32,
             AVLinearPCMIsFloatKey: true,
             AVLinearPCMIsNonInterleaved: false,
         ]
@@ -111,6 +111,13 @@ public actor WhisperASREngine: ASREngineProtocol {
                 let floatPointer = UnsafeRawPointer(pointer).assumingMemoryBound(to: Float.self)
                 pcmData.append(contentsOf: UnsafeBufferPointer(start: floatPointer, count: floatCount))
             }
+        }
+
+        // DEF-34-004 fix: 必须校验 reader 完整结束（非 .completed 即提前中断，丢弃不完整结果）
+        guard reader.status == .completed else {
+            throw ASREngineError.transcriptionFailed(
+                reason: "Audio reader interrupted: status \(reader.status.rawValue)"
+            )
         }
 
         return pcmData

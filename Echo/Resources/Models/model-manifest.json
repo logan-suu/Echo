@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Echo v6.0 bundled model manifest (3F.3). Source of truth: docs/05-planning/model-provenance-register.md",
+  "models": [
+    {
+      "modelId": "e5-multilingual-small-v1",
+      "revision": "main",
+      "artifactHash": "af2f01cb5f0cbf22832c9cec2881ea730df4eb65ecd20334245cf823edca11b9",
+      "artifactFile": "MultilingualE5Small.mlpackage",
+      "licenseId": "mit",
+      "runtime": "coreML",
+      "tokenizer": "unigram",
+      "promptTemplate": "query: / passage: ",
+      "pooling": "maskedMean",
+      "normalization": "l2",
+      "dimension": 384,
+      "quantization": "fp16",
+      "source": "tamikisg/multilingual-e5-small-coreml",
+      "referenceVectors": "e5-reference-vectors.json",
+      "provenance": "pending-approval"
+    },
+    {
+      "modelId": "whisper-tiny-q5_1-v1",
+      "revision": "main",
+      "artifactHash": "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7",
+      "artifactFile": "whisper-tiny-q5_1.gguf",
+      "licenseId": "mit",
+      "runtime": "whisperCpp",
+      "tokenizer": null,
+      "promptTemplate": null,
+      "pooling": "none",
+      "normalization": "none",
+      "dimension": 0,
+      "quantization": "q5_1",
+      "source": "ggerganov/whisper.cpp",
+      "referenceVectors": "whisper-reference-transcripts.json",
+      "provenance": "pending-approval"
+    },
+    {
+      "modelId": "siglip2-base-patch32-256-v1",
+      "revision": "main",
+      "artifactHash": "7d241bb3becad218f211f480487f491df4f8c0a472ecf7afdec5615815a301f1",
+      "artifactFile": "siglip2-base-patch32-256-model.safetensors",
+      "licenseId": "apache-2.0",
+      "runtime": "coreML",
+      "tokenizer": null,
+      "promptTemplate": null,
+      "pooling": "none",
+      "normalization": "none",
+      "dimension": 768,
+      "quantization": null,
+      "source": "google/siglip2-base-patch32-256",
+      "referenceVectors": "siglip2-reference-vectors.json",
+      "provenance": "pending-conversion-and-approval"
+    }
+  ]
+}

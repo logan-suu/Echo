@@ -2,13 +2,13 @@
   "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
   "surfaceId": "onboarding",
   "surfaceFamily": "task",
-  "responsibility": "First-launch onboarding flow: welcome page (echo-memory-canvas §15.2), PIPL privacy consent summary + equal agree/decline (US-PRV-008 AC-1~3), permission sequence with iCloud download prompt (US-SRC-001 AC-6), language selection with zh-Hans mapping hint (US-SYN-001 AC-2), first model load progress (§15.6), declined exit state. AC-4 consent persistence wired to ConsentStoreActor (3F.1) and AC-5 deregistration = transactional purge via AppComposition.revokeConsent (3F.1); Settings withdraw-consent entry full UI wiring lands in 3F.7.",
+  "responsibility": "First-launch onboarding flow: welcome page (echo-memory-canvas §15.2), PIPL privacy consent summary + equal agree/decline (US-PRV-008 AC-1~3), permission sequence with iCloud download prompt (US-SRC-001 AC-6), language selection with zh-Hans mapping hint (US-SYN-001 AC-2), first model load progress (§15.6) driven by real ModelLoaderActor (3F.3) with modelLoadError/modelUnavailable recovery (US-RES-004), declined exit state. AC-4 consent persistence wired to ConsentStoreActor (3F.1) and AC-5 deregistration = transactional purge via AppComposition.revokeConsent (3F.1); Settings withdraw-consent entry full UI wiring lands in 3F.7.",
   "inputs": {
     "privacySummary": "PIPL privacy policy summary with purpose/method/kind/retention/local-processing statement (US-PRV-008 AC-2)",
     "permissionSteps": "Ordered permission sequence: photos -> notifications -> location -> health (echo-memory-canvas §15.4)",
     "icloudDownloadPrompt": "US-SRC-001 AC-6 first photo permission download-and-keep-original hint with Open Settings button",
     "languages": "zh-Hans | en-US picker (US-SYN-001 AC-2); traditional/other mapped to zh-Hans with one-time hint",
-    "modelLoadProgress": "Determinate progress for first model load (§15.6, fixture-driven; real ModelLoaderActor Phase 3.9)"
+    "modelLoadProgress": "Determinate progress for first model load (§15.6); driven by ModelLoaderActor.overallStatus (3F.3), no fixture fallback in production"
   },
   "outputs": {
     "visibleContent": "5-step TabView flow (welcome -> privacy consent -> permissions -> language -> model loading) presented as fullScreenCover; declined state on PIPL refuse",
@@ -29,6 +29,8 @@
     "permissionDenied",
     "language",
     "modelLoading",
+    "modelLoadError",
+    "modelUnavailable",
     "completed",
     "declined"
   ],

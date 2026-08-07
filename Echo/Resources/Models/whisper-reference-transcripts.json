@@ -1,0 +1,6 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Whisper tiny Q5_1 reference transcripts (US-SRC-011 model semantics). Populated by 3F.3 after whisper.cpp runtime integration; pending artifacts/approval.",
+  "status": "pending-runtime-integration",
+  "samples": []
+}

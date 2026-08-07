@@ -1,0 +1,21 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "onboarding-model-load-recovery",
+  "steps": [
+    { "surfaceId": "onboarding", "stateId": "welcome", "actionId": "onboarding.start" },
+    { "surfaceId": "onboarding", "stateId": "privacyConsent", "actionId": "onboarding.privacyAgree" },
+    { "surfaceId": "onboarding", "stateId": "permissions", "actionId": "onboarding.permissionAllow" },
+    { "surfaceId": "onboarding", "stateId": "language", "actionId": "onboarding.selectLanguage" },
+    { "surfaceId": "onboarding", "stateId": "modelLoading", "actionId": "onboarding.beginLoad" },
+    { "surfaceId": "onboarding", "stateId": "modelLoadError", "actionId": "onboarding.retryModelLoad" },
+    { "surfaceId": "onboarding", "stateId": "modelLoading", "actionId": "onboarding.beginLoad" },
+    { "surfaceId": "onboarding", "stateId": "completed", "actionId": "onboarding.start" }
+  ],
+  "preconditionFixtures": ["onboarding-model-load-error"],
+  "assertions": [
+    { "after": "onboarding.retryModelLoad", "observable": "Manual retry reloads only local bundle artifacts; no timer-driven auto-retry (US-RES-004 AC-3)" },
+    { "after": "onboarding.beginLoad", "observable": "Completion follows verified artifact checksum + reference-output success (model-provenance-register)" },
+    { "alternative": "onboarding.openSettings", "observable": "openSettingsURLString intent fired; recoveryMethod=systemSettings (US-RES-004 AC-8)" }
+  ],
+  "version": "1.0.0"
+}

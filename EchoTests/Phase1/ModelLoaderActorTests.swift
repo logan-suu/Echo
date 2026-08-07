@@ -32,7 +32,7 @@ struct ModelLoaderActorTests {
     @Test("AC-1: modelTypes defines all 6 required models with bundle resource names")
     func test_AC1_modelTypes_definesAllSixModels() {
         let models = ModelLoaderActor.ModelType.allCases
-        #expect(models.count == 6, "AC-1: Expected 6 model types matching ModelBundleTests")
+        #expect(models.count == 3, "AC-1: Expected 3 model types (v6.0: E5/SigLIP2/Whisper)")
 
         // Verify each model type has a non-empty bundle resource name
         for modelType in models {
@@ -63,10 +63,10 @@ struct ModelLoaderActorTests {
         let sut = makeSUT()
 
         // Load a model that definitely doesn't exist in test bundle
-        let result = await sut.loadModel(.mobileCLIPImage)
+        let result = await sut.loadModel(.siglip2Vision)
 
         if case .failed(let state) = result {
-            #expect(state.modelName == ModelLoaderActor.ModelType.mobileCLIPImage.modelName,
+            #expect(state.modelName == ModelLoaderActor.ModelType.siglip2Vision.modelName,
                     "AC-2/AC-8: Error must include modelName")
         }
     }
@@ -74,10 +74,10 @@ struct ModelLoaderActorTests {
     @Test("AC-2/AC-8: ModelLoadError.modelNotFound contains modelName for audit")
     func test_AC2_modelLoadError_encodesModelName() {
         let error = ModelLoaderActor.ModelLoadError.modelNotFound(
-            modelName: "MobileCLIP-B-lt_image",
-            resourceName: "MobileCLIP-B-lt_image.mlmodelc"
+            modelName: "SigLIP2BasePatch32.mlmodelc",
+            resourceName: "SigLIP2BasePatch32.mlmodelc"
         )
-        #expect(error.modelName == "MobileCLIP-B-lt_image", "AC-8: modelLoadFailed audit must encode modelName")
+        #expect(error.modelName == "SigLIP2BasePatch32.mlmodelc", "AC-8: modelLoadFailed audit must encode modelName")
         #expect(error.recoveryMethod == "systemSettings", "AC-8: recoveryMethod must be systemSettings")
     }
 
@@ -121,15 +121,15 @@ struct ModelLoaderActorTests {
     func test_AC3_onlyManualRetryPathExists() async {
         let sut = makeSUT()
         // Attempt to load a non-existent model
-        let _ = await sut.loadModel(.mobileCLIPImage)
-        let stateBefore = await sut.state(for: .mobileCLIPImage)
+        let _ = await sut.loadModel(.siglip2Vision)
+        let stateBefore = await sut.state(for: .siglip2Vision)
 
         // State should remain failed — no auto-retry has occurred
         if case .failed = stateBefore {
             // Now manually retry
-            let _ = await sut.retryLoadModel(.mobileCLIPImage)
+            let _ = await sut.retryLoadModel(.siglip2Vision)
             // Even after manual retry, if missing, it goes back to failed (no auto-retry loop)
-            let stateAfter = await sut.state(for: .mobileCLIPImage)
+            let stateAfter = await sut.state(for: .siglip2Vision)
             if case .failed = stateAfter {
                 #expect(Bool(true), "AC-3: No auto-retry — state stays failed until manual action")
             }
@@ -170,7 +170,7 @@ struct ModelLoaderActorTests {
     @Test("AC-5: loading state transitions: notLoaded → loading → loaded|failed")
     func test_AC5_stateTransition_notLoadedToLoadedOrFailed() async {
         let sut = makeSUT()
-        let initialState = await sut.state(for: .mobileCLIPImage)
+        let initialState = await sut.state(for: .siglip2Vision)
         if case .notLoaded = initialState {
             // expected
         } else {
@@ -179,13 +179,13 @@ struct ModelLoaderActorTests {
 
         // Load should transition from notLoaded to either loaded or failed
         // (model may or may not exist in test bundle)
-        let result = await sut.loadModel(.mobileCLIPImage)
+        let result = await sut.loadModel(.siglip2Vision)
         let isLoadedOrFailed = result.isLoaded || {
             if case .failed = result { return true }; return false
         }()
         #expect(isLoadedOrFailed, "AC-5: State should transition to loaded or failed, got \(result)")
 
-        let finalState = await sut.state(for: .mobileCLIPImage)
+        let finalState = await sut.state(for: .siglip2Vision)
         // Final state must match the returned result
         if case .loaded = finalState {
             #expect(result.isLoaded, "AC-5: Final state loaded must match returned result")
@@ -220,9 +220,9 @@ struct ModelLoaderActorTests {
 
     @Test("AC-6: ModelType is a fixed enum — no runtime model switching API")
     func test_AC6_modelTypesAreFixed() {
-        // ModelType is a fixed enum with exactly 6 cases — no dynamic model registry
+        // ModelType is a fixed enum with exactly 3 cases (v6.0) — no dynamic model registry
         let models = ModelLoaderActor.ModelType.allCases
-        #expect(models.count == 6)
+        #expect(models.count == 3)
         // No addModel/removeModel/switchModel API exists
         // Verified by: ModelType is an enum, not a protocol or class hierarchy
     }
@@ -232,7 +232,7 @@ struct ModelLoaderActorTests {
     @Test("AC-7: ModelLoadState.failed case provides human-readable description for UI")
     func test_AC7_failedState_hasUIDescription() async {
         let sut = makeSUT()
-        let result = await sut.loadModel(.mobileCLIPImage)
+        let result = await sut.loadModel(.siglip2Vision)
         if case .failed = result {
             #expect(!result.description.isEmpty, "AC-7: Failed state should have UI description")
         }
@@ -290,7 +290,7 @@ struct ModelLoaderActorTests {
             // Concurrently query state
             for _ in 0..<10 {
                 group.addTask {
-                    let _ = await sut.state(for: .senseVoiceGGUF)
+                    let _ = await sut.state(for: .whisperTiny)
                     let _ = await sut.overallStatus
                     let _ = await sut.isModelLoaded(.multilingualE5Small)
                 }
@@ -302,11 +302,11 @@ struct ModelLoaderActorTests {
 
     // MARK: - Load All Models
 
-    @Test("loadAllModels returns results for all 6 model types")
-    func test_loadAllModels_returnsAllSix() async {
+    @Test("loadAllModels returns results for all 3 model types")
+    func test_loadAllModels_returnsAllThree() async {
         let sut = makeSUT()
         let results = await sut.loadAllModels()
-        #expect(results.count == 6, "loadAllModels should return exactly 6 results")
+        #expect(results.count == 3, "loadAllModels should return exactly 3 results")
     }
 
     @Test("loadAllModels is idempotent — second call skips already-loaded/failed models")
