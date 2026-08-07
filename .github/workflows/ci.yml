@@ -208,7 +208,7 @@ jobs:
           xcodebuild build \
             -project Echo.xcodeproj \
             -scheme Echo \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -derivedDataPath DerivedData \
             2>&1 | tee build.log
         env:
@@ -221,7 +221,7 @@ jobs:
           xcodebuild test \
             -project Echo.xcodeproj \
             -scheme Echo \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
             -derivedDataPath DerivedData \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
