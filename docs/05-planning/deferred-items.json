@@ -739,7 +739,11 @@
       "location": "EchoShareExtension/ShareViewController.swift:114-120 (loadFileURL) + IngestPipeline.ingestSharedAudio (transcribe(audioTrackAssetId: envelope.payload))",
       "reason": "音频分享的信封 payload 存的是扩展进程沙盒内临时文件 URL（ADR-008 §决策-7 未把文件拷入 App Group 持久化），App 稍后消费时该 URL 已失效；且 ASREngineProtocol.transcribe 入参契约是 PHAsset.localIdentifier，与文件 URL 语义不符。语音摄入即使 Whisper（3F.3）就绪也无法成功。修复需在分享侧把文件复制到 App Group 容器持久定位符 + 调整 ASR 契约（3F.3 接入 Whisper 时一并设计），本次 PR 修复会造成跨任务契约反复。AC 表 US-SRC-001 voice 行已降级为 🔮。",
       "defer_to": "3F.3（Whisper 接入时重设计 ASR 文件输入契约）+ 3F.5（生产摄入接管文件分享持久化）",
-      "deferred_at": "2026-08-05"
+      "deferred_at": "2026-08-05",
+      "target_tasks": [
+        "3F.3b",
+        "3F.5"
+      ]
     },
     {
       "id": "DEF-51-003",
