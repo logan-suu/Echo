@@ -45,10 +45,21 @@ jobs:
       # ── Cache model assets (R-4.3) ──
       # Key on prepare_models.sh + checksums manifest so the cache invalidates
       # whenever the model list or pinned revisions change.
+      # IMPORTANT: only cache downloaded model weights — git-tracked source
+      # files under Echo/Resources/Models (model-manifest.json,
+      # siglip2-reference-vectors.json) must stay fresh from checkout. Caching
+      # the whole directory + prefix restore-keys caused stale manifest /
+      # reference-vector content to overwrite new source files (CI failure on
+      # PR #54).
       - name: Cache model assets
         uses: actions/cache@v4
         with:
-          path: Echo/Resources/Models
+          path: |
+            Echo/Resources/Models/siglip2-base-patch32-256
+            Echo/Resources/Models/*.gguf
+            Echo/Resources/Models/*.safetensors
+            Echo/Resources/Models/*.mlpackage
+            Echo/Resources/Models/*.mlmodelc
           key: ${{ runner.os }}-models-${{ hashFiles('Scripts/prepare_models.sh', 'Scripts/model_checksums.sha256') }}
           restore-keys: |
             ${{ runner.os }}-models-
