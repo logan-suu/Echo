@@ -1144,7 +1144,7 @@
             "US-SRC-011",
             "US-RET-001"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "On-device ML Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1187,7 +1187,7 @@
             "US-ING-005",
             "US-SRC-011"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "On-device ML Lead",
             "approver": "Model Legal and Privacy Approver"

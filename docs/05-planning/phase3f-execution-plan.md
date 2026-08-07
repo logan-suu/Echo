@@ -84,7 +84,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
 
 ### 4.2 任务记录
 
-`3F.0` 在人类显式授权的隔离 bootstrap branch 内把以下 12 个完整对象原子写入 `docs/05-planning/task-status.json`；这些对象在写入前不被视为已存在的 ledger tasks，`3F.0` 也不经过普通 `ready → in_progress` 选择。初始原子写入必须把 `3F.0.status` 设为 `in_progress`，其余 3F.1 至 3F.11 保持 `backlog`。`documents_required` 与 §4.6 同名任务合同的全部 Exact paths 集合完全相等；任何 tracked path 增删都必须同时修改两处。当前指令及其 Appendix C 是 `3F.0` 的内嵌 bootstrap content，不是 Exact path，也不进入 `documents_required` 或 Files 集合。显示对象中的 `last_updated: null` 是 JSON-safe invalid sentinel，不得写入最终 ledger；3F.0 在同一原子写入中把 12 个 sentinel 全部替换为同一个实际 UTC RFC 3339 时间，替换不完整则写入失败。docs-only 实现和验证完成后，3F.0 在 §6.2.2 前把自身从 `in_progress` 改为 `review` 并写新的实际 UTC 时间；安全敏感任务的 `owner` 同时写实现 owner 与强制 approver。以下 fenced blocks 各自是合法 JSON 数组；按出现顺序连接其数组元素，得到唯一的 12-record Phase 3F record set。
+`3F.0` 在人类显式授权的隔离 bootstrap branch 内把以下 12 个完整对象原子写入 `docs/05-planning/task-status.json`；这些对象在写入前不被视为已存在的 ledger tasks，`3F.0` 也不经过普通 `ready → in_progress` 选择。初始原子写入必须把 `3F.0.status` 设为 `in_progress`，其余 3F.1 至 3F.11 保持 `backlog`。`documents_required` 与 §4.6 同名任务合同的全部 Exact paths 集合完全相等；任何 tracked path 增删都必须同时修改两处。当前指令及其 Appendix C 是 `3F.0` 的内嵌 bootstrap content，不是 Exact path，也不进入 `documents_required` 或 Files 集合。显示对象中的 `last_updated: null` 是 JSON-safe invalid sentinel，不得写入最终 ledger；3F.0 在同一原子写入中把 12 个 sentinel 全部替换为同一个实际 UTC RFC 3339 时间，替换不完整则写入失败。docs-only 实现和验证完成后，3F.0 在 §6.2.2 前把自身从 `in_progress` 改为 `review` 并写新的实际 UTC 时间；安全敏感任务的 `owner` 同时写实现 owner 与强制 approver。以下 fenced blocks 各自是合法 JSON 数组；按出现顺序连接其数组元素，得到唯一的 Phase 3F record set（3F.0 bootstrap 原子写入 12 条；2026-08-07 拆分 3F.3 新增 3F.3a/3F.3b，当前为 14 条）。3F.3a/3F.3b 两条记录的 `last_updated` 由拆分规划 PR 一并替换为实际 UTC 时间，非 3F.0 sentinel 替换范围。
 
 ```
 [
@@ -139,7 +139,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
   {
     "id": "3F.3a", "title": "SigLIP2 Core ML 转换与视觉推理接入",
     "story": ["US-ING-004", "US-SRC-011", "US-RET-001"],
-    "status": "backlog", "owner": {"implementation": "On-device ML Lead", "approver": "Model Legal and Privacy Approver"},
+    "status": "ready", "owner": {"implementation": "On-device ML Lead", "approver": "Model Legal and Privacy Approver"},
     "documents_required": ["README.md", "docs/02-architecture/架构设计文档.md", "docs/02-architecture/技术选型文档.md", "docs/02-architecture/数据流全链路技术说明文档.md", "docs/03-implementation/双语言实现说明文档.md", "docs/03-implementation/开发避坑与关键注意点手册.md", "docs/decisions/ADR-009-offline-model-runtime.md", "docs/05-planning/model-provenance-register.md", "docs/05-planning/phase3f-execution-plan.md", "docs/05-planning/phase3f-story-matrix.md", "docs/05-planning/phase3f-evidence-index.md", "docs/05-planning/task-status.json", "docs/05-planning/deferred-items.json"],
 "dependencies": ["3F.0", "3F.3"], "test_file": "EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift",
     "acceptance_evidence": ["PyTorch→Core ML 转换 lineage + 固定 revision + SHA-256 登记（model-provenance-register §3）", "参考向量余弦相似度 > 0.995 验证（siglip2-reference-vectors.json 回填）", "四类门禁：法律、转换一致性、Echo 数据集实机评测、实体设备资源门禁", "SigLIP2Embedder 真实 embedImage 推理（768d，独立 vision generation）"],
@@ -148,7 +148,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
   {
     "id": "3F.3b", "title": "whisper.cpp 运行时接入与真实转写",
     "story": ["US-ING-003", "US-ING-005", "US-SRC-011"],
-    "status": "backlog", "owner": {"implementation": "On-device ML Lead", "approver": "Model Legal and Privacy Approver"},
+    "status": "ready", "owner": {"implementation": "On-device ML Lead", "approver": "Model Legal and Privacy Approver"},
     "documents_required": ["README.md", "docs/02-architecture/架构设计文档.md", "docs/02-architecture/技术选型文档.md", "docs/02-architecture/数据流全链路技术说明文档.md", "docs/03-implementation/双语言实现说明文档.md", "docs/03-implementation/开发避坑与关键注意点手册.md", "docs/decisions/ADR-009-offline-model-runtime.md", "docs/05-planning/model-provenance-register.md", "docs/05-planning/phase3f-execution-plan.md", "docs/05-planning/phase3f-story-matrix.md", "docs/05-planning/phase3f-evidence-index.md", "docs/05-planning/task-status.json", "docs/05-planning/deferred-items.json"],
 "dependencies": ["3F.0", "3F.3"], "test_file": "EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift",
     "acceptance_evidence": ["whisper.cpp 依赖白名单审批（AGENTS.md §2.2）+ SBOM/NOTICE/许可证登记", "NativeWhisperCInterop 实现（whisper_init_from_file + whisper_full），替代 UnavailableWhisperCInterop", "真实 16kHz mono PCM 转写，whisper-reference-transcripts.json 回填（CER/WER 阈值）", "GGUF SHA-256 与 model-provenance-register §2 一致性验证"],
@@ -242,7 +242,7 @@ Phase 3 保持 `done`，说明改为“UI 与可注入交互切片完成，不�
 - `US-SRC-007`: owned by `3F.7` for encrypted user-mediated migration package export/import, Finder/iTunes encrypted local-backup restore, merge/conflict/integrity/reingest/ExcludedAssets behavior and live Settings integration.
 - `US-SRC-009`: specification is merged into `US-SYS-001` with every original AC retained; owned jointly by `3F.7` for the live data-overview service, JSON export and Settings integration and `3F.10` for production error, localization and accessibility behavior. It is not deferred.
 - `US-SRC-010`: owned by `3F.6` for the search contract, `3F.8` for HealthKit-backed system adaptation, and `3F.11` for no-fixture production E2E. It is not deferred.
-- `US-SRC-011`: owned by `3F.3` for model semantics, `3F.6` for subjective ranking and feedback behavior, and Phase 4 `4.1` for Golden validation. It is not deferred.
+- `US-SRC-011`: owned by `3F.3` for model semantics (E5 reference outputs), `3F.3a` for SigLIP2 reference-vector verification, `3F.3b` for Whisper reference-transcript verification, `3F.6` for subjective ranking and feedback behavior, and Phase 4 `4.1` for Golden validation. It is not deferred.
 - `US-AWK-004` and `US-AWK-006`: remain the two explicit approved product deferrals represented by `DEF-001` and `DEF-002`; they count toward the 66-story matrix only through those approved records and are not silently absorbed into another task.
 - `3F.0` must materialize these ownership rows in `docs/05-planning/phase3f-story-matrix.md`; the matrix gate passes only when all 66 unique story IDs have at least one explicit owner or an approved non-v1 removal record. These four stories may not use the deferral path.
 
@@ -1409,7 +1409,7 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 
 ☐ Write failing runtime-linked, real-transcript, reference-CER/WER, GGUF-hash and DEF-51-002 contract tests. ☐ Set `FOCUSED_SUITE=EchoTests/WhisperRuntimeTests` and run the complete §6.1 focused command. Confirm RED against `runtimeNotLinked`. ☐ Obtain §2.2 dependency whitelist approval for whisper.cpp; add SPM/static-library dependency with SBOM/NOTICE/license registration. ☐ Implement `NativeWhisperCInterop`（Sendable-safe C 包装，禁止 `nonisolated(unsafe)`）; wire `WhisperRuntimeBridge.transcribe` to real inference; backfill reference transcripts with CER/WER verification. ☐ Run focused tests, model regressions, all `EchoTests`, Release builds, checksum/SBOM/license and network-denial gates. ☐ Complete every operation and acceptance check in §4.6.3b; update evidence index and model-provenance-register §2（`pending-runtime-integration` → approved）. Before §6.2.2, populate this task's exact §11.1 PR-body marker block, remove placeholders, pass extraction validation. ☐ Prepare registered worktree/branch `feature/phase3f-whisper-runtime-3F.3b` through §6.2.1; run the single §6.2.2 script with commit `feat(service): link whisper.cpp real transcription` and PR `feat(service): link whisper.cpp real transcription [3F.3b]`.
 
-**Expected evidence:** whisper.cpp linked and loaded in bundle; real transcript from 16kHz mono PCM; reference-transcript CER/WER within threshold; GGUF SHA-256 verified; DEF-51-002 closed; zero network requests.
+**Expected evidence:** whisper.cpp linked and loaded in bundle; real transcript from 16kHz mono PCM; reference-transcript CER/WER within threshold; GGUF SHA-256 verified; DEF-51-002 ASR 文件输入契约重设计关闭（App Group 持久化生产者路径由 3F.5 完成并验证 E2E）; zero network requests.
 
 ### 3F.4: Canonical storage 与 generation 生命周期
 
