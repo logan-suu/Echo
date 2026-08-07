@@ -177,8 +177,9 @@ class SigLIP2VisionEncoder(nn.Module):
         x = self.post_ln(x)                        # [B, 64, 768]
 
         # Head: multi-head attention pooling with learned probe token (SiglipMultiheadAttentionPoolingHead)
-        # 上游 HF 语义：probe 作为唯一 query，patch tokens x 作为 key/value（cross-attention），
-        # 而非 combined self-attention。CR-13 修复——两者数学不等价，combined 会改变 attention pattern。
+        # Upstream HF semantics: probe is the sole query, patch tokens x provide keys/values
+        # (cross-attention), NOT combined self-attention. CR-13 fix -- the two are not
+        # mathematically equivalent; combined self-attention changes the attention pattern.
         probe = self.probe.expand(B, -1, -1)       # [B, 1, 768]
         qkv_probe = self.head_attn_in(probe)        # [B, 1, 2304]
         qkv_x = self.head_attn_in(x)                # [B, 64, 2304]

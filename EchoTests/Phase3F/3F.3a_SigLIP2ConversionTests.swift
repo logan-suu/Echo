@@ -244,11 +244,11 @@ struct SigLIP2RealInferenceTests {
         }
     }
 
-    // C1 回归（PR review）：非方形图片（真实照片 4:3/3:4）不得崩溃
+    // C1 regression (PR review): non-square images (real photos 4:3/3:4) must not crash
     @Test("preprocess of non-square image yields exactly 3x256x256 (C1 regression)")
     func test_preprocess_nonSquareImage() async throws {
         let embedder = SigLIP2Embedder()
-        // 4:3 横图（真实照片常见比例）
+        // 4:3 landscape (common real-photo aspect ratio)
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 300))
         let landscape = renderer.image { ctx in
             UIColor.orange.setFill()
@@ -259,7 +259,7 @@ struct SigLIP2RealInferenceTests {
                 "Non-square preprocessing must produce exactly 3x256x256, got \(floats.count)")
     }
 
-    // C1 回归（PR review）：非方形图片完整推理不得崩溃
+    // C1 regression (PR review): full inference on non-square image must not crash
     @Test("embedImage of non-square image produces 768d embedding (C1 regression)")
     func test_embedImage_nonSquareImage() async throws {
         guard siglip2MLModelCAvailable() else { return }
@@ -327,14 +327,14 @@ struct SigLIP2FourGateTests {
 
     @Test("Gate 2 (Conversion): conversion script present")
     func test_gate2_conversion_script() {
-        let url = Bundle.main.url(forResource: "convert_siglip2", withExtension: "py")
-        if let url {
-            let content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-            #expect(content.contains("coremltools") || content.contains("CoreML"),
-                    "Conversion script must reference coremltools")
-            #expect(content.contains("sha256") || content.contains("hashlib"),
-                    "Conversion script must compute SHA-256 of output")
+        guard let content = try? conversionScriptContent() else {
+            Issue.record("convert_siglip2.py not found in repository — conversion script is a required resource")
+            return
         }
+        #expect(content.contains("coremltools") || content.contains("CoreML"),
+                "Conversion script must reference coremltools")
+        #expect(content.contains("sha256") || content.contains("hashlib"),
+                "Conversion script must compute SHA-256 of output")
     }
 
     @Test("Gate 2 (Conversion): conversion lineage recorded in provenance register")
@@ -401,29 +401,22 @@ struct SigLIP2ConversionScriptTests {
 
     @Test("convert_siglip2.py is non-empty and references coremltools")
     func test_script_syntax() throws {
-        if let scriptURL = Bundle.main.url(forResource: "convert_siglip2", withExtension: "py"),
-           let script = try? String(contentsOf: scriptURL, encoding: .utf8) {
-            #expect(!script.isEmpty, "Conversion script must not be empty")
-            #expect(script.contains("coremltools") || script.contains("CoreML"),
-                    "Conversion script must reference coremltools")
-            return
-        }
+        let script = try conversionScriptContent()
+        #expect(!script.isEmpty, "Conversion script must not be empty")
+        #expect(script.contains("coremltools") || script.contains("CoreML"),
+                "Conversion script must reference coremltools")
     }
 
     @Test("convert_siglip2.py records fixed revision")
     func test_script_hasRevision() throws {
-        guard let scriptURL = Bundle.main.url(forResource: "convert_siglip2", withExtension: "py"),
-              let script = try? String(contentsOf: scriptURL, encoding: .utf8)
-        else { return }
+        let script = try conversionScriptContent()
         #expect(script.contains("REVISION") || script.contains("revision") || script.contains("sha256"),
                 "Conversion script must track revision")
     }
 
     @Test("convert_siglip2.py includes SHA-256 output")
     func test_script_hasSha256() throws {
-        guard let scriptURL = Bundle.main.url(forResource: "convert_siglip2", withExtension: "py"),
-              let script = try? String(contentsOf: scriptURL, encoding: .utf8)
-        else { return }
+        let script = try conversionScriptContent()
         #expect(script.contains("sha256") || script.contains("hashlib") || script.contains("SHA256"),
                 "Conversion script must compute SHA-256 of output")
     }
@@ -448,7 +441,7 @@ struct SigLIP2ModelLoaderIntegrationTests {
     func test_modelType_siglip2Registered() async {
         let loader = ModelLoaderActor()
         let state = await loader.state(for: .siglip2Vision)
-        // 新 loader 的初始状态必须是 .notLoaded（AC-5 默认态），验证模型类型已注册可查询
+        // A fresh loader must start in .notLoaded (AC-5 default); proves the model type is registered and queryable
         if case .notLoaded = state {
             #expect(true)
         } else {
@@ -476,6 +469,20 @@ struct SigLIP2ModelLoaderIntegrationTests {
 }
 
 // MARK: - Helpers
+
+/// Reads Scripts/convert_siglip2.py from the repository working tree.
+///
+/// The script is a repo file, not a bundle resource, so it cannot be located
+/// via `Bundle.main` (CodeRabbit review: fail when the script is unavailable).
+private func conversionScriptContent() throws -> String {
+    let thisFile = URL(fileURLWithPath: #filePath)          // EchoTests/Phase3F/...
+    let repoRoot = thisFile
+        .deletingLastPathComponent()                        // Phase3F
+        .deletingLastPathComponent()                        // EchoTests
+        .deletingLastPathComponent()                        // repo root
+    let scriptURL = repoRoot.appendingPathComponent("Scripts/convert_siglip2.py")
+    return try String(contentsOf: scriptURL, encoding: .utf8)
+}
 
 private func cosineSimilarity(_ a: [Float], _ b: [Double]) -> Double {
     guard a.count == b.count, !a.isEmpty else { return 0 }
