@@ -1181,7 +1181,14 @@
             "in_progress_at": "2026-08-07T08:30:00Z",
             "review_at": "2026-08-07T08:45:00Z"
           },
-          "pr": null
+          "pr": {
+            "number": 54,
+            "url": "https://github.com/logan-suu/Echo/pull/54",
+            "head": "feature/phase3f-siglip2-conversion-3F.3a",
+            "base": "dev-1.0",
+            "created_at": "2026-08-07T08:48:00Z"
+          },
+          "migrated_from": []
         },
         {
           "id": "3F.3b",
