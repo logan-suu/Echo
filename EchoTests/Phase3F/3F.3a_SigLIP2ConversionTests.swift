@@ -30,13 +30,10 @@ private func siglip2MLModelCAvailable() -> Bool {
 @MainActor
 struct SigLIP2BundlePresenceTests {
 
-    @Test("SigLIP2 .mlmodelc is bundled (US-ING-004 AC-3)")
+    @Test("SigLIP2 .mlmodelc is bundled (US-ING-004 AC-3)",
+          .enabled(if: siglip2MLModelCAvailable()))
     func test_mlmodelc_bundled() {
         let url = Bundle.main.url(forResource: "SigLIP2BasePatch32", withExtension: "mlmodelc")
-        // Model artefact pending conversion; CI does not have .mlmodelc
-        if url == nil {
-            return
-        }
         #expect(url != nil, "SigLIP2BasePatch32.mlmodelc must be present in app bundle")
     }
 
@@ -100,7 +97,8 @@ struct SigLIP2ReferenceVectorTests {
         #expect(dict["modelId"] != nil, "modelId required")
         #expect((dict["modelId"] as? String) == "siglip2-base-patch32-256-v1")
 
-        guard let references = dict["references"] as? [[String: Any]] else {
+        guard let references = dict["samples"] as? [[String: Any]] else {
+            Issue.record("samples array missing from siglip2-reference-vectors.json")
             return
         }
         #expect(!references.isEmpty, "At least one reference vector required")
@@ -151,10 +149,10 @@ struct SigLIP2ReferenceVectorTests {
             Issue.record("siglip2-reference-vectors.json not found or invalid")
             return
         }
-        guard let blueRef = samples.first(where: { ($0["label"] as? String) == "solid_blue_224" }),
+        guard let blueRef = samples.first(where: { ($0["label"] as? String) == "solid_blue_256" }),
               let refEmbedding = blueRef["embedding"] as? [Double]
         else {
-            Issue.record("solid_blue_224 reference embedding missing — run Scripts/convert_siglip2.py first")
+            Issue.record("solid_blue_256 reference embedding missing — run Scripts/convert_siglip2.py first")
             return
         }
         let cosine = cosineSimilarity(embedding, refEmbedding)
@@ -329,8 +327,13 @@ struct SigLIP2FourGateTests {
 
     @Test("Gate 2 (Conversion): conversion script present")
     func test_gate2_conversion_script() {
-        if Bundle.main.url(forResource: "convert_siglip2", withExtension: "py") != nil {
-            _ = "bundled"
+        let url = Bundle.main.url(forResource: "convert_siglip2", withExtension: "py")
+        if let url {
+            let content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            #expect(content.contains("coremltools") || content.contains("CoreML"),
+                    "Conversion script must reference coremltools")
+            #expect(content.contains("sha256") || content.contains("hashlib"),
+                    "Conversion script must compute SHA-256 of output")
         }
     }
 
@@ -396,7 +399,7 @@ struct SigLIP2FourGateTests {
 @MainActor
 struct SigLIP2ConversionScriptTests {
 
-    @Test("convert_siglip2.py is syntactically valid Python 3")
+    @Test("convert_siglip2.py is non-empty and references coremltools")
     func test_script_syntax() throws {
         if let scriptURL = Bundle.main.url(forResource: "convert_siglip2", withExtension: "py"),
            let script = try? String(contentsOf: scriptURL, encoding: .utf8) {
@@ -445,8 +448,12 @@ struct SigLIP2ModelLoaderIntegrationTests {
     func test_modelType_siglip2Registered() async {
         let loader = ModelLoaderActor()
         let state = await loader.state(for: .siglip2Vision)
-        #expect(!state.isLoaded || state.isLoaded, "SigLIP2 model type must be registered")
-        _ = state
+        // 新 loader 的初始状态必须是 .notLoaded（AC-5 默认态），验证模型类型已注册可查询
+        if case .notLoaded = state {
+            #expect(true)
+        } else {
+            Issue.record("SigLIP2 initial state must be .notLoaded, got \(state)")
+        }
     }
 
     @Test("reportModelLoaded works with siglip2Vision type")

@@ -58,7 +58,7 @@ def sha256_file(path: str) -> str:
 
 def sha256_dir(path: str) -> str:
     h = hashlib.sha256()
-    for root, dirs, files in sorted(os.walk(path)):
+    for root, dirs, files in os.walk(path):
         dirs.sort()
         for fname in sorted(files):
             fp = os.path.join(root, fname)
@@ -176,27 +176,23 @@ class SigLIP2VisionEncoder(nn.Module):
         # Post layer-norm
         x = self.post_ln(x)                        # [B, 64, 768]
 
-        # Head: multi-head attention pooling with probe token
+        # Head: multi-head attention pooling with learned probe token (SiglipMultiheadAttentionPoolingHead)
+        # 上游 HF 语义：probe 作为唯一 query，patch tokens x 作为 key/value（cross-attention），
+        # 而非 combined self-attention。CR-13 修复——两者数学不等价，combined 会改变 attention pattern。
         probe = self.probe.expand(B, -1, -1)       # [B, 1, 768]
-        # Concatenate [probe, x]
-        combined = torch.cat([probe, x], dim=1)    # [B, 65, 768]
-
-        # Self-attention (probe attends to all patches)
-        qkv = self.head_attn_in(combined)          # [B, 65, 2304]
-        qkv = qkv.reshape(B, 65, 3, NUM_HEADS, EMBED_DIM // NUM_HEADS)
-        qkv = qkv.permute(2, 0, 3, 1, 4)          # [3, B, 12, 65, 64]
-        q, k, v = qkv[0], qkv[1], qkv[2]
+        qkv_probe = self.head_attn_in(probe)        # [B, 1, 2304]
+        qkv_x = self.head_attn_in(x)                # [B, 64, 2304]
+        q = qkv_probe[:, :, :EMBED_DIM].reshape(B, 1, NUM_HEADS, EMBED_DIM // NUM_HEADS).transpose(1, 2)
+        k = qkv_x[:, :, EMBED_DIM:2 * EMBED_DIM].reshape(B, 64, NUM_HEADS, EMBED_DIM // NUM_HEADS).transpose(1, 2)
+        v = qkv_x[:, :, 2 * EMBED_DIM:].reshape(B, 64, NUM_HEADS, EMBED_DIM // NUM_HEADS).transpose(1, 2)
 
         attn_weights = (q @ k.transpose(-2, -1)) * (EMBED_DIM // NUM_HEADS) ** -0.5
         attn_weights = F.softmax(attn_weights, dim=-1)
-        attn = attn_weights @ v
-        attn = attn.transpose(1, 2).reshape(B, 65, EMBED_DIM)
-        attn = self.head_attn_out(attn)            # [B, 65, 768]
+        attn = attn_weights @ v                      # [B, 12, 1, 64]
+        attn = attn.transpose(1, 2).reshape(B, 1, EMBED_DIM)
+        probe_out = self.head_attn_out(attn)         # [B, 1, 768]
 
-        # Take probe output only
-        probe_out = attn[:, 0:1, :]                 # [B, 1, 768]
-
-        # Residual + LayerNorm + MLP
+        # Residual + LayerNorm + MLP (upstream chain)
         probe_out = probe_out + probe               # residual
         probe_out = self.head_ln(probe_out)
         mlp_out = self.head_mlp_fc2(
@@ -293,11 +289,11 @@ def generate_reference_vectors(model: nn.Module) -> dict:
     """Generate deterministic reference vectors from 5 solid-color images."""
     model.eval()
     colors = {
-        "solid_red_224": (255, 0, 0),
-        "solid_green_224": (0, 255, 0),
-        "solid_blue_224": (0, 0, 255),
-        "solid_white_224": (255, 255, 255),
-        "solid_black_224": (0, 0, 0),
+        "solid_red_256": (255, 0, 0),
+        "solid_green_256": (0, 255, 0),
+        "solid_blue_256": (0, 0, 255),
+        "solid_white_256": (255, 255, 255),
+        "solid_black_256": (0, 0, 0),
     }
 
     samples = []
@@ -324,7 +320,7 @@ def generate_reference_vectors(model: nn.Module) -> dict:
             "Scripts/convert_siglip2.py from 5 solid-color 256×256 images. "
             "Compare Core ML runtime output for >0.995 cosine similarity."
         ),
-        "status": "pending-approval",
+        "status": "pending-evaluation",
         "samples": samples,
     }
 
@@ -408,7 +404,7 @@ def main():
         sha256 = sha256_dir(args.model_dir)
         name = os.path.basename(args.model_dir)
         print(f"\nSHA-256: {sha256}  {name}")
-        print(f"\nAdd this to Scripts/model_checksums.sha256:")
+        print("\nAdd this to Scripts/model_checksums.sha256:")
         print(f"{sha256}  {name}")
         return
 
@@ -454,7 +450,7 @@ def main():
     # Step 5: Compile to .mlmodelc
     mlmodelc_path = None
     if not args.no_compile:
-        print(f"\n[compile] Compiling .mlmodelc via xcrun coremlcompiler...")
+        print("\n[compile] Compiling .mlmodelc via xcrun coremlcompiler...")
         output_dir = os.path.dirname(mlpackage_path) or "."
         result = subprocess.run(
             ["xcrun", "coremlcompiler", "compile", mlpackage_path, output_dir],
@@ -470,7 +466,7 @@ def main():
                 print(f"[compile]  Compiled to: {mlmodelc_path}")
                 sha256 = sha256_dir(mlmodelc_path)
                 print(f"[compile]  SHA-256: {sha256}")
-                print(f"\n  Add this to Scripts/model_checksums.sha256:")
+                print("\n  Add this to Scripts/model_checksums.sha256:")
                 print(f"  {sha256}  {compiled_name}")
             else:
                 print(f"  WARNING: Expected {compiled_name} not found", file=sys.stderr)

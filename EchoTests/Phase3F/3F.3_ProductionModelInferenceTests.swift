@@ -286,11 +286,11 @@ struct SigLIP2PreprocessingTests {
 
     @Test("aspect-fit resize preserves aspect ratio (DEF-34-004)")
     func test_preprocess_aspectRatio() async throws {
-        // 纯 CG 处理单元测试：构造 512x512 方图（≥ crop 224），验证输出 224x224
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 512, height: 512))
+        // 纯 CG 处理单元测试：构造 512x288 非方图，验证 aspect-fit + center-crop 输出 256x256
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 512, height: 288))
         let image = renderer.image { ctx in
             UIColor.red.setFill()
-            ctx.fill(CGRect(x: 0, y: 0, width: 512, height: 512))
+            ctx.fill(CGRect(x: 0, y: 0, width: 512, height: 288))
         }
         let embedder = SigLIP2Embedder()
         let floats = try embedder.preprocess(image)

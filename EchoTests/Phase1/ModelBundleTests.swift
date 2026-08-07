@@ -76,6 +76,6 @@ struct ModelBundleTests {
         let siglip2 = try #require(models.first { ($0["modelId"] as? String)?.contains("siglip2") == true })
         let provenance = try #require(siglip2["provenance"] as? String)
         #expect(provenance == "pending-evaluation",
-                "SigLIP2 provenance must be 'pending-evaluation' after 3F.3a conversion complete (was pending-approval)")
+                "SigLIP2 provenance must be 'pending-evaluation' after 3F.3a conversion complete (was pending-conversion-and-approval)")
     }
 }
