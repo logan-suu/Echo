@@ -2,30 +2,37 @@
 // 文件: SigLIP2Embedder.swift
 // 对应规格: Echo dev-1.0 缺陷修复计划.md → Phase R-3.2
 //            调研报告 §6 (SigLIP2-B/32, Apache-2.0)
-// 任务: R-3.2 - SigLIP2-B/32 图像编码器（替代 MobileCLIP）
-// AC 覆盖: 图像预处理（resize 256→crop 224）、Core ML 推理、vision_dense generation
+// 任务: R-3.2 - SigLIP2-B/32 图像编码器（替代 MobileCLIP）; 3F.3a - Core ML 推理接入
+// AC 覆盖: 图像预处理（resize 256→crop 224）、Core ML 推理、vision_dense generation,
+//          US-ING-004 AC-3 (视觉 embedding), US-SRC-011 (参考向量验证)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (禁止网络下载)
-// 状态: scaffold — 需 Core ML 转换（PyTorch → coremltools）+ 模型文件
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-08-01
+// 生成时间: 2026-08-01 (3F.3a: 2026-08-07 接入真实 Core ML 推理)
 // ==========================================
 
 import Foundation
 @preconcurrency import CoreML
 @preconcurrency import UIKit
+import Photos
 
 // MARK: - SigLIP2 Embedder
 
-/// SigLIP2-B/32 图像编码器（R-3.2）— 替代 MobileCLIP（商业许可阻断）。
+/// SigLIP2-B/32-256 图像编码器（R-3.2 / 3F.3a）— 替代 MobileCLIP（商业许可阻断）。
 ///
-/// Apache-2.0 许可工件，约 1.5GB。需自转换 Core ML（PyTorch → coremltools）。
-/// 输出写入独立的 `vision_dense/siglip2-v1` generation。
+/// Apache-2.0 许可工件，约 180MB（.mlmodelc）。通过 `Scripts/convert_siglip2.py` 完成
+/// PyTorch→coremltools→Core ML 转换，`.mlmodelc` 随 Bundle 分发（R-005）。
+/// 输出写入独立的 `vision_dense/siglip2-v1` generation（ADR-009 决策 1 空间分离）。
 ///
-/// ## 当前状态
-/// Scaffold — 需要：
-/// 1. Core ML 转换：PyTorch checkpoint → coremltools → `.mlmodelc`
-/// 2. 参考向量验证（与 HuggingFace 输出余弦相似度 > 0.995）
-/// 3. 模型文件放入 Bundle
+/// ## 推理流程
+/// 1. PHAsset → UIImage（PhotoKit）
+/// 2. `preprocess()`: 方向矫正 → aspect-fit resize（最短边 256）→ center-crop 256 → normalize
+/// 3. Core ML 推理 → 768d 视觉向量
+/// 4. L2 归一化 → 返回 768d Float 数组
+///
+/// ## 模型契约
+/// - 输入：`pixel_values`（Float32 [1, 3, 256, 256], NCHW, 归一化 [-1, 1]）
+/// - 输出：`embeddings`（Float16 [1, 768]，probe-token attention pooling + L2 归一化）
+/// - 模型文件 `SigLIP2BasePatch32.mlmodelc` 随 App Bundle 分发（R-005）
 public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - Constants
@@ -35,12 +42,15 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     /// 预处理：输入尺寸
     private nonisolated static let inputSize = CGSize(width: 256, height: 256)
-    /// 预处理：center crop 尺寸
-    private nonisolated static let cropSize = CGSize(width: 224, height: 224)
+    /// 预处理：center crop 尺寸（siglip2-base-patch32-256 输入即 256×256）
+    private nonisolated static let cropSize = CGSize(width: 256, height: 256)
     /// 预处理：归一化均值
     private nonisolated static let normalizeMean: [Float] = [0.5, 0.5, 0.5]
     /// 预处理：归一化标准差
     private nonisolated static let normalizeStd: [Float] = [0.5, 0.5, 0.5]
+
+    /// Bundle 中 Core ML 模型资源名（siglip2-base-patch32-256，输入 256×256，输出 768d）
+    private nonisolated static let modelResourceName = "SigLIP2BasePatch32"
 
     // MARK: - Properties
 
@@ -55,17 +65,16 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - EmbedderProtocol
 
-    /// 对图像生成 SigLIP2 嵌入向量。
+    /// 对 PHAsset 图像生成 SigLIP2 嵌入向量（768d）。
+    ///
+    /// 流程：PHAsset → UIImage → preprocess → Core ML inference → L2 normalize。
     ///
     /// - Parameter assetId: PHAsset.localIdentifier
-    /// - Returns: 768d 浮点向量
+    /// - Returns: 768d L2 归一化浮点向量
+    /// - Throws: `EmbedderError` 若模型未加载、图像不可用或推理失败
     public func embedImage(assetId: String) async throws -> [Float] {
-        // TODO (R-3.2): PHAsset → UIImage → preprocess → Core ML inference
-        // 1. let image = try await loadPHAsset(assetId)
-        // 2. let preprocessed = try preprocess(image)
-        // 3. let model = try await resolveModel()
-        // 4. return try await performInference(preprocessed, model: model)
-        throw EmbedderError.modelNotLoaded
+        let image = try await loadImage(from: assetId)
+        return try await embedImage(from: image)
     }
 
     /// SigLIP2 不处理文本——文本嵌入由 E5Embedder（R-3.1）负责。
@@ -75,11 +84,168 @@ public actor SigLIP2Embedder: EmbedderProtocol {
         )
     }
 
+    // MARK: - Image Embedding (Internal)
+
+    /// 直接从 UIImage 生成嵌入向量（测试与流水线入口）。
+    public func embedImage(from image: UIImage) async throws -> [Float] {
+        let preprocessed = try preprocess(image)
+        return try await runInference(preprocessedArray: preprocessed)
+    }
+
+    // MARK: - PHAsset Loading
+
+    /// 从 PHAsset 加载 UIImage。
+    private nonisolated func loadImage(from assetId: String) async throws -> UIImage {
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
+        guard let asset = fetchResult.firstObject else {
+            throw EmbedderError.assetUnavailable(assetId: assetId)
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.isSynchronous = false
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = false
+
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: PHImageManagerMaximumSize,
+                contentMode: .aspectFit,
+                options: options
+            ) { image, info in
+                if let isDegraded = info?[PHImageResultIsDegradedKey] as? Bool, isDegraded {
+                    return
+                }
+                if (info?[PHImageCancelledKey] as? Bool) == true {
+                    continuation.resume(
+                        throwing: EmbedderError.assetUnavailable(assetId: assetId)
+                    )
+                    return
+                }
+                guard let image = image else {
+                    continuation.resume(
+                        throwing: EmbedderError.assetUnavailable(assetId: assetId)
+                    )
+                    return
+                }
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
+    // MARK: - Core ML Inference
+
+    /// 解析 MLModel（惰性加载，首次使用后缓存）。
+    ///
+    /// `.mlmodelc` 是已编译模型，直接 `MLModel.load`；`MLModel.compileModel`
+    /// 仅用于未编译的 `.mlpackage`（E5 路径）。对 `.mlmodelc` 调用
+    /// `compileModel` 会导致 Core ML 尝试重新编译而报
+    /// "A valid manifest does not exist" 错误（3F.3a 实测）。
+    private func resolveModel() async throws -> MLModel {
+        if let cached = cachedModel {
+            return cached
+        }
+
+        guard let modelURL = await modelLoader.getModelBundleURL(.siglip2Vision) else {
+            throw EmbedderError.modelNotLoaded
+        }
+
+        let config = MLModelConfiguration()
+        config.computeUnits = .cpuOnly
+        let model: MLModel
+        do {
+            if modelURL.pathExtension == "mlpackage" {
+                let compiledURL = try await MLModel.compileModel(at: modelURL)
+                model = try await MLModel.load(contentsOf: compiledURL, configuration: config)
+            } else {
+                model = try await MLModel.load(contentsOf: modelURL, configuration: config)
+            }
+        } catch {
+            await modelLoader.reportModelLoadFailed(
+                .siglip2Vision,
+                error: .loadFailed(
+                    modelName: "SigLIP2",
+                    resourceName: modelURL.lastPathComponent,
+                    underlying: error
+                )
+            )
+            throw EmbedderError.modelNotLoaded
+        }
+
+        await modelLoader.reportModelLoaded(.siglip2Vision)
+        self.cachedModel = model
+        return model
+    }
+
+    /// 执行 Core ML 推理。
+    private func runInference(preprocessedArray preprocessed: [Float]) async throws -> [Float] {
+        let model = try await resolveModel()
+
+        // 显式命名输入/输出（convert_siglip2.py 固定契约），避免字典无序 .first
+        let inputName = "pixel_values"
+        let outputName = "embeddings"
+        guard model.modelDescription.inputDescriptionsByName[inputName] != nil else {
+            throw EmbedderError.inferenceFailed(
+                underlying: NSError(domain: "SigLIP2Embedder", code: -1,
+                                    userInfo: [NSLocalizedDescriptionKey: "Input '\(inputName)' not found"])
+            )
+        }
+
+        let shaped = MLShapedArray<Float>(
+            scalars: preprocessed,
+            shape: [1, 3, 256, 256]
+        )
+        let provider = try MLDictionaryFeatureProvider(
+            dictionary: [inputName: MLMultiArray(shaped)]
+        )
+
+        let prediction = try await model.prediction(from: provider)
+
+        guard let output = prediction.featureValue(for: outputName)?.multiArrayValue else {
+            throw EmbedderError.inferenceFailed(
+                underlying: NSError(domain: "SigLIP2Embedder", code: -2,
+                                    userInfo: [NSLocalizedDescriptionKey: "Output '\(outputName)' not found"])
+            )
+        }
+
+        return try extractEmbedding(from: output)
+    }
+
+    /// 从 MLMultiArray 提取嵌入向量。
+    ///
+    /// SigLIP2-B/32-256 Core ML 输出形状为 `[1, 768]`（probe token 池化 + L2 归一化）。
+    private func extractEmbedding(from output: MLMultiArray) throws -> [Float] {
+        let shape = output.shape.map { $0.intValue }
+
+        guard shape == [1, 768] else {
+            throw EmbedderError.dimensionMismatch(
+                expected: 768,
+                got: shape.last ?? 0
+            )
+        }
+
+        var embedding = [Float](repeating: 0, count: 768)
+        for i in 0..<768 {
+            embedding[i] = Float(truncating: output[i])
+        }
+        return l2Normalize(embedding)
+    }
+
+    // MARK: - L2 Normalization
+
+    /// L2 归一化：将向量缩放至单位长度。
+    private nonisolated func l2Normalize(_ vector: [Float]) -> [Float] {
+        let sumSq = vector.reduce(0) { $0 + $1 * $1 }
+        let norm = sqrt(sumSq)
+        guard norm > 0 else { return vector }
+        return vector.map { $0 / norm }
+    }
+
     // MARK: - Image Preprocessing
 
-    /// 图像预处理：方向矫正 → resize → center crop → normalize。
+    /// 图像预处理：方向矫正 → aspect-fit resize 256 → center-crop 256 → normalize。
     ///
-    /// SigLIP2 要求 224×224 输入，归一化 mean=[0.5,0.5,0.5] std=[0.5,0.5,0.5]。
+    /// SigLIP2-B/32-256 要求 256×256 输入，归一化 mean=[0.5,0.5,0.5] std=[0.5,0.5,0.5]。
     ///
     /// DEF-34-004 修复：
     /// 1. 尊重 `image.imageOrientation`（EXIF 方向），避免旋转后语义错误
@@ -104,11 +270,16 @@ public actor SigLIP2Embedder: EmbedderProtocol {
 
     // MARK: - Core Graphics Utilities
 
-    /// 等比缩放（aspect-fit），保持宽高比，长边缩放到 maxDimension。
+    /// 等比缩放（aspect-fit），保持宽高比，**最短边**缩放到 maxDimension。
+    ///
+    /// 用 `max(scaleW, scaleH)` 保证缩放后最短边恰好为 maxDimension、
+    /// 长边 ≥ maxDimension，使后续 center-crop(maxDimension) 永不越界。
+    /// （若用 `min` 则短边 < maxDimension，crop 越界返回交集，
+    /// 输出非 3×256×256，`MLShapedArray` scalars 数量不匹配 → 崩溃。C1 修复。）
     private nonisolated func aspectFitCGImage(_ image: CGImage, maxDimension: CGFloat) throws -> CGImage {
         let width = CGFloat(image.width)
         let height = CGFloat(image.height)
-        let scale = min(maxDimension / width, maxDimension / height)
+        let scale = max(maxDimension / width, maxDimension / height)
         let targetSize = CGSize(width: width * scale, height: height * scale)
         guard let context = CGContext(
             data: nil,
@@ -130,12 +301,14 @@ public actor SigLIP2Embedder: EmbedderProtocol {
     }
 
     private nonisolated func centerCropCGImage(_ image: CGImage, to size: CGSize) throws -> CGImage {
-        let cropRect = CGRect(
-            x: (CGFloat(image.width) - size.width) / 2,
-            y: (CGFloat(image.height) - size.height) / 2,
-            width: size.width,
-            height: size.height
-        )
+        // 整数坐标 + clamp，保证输出恒为 size（浮点 cropRect 取整会导致 256×257 等错位尺寸，C1）
+        let imageW = image.width
+        let imageH = image.height
+        let cropW = Int(size.width)
+        let cropH = Int(size.height)
+        let x = min(max(0, (imageW - cropW) / 2), max(0, imageW - cropW))
+        let y = min(max(0, (imageH - cropH) / 2), max(0, imageH - cropH))
+        let cropRect = CGRect(x: x, y: y, width: min(cropW, imageW - x), height: min(cropH, imageH - y))
         guard let cropped = image.cropping(to: cropRect) else {
             throw EmbedderError.preprocessingFailed(reason: "Failed to center-crop image")
         }
