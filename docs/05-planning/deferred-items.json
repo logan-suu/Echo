@@ -822,7 +822,7 @@
       "title": "CreationUITests.test_promptEditorConfirm 间歇性 UI 时序失败（CI 环境）",
       "severity": "🟡",
       "location": "EchoUITests/CreationUITests.swift:115 (XCTAssertFalse(editor.exists))",
-      "reason": "3F.3b CI 连续两次 Build, Lint & Test 均因此测试失败；本机重跑通过（17.1s）、dev-1.0 基线 CI（run 31274921544）33/33 通过。3F.3b 未触碰任何 UI/ViewModel/AppDelegate 代码（git diff 为空），app 体积仅 +38MB（GGUF 30.7MB + framework 7.2MB）不足以解释 5s 时序超时。判定为 XCUITest 间歇性 flaky（confirm tap 后编辑器关闭动画在 CI 慢环境延迟），非 3F.3b 引入缺陷。",
+      "reason": "3F.3b CI 连续两次 Build, Lint & Test 均因此测试失败；本机重跑通过（17.1s）、dev-1.0 基线 CI（run 31274921544）33/33 通过。3F.3b 未触碰任何 UI/ViewModel/AppDelegate 代码（git diff 为空），app 体积仅 +38MB（GGUF 30.7MB + framework 7.2MB）不足以解释 5s 时序超时。判定为 XCUITest 间歇性 flaky（confirm tap 后编辑器关闭动画在 CI 慢环境延迟），非 3F.3b 引入缺陷。 | 补充证据（2026-08-09）：dev-1.0 基线手动 CI（run 31301787630）同样失败，但失败于 MemoryDetailMediaUITests.test_voiceMediaPreview（XCTAssertEqual Play→Pause 时序断言），CreationUITests 通过；dev-1.0 8-05 run 31031217183 亦失败于同一 MemoryDetail 测试。证明 Echo 存在多个间歇性 UI 时序 flaky（Creation/Media 交替），与 3F.3b 无关（3F.3b 零 UI 改动、本机 3/3 通过）。",
       "defer_to": "3F.7 UI→Core 全域接线时一并加固 UI 测试时序断言（waitForExistence 替换裸 exists）",
       "deferred_at": "2026-08-09"
     }
