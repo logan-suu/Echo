@@ -376,10 +376,12 @@ public actor GenerationRegistryActor {
         )
         writes.append(routeUpsertWrite(route))
 
+        // 数据流:522 (CodeRabbit): 先持久化 store 再发布路由 — 若持久化失败则抛错，
+        // 路由不发布，避免「active route 指向无 durable store 的 generation」（重启后检索失效）
+        try await persistStore(generationId: generationId)
+
         // F-2: 状态迁移 + 路由发布合并为单个 SQLite 事务，原子提交（无跨挂起点窗口）
         _ = try await db.executeTransaction(writes)
-
-        try await persistStore(generationId: generationId)
         return route
     }
 
@@ -430,15 +432,16 @@ public actor GenerationRegistryActor {
         )
         writes.append(routeUpsertWrite(route))
 
-        // F-2: 状态迁移 + 路由发布合并为单个 SQLite 事务，原子提交（无跨挂起点窗口）
-        _ = try await db.executeTransaction(writes)
-
-        // CR-7: 回滚目标 store 若未加载（如重启后仅 restoreActiveRoute 恢复 active 代），
-        // 先恢复内存实例再持久化，避免 persistStore 静默空转导致回滚后无向量可检索
+        // CR-7 + 数据流:522: 回滚目标 store 若未加载（如重启后仅 restoreActiveRoute 恢复 active 代），
+        // 先恢复内存实例，并在发布路由前持久化 — 持久化失败则路由不发布，
+        // 避免「回滚后路由指向无 durable store 的 generation」
         guard try await restoreStoreIfNeeded(previousId) else {
             throw GenerationError.routeValidationFailed(reason: "rollback target generation missing: \(previousId)")
         }
         try await persistStore(generationId: previousId)
+
+        // F-2: 状态迁移 + 路由发布合并为单个 SQLite 事务，原子提交（无跨挂起点窗口）
+        _ = try await db.executeTransaction(writes)
         return route
     }
 

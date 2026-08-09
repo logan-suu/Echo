@@ -466,6 +466,56 @@ struct CanonicalGenerationTests {
             #expect(try await registry.loadActiveRoute() != nil)
             #expect(success >= 1)
         }
+
+        @Test("commit persists vectors so restart does not lose them (CR-147)")
+        func test_commit_persists_vectors_across_restart() async throws {
+            let registry1 = makeRegistry()
+            try await registry1.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+            try await registry1.setGenerationState("text_dense/e5-v1", state: .ready)
+            try await registry1.setGenerationState("text_dense/e5-v1", state: .active)
+
+            let repo1 = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry1)
+            let memoryId = UUID()
+            let memory = Memory(
+                memoryId: memoryId,
+                sourceLocator: "PHAsset/persist-1",
+                canonicalText: "persisted across restart",
+                sourceType: "photo"
+            )
+            try await repo1.commit(
+                memory: memory,
+                representations: [],
+                vectorsByGeneration: ["text_dense/e5-v1": [CanonicalVectorEntry(id: memoryId, vector: Array(repeating: 0.7, count: 384))]],
+                traceID: "t-persist"
+            )
+
+            // commit 内部已持久化：磁盘 .pxkt 存在且含该向量（无路由也可直接加载验证）
+            let url = await registry1.storeFileURL(for: "text_dense/e5-v1")
+            #expect(FileManager.default.fileExists(atPath: url.path))
+            let diskStore = try VectorStoreActor.load(from: url)
+            #expect(await diskStore.liveCount == 1)
+
+            try? await registry1.removeStoreFile(generationId: "text_dense/e5-v1")
+        }
+
+        @Test("activateGeneration persists store before publishing route (数据流:522)")
+        func test_activate_persists_before_publish() async throws {
+            let registry = makeRegistry()
+            try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+            try await registry.finishShadowBuild("text_dense/e5-v1", counts: 3, validationDigest: "d1")
+            _ = try await registry.activateGeneration("text_dense/e5-v1")
+
+            // 激活即持久化：磁盘 .pxkt 存在，且新实例可恢复该代 store
+            let url = await registry.storeFileURL(for: "text_dense/e5-v1")
+            #expect(FileManager.default.fileExists(atPath: url.path))
+
+            let registry2 = makeRegistry()
+            let restored = try await registry2.restoreActiveRoute()
+            #expect(restored?.textGeneration == "text_dense/e5-v1")
+            #expect(await registry2.vectorStore(for: "text_dense/e5-v1") != nil)
+
+            try? await registry2.removeStoreFile(generationId: "text_dense/e5-v1")
+        }
     }
 
     // MARK: - 反馈 generation 身份

@@ -131,6 +131,11 @@ public actor CanonicalMemoryRepositoryActor {
                     try await store.ingest(vector: entry.vector, id: entry.id, metadata: entry.metadata)
                 }
             }
+            // CR-147 (CodeRabbit): 持久化受影响 generation 的 store，保证重启后向量不丢失
+            // （canonical 行/FTS 已提交，若 .pxkt 磁盘副本无新向量，重启后语义检索失效）
+            for generationId in vectorsByGeneration.keys {
+                try await generationRegistry.persistStore(generationId: generationId)
+            }
         } catch {
             // 补偿回滚：删除已写向量 + canonical 行
             for (generationId, entries) in vectorsByGeneration {
