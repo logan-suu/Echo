@@ -2,13 +2,17 @@
 // 文件: GenerationRegistryActor.swift
 // 对应规格: Echo dev-1.0 缺陷修复计划.md → Phase R-A.3 (IndexGeneration) + R-A.4 (ActiveRouteSet)
 //            调研报告 §15.1 (数据模型: IndexGeneration / ActiveRouteSet) §16 (迁移与回滚)
+//            docs/decisions/ADR-010-canonical-generation-lifecycle.md 决策-2/3
 // 任务: R-A.3/R-A.4 - 分代索引管理 + 原子服务路由
+//      3F.4 - generation 生命周期（shadow build / 原子发布 / 回滚 / 重启恢复 / 持久化）
 // AC 覆盖: registerGeneration, setState, loadGenerations, buildItem CRUD,
 //          publishRoute, loadActiveRoute, validateRoute, fallback (回退最近有效 route)
+//          3F.4: finishShadowBuild, activateGeneration, rollbackToPrevious,
+//          restoreActiveRoute, persistStore, removeStoreFile
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007/R-008,
 //           AGENTS.md §4.5 (断点续传), §4.3 (长任务串行)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-07-31
+// 生成时间: 2026-07-31 | 更新: 2026-08-09 (3F.4 生命周期)
 // ==========================================
 
 import Foundation
@@ -38,11 +42,40 @@ public actor GenerationRegistryActor {
     private let db: DatabaseManager
     /// generationId → VectorStoreActor 实例（内存态，构建时注册）
     private var storeInstances: [String: VectorStoreActor] = [:]
+    /// 每代索引文件的持久化目录（3F.4：重启恢复）
+    private let storeDirectory: URL
 
     // MARK: - Initialization
 
-    init(db: DatabaseManager = .shared) {
+    init(db: DatabaseManager = .shared, storeDirectory: URL? = nil) {
         self.db = db
+        if let storeDirectory {
+            self.storeDirectory = storeDirectory
+        } else {
+            let appSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first!
+            let echoDir = appSupport.appendingPathComponent("Echo", isDirectory: true)
+            self.storeDirectory = echoDir.appendingPathComponent("generations", isDirectory: true)
+        }
+    }
+
+    /// 单个 generation 索引文件的 URL（`<dir>/<generationId>.pxkt`，ID 中的 `/` 替换为 `_`）。
+    public func storeFileURL(for generationId: String) -> URL {
+        let safeName = generationId.replacingOccurrences(of: "/", with: "_")
+        return storeDirectory.appendingPathComponent("\(safeName).pxkt")
+    }
+
+    /// 持久化指定 generation 的向量存储到磁盘（3F.4 重启恢复）。
+    public func persistStore(generationId: String) async throws {
+        guard let store = storeInstances[generationId] else { return }
+        try FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
+        try await store.save(to: storeFileURL(for: generationId))
+    }
+
+    /// 删除指定 generation 的持久化索引文件（测试/清理用）。
+    public func removeStoreFile(generationId: String) async throws {
+        try? FileManager.default.removeItem(at: storeFileURL(for: generationId))
     }
 
     // MARK: - R-A.3: IndexGeneration Management
@@ -51,11 +84,17 @@ public actor GenerationRegistryActor {
     ///
     /// - Parameter generation: 分代元数据（含 dimension）
     public func registerGeneration(_ generation: IndexGeneration) async throws {
-        // W-6: 内存实例生命周期 — App 重启后 storeInstances 为空。
-        // 若该 generation 已有持久化 .pxkt 文件，应改用 VectorStoreActor.load(from:)
-        // 恢复而非重建空索引。磁盘路径约定与恢复逻辑在 Phase R-3 分代持久化落地时实现。
+        // W-6 → 3F.4 修复：若存在持久化 .pxkt 文件，用 load(from:) 恢复内存实例，
+        // 否则新建空索引。维度不匹配时视为损坏，重建空索引（不可混代服务）。
         if storeInstances[generation.generationId] == nil {
-            storeInstances[generation.generationId] = VectorStoreActor(dimension: generation.dimension)
+            let url = storeFileURL(for: generation.generationId)
+            if FileManager.default.fileExists(atPath: url.path),
+               let restored = try? VectorStoreActor.load(from: url),
+               restored.dimension == generation.dimension {
+                storeInstances[generation.generationId] = restored
+            } else {
+                storeInstances[generation.generationId] = VectorStoreActor(dimension: generation.dimension)
+            }
         }
         _ = try await db.executeWrite(
             sql: """
@@ -234,8 +273,8 @@ public actor GenerationRegistryActor {
         _ = try await db.executeWrite(
             sql: """
             INSERT OR REPLACE INTO ActiveRouteSet (
-                id, textGeneration, ocrGeneration, visionGeneration, lexicalGeneration, version, updatedAt
-            ) VALUES (1, ?, ?, ?, ?, ?, ?)
+                id, textGeneration, ocrGeneration, visionGeneration, lexicalGeneration, version, updatedAt, previousTextGeneration
+            ) VALUES (1, ?, ?, ?, ?, ?, ?, ?)
             """,
             bindings: [
                 .text(route.textGeneration),
@@ -244,8 +283,105 @@ public actor GenerationRegistryActor {
                 route.lexicalGeneration.map(DBBinding.text) ?? .null,
                 .int(Int64(route.version)),
                 .double(route.updatedAt.timeIntervalSince1970),
+                route.previousTextGeneration.map(DBBinding.text) ?? .null,
             ]
         )
+    }
+
+    // MARK: - 3F.4: Generation Lifecycle (ADR-010 决策-2/3)
+
+    /// 完成 shadow build：将 generation 置为 `.ready`（ADR-010 决策-2）。
+    @discardableResult
+    public func finishShadowBuild(
+        _ generationId: String,
+        counts: Int,
+        validationDigest: String?
+    ) async throws -> Bool {
+        try await setGenerationState(generationId, state: .ready, counts: counts, validationDigest: validationDigest)
+    }
+
+    /// 原子发布：将指定 generation 提升为 active 并发布路由。
+    ///
+    /// - 旧 active 降级为 `.ready`（保留为回滚目标），新 generation 置 `.active`
+    /// - 路由版本递增，`previousTextGeneration` 记录旧 active
+    /// - 发布前校验 generation 存在且非 `.building`（禁止混代 route）
+    /// - Returns: 发布后的活跃路由
+    @discardableResult
+    public func activateGeneration(_ generationId: String) async throws -> ActiveRouteSet {
+        guard let generation = try await loadGeneration(generationId) else {
+            throw GenerationError.routeValidationFailed(reason: "generation missing: \(generationId)")
+        }
+        guard generation.state != .building else {
+            throw GenerationError.routeValidationFailed(reason: "generation still building: \(generationId)")
+        }
+
+        let previous = try await loadActiveRoute()
+        if let previous, previous.textGeneration != generationId {
+            _ = try await setGenerationState(previous.textGeneration, state: .ready)
+        }
+
+        _ = try await setGenerationState(generationId, state: .active)
+        try await persistStore(generationId: generationId)
+
+        let route = ActiveRouteSet(
+            textGeneration: generationId,
+            version: (previous?.version ?? 0) + 1,
+            previousTextGeneration: previous?.textGeneration
+        )
+        try await publishRoute(route)
+        return route
+    }
+
+    /// 回滚到前一活跃 generation（ADR-010 决策-3：旧代可回滚）。
+    ///
+    /// - 当前 active 降级为 `.ready`，`previousTextGeneration` 指向的旧代置 `.active`
+    /// - 无 previous 时返回 nil（无可回滚目标）
+    /// - Returns: 回滚后的活跃路由，或 nil
+    @discardableResult
+    public func rollbackToPrevious() async throws -> ActiveRouteSet? {
+        guard let current = try await loadActiveRoute(),
+              let previousId = current.previousTextGeneration,
+              let previous = try await loadGeneration(previousId),
+              previous.state != .building else {
+            return nil
+        }
+
+        _ = try await setGenerationState(current.textGeneration, state: .ready)
+        _ = try await setGenerationState(previousId, state: .active)
+        try await persistStore(generationId: previousId)
+
+        let route = ActiveRouteSet(
+            textGeneration: previousId,
+            version: current.version + 1,
+            previousTextGeneration: current.textGeneration
+        )
+        try await publishRoute(route)
+        return route
+    }
+
+    /// 重启恢复：加载持久化 active route，并为路由引用的 generation 恢复内存存储实例。
+    ///
+    /// - 存储实例优先从磁盘 `.pxkt` 恢复；维度不匹配或文件缺失时重建空索引
+    /// - 路由引用的 generation 缺失 → 返回 nil（调用方走降级/重建）
+    /// - Returns: 恢复的活跃路由，或 nil
+    public func restoreActiveRoute() async throws -> ActiveRouteSet? {
+        guard let route = try await loadActiveRoute() else { return nil }
+        for generationId in route.allGenerationIDs {
+            if storeInstances[generationId] == nil {
+                guard let generation = try await loadGeneration(generationId) else {
+                    return nil
+                }
+                let url = storeFileURL(for: generationId)
+                if FileManager.default.fileExists(atPath: url.path),
+                   let restored = try? VectorStoreActor.load(from: url),
+                   restored.dimension == generation.dimension {
+                    storeInstances[generationId] = restored
+                } else {
+                    storeInstances[generationId] = VectorStoreActor(dimension: generation.dimension)
+                }
+            }
+        }
+        return route
     }
 
     /// 加载当前活跃路由。
@@ -343,7 +479,8 @@ public actor GenerationRegistryActor {
             visionGeneration: row["visionGeneration"]?.stringValue,
             lexicalGeneration: row["lexicalGeneration"]?.stringValue,
             version: Int(row["version"]?.intValue ?? 1),
-            updatedAt: Date(timeIntervalSince1970: row["updatedAt"]?.doubleValue ?? 0)
+            updatedAt: Date(timeIntervalSince1970: row["updatedAt"]?.doubleValue ?? 0),
+            previousTextGeneration: row["previousTextGeneration"]?.stringValue
         )
     }
 }

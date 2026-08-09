@@ -4,6 +4,8 @@
 **日期**: 2026-08-04
 **决策人**: Privacy Engineering Lead（审批）+ Storage Architecture Lead（实现）
 
+> ✅ **3F.4 落地（2026-08-09）**：决策 1/2/3/4/5/7 已实现并有测试证据（`EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift`，18 用例；全量 883 测试 0 失败）。决策 6（迁移发布子契约）由 3F.7 US-SRC-007 与 ADR-008 共同管辖，本任务不实现迁移包格式。
+
 ## 背景
 
 基线中 ING-006（canonical 事务性 vector/text/FTS 提交、故障注入回滚、事务审计路径）完全未映射；384→512 填充与单 store 生产路由存在（须删除）；`GenerationRegistryActor`/`ActiveRouteSet` 已有骨架但无重启恢复/原子发布/回滚；反馈身份（generation 维度）与全删除边界无生产验证；`originalTimestamp`/`userLocked` 持久化缺失（DEF-38-001/002）。

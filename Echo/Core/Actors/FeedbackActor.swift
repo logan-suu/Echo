@@ -37,9 +37,10 @@ public actor FeedbackActor {
     /// - Parameters:
     ///   - entry: 反馈条目
     ///   - traceID: 审计追踪 ID（AC-7）
-    public func recordFeedback(_ entry: FeedbackEntry, traceID: String = "") async throws {
+    ///   - generationId: 反馈所绑定的 generation（ADR-010 决策-4，US-FBK-001/002/003 身份）
+    public func recordFeedback(_ entry: FeedbackEntry, traceID: String = "", generationId: String? = nil) async throws {
         try await db.executeWrite(
-            sql: "INSERT INTO FeedbackStore (feedbackId, memoryId, queryText, sentiment, cosineSimilarity, createdAt, isBadCase, badCaseReason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            sql: "INSERT INTO FeedbackStore (feedbackId, memoryId, queryText, sentiment, cosineSimilarity, createdAt, isBadCase, badCaseReason, generationId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             bindings: [
                 .text(entry.id.uuidString),
                 .text(entry.memoryId.uuidString),
@@ -49,6 +50,7 @@ public actor FeedbackActor {
                 .double(entry.createdAt.timeIntervalSince1970),
                 .int(entry.isBadCase ? 1 : 0),
                 entry.badCaseReason.map { .text($0) } ?? .null,
+                generationId.map { .text($0) } ?? .null,
             ]
         )
 
@@ -63,9 +65,9 @@ public actor FeedbackActor {
     }
 
     /// 原始插入（供测试使用，绕过审计日志以允许注入历史日期）
-    public func rawInsert(_ entry: FeedbackEntry) async throws {
+    public func rawInsert(_ entry: FeedbackEntry, generationId: String? = nil) async throws {
         try await db.executeWrite(
-            sql: "INSERT INTO FeedbackStore (feedbackId, memoryId, queryText, sentiment, cosineSimilarity, createdAt, isBadCase, badCaseReason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            sql: "INSERT INTO FeedbackStore (feedbackId, memoryId, queryText, sentiment, cosineSimilarity, createdAt, isBadCase, badCaseReason, generationId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             bindings: [
                 .text(entry.id.uuidString),
                 .text(entry.memoryId.uuidString),
@@ -75,8 +77,19 @@ public actor FeedbackActor {
                 .double(entry.createdAt.timeIntervalSince1970),
                 .int(entry.isBadCase ? 1 : 0),
                 entry.badCaseReason.map { .text($0) } ?? .null,
+                generationId.map { .text($0) } ?? .null,
             ]
         )
+    }
+
+    /// 查询指定反馈绑定的 generation 身份（ADR-010 决策-4）。
+    /// - Returns: generationId（未绑定或无记录时返回 nil）
+    public func generationId(for feedbackId: UUID) async throws -> String? {
+        let rows = try await db.executeQuery(
+            sql: "SELECT generationId FROM FeedbackStore WHERE feedbackId = ?",
+            bindings: [.text(feedbackId.uuidString)]
+        )
+        return rows.first?["generationId"]?.stringValue
     }
 
     /// 计算反馈重排调整值（US-FBK-002 AC-1~3）

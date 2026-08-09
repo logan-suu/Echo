@@ -95,9 +95,15 @@ public actor DatabaseManager {
                 cosineSimilarity REAL NOT NULL,
                 createdAt REAL NOT NULL,
                 isBadCase INTEGER NOT NULL DEFAULT 0,
-                badCaseReason TEXT
+                badCaseReason TEXT,
+                generationId TEXT
             )
             """)
+        // v5 migration: existing FeedbackStore gains generation identity (US-FBK-001/002/003, ADR-010 决策-4)
+        let feedbackColumns = try columnNames(in: "FeedbackStore")
+        if !feedbackColumns.contains("generationId") {
+            try execute(sql: "ALTER TABLE FeedbackStore ADD COLUMN generationId TEXT")
+        }
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS TaskProgress (
                 taskId TEXT PRIMARY KEY NOT NULL,
@@ -167,6 +173,7 @@ public actor DatabaseManager {
             """)
         // ── v3 schema migration: ModelManifest / IndexGeneration / ActiveRouteSet (R-A) ──
         // 规范 Memory 表 (R-A.1): canonical facts source
+        // v5 (3F.4): originalTimestamp/userEdited/userLocked (US-AWK-007, DEF-38-001/002)
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS Memory (
                 memoryId TEXT PRIMARY KEY NOT NULL,
@@ -175,9 +182,23 @@ public actor DatabaseManager {
                 sourceType TEXT NOT NULL,
                 createdAt REAL NOT NULL,
                 updatedAt REAL NOT NULL,
-                recoverability TEXT NOT NULL DEFAULT 'full'
+                recoverability TEXT NOT NULL DEFAULT 'full',
+                originalTimestamp REAL,
+                userEdited INTEGER NOT NULL DEFAULT 0,
+                userLocked INTEGER NOT NULL DEFAULT 0
             )
             """)
+        // v5 migration: existing Memory tables gain edit fields (idempotent)
+        let memoryColumns = try columnNames(in: "Memory")
+        if !memoryColumns.contains("originalTimestamp") {
+            try execute(sql: "ALTER TABLE Memory ADD COLUMN originalTimestamp REAL")
+        }
+        if !memoryColumns.contains("userEdited") {
+            try execute(sql: "ALTER TABLE Memory ADD COLUMN userEdited INTEGER NOT NULL DEFAULT 0")
+        }
+        if !memoryColumns.contains("userLocked") {
+            try execute(sql: "ALTER TABLE Memory ADD COLUMN userLocked INTEGER NOT NULL DEFAULT 0")
+        }
         // 一个记忆的多种表示 (R-A.1): modality-specific representations
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS Representation (
@@ -186,6 +207,23 @@ public actor DatabaseManager {
                 modality TEXT NOT NULL,
                 preprocessVersion TEXT NOT NULL,
                 contentHash TEXT NOT NULL
+            )
+            """)
+        // v5 (3F.4, US-ING-006 AC-3): FTS5 canonical text index, 与主事务同步提交
+        try execute(sql: """
+            CREATE VIRTUAL TABLE IF NOT EXISTS MemoryFTS USING fts5(
+                memoryId UNINDEXED,
+                canonicalText,
+                sourceType
+            )
+            """)
+        // v5 (3F.4, D-005): translationCache 持久化（全删除边界覆盖）
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS translationCache (
+                memoryId TEXT PRIMARY KEY NOT NULL,
+                languagePair TEXT NOT NULL,
+                translatedText TEXT NOT NULL,
+                createdAt REAL NOT NULL
             )
             """)
         // 模型身份与许可登记 (R-A.2)
@@ -231,6 +269,7 @@ public actor DatabaseManager {
             )
             """)
         // 原子服务路由 (R-A.4): single active route row
+        // v5 (3F.4, ADR-010 决策-3): previousTextGeneration 支持旧代回滚
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS ActiveRouteSet (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -239,9 +278,15 @@ public actor DatabaseManager {
                 visionGeneration TEXT,
                 lexicalGeneration TEXT,
                 version INTEGER NOT NULL DEFAULT 1,
-                updatedAt REAL NOT NULL
+                updatedAt REAL NOT NULL,
+                previousTextGeneration TEXT
             )
             """)
+        // v5 migration: existing ActiveRouteSet gains previousTextGeneration
+        let routeColumns = try columnNames(in: "ActiveRouteSet")
+        if !routeColumns.contains("previousTextGeneration") {
+            try execute(sql: "ALTER TABLE ActiveRouteSet ADD COLUMN previousTextGeneration TEXT")
+        }
         // 同意状态表 (3F.1, ADR-007 §决策-2): deny-by-default 同意版本与时间戳持久化
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS ConsentStore (
@@ -270,6 +315,42 @@ public actor DatabaseManager {
     /// 回滚事务
     public func rollbackTransaction() throws {
         try execute(sql: "ROLLBACK")
+    }
+
+    // MARK: - Atomic Transaction (3F.4, US-ING-006 AC-1/2)
+
+    /// 单条 SQL 写操作（事务批次元素，Sendable 值类型）。
+    public struct DBWrite: Sendable {
+        public let sql: String
+        public let bindings: [DBBinding]
+
+        public init(sql: String, bindings: [DBBinding] = []) {
+            self.sql = sql
+            self.bindings = bindings
+        }
+    }
+
+    /// 在一个 BEGIN/COMMIT 事务内执行一批写操作，无挂起点（同步执行）。
+    ///
+    /// 相比 `beginTransaction`/`commitTransaction` 分开调用（跨挂起点，
+    /// DEF-50-001 曾指出会允许其他调用方插入未提交事务），此方法整个事务体在
+    /// 同一次 actor 执行中同步完成，杜绝插入写。任一步失败自动 ROLLBACK。
+    ///
+    /// - Returns: 成功执行的写操作数
+    @discardableResult
+    public func executeTransaction(_ writes: [DBWrite]) throws -> Int32 {
+        guard !writes.isEmpty else { return 0 }
+        try execute(sql: "BEGIN TRANSACTION")
+        do {
+            for write in writes {
+                _ = try executeWrite(sql: write.sql, bindings: write.bindings)
+            }
+            try execute(sql: "COMMIT")
+            return Int32(writes.count)
+        } catch {
+            try? execute(sql: "ROLLBACK")
+            throw error
+        }
     }
 
     // MARK: - Database URL

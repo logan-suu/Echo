@@ -329,8 +329,11 @@
       "acceptance_evidence": [
         "originalTimestamp、userLocked 持久化与同步/编辑测试"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "closed",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "closed_at": "2026-08-09",
+      "closed_by_task": "3F.4",
+      "closure_evidence": "Memory.originalTimestamp column persisted in Memory table (DatabaseManager v5 migration) + round-trip test in EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (EditPersistence.test_edit_fields_roundtrip). Core persistence layer delivered per acceptance_evidence. UI MemoryDetailViewModel wiring remains 3F.7 scope."
     },
     {
       "id": "DEF-38-002",
@@ -353,8 +356,11 @@
       "acceptance_evidence": [
         "originalTimestamp、userLocked 持久化与同步/编辑测试"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "closed",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "closed_at": "2026-08-09",
+      "closed_by_task": "3F.4",
+      "closure_evidence": "Memory.userLocked column persisted in Memory table (DatabaseManager v5 migration) + round-trip test in EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (EditPersistence.test_edit_fields_roundtrip). Core persistence layer delivered per acceptance_evidence. SyncPipeline skip-on-userLocked behavior wiring remains 3F.7 scope."
     },
     {
       "id": "DEF-38-003",

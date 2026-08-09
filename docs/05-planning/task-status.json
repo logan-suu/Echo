@@ -1255,7 +1255,11 @@
             "US-FBK-002",
             "US-FBK-003"
           ],
-          "status": "ready",
+          "status": "review",
+          "status_transitions": {
+            "in_progress_at": "2026-08-09T00:00:00Z",
+            "review_at": "2026-08-09T19:00:00Z"
+          },
           "owner": {
             "implementation": "Storage Architecture Lead",
             "approver": "Privacy Engineering Lead"
@@ -1281,8 +1285,8 @@
             "迁移、原子发布、重启恢复、rollback 与事务删除矩阵",
             "ADR-010 与架构、数据流、避坑规则一致性审查"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
-          "notes": "Owns canonical generation architecture and pitfalls.",
+          "last_updated": "2026-08-09T19:00:00Z",
+          "notes": "✅ 3F.4 实现完成 (2026-08-09)。CanonicalMemoryRepositoryActor（确定性 ID RFC4122 v5 + 无挂起点 executeTransaction 事务 CRUD + 向量补偿回滚 + D-005 全删除边界 + cascadeDeleteFromOriginal）; DatabaseMigrationActor（v5 schema 迁移）; GenerationRegistryActor 生命周期（finishShadowBuild/activateGeneration/rollbackToPrevious/restoreActiveRoute/persistStore + 每代 .pxkt 磁盘恢复）; FeedbackStore.generationId（US-FBK 身份）; Memory originalTimestamp/userEdited/userLocked 持久化（US-AWK-007，关闭 DEF-38-001/002）。测试：focused 18/18 (CanonicalGenerationTests)，R-A 扩展 28/28，全量回归 883 tests / 113 suites 0 失败。SwiftLint exit 0 (github-actions-logging, 与 HEAD 基线一致)。Release simulateError Preview 失败为 dev-1.0 既有基线。",
           "pr": null
         },
         {

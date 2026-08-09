@@ -32,7 +32,9 @@ public enum AuditEvent: String, Sendable, Codable {
     case excludedRestoreFailedFileMissing
     case dataSourceChangeSynced
     case manualChangeDetectionCompleted
+    /// 记忆摄入事务审计 (US-ING-006 AC-5: 含 rolledBack=true/false)
     case memoryIngested
+    case ingestTransaction
     case imageIngested
     case videoIngested
     case voiceIngested

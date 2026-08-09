@@ -311,7 +311,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 - **3F.3** E5、SigLIP2、Whisper 与离线生成决策落地（E5 真实推理；SigLIP2/Whisper 工件 + fail-closed 桥接）
 - **3F.3a** SigLIP2 Core ML 转换与视觉推理接入（2026-08-07 拆分自 3F.3）
 - **3F.3b** whisper.cpp 运行时接入与真实转写（2026-08-07 拆分自 3F.3）
-- **3F.4** Canonical storage 与 generation 生命周期
+- **3F.4** Canonical storage 与 generation 生命周期（✅ 2026-08-09：`CanonicalMemoryRepositoryActor` 确定性 ID + 事务 CRUD + 全删除边界；`GenerationRegistryActor` shadow build / 原子发布 / 回滚 / 重启恢复 / 持久化；反馈 generation 身份；US-AWK-007 编辑字段持久化）
 - **3F.5** Production ingestion
 - **3F.6** Production search 与 feedback
 - **3F.7** UI 到 Core 全域接线

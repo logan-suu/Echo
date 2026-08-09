@@ -2,12 +2,16 @@
 // 文件: CanonicalMemory.swift
 // 对应规格: Echo dev-1.0 缺陷修复计划.md → Phase R-A.1 (规范 Memory 与 Representation)
 //            调研报告 §15.1 (数据模型: Memory / Representation)
+//            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-007 (编辑字段)
+//            docs/decisions/ADR-010-canonical-generation-lifecycle.md 决策-1
 // 任务: R-A.1 - 规范 Memory 与 Representation 数据模型
+//      3F.4 - Canonical storage（US-AWK-007 originalTimestamp/userEdited/userLocked）
 // AC 覆盖: memoryId, sourceLocator, canonicalText, sourceType, timestamps, recoverability
 //          representationId, memoryId, modality, preprocessVersion, contentHash
+//          US-AWK-007 AC-2 (userEdited + originalTimestamp), AC-4 (userLocked), AC-6 (originalTimestamp 备份)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007 (禁止 unchecked Sendable)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-07-31
+// 生成时间: 2026-07-31 | 更新: 2026-08-09 (3F.4 编辑字段)
 // ==========================================
 
 import Foundation
@@ -61,6 +65,12 @@ public struct Memory: Sendable, Codable, Equatable {
     public nonisolated let updatedAt: Date
     /// 可恢复性
     public nonisolated let recoverability: Recoverability
+    /// 覆盖时间戳的原始值备份（US-AWK-007 AC-6，仅详情页展示，不参与检索）
+    public nonisolated let originalTimestamp: Date?
+    /// 用户手动编辑标记（US-AWK-007 AC-2）
+    public nonisolated let userEdited: Bool
+    /// 用户选择手工维护，同步永久跳过（US-AWK-007 AC-4）
+    public nonisolated let userLocked: Bool
 
     public nonisolated init(
         memoryId: UUID = UUID(),
@@ -69,7 +79,10 @@ public struct Memory: Sendable, Codable, Equatable {
         sourceType: String,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
-        recoverability: Recoverability = .full
+        recoverability: Recoverability = .full,
+        originalTimestamp: Date? = nil,
+        userEdited: Bool = false,
+        userLocked: Bool = false
     ) {
         self.memoryId = memoryId
         self.sourceLocator = sourceLocator
@@ -78,6 +91,9 @@ public struct Memory: Sendable, Codable, Equatable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.recoverability = recoverability
+        self.originalTimestamp = originalTimestamp
+        self.userEdited = userEdited
+        self.userLocked = userLocked
     }
 }
 
