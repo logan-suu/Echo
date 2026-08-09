@@ -11,6 +11,9 @@
 //          restoreActiveRoute, persistStore, removeStoreFile
 //          2026-08-09 PR#56 修复: F-2 activateGeneration/rollbackToPrevious
 //          状态迁移+路由发布合并单事务 (原子发布, 无跨挂起点窗口)
+//          2026-08-09 PR#56 二轮: CR-6 lifecycleBusy in-flight 守卫 (并发竞争),
+//          CR-7 restoreActiveRoute 恢复 previousTextGeneration store + rollback 前恢复,
+//          Nitpick-2 indexRestoreFailed 审计留痕
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007/R-008,
 //           AGENTS.md §4.5 (断点续传), §4.3 (长任务串行)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
@@ -46,6 +49,8 @@ public actor GenerationRegistryActor {
     private var storeInstances: [String: VectorStoreActor] = [:]
     /// 每代索引文件的持久化目录（3F.4：重启恢复）
     private let storeDirectory: URL
+    /// 路由生命周期操作 in-flight 守卫（CR-6: 读-算-写窗口内禁止并发 activate/rollback）
+    private var lifecycleInFlight = false
 
     // MARK: - Initialization
 
@@ -95,6 +100,16 @@ public actor GenerationRegistryActor {
                restored.dimension == generation.dimension {
                 storeInstances[generation.generationId] = restored
             } else {
+                // Nitpick-2: 恢复失败重建空索引，发审计事件留痕（hash-only，不含原文）
+                let policy = await PrivacyActor.shared.getPolicy()
+                try? await PrivacyActor.shared.writeAuditLog(
+                    eventType: .indexRestoreFailed,
+                    traceID: "generation-register",
+                    policyVersion: policy.policyVersion,
+                    success: false,
+                    sourceType: generation.indexType,
+                    content: "generationId=\(generation.generationId)|dimension=\(generation.dimension)|rebuiltEmpty=true"
+                )
                 storeInstances[generation.generationId] = VectorStoreActor(dimension: generation.dimension)
             }
         }
@@ -318,6 +333,12 @@ public actor GenerationRegistryActor {
     /// - Returns: 发布后的活跃路由
     @discardableResult
     public func activateGeneration(_ generationId: String) async throws -> ActiveRouteSet {
+        guard !lifecycleInFlight else {
+            throw GenerationError.lifecycleBusy(operation: "activateGeneration")
+        }
+        lifecycleInFlight = true
+        defer { lifecycleInFlight = false }
+
         guard let generation = try await loadGeneration(generationId) else {
             throw GenerationError.routeValidationFailed(reason: "generation missing: \(generationId)")
         }
@@ -369,6 +390,12 @@ public actor GenerationRegistryActor {
     /// - Returns: 回滚后的活跃路由，或 nil
     @discardableResult
     public func rollbackToPrevious() async throws -> ActiveRouteSet? {
+        guard !lifecycleInFlight else {
+            throw GenerationError.lifecycleBusy(operation: "rollbackToPrevious")
+        }
+        lifecycleInFlight = true
+        defer { lifecycleInFlight = false }
+
         guard let current = try await loadActiveRoute(),
               let previousId = current.previousTextGeneration,
               let previous = try await loadGeneration(previousId),
@@ -406,33 +433,60 @@ public actor GenerationRegistryActor {
         // F-2: 状态迁移 + 路由发布合并为单个 SQLite 事务，原子提交（无跨挂起点窗口）
         _ = try await db.executeTransaction(writes)
 
+        // CR-7: 回滚目标 store 若未加载（如重启后仅 restoreActiveRoute 恢复 active 代），
+        // 先恢复内存实例再持久化，避免 persistStore 静默空转导致回滚后无向量可检索
+        guard try await restoreStoreIfNeeded(previousId) else {
+            throw GenerationError.routeValidationFailed(reason: "rollback target generation missing: \(previousId)")
+        }
         try await persistStore(generationId: previousId)
         return route
     }
 
-    /// 重启恢复：加载持久化 active route，并为路由引用的 generation 恢复内存存储实例。
+    /// 重启恢复：加载持久化 active route，并为路由引用 + 回滚目标 generation 恢复内存存储实例。
     ///
     /// - 存储实例优先从磁盘 `.pxkt` 恢复；维度不匹配或文件缺失时重建空索引
+    /// - CR-7 (PR#56 review): 同时恢复 `previousTextGeneration` 的 store，
+    ///   否则重启后 `rollbackToPrevious` 无向量可检索
     /// - 路由引用的 generation 缺失 → 返回 nil（调用方走降级/重建）
     /// - Returns: 恢复的活跃路由，或 nil
     public func restoreActiveRoute() async throws -> ActiveRouteSet? {
         guard let route = try await loadActiveRoute() else { return nil }
-        for generationId in route.allGenerationIDs {
-            if storeInstances[generationId] == nil {
-                guard let generation = try await loadGeneration(generationId) else {
-                    return nil
-                }
-                let url = storeFileURL(for: generationId)
-                if FileManager.default.fileExists(atPath: url.path),
-                   let restored = try? VectorStoreActor.load(from: url),
-                   restored.dimension == generation.dimension {
-                    storeInstances[generationId] = restored
-                } else {
-                    storeInstances[generationId] = VectorStoreActor(dimension: generation.dimension)
-                }
-            }
+        var ids = route.allGenerationIDs
+        if let previous = route.previousTextGeneration, !ids.contains(previous) {
+            ids.append(previous)
+        }
+        for generationId in ids {
+            guard try await restoreStoreIfNeeded(generationId) else { return nil }
         }
         return route
+    }
+
+    /// 若指定 generation 的 store 未在内存，则从磁盘 `.pxkt` 恢复（失败时重建空索引）。
+    /// - Returns: `false` 若 generation 在 DB 中不存在（调用方应降级）
+    private func restoreStoreIfNeeded(_ generationId: String) async throws -> Bool {
+        if storeInstances[generationId] != nil { return true }
+        guard let generation = try await loadGeneration(generationId) else {
+            return false
+        }
+        let url = storeFileURL(for: generationId)
+        if FileManager.default.fileExists(atPath: url.path),
+           let restored = try? VectorStoreActor.load(from: url),
+           restored.dimension == generation.dimension {
+            storeInstances[generationId] = restored
+        } else {
+            // Nitpick-2: 恢复失败重建空索引，发审计事件留痕（hash-only，不含原文）
+            let policy = await PrivacyActor.shared.getPolicy()
+            try? await PrivacyActor.shared.writeAuditLog(
+                eventType: .indexRestoreFailed,
+                traceID: "generation-restore",
+                policyVersion: policy.policyVersion,
+                success: false,
+                sourceType: generation.indexType,
+                content: "generationId=\(generationId)|dimension=\(generation.dimension)|rebuiltEmpty=true"
+            )
+            storeInstances[generationId] = VectorStoreActor(dimension: generation.dimension)
+        }
+        return true
     }
 
     /// 加载当前活跃路由。
@@ -557,6 +611,8 @@ public enum GenerationError: Error, LocalizedError, Sendable {
     case routeValidationFailed(reason: String)
     /// 非法状态迁移（违反 building → ready → active → retired 状态机）
     case illegalStateTransition(from: GenerationState, to: GenerationState)
+    /// 路由生命周期操作已在执行（CR-6 并发守卫）
+    case lifecycleBusy(operation: String)
 
     public var errorDescription: String? {
         switch self {
@@ -564,6 +620,8 @@ public enum GenerationError: Error, LocalizedError, Sendable {
             return "Route validation failed: \(reason)"
         case .illegalStateTransition(let from, let to):
             return "Illegal generation state transition: \(from.rawValue) → \(to.rawValue)"
+        case .lifecycleBusy(let operation):
+            return "Generation lifecycle operation already in flight: \(operation)"
         }
     }
 }

@@ -26,6 +26,16 @@ struct GenerationRegistryTests {
         try await db.execute(sql: "DELETE FROM IndexBuildItem")
         try await db.execute(sql: "DELETE FROM IndexGeneration")
         try await db.execute(sql: "DELETE FROM ModelManifest")
+        // CR-9 (PR#56 review): 清理共享目录 .pxkt 残留，避免跨套件恢复陈旧索引
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask
+        ).first!
+        let generationsDir = appSupport.appendingPathComponent("Echo/generations", isDirectory: true)
+        if let files = try? FileManager.default.contentsOfDirectory(atPath: generationsDir.path) {
+            for file in files where file.hasSuffix(".pxkt") {
+                try? FileManager.default.removeItem(at: generationsDir.appendingPathComponent(file))
+            }
+        }
     }
 
     @Test("registerGeneration persists metadata and creates vector store instance")

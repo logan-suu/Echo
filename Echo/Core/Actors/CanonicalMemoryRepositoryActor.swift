@@ -10,6 +10,8 @@
 //          仅从 Echo 移除写 ExcludedAssets (US-PRV-004), 反馈 generation 身份
 //          2026-08-09 PR#56 修复: F-1 deleteMemory 清理未加载 generation 的磁盘副本,
 //          F-3 searchCanonical FTS5 语法转义 (token 化短语 AND)
+//          2026-08-09 PR#56 二轮: CR-3 FTS 行与 representation 解耦 (每记忆一行),
+//          CR-1 deleteMemory 缺参回退 memory 定位, Nitpick-1 故障注入 DEBUG-only
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007, R-008 (跨 Actor await)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-09
@@ -33,8 +35,10 @@ public actor CanonicalMemoryRepositoryActor {
     private let excludedAssets: ExcludedAssetsActor
     private let privacyActor: PrivacyActor
 
-    /// 故障注入点（测试用）— 模拟事务边界处的崩溃/失败。
+    /// 故障注入点（测试用）— 模拟事务边界处的崩溃/失败。DEBUG only。
+    #if DEBUG
     private var fault: FaultPoint?
+    #endif
 
     public init(
         db: DatabaseManager = .shared,
@@ -69,8 +73,9 @@ public actor CanonicalMemoryRepositoryActor {
         ))
     }
 
-    // MARK: - Fault Injection
+    // MARK: - Fault Injection (DEBUG only — Nitpick-1: release 不暴露删数据钩子)
 
+    #if DEBUG
     public enum FaultPoint: Sendable, Equatable {
         /// 在向量写入前注入失败（模拟向量存储故障）→ 触发补偿回滚
         case vectorWrite
@@ -81,6 +86,7 @@ public actor CanonicalMemoryRepositoryActor {
     public func setFault(_ fault: FaultPoint?) {
         self.fault = fault
     }
+    #endif
 
     // MARK: - Transactional Commit (US-ING-006)
 
@@ -100,6 +106,7 @@ public actor CanonicalMemoryRepositoryActor {
         // Phase 1: SQLite 事务 — canonical + representation + FTS 原子提交
         try await writeCanonicalTransaction(memory: memory, representations: representations)
 
+        #if DEBUG
         if fault == .afterCanonicalWrite {
             // 崩溃点：canonical 已提交但向量未写 → 补偿清理，保证无 half-write
             try await compensateCanonical(memoryId: memory.memoryId)
@@ -113,6 +120,7 @@ public actor CanonicalMemoryRepositoryActor {
             try await writeTransactionAudit(traceID: traceID, rolledBack: true)
             throw CanonicalRepositoryError.vectorWriteInjected
         }
+        #endif
 
         do {
             for (generationId, entries) in vectorsByGeneration {
@@ -232,8 +240,14 @@ public actor CanonicalMemoryRepositoryActor {
         ])
 
         // 3) ExcludedAssets 契约 (US-PRV-004 AC-2 / US-PRV-007 AC-2)
-        if writeExcluded, let locator = sourceLocator, let st = sourceType {
+        //    CR-1 (PR#56 review): 缺省 sourceLocator/sourceType 时回退已加载 memory 的
+        //    定位信息，避免静默跳过排除写入；审计记录真实写入结果。
+        let effectiveLocator = sourceLocator ?? memory?.sourceLocator
+        let effectiveType = sourceType ?? memory?.sourceType
+        var excludedActuallyWritten = false
+        if writeExcluded, let locator = effectiveLocator, let st = effectiveType {
             try await excludedAssets.add(assetId: locator, sourceType: st, traceID: traceID)
+            excludedActuallyWritten = true
         }
 
         // 4) 审计
@@ -243,8 +257,8 @@ public actor CanonicalMemoryRepositoryActor {
             traceID: traceID,
             policyVersion: policy.policyVersion,
             success: true,
-            sourceType: sourceType,
-            excludedWritten: writeExcluded,
+            sourceType: effectiveType,
+            excludedWritten: excludedActuallyWritten,
             content: diskCleanupFailed ? "vectorDiskCleanupFailed=true" : nil
         )
         return true
@@ -321,6 +335,15 @@ public actor CanonicalMemoryRepositoryActor {
                 sql: "DELETE FROM MemoryFTS WHERE memoryId = ?",
                 bindings: [.text(memory.memoryId.uuidString)]
             ),
+            // CR-3 (PR#56 review): 每记忆恰好一行 FTS，与 representation 数量解耦
+            .init(
+                sql: "INSERT INTO MemoryFTS (memoryId, canonicalText, sourceType) VALUES (?, ?, ?)",
+                bindings: [
+                    .text(memory.memoryId.uuidString),
+                    memory.canonicalText.map(DBBinding.text) ?? .null,
+                    .text(memory.sourceType),
+                ]
+            ),
         ]
         for rep in representations {
             writes.append(.init(
@@ -334,17 +357,6 @@ public actor CanonicalMemoryRepositoryActor {
                     .text(rep.modality.rawValue),
                     .text(rep.preprocessVersion),
                     .text(rep.contentHash),
-                ]
-            ))
-            writes.append(.init(
-                sql: """
-                INSERT INTO MemoryFTS (memoryId, canonicalText, sourceType)
-                VALUES (?, ?, ?)
-                """,
-                bindings: [
-                    .text(memory.memoryId.uuidString),
-                    memory.canonicalText.map(DBBinding.text) ?? .null,
-                    .text(memory.sourceType),
                 ]
             ))
         }

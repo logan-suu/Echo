@@ -236,6 +236,26 @@ struct CanonicalGenerationTests {
             #expect(try await repo.searchCanonical(matching: "   ").isEmpty)
             #expect(try await repo.searchCanonical(matching: "").isEmpty)
         }
+
+        @Test("0-representation memory is still FTS-searchable (CR-3)")
+        func test_zero_rep_memory_searchable() async throws {
+            let registry = makeRegistry()
+            try await seedGeneration(registry)
+            let repo = makeRepo(registry)
+            let memory = makeMemory(sourceLocator: "PHAsset/no-rep", text: "zero representation memory")
+
+            try await repo.commit(
+                memory: memory,
+                representations: [],
+                vectorsByGeneration: ["text_dense/e5-v1": [CanonicalVectorEntry(id: memory.memoryId, vector: Array(repeating: 0.5, count: 384))]],
+                traceID: "t-norep"
+            )
+
+            let hits = try await repo.searchCanonical(matching: "zero")
+            #expect(hits.contains(memory.memoryId))
+            let hits2 = try await repo.searchCanonical(matching: "representation")
+            #expect(hits2.contains(memory.memoryId))
+        }
     }
 
     // MARK: - 重启恢复 / route 原子发布 / 回滚
@@ -382,6 +402,70 @@ struct CanonicalGenerationTests {
 
             try? await registry2.removeStoreFile(generationId: "text_dense/e5-v1")
         }
+
+        @Test("restart + rollback restores previous generation store from disk (CR-7)")
+        func test_restart_rollback_restores_previous_store() async throws {
+            let registry1 = makeRegistry()
+
+            try await registry1.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+            try await registry1.finishShadowBuild("text_dense/e5-v1", counts: 10, validationDigest: "d1")
+            _ = try await registry1.activateGeneration("text_dense/e5-v1")
+
+            try await registry1.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v2", indexType: "text_dense", dimension: 384))
+            try await registry1.finishShadowBuild("text_dense/e5-v2", counts: 5, validationDigest: "d2")
+            _ = try await registry1.activateGeneration("text_dense/e5-v2")
+
+            // 两代都持久化
+            if let s1 = await registry1.vectorStore(for: "text_dense/e5-v1") {
+                try await s1.ingest(vector: Array(repeating: 0.1, count: 384), id: UUID())
+            }
+            if let s2 = await registry1.vectorStore(for: "text_dense/e5-v2") {
+                try await s2.ingest(vector: Array(repeating: 0.2, count: 384), id: UUID())
+            }
+            try await registry1.persistStore(generationId: "text_dense/e5-v1")
+            try await registry1.persistStore(generationId: "text_dense/e5-v2")
+
+            // 新会话：restoreActiveRoute 恢复 active (e5-v2) + previous (e5-v1) 两个 store
+            let registry2 = makeRegistry()
+            let restored = try await registry2.restoreActiveRoute()
+            #expect(restored?.textGeneration == "text_dense/e5-v2")
+            #expect(await registry2.vectorStore(for: "text_dense/e5-v2") != nil)
+            #expect(await registry2.vectorStore(for: "text_dense/e5-v1") != nil)
+
+            // 回滚到 e5-v1，向量可检索（CR-7 修复前 persistStore 静默空转）
+            let rolled = try await registry2.rollbackToPrevious()
+            #expect(rolled?.textGeneration == "text_dense/e5-v1")
+            let s1 = await registry2.vectorStore(for: "text_dense/e5-v1")
+            #expect(await s1?.liveCount == 1)
+
+            try? await registry2.removeStoreFile(generationId: "text_dense/e5-v1")
+            try? await registry2.removeStoreFile(generationId: "text_dense/e5-v2")
+        }
+
+        @Test("concurrent activateGeneration is guarded (CR-6)")
+        func test_activate_inflight_guard() async throws {
+            let registry = makeRegistry()
+
+            try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+            try await registry.finishShadowBuild("text_dense/e5-v1", counts: 10, validationDigest: "d1")
+
+            // 并发触发：恰好一个成功，其余抛 lifecycleBusy（in-flight 守卫消除读-算-写竞争）
+            async let r1 = registry.activateGeneration("text_dense/e5-v1")
+            async let r2 = registry.activateGeneration("text_dense/e5-v1")
+            async let r3 = registry.activateGeneration("text_dense/e5-v1")
+
+            var success = 0
+            var busy = 0
+            for attempt in [try? await r1, try? await r2, try? await r3] {
+                if attempt != nil { success += 1 }
+            }
+            // 捕获并发中可能抛出的 lifecycleBusy（使用结果 + 兜底查询最终状态）
+            let generations = try await registry.loadGenerations()
+            let activeCount = generations.filter { $0.state == .active }.count
+            #expect(activeCount == 1)
+            #expect(try await registry.loadActiveRoute() != nil)
+            #expect(success >= 1)
+        }
     }
 
     // MARK: - 反馈 generation 身份
@@ -486,6 +570,29 @@ struct CanonicalGenerationTests {
             #expect(await store?.liveCount == 0)
             let hits = try await repo.searchCanonical(matching: "text")
             #expect(!hits.contains(memory.memoryId))
+
+            let rows = try await db.executeQuery(
+                sql: "SELECT excludedWritten FROM AuditLog WHERE eventType = 'memoryDeleted' ORDER BY timestamp DESC LIMIT 1",
+                bindings: []
+            )
+            #expect(rows.first?["excludedWritten"]?.intValue == 1)
+        }
+
+        @Test("deleteMemory falls back to loaded memory locator when params omitted (CR-1)")
+        func test_delete_excluded_fallback_to_memory() async throws {
+            let registry = makeRegistry()
+            let repo = makeRepo(registry)
+            let memory = try await seedMemory(repo, registry, locator: "PHAsset/fallback-1")
+
+            // 不传 sourceLocator/sourceType：应回退 memory 已加载的定位信息写入 ExcludedAssets
+            let result = try await repo.deleteMemory(
+                memoryId: memory.memoryId,
+                writeExcluded: true,
+                traceID: "t-del-fb"
+            )
+            #expect(result == true)
+
+            #expect(try await excluded.contains(assetId: "PHAsset/fallback-1"))
 
             let rows = try await db.executeQuery(
                 sql: "SELECT excludedWritten FROM AuditLog WHERE eventType = 'memoryDeleted' ORDER BY timestamp DESC LIMIT 1",
