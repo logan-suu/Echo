@@ -383,7 +383,7 @@ Add real production data sources: a PhotoKit source adapter (full authorization-
 Task 3F.3b integrates the whisper.cpp runtime (v1.9.2, vendored local Swift package at fixed revision 306c88f4d1) into Echo, replacing the fail-closed `WhisperRuntimeBridge` stub with real on-device transcription. `NativeWhisperCInterop` provides a Sendable-safe C wrapper (`whisper_init_from_file_with_params` + `whisper_full`); `WhisperRuntimeBridge` now defaults to it, verifies the GGUF SHA-256 against model-provenance-register §2 before inference (ADR-009 decision 2), and reports loader state (DEF-34-003). `WhisperASREngine.transcribe` is fully implemented (preprocessAudio → VAD → bridge). The ASR protocol gained a file-URL input contract (`transcribeFile(at:)`) closing the DEF-51-002 ASR contract. Reference transcripts (`whisper-reference-transcripts.json`) were backfilled with a real jfk.wav inference (CER=0.0 within 0.15 threshold). Full suite: 857 tests / 105 suites green.
 
 ## Related Specs
-- Task: 3F.3b (split from 3F.3, 2026-08-07)
+- Task 3F.3b (split from 3F.3, 2026-08-07)
 - User Stories: US-ING-003 AC-1 (voice memo transcription), US-ING-005 AC-2 (video audio offline transcription), US-SRC-011 (model semantics reference outputs)
 - ADR-009 decisions 2/3 (immutable bundled artifact + fixed revision/SHA-256; zero-network runtime)
 - AGENTS.md R-005 (zero network), R-007 (no nonisolated(unsafe)/unchecked Sendable), §2.2 dependency whitelist (whisper.cpp approved 2026-08-09)
