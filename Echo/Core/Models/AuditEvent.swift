@@ -32,7 +32,10 @@ public enum AuditEvent: String, Sendable, Codable {
     case excludedRestoreFailedFileMissing
     case dataSourceChangeSynced
     case manualChangeDetectionCompleted
+    /// 记忆摄入（无原文，仅 hash）— AGENTS.md §7.3
     case memoryIngested
+    /// 记忆摄入事务审计 (US-ING-006 AC-5: 含 rolledBack=true/false)
+    case ingestTransaction
     case imageIngested
     case videoIngested
     case voiceIngested
@@ -44,8 +47,12 @@ public enum AuditEvent: String, Sendable, Codable {
     case feedbackRevoked
     case badCaseMarked
     case badCaseRevoked
+    /// 模型加载失败 (AGENTS.md §7.3)
     case modelLoadFailed
+    /// 模型加载手动重试成功 (AGENTS.md §7.3)
     case modelLoadRetrySuccess
+    /// generation 向量存储从磁盘恢复失败（维度不匹配/文件损坏 → 重建空索引）— Nitpick-2 修复
+    case indexRestoreFailed
     case backgroundTaskInterrupted
     case retryPending
     case syncConflict

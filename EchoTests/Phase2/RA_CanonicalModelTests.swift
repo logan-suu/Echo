@@ -48,6 +48,32 @@ struct CanonicalModelTests {
         #expect(Recoverability(rawValue: "full") == .full)
     }
 
+    @Test("Memory edit fields default to non-edited state (US-AWK-007)")
+    func test_memory_edit_defaults() {
+        let memory = Memory(
+            sourceLocator: "PHAsset/d1",
+            sourceType: "photo"
+        )
+        #expect(memory.originalTimestamp == nil)
+        #expect(memory.userEdited == false)
+        #expect(memory.userLocked == false)
+    }
+
+    @Test("Memory edit fields persist custom values (US-AWK-007 AC-2/4/6)")
+    func test_memory_edit_fields() {
+        let original = Date(timeIntervalSince1970: 1_600_000_000)
+        let memory = Memory(
+            sourceLocator: "PHAsset/d2",
+            sourceType: "photo",
+            originalTimestamp: original,
+            userEdited: true,
+            userLocked: true
+        )
+        #expect(memory.originalTimestamp == original)
+        #expect(memory.userEdited == true)
+        #expect(memory.userLocked == true)
+    }
+
     @Test("Representation initializer fills modality-specific fields")
     func test_representation_initializer() {
         let rep = Representation(

@@ -2,11 +2,13 @@
 // 文件: ActiveRouteSet.swift
 // 对应规格: Echo dev-1.0 缺陷修复计划.md → Phase R-A.4 (ActiveRouteSet)
 //            调研报告 §15.1 (数据模型: ActiveRouteSet)
+//            docs/decisions/ADR-010-canonical-generation-lifecycle.md 决策-3 (旧代回滚)
 // 任务: R-A.4 - 原子服务路由
+//      3F.4 - generation 生命周期（previousTextGeneration 支持回滚）
 // AC 覆盖: textGeneration, ocrGeneration, visionGeneration, lexicalGeneration, version
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007 (禁止 unchecked Sendable)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-07-31
+// 生成时间: 2026-07-31 | 更新: 2026-08-09 (3F.4 回滚支持)
 // ==========================================
 
 import Foundation
@@ -32,6 +34,8 @@ public struct ActiveRouteSet: Sendable, Codable, Equatable {
     public nonisolated let version: Int
     /// 更新时间戳
     public nonisolated let updatedAt: Date
+    /// 前一路由的 textGeneration（ADR-010 决策-3：旧代回滚目标）
+    public nonisolated let previousTextGeneration: String?
 
     public nonisolated init(
         textGeneration: String,
@@ -39,7 +43,8 @@ public struct ActiveRouteSet: Sendable, Codable, Equatable {
         visionGeneration: String? = nil,
         lexicalGeneration: String? = nil,
         version: Int = 1,
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
+        previousTextGeneration: String? = nil
     ) {
         self.textGeneration = textGeneration
         self.ocrGeneration = ocrGeneration
@@ -47,5 +52,6 @@ public struct ActiveRouteSet: Sendable, Codable, Equatable {
         self.lexicalGeneration = lexicalGeneration
         self.version = version
         self.updatedAt = updatedAt
+        self.previousTextGeneration = previousTextGeneration
     }
 }

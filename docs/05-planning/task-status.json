@@ -1175,7 +1175,7 @@
             "四类门禁：法律（LICENSE/NOTICE/哈希）、转换一致性、Echo 数据集实机评测、实体设备资源门禁",
             "SigLIP2Embedder 真实 embedImage 推理（768d，独立 vision generation）"
           ],
-  "last_updated": "2026-08-09T10:04:39Z",
+          "last_updated": "2026-08-09T10:04:39Z",
           "notes": "从 3F.3 拆分：3F.3 交付转换源（model.safetensors）与预处理；本任务完成 Core ML 转换、参考向量验证与真实视觉推理。ADR-009 决策 1（空间分离）与决策 2（未获批模型不进打包）管辖。\n✅ 3F.3a 完成 (2026-08-07)。SigLIP2Embedder.embedImage 真实 Core ML 推理（PHAsset→UIImage→preprocess→MLModel.prediction→768d L2归一化，输入 256×256，输出 [1,768] probe-token pooling）。Scripts/convert_siglip2.py 重写（siglip2-base-patch32-256 架构：patch_size=32/image_size=256/64 patches；PyTorch→coremltools→coremlcompiler 全链路）。参考向量已回填（5 个 PyTorch 真实 768d）。Core ML 运行时余弦相似度 >0.995 验证通过（US-SRC-011）。provenance: pending-conversion-and-approval→pending-approval→pending-evaluation。model_checksums.sha256 mlmodelc SHA-256 登记。\n🔧 PR #54 review 修复 (2026-08-07)：C1 非方形图片崩溃（aspect-fit 最短边 256 + center-crop 整数 clamp，新增 2 个回归测试）；W1 陈旧注释更新；W2 manifest pooling cls→probe；W3 resolveModel 失败 reportModelLoadFailed（L3 审计）；W6 PHImageCancelledKey resume；W7 显式 I/O 名；W8 测试名修正。全量回归 849 tests / 100 suites 0 失败。\n⚠️ 延后：W5 测试静默跳过（CI 无 .mlmodelc，ADR-009 决策 2 合理门控）记入 DEF-54-002。实际 .mlmodelc 需运行 convert_siglip2.py 生成（本地已验证），审批留待后续。\n(2026-08-09 pr-merge) PR #54 merged by human logan-suu at 2026-08-08T19:28:22Z (merge commit a88ff29). Status review -> done. DEF-54-001 remains deferred (defer_to: model approved into Release packaging, conditions unmet).",
           "status_transitions": {
             "in_progress_at": "2026-08-07T08:30:00Z",
@@ -1255,7 +1255,11 @@
             "US-FBK-002",
             "US-FBK-003"
           ],
-          "status": "ready",
+          "status": "review",
+          "status_transitions": {
+            "in_progress_at": "2026-08-09T00:00:00Z",
+            "review_at": "2026-08-09T13:16:40Z"
+          },
           "owner": {
             "implementation": "Storage Architecture Lead",
             "approver": "Privacy Engineering Lead"
@@ -1281,9 +1285,15 @@
             "迁移、原子发布、重启恢复、rollback 与事务删除矩阵",
             "ADR-010 与架构、数据流、避坑规则一致性审查"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
-          "notes": "Owns canonical generation architecture and pitfalls.",
-          "pr": null
+          "last_updated": "2026-08-09T13:16:40Z",
+          "notes": "✅ 3F.4 实现完成 (2026-08-09)。CanonicalMemoryRepositoryActor（确定性 ID RFC4122 v5 + 无挂起点 executeTransaction 事务 CRUD + 向量补偿回滚 + D-005 全删除边界 + cascadeDeleteFromOriginal）; DatabaseMigrationActor（v5 schema 迁移）; GenerationRegistryActor 生命周期（finishShadowBuild/activateGeneration/rollbackToPrevious/restoreActiveRoute/persistStore + 每代 .pxkt 磁盘恢复）; FeedbackStore.generationId（US-FBK 身份）; Memory originalTimestamp/userEdited/userLocked 持久化（US-AWK-007，关闭 DEF-38-001/002）。测试：focused 18/18 (CanonicalGenerationTests)，R-A 扩展 28/28，全量回归 883 tests / 113 suites 0 失败。SwiftLint exit 0 (github-actions-logging, 与 HEAD 基线一致)。Release simulateError Preview 失败为 dev-1.0 既有基线。 | PR#56 预审修复 (2026-08-09): F-1 deleteMemory 清理未加载 generation 磁盘副本 (D-005 全 generation 覆盖, 失败记审计 content) + F-2 activateGeneration/rollbackToPrevious 状态迁移+路由发布合并单事务 (原子发布) + F-3 searchCanonical FTS5 语法转义 (token 化短语 AND, 空查询返空)。新增 4 回归测试, 全量回归 887 tests / 113 suites 0 失败。 | PR#56 二轮审查修复 (2026-08-09): CR-3 FTS 行与 representation 解耦(每记忆一行); CR-1 deleteMemory 缺参回退 memory 定位 + 审计记真实 excludedWritten; CR-6 lifecycleBusy in-flight 守卫(并发 activate/rollback); CR-7 restoreActiveRoute 恢复 previousTextGeneration store + rollback 前 restoreStoreIfNeeded; CR-8 AuditEvent doc 注释归位; CR-9 R-A 测试套件 .pxkt 清理; Nitpick-1 故障注入 DEBUG-only; Nitpick-2 indexRestoreFailed 审计留痕。全量回归 891 tests / 113 suites 0 失败（CR-147 commit persistStore 与 数据流:522 persist 前置修复后全量重跑确认，见 notes 尾部）。延后: CR-2/CR-5/Nitpick-3/4/5/6 → deferred-items.json。 | PR#56 三轮 CodeRabbit 线程全清 (2026-08-09): CR-147 commit 持久化向量 + 数据流:522 persist 前置路由发布; DEF-38-002 tracking_status partial; 全量回归最终 893 tests / 113 suites 0 失败。",
+          "pr": {
+            "number": 56,
+            "url": "https://github.com/logan-suu/Echo/pull/56",
+            "head": "feature/phase3f-canonical-generations-3F.4",
+            "base": "dev-1.0",
+            "created_at": "2026-08-09T10:48:11Z"
+          }
         },
         {
           "id": "3F.5",

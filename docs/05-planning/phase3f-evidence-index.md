@@ -443,47 +443,84 @@ Task 3F.3b integrates the whisper.cpp runtime (v1.9.2, vendored local Swift pack
 ## Entry: 3F.4 — Canonical storage 与 generation 生命周期
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: 3F.4 — branch `feature/phase3f-canonical-generations-3F.4`, commit `feat(actor): add canonical generation lifecycle`, PR `feat(actor): add canonical generation lifecycle [3F.4]` (base `dev-1.0`)
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: `in_progress` → `review` in docs/05-planning/task-status.json (2026-08-09)
+- Quoted AC and architecture constraints: US-ING-006 AC-1/2/3/4/5 (transactional canonical/vector/FTS commit; rollback; fault injection; `.ingestTransaction` audit), US-PRV-004 AC-2/3 (仅从 Echo 移除写 ExcludedAssets; 级联不写), US-PRV-007 AC-2/5 (cascade delete cleans invalid exclusions; `.cascadeDeleteFromOriginal` excludedWritten=false), US-AWK-007 AC-2/4/6 (originalTimestamp/userEdited/userLocked), US-FBK-001/002/003 (feedback generation identity); AGENTS.md D-002/D-003/D-005, §5; ADR-010 decisions 1/2/3/4/5/7
+- RED test command and observed failure: new `EchoTests/CanonicalGenerationTests` suites failed to compile until deterministicID/transaction/repository symbols existed (18 focused tests were RED); the deterministic ID RFC-4122 shape assertion initially failed (byte-order) and was corrected — final 18/18 pass
+- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/CanonicalGenerationTests` — 18/18 passed (DeterministicID 4, TransactionalCommit 3, Lifecycle 4, FeedbackIdentity 2, DeletionBoundary 3, EditPersistence 1, SchemaMigration 1)
+- Cumulative test command / exit / passed count: `xcodebuild test ... -only-testing:EchoTests` — 893 tests / 113 suites, 0 failures, exit 0
+- Release simulator and device commands / exits: Release simulator build fails on pre-existing non-DEBUG-gated `simulateError` in `#Preview` blocks (CreationView/MemoryDetailView/SearchView) — identical failure on `dev-1.0` base, out of 3F.4 scope (documented in 3F.1 entry)
+- Static/privacy/model/compliance commands / exits: `swiftlint lint --quiet` → exit 0, 0 errors (github-actions-logging reporter, identical to HEAD baseline); no strict-concurrency warnings on new/changed Core files; PrivacyCheckpoint on new repository write/delete entry points via existing actors
+- Production path exercised: CanonicalMemoryRepositoryActor.commit (canonical+representation+FTS atomic via `executeTransaction`, vector compensation), deleteMemory (D-005 full boundary incl. translationCache), cascadeDeleteFromOriginal (ExcludedAssets cleanup), GenerationRegistryActor activate/rollback/restoreActiveRoute/persistStore; `.ingestTransaction` / `.memoryDeleted` / `.cascadeDeleteFromOriginal` audits written
+- Files and documentation changed: Echo/Core/Actors/CanonicalMemoryRepositoryActor.swift (new), DatabaseMigrationActor.swift (new); DatabaseManager.swift (MemoryFTS, translationCache, Memory edit columns, FeedbackStore.generationId, ActiveRouteSet.previousTextGeneration, `executeTransaction`/`DBWrite`); GenerationRegistryActor.swift (finishShadowBuild/activateGeneration/rollbackToPrevious/restoreActiveRoute/persistStore/removeStoreFile, registerGeneration disk restore); FeedbackActor.swift (generationId); CanonicalMemory.swift (originalTimestamp/userEdited/userLocked); ActiveRouteSet.swift (previousTextGeneration); AuditEvent.swift (.ingestTransaction); EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (new) + RA_CanonicalModelTests.swift/RA_GenerationRegistryTests.swift (extended); docs (README, 架构设计, 数据流, 避坑手册, ADR-010, evidence-index, deferred-items DEF-38-001/002, phase3f-execution-plan, task-status)
+- Deferred items closed or created, with evidence links: DEF-38-001 (originalTimestamp) closed; DEF-38-002 (userLocked) partial — Core persistence layer delivered (Memory.originalTimestamp/userEdited/userLocked columns + round-trip test in CanonicalGenerationTests.EditPersistence), SyncPipeline skip-on-userLocked wiring deferred to 3F.7 (tracking_status=partial in deferred-items.json)
+- Known risks that do not weaken an in-scope gate: SearchPipeline/IngestPipeline still route through a single in-memory VectorStoreActor until 3F.5/3F.6 production wiring consumes GenerationRegistryActor per-generation stores; `executeTransaction` removes the DEF-50-001 interleave risk for canonical writes, but `ConsentStoreActor.revokeConsent`'s transaction still spans suspension points (DEF-50-001 remains open, target 3F.11 DatabaseManager atomic purge refactor); Release simulator build `simulateError` `#Preview` failure pre-existing on base (3F.1/3F.11 scope)
 
 <!-- PR-BODY:3F.4:START -->
 ## Overview
-<fill with the completed task overview>
+Task 3F.4 delivers the canonical storage and generation lifecycle per ADR-010. A new `CanonicalMemoryRepositoryActor` owns the canonical facts source with deterministic RFC-4122-derived memory IDs (SHA-256 namespace, version 5 / variant 8, input-order independent). `commit` writes Memory/Representation/MemoryFTS in a single synchronous SQLite `executeTransaction` (no suspension points — removes the DEF-50-001 interleave pattern for canonical writes) then ingests per-generation vectors with compensating rollback; any vector failure deletes the canonical row + written vectors, so no half-write or mixed-generation state survives. `deleteMemory` enforces the D-005 full deletion boundary (vectors across all generations + MemoryFTS + translationCache + audit + optional ExcludedAssets write per US-PRV-004); `cascadeDeleteFromOriginal` implements US-PRV-007 (no ExcludedAssets write, invalid exclusion records cleaned, `.cascadeDeleteFromOriginal` audit). `GenerationRegistryActor` gains the lifecycle: `finishShadowBuild` (building→ready), `activateGeneration` (atomic route publish with version bump + `previousTextGeneration` rollback target), `rollbackToPrevious`, `restoreActiveRoute` (reopens per-generation `.pxkt` stores from disk, dimension-guarded) and `persistStore`. Feedback rows now carry `generationId` (US-FBK identity). US-AWK-007 edit fields (`originalTimestamp`/`userEdited`/`userLocked`) persist on Memory. Full suite: 893 tests / 113 suites green.
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task 3F.4 — Canonical storage 与 generation 生命周期
+- User Stories: US-ING-006 AC-1~5, US-PRV-004 AC-2/3/5, US-PRV-006 AC-6, US-PRV-007 AC-2/5, US-AWK-007 AC-2/4/6, US-FBK-001/002/003
+- ADR-010 decisions 1/2/3/4/5/7
+- AGENTS.md D-002/D-003/D-005, §5 存储契约; R-007/R-008
+- docs/05-planning/phase3f-execution-plan.md §3F.4, §4.6.4
+- Deferred items DEF-38-001/002
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| US-ING-006 AC-1/2 | Memory+Representation+MemoryFTS one SQLite transaction; vectors written after with compensating rollback | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (TransactionalCommit) | CanonicalMemoryRepositoryActor.commit + DatabaseManager.executeTransaction | ✅ |
+| US-ING-006 AC-3 | FTS5 index synced with main transaction | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (TransactionalCommit) | MemoryFTS virtual table written in commit | ✅ |
+| US-ING-006 AC-4 | Fault injection proves rollback correctness | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (vector failure / crash point) | setFault(.vectorWrite/.afterCanonicalWrite) + compensation | ✅ |
+| US-ING-006 AC-5 | `.ingestTransaction` audit rolledBack=true/false | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (TransactionalCommit) | AuditEvent.ingestTransaction + writeTransactionAudit | ✅ |
+| US-PRV-004 AC-2 | 仅从 Echo 移除 writes ExcludedAssets + clears all copies | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (DeletionBoundary) | deleteMemory(writeExcluded:) + excludedAssets.add | ✅ |
+| US-PRV-007 AC-2/5 | Cascade delete no ExcludedAssets write; cleans invalid records; `.cascadeDeleteFromOriginal` | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (DeletionBoundary) | cascadeDeleteFromOriginal + excluded.remove + audit | ✅ |
+| D-005 | Full deletion boundary covers translationCache | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (DeletionBoundary) | deleteMemory clears translationCache | ✅ |
+| US-AWK-007 AC-2/4/6 | originalTimestamp/userEdited/userLocked persist | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (EditPersistence) + RA_CanonicalModelTests | Memory model + schema columns + repository round-trip | ✅ |
+| US-FBK-001/002/003 | Feedback generation identity | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (FeedbackIdentity) | FeedbackStore.generationId + FeedbackActor.generationId(for:) | ✅ |
+| ADR-010 dec-1 | Deterministic RFC-4122-derived IDs (input-order independent) | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (DeterministicID) | CanonicalMemoryRepositoryActor.deterministicID | ✅ |
+| ADR-010 dec-2/3 | Shadow build, atomic publish, rollback, restart restore | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (Lifecycle) + RA_GenerationRegistryTests | GenerationRegistryActor lifecycle methods + per-generation `.pxkt` persist | ✅ |
+| ADR-010 dec-4 | Generation-aware feedback | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (FeedbackIdentity) | FeedbackStore.generationId column | ✅ |
+| ADR-010 dec-7 | Per-space separated generation stores (dimension-guarded) | EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (Lifecycle) | registerGeneration/restoreActiveRoute dimension check | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- RED: `EchoTests/CanonicalGenerationTests` — 18 focused tests, compile-RED before repository/lifecycle symbols existed; RFC-4122 shape assertion initially failed (byte order), corrected
+- Focused: `xcodebuild test ... -only-testing:EchoTests/CanonicalGenerationTests` — 18/18 passed
+- Extended R-A: `-only-testing:EchoTests/GenerationRegistryTests -only-testing:EchoTests/ActiveRouteSetTests -only-testing:EchoTests/CanonicalModelTests` — 28/28 passed (with focused = 46)
+- Cumulative: `xcodebuild test ... -only-testing:EchoTests` — 893 tests / 113 suites, 0 failures, exit 0
+- Lint: `swiftlint lint --config .swiftlint.yml --reporter github-actions-logging --quiet` — exit 0, 0 errors (identical to HEAD baseline)
+- Release: Echo Release simulator build blocked only by pre-existing `simulateError` `#Preview` failure (documented 3F.1, base-reproducible)
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- README.md, docs/02-architecture/架构设计文档.md, docs/02-architecture/数据流全链路技术说明文档.md, docs/03-implementation/开发避坑与关键注意点手册.md updated for canonical storage/generation lifecycle
+- docs/decisions/ADR-010-canonical-generation-lifecycle.md: implementation status recorded
+- docs/05-planning/deferred-items.json: DEF-38-001/002 closed with evidence
+- docs/05-planning/phase3f-execution-plan.md §3F.4: task completed
+- docs/05-planning/task-status.json: 3F.4 → review
+- EchoTests/Phase2/RA_CanonicalModelTests.swift + RA_GenerationRegistryTests.swift extended (edit fields + lifecycle)
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- SearchPipeline/IngestPipeline single-store routing replaced at 3F.5/3F.6 production wiring (generation registry consumption); no mixed-generation route can be published (activateGeneration validates non-building), so this does not weaken 3F.11
+- DEF-50-001 (ConsentStoreActor.revokeConsent transaction spans suspension points) remains open — canonical `executeTransaction` is suspension-free, but revokeConsent still awaits DatabaseManager across its transaction; target 3F.11 DatabaseManager atomic purge refactor
+- Release simulator build `simulateError` `#Preview` failure is pre-existing on base (3F.1 entry, 3F.11 release-gate scope); not introduced by this task
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+- DEF-38-001 (originalTimestamp backup field): CLOSED — Memory.originalTimestamp persisted + round-trip tested (CanonicalGenerationTests.EditPersistence)
+- DEF-38-002 (userLocked semantics): PARTIAL — Memory.userLocked persisted (schema + round-trip, Core persistence layer delivered); SyncPipeline skip-on-userLocked wiring remains 3F.7 scope (tracking_status=partial)
+- No new deferred items created by this task
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- [x] New Actor methods are actor-isolated; cross-actor calls awaited (R-008); no `nonisolated(unsafe)`/`@unchecked Sendable`/Combine (R-007)
+- [x] Canonical writes use suspension-free `executeTransaction` (no half-write; DEF-50-001 pattern not reintroduced)
+- [x] Deletion boundary covers vector + index + cache + metadata + audit + translationCache (D-005)
+- [x] ExcludedAssets written only on user "仅从 Echo 移除"; cascade delete never writes and cleans invalid records (D-002/D-003, US-PRV-007)
+- [x] Feedback generation identity persisted (US-FBK)
+- [x] `originalTimestamp`/`userEdited`/`userLocked` persist (US-AWK-007, DEF-38-001/002)
+- [x] Branch `feature/phase3f-canonical-generations-3F.4`, commit `feat(actor): add canonical generation lifecycle`, PR base `dev-1.0`
 <!-- PR-BODY:3F.4:END -->
 
 ---

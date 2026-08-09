@@ -26,6 +26,16 @@ struct GenerationRegistryTests {
         try await db.execute(sql: "DELETE FROM IndexBuildItem")
         try await db.execute(sql: "DELETE FROM IndexGeneration")
         try await db.execute(sql: "DELETE FROM ModelManifest")
+        // CR-9 (PR#56 review): 清理共享目录 .pxkt 残留，避免跨套件恢复陈旧索引
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask
+        ).first!
+        let generationsDir = appSupport.appendingPathComponent("Echo/generations", isDirectory: true)
+        if let files = try? FileManager.default.contentsOfDirectory(atPath: generationsDir.path) {
+            for file in files where file.hasSuffix(".pxkt") {
+                try? FileManager.default.removeItem(at: generationsDir.appendingPathComponent(file))
+            }
+        }
     }
 
     @Test("registerGeneration persists metadata and creates vector store instance")
@@ -301,5 +311,96 @@ struct ActiveRouteSetTests {
         try await sut.publishRoute(ActiveRouteSet(textGeneration: "text_dense/e5-v1", version: 2))
         let loaded = try await sut.loadActiveRoute()
         #expect(loaded?.version == 2)
+    }
+
+    // MARK: - 3F.4: Generation Lifecycle (ADR-010 决策-2/3)
+
+    @Test("finishShadowBuild sets building generation to ready (3F.4)")
+    func test_finishShadowBuild_ready() async throws {
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "g-shadow", indexType: "text_dense", dimension: 384)
+        )
+        try await sut.finishShadowBuild("g-shadow", counts: 7, validationDigest: "digest")
+        let loaded = try await sut.loadGeneration("g-shadow")
+        #expect(loaded?.state == .ready)
+        #expect(loaded?.counts == 7)
+        #expect(loaded?.validationDigest == "digest")
+    }
+
+    @Test("activateGeneration rejects a building generation (no mixed route) (3F.4)")
+    func test_activate_rejects_building() async throws {
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "g-not-ready", indexType: "text_dense", dimension: 384)
+        )
+        do {
+            _ = try await sut.activateGeneration("g-not-ready")
+            #expect(Bool(false), "Expected routeValidationFailed")
+        } catch let error as Echo.GenerationError {
+            if case .routeValidationFailed = error {
+                // expected
+            } else {
+                #expect(Bool(false), "Wrong error: \(error)")
+            }
+        }
+    }
+
+    @Test("activateGeneration publishes route with previousTextGeneration (3F.4)")
+    func test_activate_tracks_previous() async throws {
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384)
+        )
+        try await sut.finishShadowBuild("text_dense/e5-v1", counts: 1, validationDigest: "d1")
+        let route1 = try await sut.activateGeneration("text_dense/e5-v1")
+        #expect(route1.version == 1)
+        #expect(route1.previousTextGeneration == nil)
+
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v2", indexType: "text_dense", dimension: 384)
+        )
+        try await sut.finishShadowBuild("text_dense/e5-v2", counts: 1, validationDigest: "d2")
+        let route2 = try await sut.activateGeneration("text_dense/e5-v2")
+        #expect(route2.version == 2)
+        #expect(route2.previousTextGeneration == "text_dense/e5-v1")
+    }
+
+    @Test("rollbackToPrevious restores prior active generation (3F.4)")
+    func test_rollback_restores_previous() async throws {
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384)
+        )
+        try await sut.finishShadowBuild("text_dense/e5-v1", counts: 1, validationDigest: "d1")
+        _ = try await sut.activateGeneration("text_dense/e5-v1")
+
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v2", indexType: "text_dense", dimension: 384)
+        )
+        try await sut.finishShadowBuild("text_dense/e5-v2", counts: 1, validationDigest: "d2")
+        _ = try await sut.activateGeneration("text_dense/e5-v2")
+
+        let rolled = try await sut.rollbackToPrevious()
+        #expect(rolled != nil)
+        #expect(rolled?.textGeneration == "text_dense/e5-v1")
+
+        let loaded = try await sut.loadActiveRoute()
+        #expect(loaded?.textGeneration == "text_dense/e5-v1")
+    }
+
+    @Test("rollbackToPrevious returns nil when no previous exists (3F.4)")
+    func test_rollback_nil_without_previous() async throws {
+        try await sut.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384)
+        )
+        try await sut.finishShadowBuild("text_dense/e5-v1", counts: 1, validationDigest: "d1")
+        _ = try await sut.activateGeneration("text_dense/e5-v1")
+
+        let rolled = try await sut.rollbackToPrevious()
+        #expect(rolled == nil)
+    }
+
+    @Test("restoreActiveRoute returns nil when no route persisted (3F.4)")
+    func test_restore_nil_without_route() async throws {
+        let fresh = GenerationRegistryActor(db: db)
+        let restored = try await fresh.restoreActiveRoute()
+        #expect(restored == nil)
     }
 }
