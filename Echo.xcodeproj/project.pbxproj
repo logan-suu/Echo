@@ -203,6 +203,7 @@
 			name = Echo;
 			packageProductDependencies = (
 				231256F12FE983AE0065B780 /* ProximaKit */,
+				3C96DDA462B5392A8E492917 /* whisper */,
 			);
 			productName = Echo;
 			productReference = 231256BF2FE983AE0065B780 /* Echo.app */;
@@ -227,6 +228,7 @@
 			name = EchoTests;
 			packageProductDependencies = (
 				231256F22FE983AE0065B780 /* ProximaKit */,
+				BAB871F997C017847C9A5E02 /* whisper */,
 			);
 			productName = EchoTests;
 			productReference = 231256CC2FE983AF0065B780 /* EchoTests.xctest */;
@@ -314,6 +316,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				231256F02FE983AE0065B780 /* XCRemoteSwiftPackageReference "ProximaKit" */,
+				B56E5A6C80EB2363A1B0BADE /* XCLocalSwiftPackageReference "whisper-cpp" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 231256C02FE983AE0065B780 /* Products */;
@@ -827,6 +830,13 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		B56E5A6C80EB2363A1B0BADE /* XCLocalSwiftPackageReference "whisper-cpp" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThirdParty/whisper.cpp;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		231256F12FE983AE0065B780 /* ProximaKit */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -837,6 +847,14 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 231256F02FE983AE0065B780 /* XCRemoteSwiftPackageReference "ProximaKit" */;
 			productName = ProximaKit;
+		};
+		3C96DDA462B5392A8E492917 /* whisper */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = whisper;
+		};
+		BAB871F997C017847C9A5E02 /* whisper */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = whisper;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

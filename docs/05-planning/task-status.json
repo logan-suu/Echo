@@ -1201,7 +1201,7 @@
             "US-ING-005",
             "US-SRC-011"
           ],
-          "status": "ready",
+          "status": "in_progress",
           "owner": {
             "implementation": "On-device ML Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1232,8 +1232,8 @@
             "真实 16kHz mono PCM 转写，whisper-reference-transcripts.json 回填（CER/WER 阈值）",
             "GGUF SHA-256 与 model-provenance-register §2 一致性验证"
           ],
-          "last_updated": "2026-08-07T00:00:00Z",
-          "notes": "从 3F.3 拆分：3F.3 交付 GGUF 工件与 fail-closed 桥接（WhisperRuntimeBridge.runtimeNotLinked）；本任务引入 whisper.cpp 运行时（需 §2.2 白名单审批）、实现 C 互操作与真实转写。关闭 DEF-51-002 的 ASR 契约。",
+          "last_updated": "2026-08-09T04:31:00Z",
+          "notes": "从 3F.3 拆分：3F.3 交付 GGUF 工件与 fail-closed 桥接（WhisperRuntimeBridge.runtimeNotLinked）；本任务引入 whisper.cpp 运行时（§2.2 白名单审批已获批 2026-08-09）、实现 C 互操作与真实转写。关闭 DEF-51-002 的 ASR 契约。",
           "pr": null
         },
         {

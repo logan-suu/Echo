@@ -87,8 +87,20 @@
 | 字段 | 值 |
 |------|-----|
 | **文件** | `Echo/Resources/Models/whisper-reference-transcripts.json` |
-| **内容** | 状态 `pending-runtime-integration`（whisper.cpp 运行时接入后回填真实转写样本） |
+| **内容** | 状态 `approved`（3F.3b 2026-08-09 回填）：jfk.wav 真实转写样本 + 参考文本 + CER/WER 阈值（0.15） |
 | **用途** | US-SRC-011 model semantics；Golden 验证在 Phase 4 4.1 |
+| **验证** | `WhisperRuntimeTests.ReferenceCERWER`：真实转写 CER=0.0 ≤ 0.15（spike 实测） |
+
+### 2.3 运行时接入（3F.3b）
+
+| 字段 | 值 |
+|------|-----|
+| **运行时** | whisper.cpp v1.9.2（本地 SPM 包，vendored 固定 revision `306c88f4d1`，`ThirdParty/whisper.cpp/`） |
+| **接入方式** | `NativeWhisperCInterop`（whisper_init_from_file_with_params + whisper_full，Sendable 安全）；`WhisperRuntimeBridge` 默认接线 |
+| **构建决策** | `GGML_CPU_GENERIC` + 排除 `arch/arm/*.c`（SPM 无法按架构排除源文件，避免 x86_64 duplicate symbol；见 Package.swift 注释） |
+| **校验** | 转写前 SHA-256 与 §2.1 登记值比对（`checksumMismatch` L3）；失败走 fail-closed |
+| **GGUF 状态** | `pending-runtime-integration` → `approved`（2026-08-09，3F.3b） |
+| **依赖白名单** | AGENTS.md §2.2 白名单审批通过（2026-08-09，人类批准）；SBOM/NOTICE 随 §4 打包前创建 |
 
 ---
 
@@ -159,3 +171,4 @@
 |------|------|--------|
 | 2026-08-06 | 初始登记：E5/Whisper/SigLIP2 三工件 + tokenizer 附属件 | On-device ML Lead |
 | 2026-08-07 | 3F.3a: Core ML 转换管线（`convert_siglip2.py`）+ `SigLIP2Embedder` 真实推理接入 + 参考向量 schema 就绪 + provenance 模型更新 | On-device ML Lead |
+| 2026-08-09 | 3F.3b: whisper.cpp v1.9.2 运行时接入（vendored 固定 revision + GGML_CPU_GENERIC）+ `NativeWhisperCInterop` 真实转写 + 参考转写回填（§2.2 approved）+ GGUF 状态 `pending-runtime-integration` → `approved`（§2.3） | On-device ML Lead |

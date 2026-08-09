@@ -738,12 +738,13 @@
       "severity": "🟡",
       "location": "EchoShareExtension/ShareViewController.swift:114-120 (loadFileURL) + IngestPipeline.ingestSharedAudio (transcribe(audioTrackAssetId: envelope.payload))",
       "reason": "音频分享的信封 payload 存的是扩展进程沙盒内临时文件 URL（ADR-008 §决策-7 未把文件拷入 App Group 持久化），App 稍后消费时该 URL 已失效；且 ASREngineProtocol.transcribe 入参契约是 PHAsset.localIdentifier，与文件 URL 语义不符。语音摄入即使 Whisper（3F.3）就绪也无法成功。修复需在分享侧把文件复制到 App Group 容器持久定位符 + 调整 ASR 契约（3F.3 接入 Whisper 时一并设计），本次 PR 修复会造成跨任务契约反复。AC 表 US-SRC-001 voice 行已降级为 🔮。",
-      "defer_to": "3F.3（Whisper 接入时重设计 ASR 文件输入契约）+ 3F.5（生产摄入接管文件分享持久化）",
+      "defer_to": "3F.3b（ASR 文件输入契约已重设计，transcribeFile(at:) 新增，2026-08-09 ✅）+ 3F.5（生产摄入接管文件分享持久化，App Group 生产者路径待完成并验证 E2E）",
       "deferred_at": "2026-08-05",
       "target_tasks": [
         "3F.3b",
         "3F.5"
-      ]
+      ],
+      "resolution_notes": "3F.3b（2026-08-09）：ASREngineProtocol 新增 `transcribeFile(at:)` 文件 URL 输入契约，WhisperASREngine/StubASREngine 均已实现，DEF-51-002 的 ASR 契约部分关闭。剩余：3F.5 完成 Share Extension 文件持久化到 App Group + 生产摄入 E2E 验证。"
     },
     {
       "id": "DEF-51-003",

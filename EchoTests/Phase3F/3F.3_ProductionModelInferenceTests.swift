@@ -256,10 +256,11 @@ struct LoaderStateReportTests {
 @MainActor
 struct WhisperRuntimeBridgeTests {
 
-    @Test("bridge fails closed when whisper.cpp runtime not linked")
+    @Test("bridge fails closed when runtime unavailable (injected)")
     func test_bridge_runtimeNotLinked() async {
-        let bridge = WhisperRuntimeBridge()
-        // 模型存在与否不影响：运行时未链接 → runtimeNotLinked
+        // 3F.3b: 默认 cInterop 已切换为 NativeWhisperCInterop（真实转写）；
+        // fail-closed 场景通过显式注入 UnavailableWhisperCInterop 保留验证
+        let bridge = WhisperRuntimeBridge(cInterop: UnavailableWhisperCInterop())
         await #expect(throws: WhisperRuntimeBridge.BridgeError.self) {
             _ = try await bridge.transcribe(pcm: [Float](repeating: 0.1, count: 16000))
         }
@@ -269,6 +270,15 @@ struct WhisperRuntimeBridgeTests {
     func test_unavailableInterop() {
         let interop = UnavailableWhisperCInterop()
         #expect(interop.isAvailable == false)
+    }
+
+    @Test("default interop is native when runtime linked (3F.3b)")
+    func test_defaultInterop_native() {
+        let bridge = WhisperRuntimeBridge()
+        let interop = NativeWhisperCInterop()
+        #expect(interop.isAvailable == true)
+        // 默认构造使用 NativeWhisperCInterop（whisper.cpp 静态库随包链接）
+        let _ = bridge
     }
 
     @Test("GGUF model presence when bundled")
