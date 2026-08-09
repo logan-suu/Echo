@@ -403,8 +403,9 @@ Task 3F.3b integrates the whisper.cpp runtime (v1.9.2, vendored local Swift pack
 
 ## Testing
 - RED: `xcodebuild test ... -only-testing:EchoTests/WhisperRuntimeLinkedTests -only-testing:EchoTests/WhisperFileInputContractTests` — 2/2 failed (`.runtimeNotLinked`, `.modelNotLoaded`)
-- Focused: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO` + 5 WhisperRuntime test classes — 7/7 passed (145s, real inference)
-- Cumulative: `xcodebuild test ... -only-testing:EchoTests` — 857 tests / 105 suites, 0 failures, exit 0 (338s)
+- Focused: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO` + 5 WhisperRuntime test classes — 7/7 passed (real inference, CER=0.0 ≤ 0.15)
+- Model-gated skip (PR review fix): model-dependent Whisper tests silently skip when GGUF/jfk.wav absent, matching 3F.3a SigLIP2 / E5 convention (DEF-54-001) — verified 7/7 pass with model, all skip without model
+- Cumulative: `xcodebuild test ... -only-testing:EchoTests` — 857 tests / 105 suites, 0 failures, exit 0 (338s, local with models)
 - Model gate: `bash Scripts/prepare_models.sh --verify-only` — exit 0, whisper GGUF checksum OK
 - Lint: `swiftlint lint --quiet` — 0 errors / 0 warnings (changed files), repo-wide clean
 - Release: whisper-cpp package compiles for arm64+x86_64 (GGML_CPU_GENERIC); Echo Release simulator build blocked only by pre-existing `simulateError` `#Preview` failure (documented 3F.1, base-reproducible)
