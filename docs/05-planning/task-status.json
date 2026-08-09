@@ -1233,7 +1233,7 @@
             "GGUF SHA-256 与 model-provenance-register §2 一致性验证"
           ],
           "last_updated": "2026-08-09T05:31:34Z",
-          "notes": "从 3F.3 拆分：3F.3 交付 GGUF 工件与 fail-closed 桥接（WhisperRuntimeBridge.runtimeNotLinked）；本任务引入 whisper.cpp 运行时（§2.2 白名单审批已获批 2026-08-09）、实现 C 互操作与真实转写。关闭 DEF-51-002 的 ASR 契约。",
+          "notes": "从 3F.3 拆分：3F.3 交付 GGUF 工件与 fail-closed 桥接（WhisperRuntimeBridge.runtimeNotLinked）；本任务引入 whisper.cpp 运行时（§2.2 白名单审批已获批 2026-08-09）、实现 C 互操作与真实转写。关闭 DEF-51-002 的 ASR 契约。 | PR 审查修复（2026-08-09, PR #55）: Whisper 运行时测试改为模型缺失时静默跳过（与 DEF-54-001 一致），修复 CI 因模型未随包导致的 6 测试失败；deferred DEF-55-001/002/003 已登记",
           "pr": {
             "number": 55,
             "url": "https://github.com/logan-suu/Echo/pull/55",
