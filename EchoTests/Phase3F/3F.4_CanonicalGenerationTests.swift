@@ -216,6 +216,26 @@ struct CanonicalGenerationTests {
             let store = await registry.vectorStore(for: "text_dense/e5-v1")
             #expect(await store?.liveCount == 0)
         }
+
+        @Test("searchCanonical escapes FTS5 syntax characters, no MATCH error (F-3)")
+        func test_search_escapes_fts5_syntax() async throws {
+            let registry = makeRegistry()
+            try await seedGeneration(registry)
+            let repo = makeRepo(registry)
+            let memory = makeMemory(sourceLocator: "PHAsset/fts-1", text: "meeting notes parentheses stars quoted words")
+            let rep = Representation(memoryId: memory.memoryId, modality: .textDense, preprocessVersion: "e5-v1", contentHash: "sha256:fts")
+            try await repo.commit(memory: memory, representations: [rep], vectorsByGeneration: [:], traceID: "t-fts")
+
+            // FTS5 语法字符（括号/星号/引号）不再导致 MATCH 运行时错误
+            #expect(try await repo.searchCanonical(matching: "(parentheses)").contains(memory.memoryId))
+            #expect(try await repo.searchCanonical(matching: "*stars*").contains(memory.memoryId))
+            #expect(try await repo.searchCanonical(matching: "\"quoted\"").contains(memory.memoryId))
+            #expect(try await repo.searchCanonical(matching: "meeting parentheses").contains(memory.memoryId))
+
+            // 空/纯空白查询返回空数组（不抛错）
+            #expect(try await repo.searchCanonical(matching: "   ").isEmpty)
+            #expect(try await repo.searchCanonical(matching: "").isEmpty)
+        }
     }
 
     // MARK: - 重启恢复 / route 原子发布 / 回滚
@@ -290,6 +310,52 @@ struct CanonicalGenerationTests {
 
             let loaded = try await registry.loadActiveRoute()
             #expect(loaded?.textGeneration == "text_dense/e5-v1")
+        }
+
+        @Test("activateGeneration commits state migration + route in one transaction (F-2)")
+        func test_activate_atomic_commit() async throws {
+            let registry = makeRegistry()
+
+            try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+            try await registry.finishShadowBuild("text_dense/e5-v1", counts: 10, validationDigest: "d1")
+            _ = try await registry.activateGeneration("text_dense/e5-v1")
+
+            try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v2", indexType: "text_dense", dimension: 384))
+            try await registry.finishShadowBuild("text_dense/e5-v2", counts: 5, validationDigest: "d2")
+            _ = try await registry.activateGeneration("text_dense/e5-v2")
+
+            // 单事务原子提交：旧代 .ready、新代 .active、路由指向新代且记录 previous
+            let old = try await registry.loadGeneration("text_dense/e5-v1")
+            #expect(old?.state == .ready)
+            let new = try await registry.loadGeneration("text_dense/e5-v2")
+            #expect(new?.state == .active)
+            let route = try await registry.loadActiveRoute()
+            #expect(route?.textGeneration == "text_dense/e5-v2")
+            #expect(route?.previousTextGeneration == "text_dense/e5-v1")
+        }
+
+        @Test("rollbackToPrevious commits demotion + promotion + route in one transaction (F-2)")
+        func test_rollback_atomic_commit() async throws {
+            let registry = makeRegistry()
+
+            try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+            try await registry.finishShadowBuild("text_dense/e5-v1", counts: 10, validationDigest: "d1")
+            _ = try await registry.activateGeneration("text_dense/e5-v1")
+
+            try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v2", indexType: "text_dense", dimension: 384))
+            try await registry.finishShadowBuild("text_dense/e5-v2", counts: 5, validationDigest: "d2")
+            _ = try await registry.activateGeneration("text_dense/e5-v2")
+
+            let rolled = try await registry.rollbackToPrevious()
+            #expect(rolled?.textGeneration == "text_dense/e5-v1")
+
+            let old = try await registry.loadGeneration("text_dense/e5-v1")
+            #expect(old?.state == .active)
+            let new = try await registry.loadGeneration("text_dense/e5-v2")
+            #expect(new?.state == .ready)
+            let route = try await registry.loadActiveRoute()
+            #expect(route?.textGeneration == "text_dense/e5-v1")
+            #expect(route?.previousTextGeneration == "text_dense/e5-v2")
         }
 
         @Test("restart restore reopens route and generation stores from disk")
@@ -472,6 +538,33 @@ struct CanonicalGenerationTests {
                 bindings: [.text(memory.memoryId.uuidString)]
             )
             #expect(rows.first?["c"]?.intValue == 0)
+        }
+
+        @Test("deleteMemory cleans persisted disk copies for unloaded generations (F-1/D-005)")
+        func test_delete_cleans_disk_copies_unloaded_generation() async throws {
+            let registry = makeRegistry()
+            let repo = makeRepo(registry)
+            let memory = try await seedMemory(repo, registry, locator: "PHAsset/disk-1")
+            try await registry.persistStore(generationId: "text_dense/e5-v1")
+            let url = await registry.storeFileURL(for: "text_dense/e5-v1")
+            #expect(FileManager.default.fileExists(atPath: url.path))
+            let before = try VectorStoreActor.load(from: url)
+            #expect(await before.liveCount == 1)
+
+            // 模拟新会话：全新 registry 实例（storeInstances 为空），generation 仅存于 DB + 磁盘
+            let freshRegistry = makeRegistry()
+            let freshRepo = makeRepo(freshRegistry)
+            let deleted = try await freshRepo.deleteMemory(
+                memoryId: memory.memoryId,
+                sourceType: "photo",
+                writeExcluded: false,
+                traceID: "t-disk-1"
+            )
+            #expect(deleted == true)
+
+            let after = try VectorStoreActor.load(from: url)
+            #expect(await after.liveCount == 0)
+            try? await freshRegistry.removeStoreFile(generationId: "text_dense/e5-v1")
         }
     }
 

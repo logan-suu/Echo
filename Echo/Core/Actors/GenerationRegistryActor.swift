@@ -9,6 +9,8 @@
 //          publishRoute, loadActiveRoute, validateRoute, fallback (回退最近有效 route)
 //          3F.4: finishShadowBuild, activateGeneration, rollbackToPrevious,
 //          restoreActiveRoute, persistStore, removeStoreFile
+//          2026-08-09 PR#56 修复: F-2 activateGeneration/rollbackToPrevious
+//          状态迁移+路由发布合并单事务 (原子发布, 无跨挂起点窗口)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007/R-008,
 //           AGENTS.md §4.5 (断点续传), §4.3 (长任务串行)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
@@ -270,7 +272,15 @@ public actor GenerationRegistryActor {
                 throw GenerationError.routeValidationFailed(reason: "generation still building: \(generationId)")
             }
         }
-        _ = try await db.executeWrite(
+        _ = try await db.executeTransaction([routeUpsertWrite(route)])
+    }
+
+    /// 构建 ActiveRouteSet 的路由 upsert 写（INSERT OR REPLACE id=1）。
+    ///
+    /// F-2: 供 `activateGeneration` / `rollbackToPrevious` 与状态迁移合并进
+    /// 同一 SQLite 事务，保证「状态变更 + 路由发布」原子提交（无跨挂起点窗口）。
+    private func routeUpsertWrite(_ route: ActiveRouteSet) -> DatabaseManager.DBWrite {
+        DatabaseManager.DBWrite(
             sql: """
             INSERT OR REPLACE INTO ActiveRouteSet (
                 id, textGeneration, ocrGeneration, visionGeneration, lexicalGeneration, version, updatedAt, previousTextGeneration
@@ -316,19 +326,39 @@ public actor GenerationRegistryActor {
         }
 
         let previous = try await loadActiveRoute()
+        var writes: [DatabaseManager.DBWrite] = []
         if let previous, previous.textGeneration != generationId {
-            _ = try await setGenerationState(previous.textGeneration, state: .ready)
+            // 旧 active 降级 .ready（保留为回滚目标），校验迁移合法
+            if let prevGen = try await loadGeneration(previous.textGeneration) {
+                guard GenerationState.ready.isLegalTransition(from: prevGen.state) else {
+                    throw GenerationError.illegalStateTransition(from: prevGen.state, to: .ready)
+                }
+                writes.append(.init(
+                    sql: "UPDATE IndexGeneration SET state = ? WHERE generationId = ?",
+                    bindings: [.text(GenerationState.ready.rawValue), .text(previous.textGeneration)]
+                ))
+            }
         }
-
-        _ = try await setGenerationState(generationId, state: .active)
-        try await persistStore(generationId: generationId)
+        // 新 generation 置 .active，校验迁移合法（禁止 building 直接激活已在守卫处拒绝）
+        guard GenerationState.active.isLegalTransition(from: generation.state) else {
+            throw GenerationError.illegalStateTransition(from: generation.state, to: .active)
+        }
+        writes.append(.init(
+            sql: "UPDATE IndexGeneration SET state = ? WHERE generationId = ?",
+            bindings: [.text(GenerationState.active.rawValue), .text(generationId)]
+        ))
 
         let route = ActiveRouteSet(
             textGeneration: generationId,
             version: (previous?.version ?? 0) + 1,
             previousTextGeneration: previous?.textGeneration
         )
-        try await publishRoute(route)
+        writes.append(routeUpsertWrite(route))
+
+        // F-2: 状态迁移 + 路由发布合并为单个 SQLite 事务，原子提交（无跨挂起点窗口）
+        _ = try await db.executeTransaction(writes)
+
+        try await persistStore(generationId: generationId)
         return route
     }
 
@@ -346,16 +376,37 @@ public actor GenerationRegistryActor {
             return nil
         }
 
-        _ = try await setGenerationState(current.textGeneration, state: .ready)
-        _ = try await setGenerationState(previousId, state: .active)
-        try await persistStore(generationId: previousId)
+        var writes: [DatabaseManager.DBWrite] = []
+        // 当前 active 降级 .ready，校验迁移合法
+        if let currentGen = try await loadGeneration(current.textGeneration) {
+            guard GenerationState.ready.isLegalTransition(from: currentGen.state) else {
+                throw GenerationError.illegalStateTransition(from: currentGen.state, to: .ready)
+            }
+            writes.append(.init(
+                sql: "UPDATE IndexGeneration SET state = ? WHERE generationId = ?",
+                bindings: [.text(GenerationState.ready.rawValue), .text(current.textGeneration)]
+            ))
+        }
+        // previous 置 .active，校验迁移合法
+        guard GenerationState.active.isLegalTransition(from: previous.state) else {
+            throw GenerationError.illegalStateTransition(from: previous.state, to: .active)
+        }
+        writes.append(.init(
+            sql: "UPDATE IndexGeneration SET state = ? WHERE generationId = ?",
+            bindings: [.text(GenerationState.active.rawValue), .text(previousId)]
+        ))
 
         let route = ActiveRouteSet(
             textGeneration: previousId,
             version: current.version + 1,
             previousTextGeneration: current.textGeneration
         )
-        try await publishRoute(route)
+        writes.append(routeUpsertWrite(route))
+
+        // F-2: 状态迁移 + 路由发布合并为单个 SQLite 事务，原子提交（无跨挂起点窗口）
+        _ = try await db.executeTransaction(writes)
+
+        try await persistStore(generationId: previousId)
         return route
     }
 

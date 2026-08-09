@@ -8,6 +8,8 @@
 // AC 覆盖: 确定性 ID (RFC 4122 派生), 事务 CRUD (canonical+vector+FTS 同事务/补偿),
 //          崩溃点故障注入 (无 half-write), 全删除边界 (D-005), 级联删除 (US-PRV-007),
 //          仅从 Echo 移除写 ExcludedAssets (US-PRV-004), 反馈 generation 身份
+//          2026-08-09 PR#56 修复: F-1 deleteMemory 清理未加载 generation 的磁盘副本,
+//          F-3 searchCanonical FTS5 语法转义 (token 化短语 AND)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007, R-008 (跨 Actor await)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-09
@@ -156,10 +158,19 @@ public actor CanonicalMemoryRepositoryActor {
     }
 
     /// FTS5 canonical 文本检索（US-ING-006 AC-3：FTS5 与主事务同步提交）。
+    ///
+    /// F-3: 用户查询中的 FTS5 语法字符（引号、`*`、括号、AND/OR 等）会导致
+    /// MATCH 运行时错误或异常结果。查询按空白分词，每 token 作为短语（引号包裹 +
+    /// 内嵌引号转义）以隐式 AND 组合，杜绝语法注入；空查询返回空数组。
     public func searchCanonical(matching query: String, limit: Int = 50) async throws -> [UUID] {
+        let tokens = query.split(whereSeparator: \.isWhitespace).map {
+            "\"" + String($0).replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        }
+        guard !tokens.isEmpty else { return [] }
+        let ftsQuery = tokens.joined(separator: " ")
         let rows = try await db.executeQuery(
             sql: "SELECT memoryId FROM MemoryFTS WHERE MemoryFTS MATCH ? LIMIT ?",
-            bindings: [.text(query), .int(Int64(limit))]
+            bindings: [.text(ftsQuery), .int(Int64(limit))]
         )
         return rows.compactMap { row in
             row["memoryId"]?.stringValue.flatMap { UUID(uuidString: $0) }
@@ -184,11 +195,32 @@ public actor CanonicalMemoryRepositoryActor {
         let memory = try await loadMemory(memoryId: memoryId)
         guard memory != nil else { return false }
 
-        // 1) 删除全部 generation 中的向量
+        // 1) 删除全部 generation 中的向量（内存实例 + 持久化磁盘副本，D-005 跨全 generation）
+        //    F-1: 未在本会话加载的 generation（retired/未恢复）其 .pxkt 磁盘副本同样必须清理，
+        //    否则重启恢复后残留向量。磁盘清理失败记录到审计日志，不阻断 SQLite 删除事务。
+        var diskCleanupFailed = false
         let generations = try await generationRegistry.loadGenerations()
         for gen in generations {
-            if let store = await generationRegistry.vectorStore(for: gen.generationId) {
+            let generationId = gen.generationId
+            if let store = await generationRegistry.vectorStore(for: generationId) {
                 _ = await store.delete(id: memoryId)
+                // 内存删除后持久化，避免磁盘副本仍保留已删向量（F-1）
+                do {
+                    try await generationRegistry.persistStore(generationId: generationId)
+                } catch {
+                    diskCleanupFailed = true
+                }
+            } else {
+                // 未加载的 generation：直接从磁盘副本加载并删除对应向量（F-1）
+                let url = await generationRegistry.storeFileURL(for: generationId)
+                guard FileManager.default.fileExists(atPath: url.path),
+                      let diskStore = try? VectorStoreActor.load(from: url) else { continue }
+                _ = await diskStore.delete(id: memoryId)
+                do {
+                    try await diskStore.save(to: url)
+                } catch {
+                    diskCleanupFailed = true
+                }
             }
         }
 
@@ -212,7 +244,8 @@ public actor CanonicalMemoryRepositoryActor {
             policyVersion: policy.policyVersion,
             success: true,
             sourceType: sourceType,
-            excludedWritten: writeExcluded
+            excludedWritten: writeExcluded,
+            content: diskCleanupFailed ? "vectorDiskCleanupFailed=true" : nil
         )
         return true
     }
