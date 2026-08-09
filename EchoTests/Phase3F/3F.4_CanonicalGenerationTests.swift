@@ -33,6 +33,7 @@ struct CanonicalGenerationTests {
         try await db.execute(sql: "DELETE FROM IndexGeneration")
         try await db.execute(sql: "DELETE FROM ActiveRouteSet")
         try await db.execute(sql: "DELETE FROM FeedbackStore")
+        try await db.execute(sql: "DELETE FROM ExcludedAssets")
         try await db.execute(sql: "DELETE FROM AuditLog")
 
         // 清理默认 generation 存储目录中的持久化索引文件，保证测试隔离
