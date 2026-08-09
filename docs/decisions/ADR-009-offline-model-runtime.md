@@ -32,12 +32,14 @@
 - 全部模型工件可溯源、可验证、全离线；`model-provenance-register` 成为分发唯一事实源。
 - Language Aligner 保证 AI 输出语言符合 `UserPolicy.preferredLanguage`。
 - 关闭 DEF-34-003/004、DEF-35-001 的证据路径确定。
+- **3F.3b（2026-08-09）**：whisper.cpp v1.9.2 运行时接入 — 真实转写可用（`NativeWhisperCInterop`），GGUF SHA-256 校验强制，参考转写回填（CER=0.0）。
 
 ### 负面
 
 - 捆绑 LLM 增加包体积；须接受体积/质量权衡并经 Model Legal 批准。
 - 不可变工件使模型升级走「新 revision + 新审批」路径，无法热替换。
 - 参考输出需维护与模型 revision 一一对应。
+- **3F.3b 决策**：whisper.cpp 以 `GGML_CPU_GENERIC` 构建（SPM 无法按架构排除源文件，避免 x86_64 duplicate symbol），无 NEON 专属加速 — CPU 推理约 28s/11s 音频，可接受。
 
 ## 参考
 

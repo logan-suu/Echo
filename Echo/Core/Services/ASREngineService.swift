@@ -3,13 +3,15 @@
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-ING-005 (视频音频转写)
 //            docs/02-architecture/数据流全链路技术说明文档.md §3.2 (视频摄入音频转写)
 // 任务: 2.4 - IngestPipeline：视频摄入（AC-2: 离线转写）
-// AC 覆盖: US-ING-005 AC-2 (离线转录音频轨道)
+//      3F.3b - DEF-51-002 ASR 文件输入契约重设计（2026-08-09）
+// AC 覆盖: US-ING-005 AC-2 (离线转录音频轨道)、DEF-51-002 (文件 URL 输入契约)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (禁止网络下载),
 //           R-007 (禁止 unchecked Sendable)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 3F.3 (2026-08-06): SenseVoice（FunASR 自定义条款）退役，ASR 由 WhisperASREngine (R-3.3) 提供。
-//   whisper.cpp 运行时接入前 fail-closed（WhisperRuntimeBridge.runtimeNotLinked，L3）。
-//   当前 Stub 保留供 IngestPipeline 测试。
+// 3F.3b (2026-08-09): whisper.cpp 真实转写接入；ASREngineProtocol 新增 `transcribeFile(at:)`
+//   文件输入契约（DEF-51-002）— Share Extension 持久化的音频文件 URL 可直接转写，
+//   PHAsset ID 语义契约由 3F.5 生产摄入统一。
 // 生成时间: 2026-07-11
 // ==========================================
 
@@ -20,6 +22,9 @@ import Foundation
 /// 离线语音转写协议 — 抽象 ASR 引擎，支持依赖注入与测试 Mock。
 ///
 /// AC-2 (US-ING-005): 通过 Whisper tiny（whisper.cpp）离线转录音频轨道为文本。
+/// DEF-51-002 (3F.3b): `transcribeFile(at:)` 提供文件 URL 输入契约 —
+///   Share Extension 将音频拷入 App Group 持久定位符后可直接转写；
+///   `transcribe(audioTrackAssetId:)` 保留 PHAsset ID 语义（视频轨，3F.5 统一）。
 /// 协议设计为 Sendable（非 Actor），以便测试 Mock 无需 Actor 隔离。
 public protocol ASREngineProtocol: Sendable {
     /// 对视频音频轨道进行离线语音转写。
@@ -28,6 +33,13 @@ public protocol ASREngineProtocol: Sendable {
     /// - Returns: 转写后的文本
     /// - Throws: `ASREngineError` 若模型未加载或转写失败
     func transcribe(audioTrackAssetId: String) async throws -> String
+
+    /// DEF-51-002: 对本地音频文件 URL 进行离线语音转写。
+    ///
+    /// - Parameter url: 本地音频文件 URL（16kHz mono 或任意采样率，引擎内部重采样）
+    /// - Returns: 转写后的文本
+    /// - Throws: `ASREngineError` 若模型未加载、音频无效或转写失败
+    func transcribeFile(at url: URL) async throws -> String
 }
 
 // MARK: - ASR Engine Error
@@ -87,6 +99,15 @@ public actor StubASREngine: ASREngineProtocol {
     /// - Returns: 预设的转写文本
     /// - Throws: 如已调用 `setNextError()` 则抛出对应错误
     public func transcribe(audioTrackAssetId: String) async throws -> String {
+        if let error = shouldThrowNext {
+            shouldThrowNext = nil
+            throw error
+        }
+        return nextTranscript
+    }
+
+    /// DEF-51-002: 文件 URL 输入契约 — 返回预设文本（Stub 忽略文件内容）。
+    public func transcribeFile(at url: URL) async throws -> String {
         if let error = shouldThrowNext {
             shouldThrowNext = nil
             throw error

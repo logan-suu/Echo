@@ -1,6 +1,25 @@
 {
   "schemaVersion": "1.0.0",
-  "description": "Whisper tiny Q5_1 reference transcripts (US-SRC-011 model semantics). Populated by 3F.3 after whisper.cpp runtime integration; pending artifacts/approval.",
-  "status": "pending-runtime-integration",
-  "samples": []
+  "description": "Whisper tiny Q5_1 reference transcripts (US-SRC-011 model semantics). Backfilled by 3F.3b with real whisper.cpp v1.9.2 inference.",
+  "status": "approved",
+  "runtime": {
+    "engine": "whisper.cpp",
+    "version": "1.9.2",
+    "revision": "306c88f4d1",
+    "model": "whisper-tiny-q5_1.gguf",
+    "modelSha256": "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7"
+  },
+  "thresholds": {
+    "cer": 0.15,
+    "wer": 0.15
+  },
+  "samples": [
+    {
+      "id": "jfk",
+      "source": "whisper.cpp samples/jfk.wav (16kHz mono, 11s)",
+      "reference": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country.",
+      "referenceNormalized": "and so my fellow americans ask not what your country can do for you ask what you can do for your country",
+      "verified": true
+    }
+  ]
 }

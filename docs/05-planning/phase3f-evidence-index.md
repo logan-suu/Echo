@@ -360,50 +360,82 @@ Add real production data sources: a PhotoKit source adapter (full authorization-
 
 ## Entry: 3F.3b — whisper.cpp 运行时接入与真实转写
 
-> Split from 3F.3 (2026-08-07 planning change): 3F.3 delivers GGUF artifact + fail-closed bridge; 3F.3b introduces whisper.cpp runtime (§2.2 whitelist approval), C interop and real transcription. Closes DEF-51-002 ASR contract.
+> Split from 3F.3 (2026-08-07 planning change): 3F.3 delivers GGUF artifact + fail-closed bridge; 3F.3b introduces whisper.cpp runtime (§2.2 whitelist approval), C interop and real transcription. Closes DEF-51-002 ASR file-input contract.
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: 3F.3b — branch `feature/phase3f-whisper-runtime-3F.3b`, commit `feat(service): link whisper.cpp real transcription`, PR `feat(service): link whisper.cpp real transcription [3F.3b]` (base `dev-1.0`)
 - Registered worktree path / ownership / clean rebase result: n/a — plain branch in main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: `in_progress` → `review` in docs/05-planning/task-status.json (2026-08-09); dependency whitelist approval for whisper.cpp recorded (AGENTS.md §2.2, human approval 2026-08-09)
+- Quoted AC and architecture constraints: US-ING-003 AC-1 (voice memo transcription), US-ING-005 AC-2 (video audio offline transcription), US-SRC-011 model semantics (reference transcripts); AGENTS.md R-005 (zero network), R-007 (no nonisolated(unsafe)/unchecked Sendable); ADR-009 decisions 2/3 (immutable bundled artifact + fixed revision/SHA-256; zero-network runtime)
+- RED test command and observed failure: `xcodebuild test ... -only-testing:EchoTests/WhisperRuntimeLinkedTests -only-testing:EchoTests/WhisperFileInputContractTests` — 2/2 failed: `test_bridge_runtimeLinked` caught `.runtimeNotLinked`; `test_asrEngine_fileURLInput` caught `.modelNotLoaded`
+- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/WhisperRuntimeLinkedTests -only-testing:EchoTests/WhisperRealTranscriptTests -only-testing:EchoTests/WhisperReferenceCERWERTests -only-testing:EchoTests/WhisperGGUFHashTests -only-testing:EchoTests/WhisperFileInputContractTests` — 7/7 passed (real inference ~28-30s per test, total 145s)
+- Cumulative test command / exit / passed count: `xcodebuild test ... -only-testing:EchoTests` — 857 tests / 105 suites, 0 failures, exit 0 (338s)
+- Release simulator and device commands / exits: Release simulator build fails on pre-existing non-DEBUG-gated `simulateError` in `#Preview` blocks (CreationView/MemoryDetailView/SearchView) — identical failure on `dev-1.0` base, out of 3F.3b scope (documented in 3F.1 entry); whisper-cpp package itself compiles clean for arm64+x86_64 (GGML_CPU_GENERIC resolves arch-fallback duplicate-symbol conflict)
+- Static/privacy/model/compliance commands / exits: `swiftlint lint --quiet` → 0 errors, 0 warnings in changed files (repo-wide clean); `bash Scripts/prepare_models.sh --verify-only` → exit 0, whisper-tiny-q5_1.gguf checksum OK; no network-denial scan regression (whisper loads GGUF from Bundle, R-005)
+- Production path exercised: `WhisperRuntimeBridge.transcribe(pcm:)` real inference on 16kHz mono PCM (jfk.wav 11s) → transcript "And so my fellow Americans ask not what your country can do for you, ask what you can do for your country." (CER=0.0 vs reference); `WhisperASREngine.transcribeFile(at:)` file-URL contract (DEF-51-002); GGUF SHA-256 verified before transcription (ADR-009 decision 2)
+- Files and documentation changed: ThirdParty/whisper.cpp/ (vendored v1.9.2, rev 306c88f4d1, Package.swift, LICENSE, AUTHORS, samples/jfk.wav); Echo/Core/Services/NativeWhisperCInterop.swift (new); WhisperRuntimeBridge.swift / WhisperASREngine.swift / ASREngineService.swift (real wiring + transcribeFile contract); Echo.xcodeproj (local package reference); Echo/Resources/Models/whisper-reference-transcripts.json (approved backfill) + jfk.wav (new); Scripts/model_checksums.sha256; EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift (new) + 3F.3_ProductionModelInferenceTests.swift (fail-closed → injected); docs (README, 技术选型, 数据流, 避坑手册, ADR-009, model-provenance-register §2, evidence-index, deferred-items DEF-51-002, phase3f-execution-plan, task-status)
+- Deferred items closed or created, with evidence links: DEF-51-002 ASR contract portion CLOSED (transcribeFile(at:) implemented + tested in WhisperRuntimeTests.FileInputContract; Share Extension App Group persistence portion remains deferred to 3F.5, recorded with resolution_notes in deferred-items.json)
+- Known risks that do not weaken an in-scope gate: whisper.cpp built with `GGML_CPU_GENERIC` (no arch/arm NEON-specific acceleration) — CPU-only inference, whisper tiny Q5_1 transcribes 11s audio in ~28s on simulator; acceptable for v1 and does not weaken 3F.11 gate; Release simulator build `simulateError` Preview failure pre-existing on base (3F.1/3F.11 scope); SBOM/NOTICE for whisper.cpp created at §4 packaging gate per model-provenance-register policy
 
 <!-- PR-BODY:3F.3b:START -->
 ## Overview
-<fill with the completed task overview>
+Task 3F.3b integrates the whisper.cpp runtime (v1.9.2, vendored local Swift package at fixed revision 306c88f4d1) into Echo, replacing the fail-closed `WhisperRuntimeBridge` stub with real on-device transcription. `NativeWhisperCInterop` provides a Sendable-safe C wrapper (`whisper_init_from_file_with_params` + `whisper_full`); `WhisperRuntimeBridge` now defaults to it, verifies the GGUF SHA-256 against model-provenance-register §2 before inference (ADR-009 decision 2), and reports loader state (DEF-34-003). `WhisperASREngine.transcribe` is fully implemented (preprocessAudio → VAD → bridge). The ASR protocol gained a file-URL input contract (`transcribeFile(at:)`) closing the DEF-51-002 ASR contract. Reference transcripts (`whisper-reference-transcripts.json`) were backfilled with a real jfk.wav inference (CER=0.0 within 0.15 threshold). Full suite: 857 tests / 105 suites green.
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task 3F.3b (split from 3F.3, 2026-08-07)
+- User Stories: US-ING-003 AC-1 (voice memo transcription), US-ING-005 AC-2 (video audio offline transcription), US-SRC-011 (model semantics reference outputs)
+- ADR-009 decisions 2/3 (immutable bundled artifact + fixed revision/SHA-256; zero-network runtime)
+- AGENTS.md R-005 (zero network), R-007 (no nonisolated(unsafe)/unchecked Sendable), §2.2 dependency whitelist (whisper.cpp approved 2026-08-09)
+- docs/05-planning/model-provenance-register.md §2 (GGUF approved; runtime section added), §2.3
+- Deferred item DEF-51-002 (ASR file-input contract redesign)
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| US-ING-003 AC-1 | Voice memo transcription via Whisper | EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift (RealTranscript) | WhisperRuntimeBridge.transcribe → NativeWhisperCInterop | ✅ |
+| US-ING-005 AC-2 | Offline transcription of audio track | EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift (FileInputContract) | WhisperASREngine.transcribeFile(at:) | ✅ |
+| US-SRC-011 | Reference transcripts with CER/WER threshold | EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift (ReferenceCERWER) | whisper-reference-transcripts.json (approved, jfk CER=0.0 ≤ 0.15) | ✅ |
+| ADR-009 dec-2 | Immutable artifact + SHA-256 verification | EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift (GGUFHash) | WhisperRuntimeBridge.verifyGGUFChecksum + model_checksums.sha256 | ✅ |
+| ADR-009 dec-3 | Zero-network runtime (R-005) | WhisperRuntimeTests.RealTranscript (Bundle-loaded GGUF) | whisper_init_from_file_with_params on local path | ✅ |
+| DEF-51-002 | ASR file-URL input contract | EchoTests/Phase3F/3F.3b_WhisperRuntimeTests.swift (FileInputContract) | ASREngineProtocol.transcribeFile(at:) + WhisperASREngine impl | ✅ |
+| R-007 | No nonisolated(unsafe)/unchecked Sendable | CI static scan + SwiftLint | NativeWhisperCInterop (Sendable-safe, no escape) | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- RED: `xcodebuild test ... -only-testing:EchoTests/WhisperRuntimeLinkedTests -only-testing:EchoTests/WhisperFileInputContractTests` — 2/2 failed (`.runtimeNotLinked`, `.modelNotLoaded`)
+- Focused: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO` + 5 WhisperRuntime test classes — 7/7 passed (real inference, CER=0.0 ≤ 0.15)
+- Model-gated skip (PR review fix): model-dependent Whisper tests silently skip when GGUF/jfk.wav absent, matching 3F.3a SigLIP2 / E5 convention (DEF-54-001) — verified 7/7 pass with model, all skip without model
+- Cumulative: `xcodebuild test ... -only-testing:EchoTests` — 857 tests / 105 suites, 0 failures, exit 0 (338s, local with models)
+- Model gate: `bash Scripts/prepare_models.sh --verify-only` — exit 0, whisper GGUF checksum OK
+- Lint: `swiftlint lint --quiet` — 0 errors / 0 warnings (changed files), repo-wide clean
+- Release: whisper-cpp package compiles for arm64+x86_64 (GGML_CPU_GENERIC); Echo Release simulator build blocked only by pre-existing `simulateError` `#Preview` failure (documented 3F.1, base-reproducible)
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- README.md, docs/02-architecture/技术选型文档.md, docs/02-architecture/数据流全链路技术说明文档.md, docs/03-implementation/开发避坑与关键注意点手册.md updated for whisper runtime
+- docs/decisions/ADR-009-offline-model-runtime.md: runtime-integration status updated
+- docs/05-planning/model-provenance-register.md §2.2/§2.3: reference transcripts approved + runtime integration section
+- docs/05-planning/deferred-items.json: DEF-51-002 ASR contract portion closed with resolution_notes
+- docs/05-planning/phase3f-execution-plan.md §3F.3b: task completed
+- docs/05-planning/task-status.json: 3F.3b → review
+- Scripts/model_checksums.sha256: jfk.wav + whisper.cpp LICENSE registered
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- whisper.cpp built with GGML_CPU_GENERIC (no NEON-specific arch/arm acceleration): CPU-only inference, ~28s for 11s audio on simulator; acceptable for v1, does not weaken 3F.11 gate (performance gate is P95 search latency, not ASR throughput). Recorded in Package.swift build-decision comment.
+- Release simulator build `simulateError` `#Preview` failure is pre-existing on base (3F.1 entry, 3F.11 release-gate scope); not introduced by this task.
+- SBOM/NOTICE for whisper.cpp runtime deferred to model-provenance-register §4 packaging gate (per register policy "打包前创建").
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+- DEF-51-002 (ASR contract): contract portion CLOSED by this task (`transcribeFile(at:)` + tests). Share Extension App Group audio-file persistence portion remains open, deferred to 3F.5 (production ingestion) with resolution_notes in deferred-items.json.
+- No new deferred items created by this task.
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- [x] All new pipeline/service entries follow actor isolation (WhisperRuntimeBridge actor; NativeWhisperCInterop Sendable-safe, no cross-isolation pointer escape)
+- [x] No `nonisolated(unsafe)`, `@unchecked Sendable`, or Combine in new code (R-007)
+- [x] Zero network: GGUF loaded from Bundle via ModelLoaderActor (R-005); no download code
+- [x] GGUF SHA-256 verified before inference (ADR-009 decision 2)
+- [x] DEF-51-002 ASR file-input contract implemented and tested
+- [x] Reference transcripts backfilled with real inference (CER=0.0 ≤ 0.15)
+- [x] Branch `feature/phase3f-whisper-runtime-3F.3b`, commit `feat(service): link whisper.cpp real transcription`, PR base `dev-1.0`
 <!-- PR-BODY:3F.3b:END -->
 
 ---

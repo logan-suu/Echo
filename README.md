@@ -19,12 +19,12 @@ Echo 是一款**完全离线**的端侧 AI 记忆助手。它自动索引你的 
 | 📷 **相册图片** | PhotoKit 授权范围内读取（自动） | SigLIP2 视觉语义理解，支持「那只穿红裙子的猫」这类自然语言搜索 | 🔶 |
 | 🎬 **相册视频** | PhotoKit 授权范围内读取（自动） | 帧级语义索引 + 语音内容全文检索 | 🔶 |
 | 📝 **备忘录** | Share Sheet 显式分享（需用户操作） | E5 文本向量化，支持中英文语义检索 | 🔶 |
-| 🎙️ **语音备忘录** | Share Sheet 显式分享（需用户操作） | Whisper ASR 转写 + 文本向量索引 | 🔶 |
+| 🎙️ **语音备忘录** | Share Sheet 显式分享（需用户操作） | Whisper ASR 真实转写（whisper.cpp v1.9.2，3F.3b）+ 文本向量索引 | 🔶 |
 
 > ⚠️ **Echo 不会主动上传任何内容。** 所有数据在设备本地处理。
-> 📌 **目标态**：AI 模型随 App 安装包分发、运行时无网络请求（R-005 红线）。**3F.3 已交付（2026-08-06）**：E5 真实 384d 文本推理（Unigram tokenizer + Core ML）、SigLIP2 视觉预处理与转换源工件、Whisper tiny GGUF 工件与 fail-closed 桥接、LanguageAligner（R-004 单次重试）、模型溯源登记（model-provenance-register）。SigLIP2 Core ML 转换与 whisper.cpp 运行时接入追踪于 3F.3 后续任务与 model-provenance-register §3。
+> 📌 **目标态**：AI 模型随 App 安装包分发、运行时无网络请求（R-005 红线）。**3F.3 已交付（2026-08-06）**：E5 真实 384d 文本推理（Unigram tokenizer + Core ML）、SigLIP2 视觉预处理与转换源工件、Whisper tiny GGUF 工件与 fail-closed 桥接、LanguageAligner（R-004 单次重试）、模型溯源登记（model-provenance-register）。SigLIP2 Core ML 转换仍追踪于 3F.3 后续任务与 model-provenance-register §3。**3F.3b 已交付（2026-08-09）**：whisper.cpp v1.9.2 运行时接入（vendored SPM 本地包 + GGML_CPU_GENERIC 构建），`WhisperASREngine` 真实转写经 `WhisperRuntimeBridge` → `NativeWhisperCInterop`，GGUF SHA-256 校验（818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7）+ `reportModelLoaded(.whisperTiny)` 上报。
 >
-> 📌 **当前状态**：核心架构（Actor 隔离、认知管线、隐私校验、反馈学习）已实现并通过测试；AI 推理层（3F.3）已接入 E5 真实推理 + SigLIP2/Whisper 工件与 fail-closed 桥接。数据源接入遵循 R-5.2 决策（Photos 自动 + 备忘录/语音备忘录 Share 分享）。
+> 📌 **当前状态**：核心架构（Actor 隔离、认知管线、隐私校验、反馈学习）已实现并通过测试；AI 推理层（3F.3）已接入 E5 真实推理 + SigLIP2 工件与 fail-closed 桥接，Whisper 真实转写由 3F.3b 接入（whisper.cpp v1.9.2）。数据源接入遵循 R-5.2 决策（Photos 自动 + 备忘录/语音备忘录 Share 分享）。
 >
 > 📌 **3F.2 已交付（2026-08-05）**：真实来源边界——`PhotoKitSourceAdapter`（授权状态机 + 撤回即停 + 本地仅下载策略 + `.dataSourceConnected` 审计）、`PhotoKitChangeObserver`（变更去重）、`EchoShareExtension` target（Share 预览确认 → App Group 信封原子入队）、`SharedImportQueueActor`（去重 + 恰好一次消费，App 重启恢复）、`IngestPipeline.ingestShared`/`drainSharedImports`（R-006 + ExcludedAssets fail-closed + hash-only `.shareExtensionImported` 审计）。App/Extension 共享 `group.com.echo.Echo` App Group。真实模型工件推理（E5/SigLIP2/Whisper）由 3F.3 接入；真实来源 E2E 证据于 3F.11 no-fixture 门禁验证。
 

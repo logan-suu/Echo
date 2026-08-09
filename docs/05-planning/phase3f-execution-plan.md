@@ -1391,6 +1391,8 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 ### 3F.3b: whisper.cpp 运行时接入与真实转写
 
 > 从 3F.3 拆分（2026-08-07 规划变更）：3F.3 交付 GGUF 工件与 fail-closed 桥接（`WhisperRuntimeBridge.runtimeNotLinked`）；本任务引入 whisper.cpp 运行时（AGENTS.md §2.2 白名单审批）、实现 C 互操作与真实转写。关闭 DEF-51-002 ASR 契约。
+>
+> ✅ **已交付（2026-08-09）**：whisper.cpp v1.9.2 vendored 本地 SPM 包（固定 revision 306c88f4d1）；`NativeWhisperCInterop` 真实转写；`WhisperRuntimeBridge` 默认接线 + GGUF SHA-256 校验；`WhisperASREngine.transcribe` 完整实现；`ASREngineProtocol.transcribeFile(at:)` 文件输入契约（DEF-51-002 ASR 部分关闭）；参考转写回填（jfk CER=0.0）。证据见 phase3f-evidence-index §3F.3b。
 
 **Files**
 
