@@ -8,6 +8,8 @@
 // AC 覆盖: 四类真实来源 trace 共享 traceID, canonical/vector/FTS 计数,
 //          取消/重启恢复, 故障回滚, 生产路径无 StubEmbedder/StubASR
 // PR#57 review fix: W-01 视频含音频无 ASR → L2 用例; W-03 canonical 删除故障 → failed/审计 success=false 用例
+// PR#57 CodeRabbit fix: CR-1 TaskQueue cancel-resume/paused-no-starve 用例; CR-14 queue purgeAll 清理;
+//                       CR-15 no-stub 真实类型断言（E5/SigLIP2/Whisper）
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §4.3 (TaskQueue 串行), R-006, R-007
 // 生成时间: 2026-08-10
 // ==========================================
@@ -256,6 +258,76 @@ struct ProductionIngestionTests {
         #expect(try await progress.load(taskId: "done-job") == nil)
     }
 
+    @Test("cancel a queued job resumes its enqueueAndWait caller (CR-1)")
+    func test_queue_cancelQueuedResumesCaller() async throws {
+        let progress = ProgressActor.shared
+        let queue = TaskQueueActor(progressActor: progress)
+
+        let firstStarted = expectationSignal()
+        let firstDone = expectationSignal()
+
+        try await queue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: "blocking-job",
+            taskType: .fullIndex,
+            totalCount: 1
+        ) { _ in
+            await firstStarted.signal()
+            await firstDone.awaitSignal()
+        })
+        await firstStarted.awaitSignal()
+
+        let queuedRun = Task {
+            do {
+                try await queue.enqueueAndWait(TaskQueueActor.QueuedJob(
+                    taskId: "queued-cancel",
+                    taskType: .dataSourceSync,
+                    totalCount: 1
+                ) { _ in
+                    await firstDone.signal()
+                })
+                return "completed"
+            } catch let TaskQueueError.cancelled(id) {
+                return "cancelled:\(id)"
+            } catch {
+                return "other"
+            }
+        }
+        try? await Task.sleep(for: .milliseconds(100))
+        await queue.cancel(taskId: "queued-cancel")
+
+        let outcome = await queuedRun.value
+        #expect(outcome == "cancelled:queued-cancel")
+        #expect(try await progress.load(taskId: "queued-cancel") == nil)
+        await firstDone.signal()
+    }
+
+    @Test("paused queued job does not starve later runnable jobs (CR-1)")
+    func test_queue_pausedDoesNotStarveLaterJobs() async throws {
+        let progress = ProgressActor.shared
+        let queue = TaskQueueActor(progressActor: progress)
+
+        await queue.pause(taskId: "paused-job")
+        try await queue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: "paused-job",
+            taskType: .fullIndex,
+            totalCount: 1
+        ) { context in
+            try await context.report(processedIndex: 1, lastProcessedId: "p")
+        })
+
+        try await queue.enqueueAndWait(TaskQueueActor.QueuedJob(
+            taskId: "runnable-job",
+            taskType: .dataSourceSync,
+            totalCount: 1
+        ) { context in
+            try await context.report(processedIndex: 1, lastProcessedId: "r")
+        })
+
+        #expect(try await progress.load(taskId: "runnable-job") == nil)
+        #expect(await queue.isPaused(taskId: "paused-job"))
+        #expect(await queue.pendingCount() == 1)
+    }
+
     // ══════════════════════════════════════════════════════════════
     // 2. 生产摄入：四类真实来源 trace 共享 traceID + canonical/vector/FTS 计数
     // ══════════════════════════════════════════════════════════════
@@ -470,8 +542,9 @@ struct ProductionIngestionTests {
     @Test("production composition uses real embedder/asr (no StubEmbedder/StubASR)")
     func test_productionNoStubInjection() async throws {
         let composition = AppComposition.shared
-        let _ = composition.databaseManager
-        #expect(true)
+        #expect(composition.textEmbedder is E5Embedder)
+        #expect(composition.visionEmbedder is SigLIP2Embedder)
+        #expect(composition.asrEngine is WhisperASREngine)
     }
 
     @Test("production pipeline resolves route from active generation registry")
@@ -587,10 +660,9 @@ struct ProductionIngestionTests {
         let registry = makeRegistry()
         try await seedGenerations(registry)
         let queue = SharedImportQueueActor()
-        // 清理队列目录中既有 pending 文件
-        for key in (try? await queue.pendingKeys()) ?? [] {
-            try? await queue.rollbackProcessing(for: key)
-        }
+        // CR-14: 复用共享 App Group 目录时须清空全部队列文件（pending/processing/corrupted），
+        // rollbackProcessing 仅恢复 processing→pending，无法清除既有 pending .json。
+        _ = try? await queue.purgeAll()
 
         let envelope = try makeEnvelope(payload: "shared import production text")
         try await queue.enqueue(envelope)

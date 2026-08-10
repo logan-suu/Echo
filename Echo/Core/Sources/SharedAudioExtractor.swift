@@ -6,6 +6,8 @@
 // AC 覆盖: US-ING-003 AC-1 (Whisper.cpp 离线转写), AC-3 (原始音频不持久化),
 //          DEF-51-002 (App Group 持久化音频文件 URL → transcribeFile)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (零网络), R-007 (禁止 unchecked Sendable)
+// PR#57 CodeRabbit fix: CR-7 URL(string:) 先解析 file:// payload（回退 fileURLWithPath）;
+//                       CR-24 Fake 提取器 #if DEBUG 包裹
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-10
 // ==========================================
@@ -44,7 +46,14 @@ public struct RealSharedAudioExtractor: SharedAudioExtracting {
         guard !locator.isEmpty else {
             throw SharedImportError.emptyPayload
         }
-        let url = URL(fileURLWithPath: locator)
+        // CR-7: Share Extension 以 fileURL.absoluteString（file://...）写入 payload，
+        // 需先经 URL(string:) 解析；无 scheme 的纯路径再回退 fileURLWithPath。
+        let url: URL
+        if let parsed = URL(string: locator), parsed.isFileURL {
+            url = parsed
+        } else {
+            url = URL(fileURLWithPath: locator)
+        }
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw SharedImportError.unsupportedContentKind("audio file missing at locator")
         }
@@ -56,6 +65,7 @@ public struct RealSharedAudioExtractor: SharedAudioExtracting {
     }
 }
 
+#if DEBUG
 /// 测试用 Fake 共享音频提取器 — 固定文件 URL（文件存在性由调用方控制）。
 public actor FakeSharedAudioExtractor: SharedAudioExtracting {
 
@@ -78,3 +88,4 @@ public actor FakeSharedAudioExtractor: SharedAudioExtracting {
         )
     }
 }
+#endif

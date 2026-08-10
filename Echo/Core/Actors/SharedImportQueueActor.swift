@@ -136,6 +136,22 @@ public actor SharedImportQueueActor {
         (try? pendingEnvelopes().count) ?? 0
     }
 
+    /// 清空全部队列文件（pending + 残留 processing/corrupted）— 测试隔离用（CR-14）。
+    ///
+    /// `rollbackProcessing` 仅恢复 processing→pending，无法清除既有 pending `.json`；
+    /// 测试复用共享 App Group 目录时需此路径保证 `drain.processed` 精确。
+    @discardableResult
+    public func purgeAll() throws -> Int {
+        var removed = 0
+        for suffix in [QueueState.pending.rawValue, QueueState.processing.rawValue, QueueState.corrupted.rawValue] {
+            for file in try files(withSuffix: suffix) {
+                try? fileManager.removeItem(at: file)
+                removed += 1
+            }
+        }
+        return removed
+    }
+
     // MARK: - Exactly-Once Processing
 
     /// 开始处理一封：将 pending 原子移为 processing，返回信封。

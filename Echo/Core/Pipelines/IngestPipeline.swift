@@ -18,6 +18,9 @@
 // 生成时间: 2026-07-09 (v1 图片), 2026-07-11 (v2 视频), 2026-07-12 (v3 文本+语音)
 // PR#57 review fix: W-01 视频含音频但 ASR 未加载时抛 L2（对齐 ingestProductionSharedAudio）;
 //                   W-05 inline runQueued 取消保留进度（§4.5）并清理 unused try? 结果
+// PR#57 CodeRabbit fix: CR-2 commit guard (productionNotConfigured), CR-4 checkpoint 前置到入口,
+//                       CR-5 生产错误 L1~L4 包装, CR-12 registry 条件, CR-13 视频 modalities/转写字数,
+//                       CR-10 visionEmbedder 路由（图片/视频帧 → SigLIP2, 推理门控 DEF-54-001）
 // ==========================================
 
 import Foundation
@@ -190,6 +193,8 @@ public actor IngestPipeline {
     private let videoExtractor: (any VideoAssetExtracting)?
     private let sharedTextExtractor: (any SharedTextExtracting)?
     private let sharedAudioExtractor: (any SharedAudioExtracting)?
+    /// 视觉嵌入器（SigLIP2）— 图片/视频帧生产路径使用；缺省时回退 `embedder`（CR-10）
+    private let visionEmbedder: (any EmbedderProtocol)?
 
     // MARK: - Initialization
 
@@ -206,7 +211,8 @@ public actor IngestPipeline {
         photoExtractor: (any PhotoAssetExtracting)? = nil,
         videoExtractor: (any VideoAssetExtracting)? = nil,
         sharedTextExtractor: (any SharedTextExtracting)? = nil,
-        sharedAudioExtractor: (any SharedAudioExtracting)? = nil
+        sharedAudioExtractor: (any SharedAudioExtracting)? = nil,
+        visionEmbedder: (any EmbedderProtocol)? = nil
     ) {
         self.embedder = embedder
         self.asrEngine = asrEngine
@@ -221,6 +227,7 @@ public actor IngestPipeline {
         self.videoExtractor = videoExtractor
         self.sharedTextExtractor = sharedTextExtractor
         self.sharedAudioExtractor = sharedAudioExtractor
+        self.visionEmbedder = visionEmbedder
     }
 
     // MARK: - Image Ingestion (US-ING-004)
@@ -811,7 +818,7 @@ public actor IngestPipeline {
             do {
                 // 3F.5 生产路径：已装配 canonical + generation registry 时经生产摄入
                 // 写入 canonical/每代向量存储；否则回退 legacy ingestShared（Phase 2 兼容）。
-                if canonicalRepository != nil {
+                if canonicalRepository != nil, generationRegistry != nil {
                     switch started.contentKind {
                     case .text, .url:
                         _ = try await ingestProductionSharedText(started, taskID: "shared-\(started.dedupeKey.prefix(12))", traceID: traceID)
@@ -980,6 +987,7 @@ public actor IngestPipeline {
         taskID: String,
         traceID: String = UUID().uuidString
     ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: ["photo"], traceID: traceID)
         let extractor = photoExtractor ?? RealPhotoAssetExtractor()
         guard await extractor.isLocallyAvailable(assetId: assetId) else {
             throw IngestError.assetUnavailableLocally(assetId: assetId)
@@ -1013,6 +1021,7 @@ public actor IngestPipeline {
         taskID: String,
         traceID: String = UUID().uuidString
     ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: [envelope.sourceType.rawValue], traceID: traceID)
         let extractor = sharedTextExtractor ?? RealSharedTextExtractor()
         let content = try extractor.extractText(from: envelope)
 
@@ -1042,6 +1051,7 @@ public actor IngestPipeline {
         taskID: String,
         traceID: String = UUID().uuidString
     ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: [envelope.sourceType.rawValue], traceID: traceID)
         guard asrEngine != nil else {
             throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
         }
@@ -1074,6 +1084,7 @@ public actor IngestPipeline {
         taskID: String,
         traceID: String = UUID().uuidString
     ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: ["video"], traceID: traceID)
         let extractor = videoExtractor ?? RealVideoAssetExtractor()
         let content = try await extractor.extractFrames(assetId: assetId)
 
@@ -1090,7 +1101,7 @@ public actor IngestPipeline {
             )
         }
         try await runQueued(work, traceID: traceID)
-        let generationIds = try await productionGenerations(for: [.visionDense, .textDense])
+        let generationIds = try await productionGenerations(for: content.hasAudio ? [.visionDense, .textDense] : [.visionDense])
         return ProductionIngestResult(sourceLocator: assetId, sourceType: "video", generationIds: generationIds)
     }
 
@@ -1107,8 +1118,11 @@ public actor IngestPipeline {
         try context.checkCancelled()
         try await validateProduction(.ingest, sourceTypes: ["photo"], traceID: traceID)
         try await checkExcluded(assetId: assetId)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
 
-        let visionVector = try await embedder.embedImage(assetId: assetId)
+        let visionVector = try await productionEmbedImage(assetId: assetId)
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: assetId, sourceType: "photo")
         let memory = Memory(
             memoryId: memoryId,
@@ -1125,7 +1139,8 @@ public actor IngestPipeline {
             contentHash: Self.sha256(of: visionVector)
         )
         let visionGen = try await productionGeneration(for: .visionDense)
-        try await canonicalRepository?.commit(
+        try await productionCommit(
+            canonicalRepository,
             memory: memory,
             representations: [rep],
             vectorsByGeneration: [
@@ -1158,8 +1173,11 @@ public actor IngestPipeline {
         try context.checkCancelled()
         try await validateProduction(.ingest, sourceTypes: [content.sourceType], traceID: traceID)
         try await checkExcluded(assetId: content.dedupeKey)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
 
-        let textVector = try await embedder.embedText(content.originalText)
+        let textVector = try await productionEmbedText(content.originalText)
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: content.dedupeKey, sourceType: content.sourceType)
         let memory = Memory(
             memoryId: memoryId,
@@ -1176,7 +1194,8 @@ public actor IngestPipeline {
             contentHash: Self.sha256(of: content.originalText)
         )
         let textGen = try await productionGeneration(for: .textDense)
-        try await canonicalRepository?.commit(
+        try await productionCommit(
+            canonicalRepository,
             memory: memory,
             representations: [rep],
             vectorsByGeneration: [
@@ -1207,14 +1226,17 @@ public actor IngestPipeline {
     ) async throws {
         let started = Date()
         try context.checkCancelled()
-        guard let asr = asrEngine else {
+        guard asrEngine != nil else {
             throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
         }
         try await validateProduction(.ingest, sourceTypes: [content.sourceType], traceID: traceID)
         try await checkExcluded(assetId: content.dedupeKey)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
 
-        let transcript = try await asr.transcribeFile(at: content.fileURL)
-        let textVector = try await embedder.embedText(transcript)
+        let transcript = try await productionTranscribe(content.fileURL)
+        let textVector = try await productionEmbedText(transcript)
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: content.dedupeKey, sourceType: content.sourceType)
         let memory = Memory(
             memoryId: memoryId,
@@ -1231,7 +1253,8 @@ public actor IngestPipeline {
             contentHash: Self.sha256(of: transcript)
         )
         let textGen = try await productionGeneration(for: .textDense)
-        try await canonicalRepository?.commit(
+        try await productionCommit(
+            canonicalRepository,
             memory: memory,
             representations: [rep],
             vectorsByGeneration: [
@@ -1265,15 +1288,19 @@ public actor IngestPipeline {
         try context.checkCancelled()
         try await validateProduction(.ingest, sourceTypes: ["video"], traceID: traceID)
         try await checkExcluded(assetId: assetId)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
 
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: assetId, sourceType: "video")
         var representations: [Representation] = []
         var vectors: [String: [CanonicalVectorEntry]] = [:]
+        var audioTranscriptLength = 0
 
         let visionGen = try await productionGeneration(for: .visionDense)
         for (index, frameData) in content.frameImages.enumerated() {
             try context.checkCancelled()
-            let frameVector = try await embedder.embedImageData(frameData)
+            let frameVector = try await productionEmbedImageData(frameData)
             representations.append(Representation(
                 memoryId: memoryId,
                 modality: .visionDense,
@@ -1288,14 +1315,15 @@ public actor IngestPipeline {
 
         if content.hasAudio {
             try context.checkCancelled()
-            guard let asr = asrEngine else {
+            guard asrEngine != nil else {
                 throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
             }
             guard let audioURL = try await (videoExtractor ?? RealVideoAssetExtractor()).extractAudioTrack(assetId: assetId) else {
                 throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.transcriptionFailed(reason: "audio track unavailable"))
             }
-            let transcript = try await asr.transcribeFile(at: audioURL)
-            let textVector = try await embedder.embedText(transcript)
+            let transcript = try await productionTranscribe(audioURL)
+            audioTranscriptLength = transcript.count
+            let textVector = try await productionEmbedText(transcript)
             let textGen = try await productionGeneration(for: .textDense)
             representations.append(Representation(
                 memoryId: memoryId,
@@ -1320,7 +1348,8 @@ public actor IngestPipeline {
             createdAt: content.creationDate ?? Date(),
             recoverability: .full
         )
-        try await canonicalRepository?.commit(
+        try await productionCommit(
+            canonicalRepository,
             memory: memory,
             representations: representations,
             vectorsByGeneration: vectors,
@@ -1338,12 +1367,73 @@ public actor IngestPipeline {
             sourceLanguage: nil,
             elapsedMs: Int(Date().timeIntervalSince(started) * 1000),
             frameCount: content.frameImages.count,
-            audioTranscriptLength: content.hasAudio ? 1 : 0,
+            audioTranscriptLength: audioTranscriptLength,
             hasAudio: content.hasAudio
         )
     }
 
     // MARK: - Production Helpers
+
+    /// 生产路径嵌入包装：错误映射为 `IngestError.embeddingFailed`（L3，CR-5）。
+    private func productionEmbedImage(assetId: String) async throws -> [Float] {
+        let visual = visionEmbedder ?? embedder
+        do {
+            return try await visual.embedImage(assetId: assetId)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径图像数据嵌入包装（视频帧，CR-5/CR-10）。
+    private func productionEmbedImageData(_ data: Data) async throws -> [Float] {
+        let visual = visionEmbedder ?? embedder
+        do {
+            return try await visual.embedImageData(data)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径文本嵌入包装：错误映射为 `IngestError.embeddingFailed`（L3，CR-5）。
+    private func productionEmbedText(_ text: String) async throws -> [Float] {
+        do {
+            return try await embedder.embedText(text)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径 ASR 转写包装：错误映射为 `IngestError.audioTranscriptionFailed`（L2，CR-5）。
+    private func productionTranscribe(_ url: URL) async throws -> String {
+        guard let asr = asrEngine else {
+            throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
+        }
+        do {
+            return try await asr.transcribeFile(at: url)
+        } catch {
+            throw IngestError.audioTranscriptionFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径 canonical commit 包装：错误映射为 `IngestError.vectorStoreWriteFailed`（L2，CR-5）。
+    private func productionCommit(
+        _ repository: CanonicalMemoryRepositoryActor,
+        memory: Memory,
+        representations: [Representation],
+        vectorsByGeneration: [String: [CanonicalVectorEntry]],
+        traceID: String
+    ) async throws {
+        do {
+            try await repository.commit(
+                memory: memory,
+                representations: representations,
+                vectorsByGeneration: vectorsByGeneration,
+                traceID: traceID
+            )
+        } catch {
+            throw IngestError.vectorStoreWriteFailed(underlying: error)
+        }
+    }
 
     private func validateProduction(
         _ operation: PrivacyOperation,

@@ -7,6 +7,8 @@
 // AC 覆盖: 串行执行 (索引构建与数据同步互斥), 入队写入任务, 暂停 (挂起不释放资源),
 //          取消 (保存进度), 完成/最终失败后删除 TaskProgress, 取消保留进度供下次询问
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §4.3 (TaskQueue 契约), R-007 (禁止 unchecked Sendable)
+// PR#57 CodeRabbit fix: CR-1 取消/暂停排队任务 resume 等待方、暂停不阻塞后续任务;
+//                       CR-21 cancel 即时移除队列条目（pendingCount 精确）
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-10
 // ==========================================
@@ -127,13 +129,21 @@ public actor TaskQueueActor {
         }
     }
 
-    /// 取消指定任务：运行中 → 终止底层 Task（进度保留）；排队中 → 移除（进度清理）。
+    /// 取消指定任务：运行中 → 终止底层 Task（进度保留）；排队中 → 立即移除并恢复等待方。
+    ///
+    /// 排队中的任务被取消时同步清理进度并 resume `enqueueAndWait` 等待方（CR-1），
+    /// 且不再留在 `pendingCount` 计数内（CR-21）。
     public func cancel(taskId: String) async {
         if activeJobId == taskId {
             cancelledJobIds.insert(taskId)
             activeTask?.cancel()
-        } else if queue.contains(where: { $0.taskId == taskId }) {
-            cancelledJobIds.insert(taskId)
+        } else if let index = queue.firstIndex(where: { $0.taskId == taskId }) {
+            let job = queue.remove(at: index)
+            cancelledJobIds.remove(job.taskId)
+            _ = try? await progressActor.delete(taskId: job.taskId)
+            if let completion = completions.removeValue(forKey: job.taskId) {
+                completion.resume(throwing: TaskQueueError.cancelled(taskId: job.taskId))
+            }
         }
     }
 
@@ -197,21 +207,29 @@ public actor TaskQueueActor {
 
     // MARK: - Internal Execution
 
-    /// 串行执行：持续取出队首未被取消/暂停的任务运行，直到队列空。
+    /// 串行执行：取队中第一个可运行任务执行，直到队列空。
+    ///
+    /// - 已取消任务：清理进度并 resume 其 `enqueueAndWait` 等待方（CR-1）
+    /// - 已暂停任务：保留在队尾，跳过继续找下一个可运行任务，避免阻塞后续任务（CR-1）
     private func startNext() async {
-        while activeTask == nil, !queue.isEmpty {
+        guard activeTask == nil else { return }
+        var scanned = 0
+        let originalCount = queue.count
+        while scanned < originalCount, !queue.isEmpty {
             let job = queue.removeFirst()
+            scanned += 1
 
             if cancelledJobIds.contains(job.taskId) {
                 cancelledJobIds.remove(job.taskId)
-                // 排队中被取消 → 清理进度（从未开始）
-                try? await progressActor.delete(taskId: job.taskId)
+                _ = try? await progressActor.delete(taskId: job.taskId)
+                if let completion = completions.removeValue(forKey: job.taskId) {
+                    completion.resume(throwing: TaskQueueError.cancelled(taskId: job.taskId))
+                }
                 continue
             }
             if pausedJobIds.contains(job.taskId) {
-                // 暂停任务留在队首等待恢复（挂起不释放资源）
-                queue.insert(job, at: 0)
-                break
+                queue.append(job)
+                continue
             }
 
             activeJobId = job.taskId

@@ -7,6 +7,8 @@
 // AC 覆盖: US-ING-004 AC-2 (EXIF 元数据完整保留), AC-4 (PHAsset 引用，不复制存储),
 //          US-SRC-001 AC-6 (仅处理已下载本地资源)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (零网络), R-007 (禁止 unchecked Sendable)
+// PR#57 CodeRabbit fix: CR-23 EXIF 叶值递归 sanitize（Date→ISO8601/Data→base64，避免整组 EXIF 丢弃）;
+//                       CR-24 Fake 提取器 #if DEBUG 包裹
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 //       PhotoKit SDK 标注 @MainActor，真实实现经 MainActor.run 跳转访问（与 3F.2 一致）
 // 生成时间: 2026-08-10
@@ -110,13 +112,38 @@ public struct RealPhotoAssetExtractor: PhotoAssetExtracting {
             return nil
         }
         let exif: [String: Any] = properties.reduce(into: [:]) { result, pair in
-            result[(pair.key as String)] = pair.value
+            let key = pair.key as String
+            if let safe = Self.jsonSafe(pair.value) {
+                result[key] = safe
+            }
         }
         guard JSONSerialization.isValidJSONObject(exif) else { return nil }
         return try? JSONSerialization.data(withJSONObject: exif)
     }
+
+    /// 递归清洗 EXIF 叶值：Date→ISO8601、Data→base64，其它不可序列化叶值丢弃，
+    /// 避免单个不支持的值丢弃整组 EXIF（CR-23，US-ING-004 AC-2）。
+    private nonisolated static func jsonSafe(_ value: Any) -> Any? {
+        if let date = value as? Date {
+            return ISO8601DateFormatter().string(from: date)
+        }
+        if let data = value as? Data {
+            return data.base64EncodedString()
+        }
+        if let dict = value as? [String: Any] {
+            return dict.compactMapValues { jsonSafe($0) }
+        }
+        if let array = value as? [Any] {
+            return array.compactMap { jsonSafe($0) }
+        }
+        if JSONSerialization.isValidJSONObject(value) {
+            return value
+        }
+        return nil
+    }
 }
 
+#if DEBUG
 /// 测试用 Fake 图片资产提取器 — 注入固定元数据与本地可用性。
 public actor FakePhotoAssetExtractor: PhotoAssetExtracting {
 
@@ -136,3 +163,4 @@ public actor FakePhotoAssetExtractor: PhotoAssetExtracting {
         locallyAvailable
     }
 }
+#endif

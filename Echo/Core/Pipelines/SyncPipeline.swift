@@ -20,11 +20,15 @@
 // 生成时间: 2026-07-12
 // PR#57 review fix: W-03 canonical 删除 do/catch 抛 SyncError.canonicalDeleteFailed（L3）,
 //                   不再 try? 静默吞错，失败计入 failedCount → 审计 success=false（D-005）
+// PR#57 CodeRabbit fix: CR-3 方案A 生产替换经 canonical 确定性 ID upsert + 活跃路由向量（PIPE-012）,
+//                       CR-9 defer 统一释放 AC-6 锁（修复 W-03 引入的锁泄漏）,
+//                       CR-11 UUID guard 解析 + deleteMemory false 显式计失败
 // ==========================================
 
 import Foundation
 import Photos
 import ProximaKit
+import CryptoKit
 
 // MARK: - Sync Error
 
@@ -44,6 +48,8 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
     case vectorStoreFailed(underlying: Error)
     /// canonical 事务删除失败（3F.5 生产路径，D-005）— 数据库完整性错误，计入 failed 不静默吞错
     case canonicalDeleteFailed(underlying: Error)
+    /// 生产替换写入失败（CR-3 方案A）— canonical 替换经活跃路由写入失败，L3 阻断
+    case productionReplacementFailed(underlying: Error)
     /// 内存锁定冲突 — 在同步期间尝试编辑（L4）
     case memoryLockedDuringSync(memoryId: String)
     /// 哈希对比跳过 — 非错误，仅为记录（内容过大或内存不足）
@@ -61,6 +67,7 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
         case .metadataEncodingFailed:     return 2
         case .vectorStoreFailed:          return 2
         case .canonicalDeleteFailed:      return 3
+        case .productionReplacementFailed: return 3
         case .memoryLockedDuringSync:     return 4
         case .hashSkippedDueToConstraints: return 1
         case .cancelled:                  return 1
@@ -83,6 +90,8 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
             return "Vector store operation failed: \(error.localizedDescription)"
         case .canonicalDeleteFailed(let error):
             return "Canonical memory delete failed: \(error.localizedDescription)"
+        case .productionReplacementFailed(let error):
+            return "Production replacement write failed: \(error.localizedDescription)"
         case .memoryLockedDuringSync(let memoryId):
             return "Memory \(memoryId) is locked during sync — 该记忆正在同步更新中，请稍后再编辑"
         case .hashSkippedDueToConstraints(let reason):
@@ -102,6 +111,7 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
         case (.metadataEncodingFailed, .metadataEncodingFailed): return true
         case (.vectorStoreFailed, .vectorStoreFailed): return true
         case (.canonicalDeleteFailed, .canonicalDeleteFailed): return true
+        case (.productionReplacementFailed, .productionReplacementFailed): return true
         case (.memoryLockedDuringSync(let a), .memoryLockedDuringSync(let b)): return a == b
         case (.hashSkippedDueToConstraints(let a), .hashSkippedDueToConstraints(let b)): return a == b
         case (.cancelled, .cancelled): return true
@@ -212,6 +222,8 @@ public actor SyncPipeline {
     private let progressActor: ProgressActor
     /// 生产同步路由（3F.5）— 非 nil 时删除/替换经 canonical repo 事务清除（D-005）
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
+    /// 分代索引注册表（CR-3 方案A）— 生产替换路径经活跃路由写入 canonical + 每代向量
+    private let generationRegistry: GenerationRegistryActor?
 
     /// 当前同步中锁定的内存 ID 集合（AC-6: 防止并发编辑）
     private var lockedMemoryIds: Set<String> = []
@@ -232,7 +244,8 @@ public actor SyncPipeline {
         vectorStore: VectorStoreActor,
         excludedAssets: ExcludedAssetsActor = .shared,
         progressActor: ProgressActor = .shared,
-        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
+        canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
+        generationRegistry: GenerationRegistryActor? = nil
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
@@ -240,6 +253,7 @@ public actor SyncPipeline {
         self.excludedAssets = excludedAssets
         self.progressActor = progressActor
         self.canonicalRepository = canonicalRepository
+        self.generationRegistry = generationRegistry
     }
 
     // MARK: - Sync Execution (AC-4, AC-5, AC-7, AC-9)
@@ -357,44 +371,75 @@ public actor SyncPipeline {
                     for memId in oldMemoryIds {
                         lockedMemoryIds.insert(memId)
                     }
-
-                    let newEmbedding = try await generateEmbedding(for: change)
-                    let newMemory = MemoryEntry(
-                        assetId: change.assetId,
-                        embedding: newEmbedding,
-                        sourceType: change.source.rawValue,
-                        timestamp: Date(),
-                        exifMetadata: nil,
-                        privacyBlurApplied: false,
-                        traceID: traceID
-                    )
-                    let metadata = try newMemory.encodeMetadata()
-                    try await vectorStore.ingest(
-                        vector: newEmbedding,
-                        id: newMemory.id,
-                        metadata: metadata
-                    )
-
-                    // 新记录写入成功后才删除旧记忆（AC-4, R-003: 不写 ExcludedAssets）
-                    for memId in oldMemoryIds {
-                        if let canonicalRepository {
-                            do {
-                                try await canonicalRepository.deleteMemory(
-                                    memoryId: UUID(uuidString: memId) ?? UUID(),
-                                    writeExcluded: false,
-                                    traceID: traceID
-                                )
-                            } catch {
-                                throw SyncError.canonicalDeleteFailed(underlying: error)
-                            }
-                        } else {
-                            _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
+                    // CR-9: 统一释放锁（成功与抛错路径均覆盖，避免 canonical 删除抛错泄漏锁）
+                    defer {
+                        for memId in oldMemoryIds {
+                            lockedMemoryIds.remove(memId)
                         }
                     }
 
-                    // AC-6: 删除完成，释放锁
-                    for memId in oldMemoryIds {
-                        lockedMemoryIds.remove(memId)
+                    let newEmbedding = try await generateEmbedding(for: change)
+
+                    if let canonicalRepository, let generationRegistry {
+                        // CR-3 方案A（PIPE-012）：生产替换经 canonical 确定性 ID upsert + 活跃路由向量，
+                        // 不再写 legacy store 也不删旧 canonical（INSERT OR REPLACE 覆盖）。
+                        guard let route = try await generationRegistry.loadActiveRoute() else {
+                            throw SyncError.productionReplacementFailed(
+                                underlying: IngestError.productionRouteUnavailable
+                            )
+                        }
+                        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(
+                            sourceLocator: change.assetId,
+                            sourceType: change.source.rawValue
+                        )
+                        let memory = Memory(
+                            memoryId: memoryId,
+                            sourceLocator: change.assetId,
+                            canonicalText: nil,
+                            sourceType: change.source.rawValue,
+                            createdAt: Date(),
+                            recoverability: .full
+                        )
+                        let rep = Representation(
+                            memoryId: memoryId,
+                            modality: .visionDense,
+                            preprocessVersion: "siglip2-v1",
+                            contentHash: Self.sha256(of: newEmbedding)
+                        )
+                        let generation = route.visionGeneration ?? route.textGeneration
+                        do {
+                            try await canonicalRepository.commit(
+                                memory: memory,
+                                representations: [rep],
+                                vectorsByGeneration: [
+                                    generation: [CanonicalVectorEntry(id: memoryId, vector: newEmbedding)]
+                                ],
+                                traceID: traceID
+                            )
+                        } catch {
+                            throw SyncError.productionReplacementFailed(underlying: error)
+                        }
+                    } else {
+                        let newMemory = MemoryEntry(
+                            assetId: change.assetId,
+                            embedding: newEmbedding,
+                            sourceType: change.source.rawValue,
+                            timestamp: Date(),
+                            exifMetadata: nil,
+                            privacyBlurApplied: false,
+                            traceID: traceID
+                        )
+                        let metadata = try newMemory.encodeMetadata()
+                        try await vectorStore.ingest(
+                            vector: newEmbedding,
+                            id: newMemory.id,
+                            metadata: metadata
+                        )
+
+                        // 新记录写入成功后才删除旧记忆（AC-4, R-003: 不写 ExcludedAssets）
+                        for memId in oldMemoryIds {
+                            _ = await vectorStore.delete(id: try Self.requireUUID(memId))
+                        }
                     }
 
                     replacedCount += 1
@@ -405,16 +450,21 @@ public actor SyncPipeline {
                     for memId in oldMemoryIds {
                         if let canonicalRepository {
                             do {
-                                try await canonicalRepository.deleteMemory(
-                                    memoryId: UUID(uuidString: memId) ?? UUID(),
+                                let deleted = try await canonicalRepository.deleteMemory(
+                                    memoryId: try Self.requireUUID(memId),
                                     writeExcluded: false,
                                     traceID: traceID
                                 )
+                                guard deleted else {
+                                    throw SyncError.canonicalDeleteFailed(
+                                        underlying: CanonicalRepositoryError.memoryNotFound(memoryId: memId)
+                                    )
+                                }
                             } catch {
                                 throw SyncError.canonicalDeleteFailed(underlying: error)
                             }
                         } else {
-                            _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
+                            _ = await vectorStore.delete(id: try Self.requireUUID(memId))
                         }
                     }
                     replacedCount += 1
@@ -422,7 +472,7 @@ public actor SyncPipeline {
             } catch {
                 // Individual asset failure does not block others (AC-4 partial failure)
                 failedCount += 1
-                // Release any locks that were set (R-1.1: 新摄入成功后旧锁已自然释放)
+                // AC-6 锁统一经 defer 释放（R-1.1 修复后成功路径亦释放）
             }
 
             // Update progress
@@ -575,5 +625,23 @@ public actor SyncPipeline {
         case .photo:
             return try await embedder.embedImage(assetId: change.assetId)
         }
+    }
+
+    /// 解析记忆 ID 为 UUID；非法时抛 `SyncError.canonicalDeleteFailed`（CR-11，
+    /// 不再回退随机 UUID 静默跳过删除）。
+    private nonisolated static func requireUUID(_ memoryId: String) throws -> UUID {
+        guard let uuid = UUID(uuidString: memoryId) else {
+            throw SyncError.canonicalDeleteFailed(
+                underlying: CanonicalRepositoryError.invalidMemoryID(memoryId: memoryId)
+            )
+        }
+        return uuid
+    }
+
+    /// 向量 SHA-256 摘要（Representation contentHash，CR-3 方案A）。
+    private nonisolated static func sha256(of vector: [Float]) -> String {
+        let data = vector.withUnsafeBytes { Data($0) }
+        let digest = CryptoKit.SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

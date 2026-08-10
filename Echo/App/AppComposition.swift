@@ -57,6 +57,12 @@ public final class AppComposition {
     public let consentStore: ConsentStoreActor
     public let modelLoader: ModelLoaderActor
     public let generationRegistry: GenerationRegistryActor
+    /// 文本嵌入器（E5）— 生产摄入/检索文本路径（CR-10）
+    public let textEmbedder: any EmbedderProtocol
+    /// 视觉嵌入器（SigLIP2）— 图片/视频帧生产路径（CR-10）
+    public let visionEmbedder: any EmbedderProtocol
+    /// ASR 引擎（Whisper）— 语音转写生产路径（CR-10）
+    public let asrEngine: (any ASREngineProtocol)?
 
     // MARK: - Startup State
 
@@ -69,13 +75,19 @@ public final class AppComposition {
         privacyActor: PrivacyActor = .shared,
         consentStore: ConsentStoreActor = .shared,
         modelLoader: ModelLoaderActor = .shared,
-        generationRegistry: GenerationRegistryActor = .shared
+        generationRegistry: GenerationRegistryActor = .shared,
+        textEmbedder: any EmbedderProtocol = E5Embedder(),
+        visionEmbedder: any EmbedderProtocol = SigLIP2Embedder(),
+        asrEngine: (any ASREngineProtocol)? = WhisperASREngine()
     ) {
         self.databaseManager = databaseManager
         self.privacyActor = privacyActor
         self.consentStore = consentStore
         self.modelLoader = modelLoader
         self.generationRegistry = generationRegistry
+        self.textEmbedder = textEmbedder
+        self.visionEmbedder = visionEmbedder
+        self.asrEngine = asrEngine
     }
 
     // MARK: - Bootstrap

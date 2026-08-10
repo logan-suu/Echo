@@ -17,6 +17,7 @@
 // 生成时间: 2026-08-09
 // PR#57 review fix: W-03 新增 DEBUG-only .deleteFail 故障点 + CanonicalRepositoryError.deleteInjected，
 //                   供 SyncPipeline canonical 删除失败路径测试（D-005 不静默吞错）
+// PR#57 CodeRabbit fix: CR-11 新增 memoryNotFound/invalidMemoryID 显式错误（deleteMemory false 与非法 UUID 不再静默）
 // ==========================================
 
 import Foundation
@@ -478,6 +479,10 @@ public enum CanonicalRepositoryError: Error, LocalizedError, Sendable {
     case deleteInjected
     case generationMissing(generationId: String)
     case vectorWriteFailed(underlying: Error)
+    /// deleteMemory 未找到对应记忆（CR-11：false 结果显式化为错误，不再静默跳过）
+    case memoryNotFound(memoryId: String)
+    /// 记忆 ID 字符串无法解析为 UUID（CR-11：不再回退随机 UUID 静默跳过删除）
+    case invalidMemoryID(memoryId: String)
 
     public var errorDescription: String? {
         switch self {
@@ -491,6 +496,10 @@ public enum CanonicalRepositoryError: Error, LocalizedError, Sendable {
             return "Generation vector store missing: \(generationId)"
         case .vectorWriteFailed(let error):
             return "Vector write failed: \(error.localizedDescription)"
+        case .memoryNotFound(let memoryId):
+            return "Canonical memory not found: \(memoryId)"
+        case .invalidMemoryID(let memoryId):
+            return "Invalid memory UUID: \(memoryId)"
         }
     }
 }

@@ -6,6 +6,8 @@
 // AC 覆盖: US-ING-005 AC-1 (≤2fps, 总帧数 ≤20), AC-4 (PHAsset 引用，不复制存储)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (零网络), R-007 (禁止 unchecked Sendable)
 // PR#57 review fix: @preconcurrency import AVFoundation（loadTracks 返回非 Sendable [AVAssetTrack]）
+// PR#57 CodeRabbit fix: CR-6 长视频按时长均布采样（≤20 帧全时长覆盖）+ 跳过编码失败帧而非中止;
+//                       CR-24 Fake 提取器 #if DEBUG 包裹
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 //       AVFoundation/PhotoKit SDK 标注 @MainActor，真实实现经 MainActor.run 访问
 // 生成时间: 2026-08-10
@@ -93,13 +95,15 @@ public struct RealVideoAssetExtractor: VideoAssetExtracting {
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 512, height: 512)
 
-        // AC-1: 每秒 ≤2 帧，总帧数 ≤20
+        // AC-1: 每秒 ≤2 帧且总帧数 ≤20 —— 长视频按时长均匀采样，避免帧全部集中在前 10 秒（CR-6）
         let fps: Double = 2.0
+        let maxFrames = 20
+        let interval = max(1.0 / fps, durationSeconds / Double(maxFrames))
         var sampleTimes: [CMTime] = []
         var t: Double = 0
-        while t < durationSeconds, sampleTimes.count < 20 {
+        while t < durationSeconds, sampleTimes.count < maxFrames {
             sampleTimes.append(CMTime(seconds: t, preferredTimescale: 600))
-            t += 1.0 / fps
+            t += interval
         }
 
         var frameData: [Data] = []
@@ -107,7 +111,10 @@ public struct RealVideoAssetExtractor: VideoAssetExtracting {
             do {
                 let cgImage = try await generator.image(at: time).image
                 let image = UIImage(cgImage: cgImage)
-                frameData.append(image.jpegData(compressionQuality: 0.8) ?? Data())
+                // CR-6: jpeg 编码失败时跳过该帧，不 append 空 Data（避免整段摄入中止）
+                if let data = image.jpegData(compressionQuality: 0.8) {
+                    frameData.append(data)
+                }
             } catch {
                 continue
             }
@@ -144,6 +151,7 @@ public struct RealVideoAssetExtractor: VideoAssetExtracting {
     }
 }
 
+#if DEBUG
 /// 测试用 Fake 视频资产提取器 — 注入固定帧与音频存在性。
 public actor FakeVideoAssetExtractor: VideoAssetExtracting {
 
@@ -163,3 +171,4 @@ public actor FakeVideoAssetExtractor: VideoAssetExtracting {
         audioURL
     }
 }
+#endif

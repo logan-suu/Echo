@@ -51,6 +51,7 @@ public struct RealSharedTextExtractor: SharedTextExtracting {
     }
 }
 
+#if DEBUG
 /// 测试用 Fake 共享文本提取器 — 固定内容。
 public actor FakeSharedTextExtractor: SharedTextExtracting {
 
@@ -73,3 +74,4 @@ public actor FakeSharedTextExtractor: SharedTextExtracting {
         )
     }
 }
+#endif
