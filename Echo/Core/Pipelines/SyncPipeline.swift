@@ -18,6 +18,8 @@
 //           AGENTS.md §8.3 (后台任务面板进度订阅)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-07-12
+// PR#57 review fix: W-03 canonical 删除 do/catch 抛 SyncError.canonicalDeleteFailed（L3）,
+//                   不再 try? 静默吞错，失败计入 failedCount → 审计 success=false（D-005）
 // ==========================================
 
 import Foundation
@@ -40,6 +42,8 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
     case metadataEncodingFailed(underlying: Error)
     /// 向量存储操作失败
     case vectorStoreFailed(underlying: Error)
+    /// canonical 事务删除失败（3F.5 生产路径，D-005）— 数据库完整性错误，计入 failed 不静默吞错
+    case canonicalDeleteFailed(underlying: Error)
     /// 内存锁定冲突 — 在同步期间尝试编辑（L4）
     case memoryLockedDuringSync(memoryId: String)
     /// 哈希对比跳过 — 非错误，仅为记录（内容过大或内存不足）
@@ -56,6 +60,7 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
         case .embeddingFailed:            return 3
         case .metadataEncodingFailed:     return 2
         case .vectorStoreFailed:          return 2
+        case .canonicalDeleteFailed:      return 3
         case .memoryLockedDuringSync:     return 4
         case .hashSkippedDueToConstraints: return 1
         case .cancelled:                  return 1
@@ -76,6 +81,8 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
             return "Metadata encoding failed: \(error.localizedDescription)"
         case .vectorStoreFailed(let error):
             return "Vector store operation failed: \(error.localizedDescription)"
+        case .canonicalDeleteFailed(let error):
+            return "Canonical memory delete failed: \(error.localizedDescription)"
         case .memoryLockedDuringSync(let memoryId):
             return "Memory \(memoryId) is locked during sync — 该记忆正在同步更新中，请稍后再编辑"
         case .hashSkippedDueToConstraints(let reason):
@@ -94,6 +101,7 @@ public enum SyncError: Error, LocalizedError, Sendable, Equatable {
         case (.embeddingFailed, .embeddingFailed): return true
         case (.metadataEncodingFailed, .metadataEncodingFailed): return true
         case (.vectorStoreFailed, .vectorStoreFailed): return true
+        case (.canonicalDeleteFailed, .canonicalDeleteFailed): return true
         case (.memoryLockedDuringSync(let a), .memoryLockedDuringSync(let b)): return a == b
         case (.hashSkippedDueToConstraints(let a), .hashSkippedDueToConstraints(let b)): return a == b
         case (.cancelled, .cancelled): return true
@@ -370,12 +378,15 @@ public actor SyncPipeline {
                     // 新记录写入成功后才删除旧记忆（AC-4, R-003: 不写 ExcludedAssets）
                     for memId in oldMemoryIds {
                         if let canonicalRepository {
-                            // 3F.5 生产路径：canonical 事务清除（canonical+FTS+全 generation 向量，D-005）
-                            _ = try? await canonicalRepository.deleteMemory(
-                                memoryId: UUID(uuidString: memId) ?? UUID(),
-                                writeExcluded: false,
-                                traceID: traceID
-                            )
+                            do {
+                                try await canonicalRepository.deleteMemory(
+                                    memoryId: UUID(uuidString: memId) ?? UUID(),
+                                    writeExcluded: false,
+                                    traceID: traceID
+                                )
+                            } catch {
+                                throw SyncError.canonicalDeleteFailed(underlying: error)
+                            }
                         } else {
                             _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
                         }
@@ -393,11 +404,15 @@ public actor SyncPipeline {
                     let oldMemoryIds = try await findMemories(byAssetId: change.assetId)
                     for memId in oldMemoryIds {
                         if let canonicalRepository {
-                            _ = try? await canonicalRepository.deleteMemory(
-                                memoryId: UUID(uuidString: memId) ?? UUID(),
-                                writeExcluded: false,
-                                traceID: traceID
-                            )
+                            do {
+                                try await canonicalRepository.deleteMemory(
+                                    memoryId: UUID(uuidString: memId) ?? UUID(),
+                                    writeExcluded: false,
+                                    traceID: traceID
+                                )
+                            } catch {
+                                throw SyncError.canonicalDeleteFailed(underlying: error)
+                            }
                         } else {
                             _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
                         }

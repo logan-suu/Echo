@@ -7,6 +7,7 @@
 // 任务: 3F.5 - Production ingestion
 // AC 覆盖: 四类真实来源 trace 共享 traceID, canonical/vector/FTS 计数,
 //          取消/重启恢复, 故障回滚, 生产路径无 StubEmbedder/StubASR
+// PR#57 review fix: W-01 视频含音频无 ASR → L2 用例; W-03 canonical 删除故障 → failed/审计 success=false 用例
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §4.3 (TaskQueue 串行), R-006, R-007
 // 生成时间: 2026-08-10
 // ==========================================
@@ -385,6 +386,47 @@ struct ProductionIngestionTests {
         #expect(await textStore?.liveCount == 1)
     }
 
+    @Test("video with audio but no ASR throws L2 instead of skipping transcription (W-01)")
+    func test_videoAudioNoASRThrowsL2() async throws {
+        let registry = makeRegistry()
+        try await seedGenerations(registry)
+
+        let fakeExtractor = FakeVideoAssetExtractor(
+            content: VideoAssetContent(
+                assetId: "PHAsset/video-noasr",
+                creationDate: Date(),
+                frameImages: [Data("frame".utf8)],
+                hasAudio: true
+            ),
+            audioURL: URL(fileURLWithPath: "/tmp/video-noasr.m4a")
+        )
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let pipeline = IngestPipeline(
+            embedder: ProductionTestEmbedder(),
+            asrEngine: nil,
+            privacyActor: PrivacyActor(db: db),
+            vectorStore: VectorStoreActor(dimension: 512),
+            excludedAssets: ExcludedAssetsActor(db: db, privacyActor: PrivacyActor(db: db)),
+            canonicalRepository: repo,
+            generationRegistry: registry,
+            taskQueue: nil,
+            progressActor: .shared,
+            videoExtractor: fakeExtractor
+        )
+
+        do {
+            _ = try await pipeline.ingestProductionVideo(
+                assetId: "PHAsset/video-noasr",
+                taskID: "task-video-noasr",
+                traceID: "trace-video-noasr"
+            )
+            #expect(Bool(false), "expected audioTranscriptionFailed when ASR not loaded")
+        } catch let error as IngestError {
+            #expect(error == .audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded))
+            #expect(error.errorLevel == 2)
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════
     // 3. 故障回滚（US-ING-006 AC-4, D-005）
     // ══════════════════════════════════════════════════════════════
@@ -498,6 +540,46 @@ struct ProductionIngestionTests {
         #expect(try await repo.loadMemory(memoryId: memoryId) == nil)
         let store = await registry.vectorStore(for: "vision_dense/siglip2-v1")
         #expect(await store?.liveCount == 0)
+    }
+
+    @Test("canonical delete fault surfaces as failed not silent success (W-03)")
+    func test_syncCanonicalDeleteFaultSurfacesFailure() async throws {
+        let registry = makeRegistry()
+        try await seedGenerations(registry)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        let pipeline = makePipeline(registry: registry, photoExtractor: FakePhotoAssetExtractor(
+            metadata: PhotoAssetContent(assetId: "PHAsset/sync-fault", creationDate: Date(), exifMetadata: nil),
+            locallyAvailable: true
+        ))
+        _ = try await pipeline.ingestProductionPhoto(assetId: "PHAsset/sync-fault", taskID: "task-sync-fault", traceID: "trace-sync-fault")
+
+        let sync = SyncPipeline(
+            embedder: ProductionTestEmbedder(),
+            privacyActor: PrivacyActor(db: db),
+            vectorStore: VectorStoreActor(dimension: 512),
+            excludedAssets: ExcludedAssetsActor(db: db, privacyActor: PrivacyActor(db: db)),
+            progressActor: .shared,
+            canonicalRepository: repo
+        )
+
+        try await repo.setFault(.deleteFail)
+        let result = try await sync.sync(changes: [
+            ChangeEvent(assetId: "PHAsset/sync-fault", source: .photo, changeType: .removed)
+        ])
+        try await repo.setFault(nil)
+
+        #expect(result.failedCount == 1)
+        #expect(result.replacedCount == 0)
+
+        let rows = try await db.executeQuery(
+            sql: "SELECT success FROM AuditLog WHERE eventType = 'dataSourceChangeSynced' ORDER BY timestamp DESC LIMIT 1",
+            bindings: []
+        )
+        #expect(rows.first?["success"]?.intValue == 0)
+
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/sync-fault", sourceType: "photo")
+        #expect(try await repo.loadMemory(memoryId: memoryId) != nil)
     }
 
     @Test("drainSharedImports routes through production when canonical configured")

@@ -15,6 +15,8 @@
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007, R-008 (跨 Actor await)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-09
+// PR#57 review fix: W-03 新增 DEBUG-only .deleteFail 故障点 + CanonicalRepositoryError.deleteInjected，
+//                   供 SyncPipeline canonical 删除失败路径测试（D-005 不静默吞错）
 // ==========================================
 
 import Foundation
@@ -81,6 +83,8 @@ public actor CanonicalMemoryRepositoryActor {
         case vectorWrite
         /// 在 canonical 提交后、向量写入前注入崩溃 → 补偿清理 canonical
         case afterCanonicalWrite
+        /// 在 deleteMemory 向量清理前注入失败（模拟 DB 删除故障，3F.5 W-03）
+        case deleteFail
     }
 
     public func setFault(_ fault: FaultPoint?) {
@@ -219,6 +223,12 @@ public actor CanonicalMemoryRepositoryActor {
     ) async throws -> Bool {
         let memory = try await loadMemory(memoryId: memoryId)
         guard memory != nil else { return false }
+
+        #if DEBUG
+        if fault == .deleteFail {
+            throw CanonicalRepositoryError.deleteInjected
+        }
+        #endif
 
         // 1) 删除全部 generation 中的向量（内存实例 + 持久化磁盘副本，D-005 跨全 generation）
         //    F-1: 未在本会话加载的 generation（retired/未恢复）其 .pxkt 磁盘副本同样必须清理，
@@ -465,6 +475,7 @@ public struct CascadeDeleteResult: Sendable, Equatable {
 public enum CanonicalRepositoryError: Error, LocalizedError, Sendable {
     case crashAfterCanonicalWrite
     case vectorWriteInjected
+    case deleteInjected
     case generationMissing(generationId: String)
     case vectorWriteFailed(underlying: Error)
 
@@ -474,6 +485,8 @@ public enum CanonicalRepositoryError: Error, LocalizedError, Sendable {
             return "Injected crash after canonical write (test fault)"
         case .vectorWriteInjected:
             return "Injected vector write failure (test fault)"
+        case .deleteInjected:
+            return "Injected canonical delete failure (test fault)"
         case .generationMissing(let generationId):
             return "Generation vector store missing: \(generationId)"
         case .vectorWriteFailed(let error):

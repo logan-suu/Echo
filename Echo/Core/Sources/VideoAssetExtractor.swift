@@ -5,6 +5,7 @@
 // 任务: 3F.5 - Production ingestion
 // AC 覆盖: US-ING-005 AC-1 (≤2fps, 总帧数 ≤20), AC-4 (PHAsset 引用，不复制存储)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (零网络), R-007 (禁止 unchecked Sendable)
+// PR#57 review fix: @preconcurrency import AVFoundation（loadTracks 返回非 Sendable [AVAssetTrack]）
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 //       AVFoundation/PhotoKit SDK 标注 @MainActor，真实实现经 MainActor.run 访问
 // 生成时间: 2026-08-10
@@ -12,7 +13,7 @@
 
 import Foundation
 @preconcurrency import Photos
-import AVFoundation
+@preconcurrency import AVFoundation
 import UIKit
 
 /// 视频资产提取结果 — 供生产摄入管线消费（不跨边界传递 PHAsset/AVAsset）。

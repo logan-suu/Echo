@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.0",
-  "_last_updated": "2026-08-09T13:01:47Z",
+  "_last_updated": "2026-08-10T08:00:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -895,6 +895,26 @@
       "reason": "维护性建议，非阻塞；现有 split API 仍被 ConsentStoreActor 使用",
       "defer_to": "3F.11 DatabaseManager 原子 purge 重构时",
       "deferred_at": "2026-08-09"
+    },
+    {
+      "id": "DEF-57-001",
+      "pr": 57,
+      "title": "R-006 checkpoint 位于入队任务体内而非 ingestProduction* 公开方法入口",
+      "severity": "🟡",
+      "location": "IngestPipeline.swift:976/1009/1038/1070",
+      "reason": "PR#57 review 接受现状：validateProduction 在入队 perform* 体内、写入前执行，隐私门在写入路径全覆盖；但公开方法入口先执行了 PhotoKit 源读取（isLocallyAvailable/extractMetadata）。严格 R-006 读法下应在公开方法入口即校验。",
+      "defer_to": "3F.6 production search/fix 阶段或 R-006 静态扫描收紧时",
+      "deferred_at": "2026-08-10"
+    },
+    {
+      "id": "DEF-57-002",
+      "pr": 57,
+      "title": "PrivacyActor 默认 authorizedSourceTypes 新增 video，默认授权范围静默扩大",
+      "severity": "🟡",
+      "location": "PrivacyActor.swift:97,206",
+      "reason": "PR#57 review 接受现状：视频属 Photos 授权范畴（US-ING-005），默认值变更随 photo 授权联动；未提供 onboarding 显式 video 确认。记录以跟踪是否需显式二次确认。",
+      "defer_to": "3F.7 onboarding 全域接线阶段（若需显式 video 授权确认）",
+      "deferred_at": "2026-08-10"
     }
   ]
 }

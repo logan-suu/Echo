@@ -16,6 +16,8 @@
 //           AGENTS.md §4.4 (L1~L4 统一错误分级)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-07-09 (v1 图片), 2026-07-11 (v2 视频), 2026-07-12 (v3 文本+语音)
+// PR#57 review fix: W-01 视频含音频但 ASR 未加载时抛 L2（对齐 ingestProductionSharedAudio）;
+//                   W-05 inline runQueued 取消保留进度（§4.5）并清理 unused try? 结果
 // ==========================================
 
 import Foundation
@@ -1284,8 +1286,11 @@ public actor IngestPipeline {
             try await context.report(processedIndex: index + 1, lastProcessedId: "\(assetId)|frame\(index)")
         }
 
-        if content.hasAudio, let asr = asrEngine {
+        if content.hasAudio {
             try context.checkCancelled()
+            guard let asr = asrEngine else {
+                throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
+            }
             guard let audioURL = try await (videoExtractor ?? RealVideoAssetExtractor()).extractAudioTrack(assetId: assetId) else {
                 throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.transcriptionFailed(reason: "audio track unavailable"))
             }
@@ -1415,12 +1420,14 @@ public actor IngestPipeline {
                     progressActor: progressStore,
                     pauseToken: token
                 ))
-                try? await progressStore.delete(taskId: job.taskId)
+                // 完成 → 清理进度（US-SYS-001 AC-4）
+                _ = try? await progressStore.delete(taskId: job.taskId)
             } catch is CancellationError {
-                try? await progressStore.delete(taskId: job.taskId)
+                // 取消保留进度（AGENTS.md §4.5 断点续传），与 TaskQueueActor.run 语义一致
                 throw CancellationError()
             } catch {
-                try? await progressStore.delete(taskId: job.taskId)
+                // 最终失败 → 清理进度
+                _ = try? await progressStore.delete(taskId: job.taskId)
                 throw error
             }
         }

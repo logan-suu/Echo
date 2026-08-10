@@ -134,7 +134,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         guard #available(iOS 26, *) else { return }
         guard let adapter = photoSourceAdapter else { return }
         guard await adapter.shouldPresentLimitedLibraryPicker() else { return }
-        guard let rootVC = await Self.keyWindowRootViewController() else { return }
+        guard let rootVC = Self.keyWindowRootViewController() else { return }
         await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: rootVC)
         await adapter.markLimitedLibraryPickerPresented()
     }

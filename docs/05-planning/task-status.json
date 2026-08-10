@@ -1342,8 +1342,8 @@
           "acceptance_evidence": [
             "四类真实来源 trace、canonical/vector/FTS 计数、取消重启恢复与 rollback 证据"
           ],
-          "last_updated": "2026-08-10T14:40:00Z",
-          "notes": "ADR-011 governs task progress. ✅ 3F.5 实现完成 (2026-08-10)。生产摄入路径：TaskQueueActor（串行 + ProgressActor 断点续传 + 取消保留进度）+ 4 个 source extractors（Photo/Video/SharedText/SharedAudio）+ IngestPipeline.ingestProductionPhoto/Video/SharedText/SharedAudio（经 CanonicalMemoryRepositoryActor 单事务写入 canonical + 每代向量 + FTS，ADR-010 路由）+ SyncPipeline 生产删除路由 + AppDelegate 装配真实 E5/SigLIP2/Whisper（无 Stub）。测试：focused 13/13（TaskQueue 串行/取消/完成清理、photo/text/audio/video 四类真实来源 trace 共享 traceID、fault rollback、no-stub 证明、route 解析、audit traceID、sync canonical delete、drain production path），全量回归 906 tests / 114 suites 0 失败。SwiftLint exit 0。关闭 DEF-51-001（孤儿 VectorStoreActor）。",
+          "last_updated": "2026-08-10T16:00:00Z",
+          "notes": "ADR-011 governs task progress. ✅ 3F.5 实现完成 (2026-08-10)。生产摄入路径：TaskQueueActor（串行 + ProgressActor 断点续传 + 取消保留进度）+ 4 个 source extractors（Photo/Video/SharedText/SharedAudio）+ IngestPipeline.ingestProductionPhoto/Video/SharedText/SharedAudio（经 CanonicalMemoryRepositoryActor 单事务写入 canonical + 每代向量 + FTS，ADR-010 路由）+ SyncPipeline 生产删除路由 + AppDelegate 装配真实 E5/SigLIP2/Whisper（无 Stub）。PR#57 review fix (2026-08-10): C-01 @preconcurrency import AVFoundation 修复 loadTracks 非 Sendable 编译错误；W-01 视频含音频但 ASR 未加载抛 L2（对齐 ingestProductionSharedAudio）；W-03 SyncPipeline canonical 删除 do/catch 抛 SyncError.canonicalDeleteFailed（L3），失败计入 failedCount → 审计 success=false；W-05 PhotoAssetExtractor var→let、inline runQueued 取消保留进度（§4.5）+ 清理 unused try?、AppDelegate 冗余 await。测试：focused 15/15（含新增 W-01/W-03 用例），受影响 Sync/Canonical 套件 40/40，全量回归 937 tests / 0 failures。W-02（checkpoint 在入队 perform* 体内，写入前校验）与 W-04（默认授权源新增 video）接受现状，见 deferred-items DEF-57-001/002。",
           "pr": {
             "number": 57,
             "url": "https://github.com/logan-suu/Echo/pull/57",

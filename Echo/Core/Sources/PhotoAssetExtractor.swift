@@ -69,7 +69,7 @@ public struct RealPhotoAssetExtractor: PhotoAssetExtracting {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else {
             throw EmbedderError.assetUnavailable(assetId: assetId)
         }
-        var creationDate = asset.creationDate
+        let creationDate = asset.creationDate
         var exifData: Data?
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
