@@ -682,7 +682,7 @@ struct ProductionIngestionTests {
     // 6. CodeRabbit 第二轮（N-1~N-4）修复回归
     // ══════════════════════════════════════════════════════════════
 
-    @Test("purgeAll removes all queue files and reports accurate count (N-1)")
+    @Test("purgeAll removes pending, processing and corrupted files (N-1)")
     func test_purgeAllRemovesAll() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("echo-queue-\(UUID().uuidString)", isDirectory: true)
@@ -690,12 +690,19 @@ struct ProductionIngestionTests {
         defer { try? FileManager.default.removeItem(at: dir) }
 
         let queue = SharedImportQueueActor(directory: dir)
-        try await queue.enqueue(try makeEnvelope(payload: "purge-a"))
-        try await queue.enqueue(try makeEnvelope(payload: "purge-b"))
-        #expect(try await queue.count() == 2)
+
+        // pending 态
+        let pendingEnv = try makeEnvelope(payload: "purge-pending")
+        try await queue.enqueue(pendingEnv)
+        // processing 态（beginProcessing 原子 move pending → processing）
+        let processingEnv = try makeEnvelope(payload: "purge-processing")
+        try await queue.enqueue(processingEnv)
+        _ = try await queue.beginProcessing(for: processingEnv.dedupeKey)
+        // corrupted 态（不可解码信封经 beginProcessing 会落到 .corrupted；此处确定性直写）
+        try Data("not-json".utf8).write(to: dir.appendingPathComponent("zz-corrupt.corrupted"))
 
         let removed = try await queue.purgeAll()
-        #expect(removed == 2)
+        #expect(removed == 3)
         #expect(try await queue.count() == 0)
     }
 
