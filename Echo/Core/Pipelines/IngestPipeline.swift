@@ -21,6 +21,8 @@
 // PR#57 CodeRabbit fix: CR-2 commit guard (productionNotConfigured), CR-4 checkpoint 前置到入口,
 //                       CR-5 生产错误 L1~L4 包装, CR-12 registry 条件, CR-13 视频 modalities/转写字数,
 //                       CR-10 visionEmbedder 路由（图片/视频帧 → SigLIP2, 推理门控 DEF-54-001）
+// PR#57 CodeRabbit fix (round 4): productionGeneration(.visionDense) 无 vision 路由时抛 L3
+//                                  productionRouteUnavailable，不再回退写 text generation（对齐 O-2）
 // ==========================================
 
 import Foundation
@@ -1474,7 +1476,12 @@ public actor IngestPipeline {
         case .textDense:
             return route.textGeneration
         case .visionDense:
-            return route.visionGeneration ?? route.textGeneration
+            // round-4 (O-2 对齐)：vision 向量不得回退写入 text generation——
+            // 无 vision 路由时显式 L3 失败（否则 768d vision 向量错写 384d 文本代 → dimensionMismatch）。
+            guard let generation = route.visionGeneration else {
+                throw IngestError.productionRouteUnavailable
+            }
+            return generation
         case .ocrText:
             return route.ocrGeneration ?? route.textGeneration
         case .lexical:

@@ -860,12 +860,14 @@ struct ProductionIngestionTests {
                 createdAt: Date(),
                 recoverability: .full
             ),
-            representations: [Representation(
-                memoryId: memoryId,
-                modality: .textDense,
-                preprocessVersion: "e5-v1",
-                contentHash: "seed"
-            )],
+            representations: [
+                Representation(
+                    memoryId: memoryId,
+                    modality: .textDense,
+                    preprocessVersion: "e5-v1",
+                    contentHash: "seed",
+                ),
+            ],
             vectorsByGeneration: [
                 "text_dense/e5-v1": [CanonicalVectorEntry(id: memoryId, vector: [Float](repeating: 0.5, count: 384))]
             ],
@@ -888,6 +890,33 @@ struct ProductionIngestionTests {
         #expect(result.replacedCount == 0)
         // fail-closed：canonical 记录未被替换破坏
         #expect(try await repo.loadMemory(memoryId: memoryId) != nil)
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // 8. round-4（vision fallback 对齐 O-2，原 DEF-57-004 项）
+    // ══════════════════════════════════════════════════════════════
+
+    @Test("photo ingestion fails closed when no vision route (round-4)")
+    func test_photoIngestionNoVisionRouteFailsClosed() async throws {
+        let registry = makeRegistry()
+        let route = try await seedTextOnlyRoute(registry)
+        #expect(route.visionGeneration == nil)
+
+        let pipeline = makePipeline(registry: registry, photoExtractor: FakePhotoAssetExtractor(
+            metadata: PhotoAssetContent(assetId: "PHAsset/no-vision-2", creationDate: Date(), exifMetadata: nil),
+            locallyAvailable: true
+        ))
+        do {
+            _ = try await pipeline.ingestProductionPhoto(
+                assetId: "PHAsset/no-vision-2",
+                taskID: "task-no-vision-2",
+                traceID: "trace-no-vision-2"
+            )
+            #expect(Bool(false), "expected productionRouteUnavailable (L3) instead of vision->text fallback")
+        } catch let error as IngestError {
+            #expect(error == .productionRouteUnavailable)
+            #expect(error.errorLevel == 3)
+        }
     }
 
 }
