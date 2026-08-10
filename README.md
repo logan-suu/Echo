@@ -312,6 +312,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 - **3F.3a** SigLIP2 Core ML 转换与视觉推理接入（2026-08-07 拆分自 3F.3）
 - **3F.3b** whisper.cpp 运行时接入与真实转写（2026-08-07 拆分自 3F.3）
 - **3F.4** Canonical storage 与 generation 生命周期（✅ 2026-08-09：`CanonicalMemoryRepositoryActor` 确定性 ID + 事务 CRUD + 全删除边界；`GenerationRegistryActor` shadow build / 原子发布 / 回滚 / 重启恢复 / 持久化；反馈 generation 身份；US-AWK-007 编辑字段持久化）
+- **3F.5** Production ingestion（✅ 2026-08-10：生产摄入路径——`ingestProductionPhoto/Video/SharedText/SharedAudio` 经 `CanonicalMemoryRepositoryActor` 单事务写入 canonical + 每代向量 + FTS，向量路由由 `GenerationRegistryActor` 活跃路由解析（ADR-010）；`TaskQueueActor` 串行入队 + `ProgressActor` 断点续传（ADR-011）；`SyncPipeline` 生产删除路由；AppDelegate 装配真实 E5/SigLIP2/Whisper，无 Stub）
 - **3F.5** Production ingestion
 - **3F.6** Production search 与 feedback
 - **3F.7** UI 到 Core 全域接线

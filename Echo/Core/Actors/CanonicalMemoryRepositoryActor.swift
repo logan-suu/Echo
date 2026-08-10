@@ -162,6 +162,18 @@ public actor CanonicalMemoryRepositoryActor {
         return rows.first.flatMap { Self.rowToMemory($0) }
     }
 
+    /// 按 sourceLocator 定位全部关联记忆 ID（3F.5 生产同步路由）。
+    ///
+    /// 供 SyncPipeline 删除/替换路径查询；与摄入写入时的确定性 ID 语义一致
+    /// （同一 sourceLocator + sourceType 恒映射同一记忆）。
+    public func memoryIDs(forSourceLocator sourceLocator: String) async throws -> [String] {
+        let rows = try await db.executeQuery(
+            sql: "SELECT memoryId FROM Memory WHERE sourceLocator = ?",
+            bindings: [.text(sourceLocator)]
+        )
+        return rows.compactMap { $0["memoryId"]?.stringValue }
+    }
+
     public func loadRepresentations(memoryId: UUID) async throws -> [Representation] {
         let rows = try await db.executeQuery(
             sql: "SELECT representationId, memoryId, modality, preprocessVersion, contentHash FROM Representation WHERE memoryId = ? ORDER BY representationId",

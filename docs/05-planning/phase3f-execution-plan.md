@@ -1436,6 +1436,8 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 
 **Expected evidence:** migration/rollback logs, DB snapshots, route versions before/after restart, per-generation file inventory, fault-injection matrix, deletion inventory.
 
+> ✅ **3F.5 完成（2026-08-10）**：生产摄入路径落地——`TaskQueueActor`（串行 + ProgressActor 断点续传 + 取消保留进度，ADR-011）、4 个 source extractors（PhotoAsset/VideoAsset/SharedText/SharedAudio）、`IngestPipeline.ingestProductionPhoto/Video/SharedText/SharedAudio`（经 `CanonicalMemoryRepositoryActor.commit` 单事务 canonical + 每代向量 + FTS，ADR-010 活跃路由）、`SyncPipeline` 生产删除路由（canonical 事务清除，D-005）、AppDelegate 装配真实 E5/SigLIP2/Whisper。focused 13/13，全量 906 tests / 114 suites 0 失败。DEF-51-001 关闭。PR `feat(pipeline): add production ingestion [3F.5]` 待创建。
+
 ### 3F.5: Production ingestion
 
 **Files**

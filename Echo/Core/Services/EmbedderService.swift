@@ -35,6 +35,18 @@ public protocol EmbedderProtocol: Sendable {
     /// - Returns: 浮点向量（multilingual-e5-small 384d；Stub 默认 512d — 待对齐）
     /// - Throws: `EmbedderError` 若推理失败
     func embedText(_ text: String) async throws -> [Float]
+
+    /// 对图像数据（JPEG/PNG）生成嵌入向量 — 视频关键帧等非 PHAsset 引用场景。
+    ///
+    /// 默认实现抛出 `preprocessingFailed`；支持图像数据的嵌入器（SigLIP2）覆盖此方法。
+    func embedImageData(_ data: Data) async throws -> [Float]
+}
+
+extension EmbedderProtocol {
+    /// 默认实现：无图像数据嵌入能力的嵌入器返回预处理失败（L3 阻断）。
+    public func embedImageData(_ data: Data) async throws -> [Float] {
+        throw EmbedderError.preprocessingFailed(reason: "\(type(of: self)) does not support image data embedding")
+    }
 }
 
 // MARK: - Embedder Error
@@ -114,6 +126,15 @@ public actor StubEmbedder: EmbedderProtocol {
     /// - Returns: 预设的浮点向量（默认 512d 占位）；生产环境中 multilingual-e5-small 应返回 384d 并经零填充对齐
     /// - Throws: 如已调用 `setNextError()` 则抛出对应错误
     public func embedText(_ text: String) async throws -> [Float] {
+        if let error = shouldThrowNext {
+            shouldThrowNext = nil
+            throw error
+        }
+        return nextEmbedding
+    }
+
+    /// 返回预设的固定向量（与 embedImage/embedText 共享相同 stub 向量）。
+    public func embedImageData(_ data: Data) async throws -> [Float] {
         if let error = shouldThrowNext {
             shouldThrowNext = nil
             throw error

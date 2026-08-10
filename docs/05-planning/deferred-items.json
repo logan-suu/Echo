@@ -735,7 +735,11 @@
       "location": "Echo/App/AppDelegate.swift:86 (configureSources)",
       "reason": "configureSources 新建独立 VectorStoreActor + SyncPipeline + IngestPipeline，未注册进 AppComposition 唯一依赖图（ADR-007 §决策-1）也未走 GenerationRegistryActor（AGENTS.md §5.1）。当前 E5 模型未接入（3F.3）embed 抛错回滚、无实际数据写入；3F.3 模型就绪后 drainSharedImports 会把分享内容写入孤儿内存 store，检索侧读不到、重启即丢（静默数据丢失路径）。修复依赖 3F.4/3F.5 的 generation 生命周期与生产摄入重构，本次 PR 硬改会造成半成品。",
       "defer_to": "3F.5 生产摄入时经 GenerationRegistryActor 获取活跃代 store 重接；在此之前 drainSharedImports 保持 fail-closed（embed 抛错回滚）",
-      "deferred_at": "2026-08-05"
+      "deferred_at": "2026-08-05",
+      "tracking_status": "closed",
+      "closed_at": "2026-08-10",
+      "closed_by_task": "3F.5",
+      "closure_evidence": "AppDelegate configureSources 装配 canonical repository + generation registry + TaskQueueActor；IngestPipeline.drainSharedImports 在 canonicalRepository 配置时路由到 ingestProductionSharedText/Audio（canonical + 每代向量存储），不再写入孤儿内存 store。关闭于 3F.5 Production ingestion。"
     },
     {
       "id": "DEF-51-002",

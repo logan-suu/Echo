@@ -94,7 +94,7 @@ public struct UserPolicy: Sendable, Codable {
 
     public nonisolated init(
         preferredLanguage: String = "zh-Hans",
-        authorizedSourceTypes: Set<String> = ["photo", "note", "voice"],
+        authorizedSourceTypes: Set<String> = ["photo", "note", "voice", "video"],
         policyVersion: Int = 1
     ) {
         self.preferredLanguage = preferredLanguage
@@ -203,7 +203,7 @@ public actor PrivacyActor {
                let decoded = try? JSONDecoder().decode([String].self, from: data) {
                 sources = Set(decoded)
             } else {
-                sources = ["photo", "note", "voice"]
+                sources = ["photo", "note", "voice", "video"]
             }
             self.policy = UserPolicy(
                 preferredLanguage: language,

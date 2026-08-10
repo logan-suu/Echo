@@ -202,6 +202,8 @@ public actor SyncPipeline {
     private let vectorStore: VectorStoreActor
     private let excludedAssets: ExcludedAssetsActor
     private let progressActor: ProgressActor
+    /// 生产同步路由（3F.5）— 非 nil 时删除/替换经 canonical repo 事务清除（D-005）
+    private let canonicalRepository: CanonicalMemoryRepositoryActor?
 
     /// 当前同步中锁定的内存 ID 集合（AC-6: 防止并发编辑）
     private var lockedMemoryIds: Set<String> = []
@@ -221,13 +223,15 @@ public actor SyncPipeline {
         privacyActor: PrivacyActor = .shared,
         vectorStore: VectorStoreActor,
         excludedAssets: ExcludedAssetsActor = .shared,
-        progressActor: ProgressActor = .shared
+        progressActor: ProgressActor = .shared,
+        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
         self.vectorStore = vectorStore
         self.excludedAssets = excludedAssets
         self.progressActor = progressActor
+        self.canonicalRepository = canonicalRepository
     }
 
     // MARK: - Sync Execution (AC-4, AC-5, AC-7, AC-9)
@@ -365,7 +369,16 @@ public actor SyncPipeline {
 
                     // 新记录写入成功后才删除旧记忆（AC-4, R-003: 不写 ExcludedAssets）
                     for memId in oldMemoryIds {
-                        _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
+                        if let canonicalRepository {
+                            // 3F.5 生产路径：canonical 事务清除（canonical+FTS+全 generation 向量，D-005）
+                            _ = try? await canonicalRepository.deleteMemory(
+                                memoryId: UUID(uuidString: memId) ?? UUID(),
+                                writeExcluded: false,
+                                traceID: traceID
+                            )
+                        } else {
+                            _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
+                        }
                     }
 
                     // AC-6: 删除完成，释放锁
@@ -379,7 +392,15 @@ public actor SyncPipeline {
                     // Delete old memories without re-ingestion
                     let oldMemoryIds = try await findMemories(byAssetId: change.assetId)
                     for memId in oldMemoryIds {
-                        _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
+                        if let canonicalRepository {
+                            _ = try? await canonicalRepository.deleteMemory(
+                                memoryId: UUID(uuidString: memId) ?? UUID(),
+                                writeExcluded: false,
+                                traceID: traceID
+                            )
+                        } else {
+                            _ = await vectorStore.delete(id: UUID(uuidString: memId) ?? UUID())
+                        }
                     }
                     replacedCount += 1
                 }
@@ -511,6 +532,10 @@ public actor SyncPipeline {
     /// - Parameter assetId: PHAsset.localIdentifier 或其他数据源标识符
     /// - Returns: 匹配的记忆 UUID 字符串列表
     private func findMemories(byAssetId assetId: String) async throws -> [String] {
+        if let canonicalRepository {
+            // 3F.5 生产路径：canonical 按 sourceLocator 定位（与写入时的确定性 ID 一致）
+            return try await canonicalRepository.memoryIDs(forSourceLocator: assetId)
+        }
         let entries = await vectorStore.allEntries()
         guard !entries.isEmpty else { return [] }
 

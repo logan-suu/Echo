@@ -84,6 +84,14 @@ public actor SigLIP2Embedder: EmbedderProtocol {
         )
     }
 
+    /// 对 JPEG/PNG 图像数据生成嵌入向量（视频关键帧等非 PHAsset 引用场景）。
+    public func embedImageData(_ data: Data) async throws -> [Float] {
+        guard let image = UIImage(data: data) else {
+            throw EmbedderError.preprocessingFailed(reason: "Invalid image data for SigLIP2")
+        }
+        return try await embedImage(from: image)
+    }
+
     // MARK: - Image Embedding (Internal)
 
     /// 直接从 UIImage 生成嵌入向量（测试与流水线入口）。
