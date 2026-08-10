@@ -9,6 +9,7 @@
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (零网络), R-007 (禁止 unchecked Sendable)
 // PR#57 CodeRabbit fix: CR-23 EXIF 叶值递归 sanitize（Date→ISO8601/Data→base64，避免整组 EXIF 丢弃）;
 //                       CR-24 Fake 提取器 #if DEBUG 包裹
+// PR#57 CodeRabbit fix (round 2): N-4 jsonSafe 显式保留 String/NSNumber/NSNull 标量叶值
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 //       PhotoKit SDK 标注 @MainActor，真实实现经 MainActor.run 跳转访问（与 3F.2 一致）
 // 生成时间: 2026-08-10
@@ -122,8 +123,8 @@ public struct RealPhotoAssetExtractor: PhotoAssetExtracting {
     }
 
     /// 递归清洗 EXIF 叶值：Date→ISO8601、Data→base64，其它不可序列化叶值丢弃，
-    /// 避免单个不支持的值丢弃整组 EXIF（CR-23，US-ING-004 AC-2）。
-    private nonisolated static func jsonSafe(_ value: Any) -> Any? {
+    /// 避免单个不支持的值丢弃整组 EXIF（CR-23，US-ING-004 AC-2）。internal 供测试验证标量保留（N-4）。
+    nonisolated static func jsonSafe(_ value: Any) -> Any? {
         if let date = value as? Date {
             return ISO8601DateFormatter().string(from: date)
         }
@@ -135,6 +136,11 @@ public struct RealPhotoAssetExtractor: PhotoAssetExtracting {
         }
         if let array = value as? [Any] {
             return array.compactMap { jsonSafe($0) }
+        }
+        // N-4: JSON 标量叶值（String/NSNumber/Bool/NSNull）须显式保留——
+        // isValidJSONObject 对标量返回 false，仅检查它会丢弃全部标量 EXIF 字段。
+        if value is String || value is NSNumber || value is NSNull {
+            return value
         }
         if JSONSerialization.isValidJSONObject(value) {
             return value

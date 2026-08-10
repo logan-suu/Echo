@@ -23,6 +23,8 @@
 // PR#57 CodeRabbit fix: CR-3 方案A 生产替换经 canonical 确定性 ID upsert + 活跃路由向量（PIPE-012）,
 //                       CR-9 defer 统一释放 AC-6 锁（修复 W-03 引入的锁泄漏）,
 //                       CR-11 UUID guard 解析 + deleteMemory false 显式计失败
+// PR#57 CodeRabbit fix (round 2): N-2 AC-6 锁引用计数（交叠 sync 不误释放）,
+//                                 N-3 canonical 配置缺 registry 时 fail-closed
 // ==========================================
 
 import Foundation
@@ -225,8 +227,12 @@ public actor SyncPipeline {
     /// 分代索引注册表（CR-3 方案A）— 生产替换路径经活跃路由写入 canonical + 每代向量
     private let generationRegistry: GenerationRegistryActor?
 
-    /// 当前同步中锁定的内存 ID 集合（AC-6: 防止并发编辑）
-    private var lockedMemoryIds: Set<String> = []
+    /// 当前同步中锁定的内存 ID 引用计数（AC-6: 防止并发编辑，N-2 修复）
+    ///
+    /// Set 无法区分两个交叠 sync 调用对同一记忆的锁所有权——先完成者的释放会使
+    /// 后完成者失去保护。改用引用计数：每次锁定 +1，仅归零才移除，保证交叠同步
+    /// 期间锁持续有效。
+    private var lockedMemoryIds: [String: Int] = [:]
 
     /// 相册变更观察者（US-SRC-012 AC-1, ADR-008 §决策-1）— 由 PHPhotoLibrary 注册，Actor 持有引用防止释放
     private var photoObserver: PhotoKitChangeObserver?
@@ -369,18 +375,27 @@ public actor SyncPipeline {
 
                     // AC-6 (W1): 删除旧记忆窗口期加锁，阻止并发用户编辑（L4 冲突保护）
                     for memId in oldMemoryIds {
-                        lockedMemoryIds.insert(memId)
+                        lockMemory(memId)
                     }
-                    // CR-9: 统一释放锁（成功与抛错路径均覆盖，避免 canonical 删除抛错泄漏锁）
+                    // CR-9/N-2: defer 统一释放锁（引用计数 -1，归零才移除）——
+                    // 成功与抛错路径均覆盖，且交叠 sync 不误释放对方所有权
                     defer {
                         for memId in oldMemoryIds {
-                            lockedMemoryIds.remove(memId)
+                            unlockMemory(memId)
                         }
                     }
 
                     let newEmbedding = try await generateEmbedding(for: change)
 
-                    if let canonicalRepository, let generationRegistry {
+                    if let canonicalRepository {
+                        // N-3: canonical 配置但缺 generationRegistry 时 fail-closed——
+                        // findMemories 已返回 canonical ID，回退 legacy 写随机 UUID 会造成
+                        // canonical 陈旧 + legacy 孤儿向量（后续 .removed 只删 canonical）。
+                        guard let generationRegistry else {
+                            throw SyncError.productionReplacementFailed(
+                                underlying: IngestError.productionNotConfigured
+                            )
+                        }
                         // CR-3 方案A（PIPE-012）：生产替换经 canonical 确定性 ID upsert + 活跃路由向量，
                         // 不再写 legacy store 也不删旧 canonical（INSERT OR REPLACE 覆盖）。
                         guard let route = try await generationRegistry.loadActiveRoute() else {
@@ -518,14 +533,28 @@ public actor SyncPipeline {
 
     // MARK: - Memory Locking (AC-6)
 
-    /// 锁定指定内存，阻止并发用户编辑（AC-6: L4 冲突处理）
+    /// 锁定指定内存，阻止并发用户编辑（AC-6: L4 冲突处理，引用计数 +1）。
     public func lockMemoryForSync(memoryId: String) async {
-        lockedMemoryIds.insert(memoryId)
+        lockMemory(memoryId)
     }
 
-    /// 检查内存是否因同步而被锁定（AC-6）
+    /// 检查内存是否因同步而被锁定（AC-6；计数 > 0 即 locked）。
     public func isMemoryLockedForSync(memoryId: String) async -> Bool {
-        lockedMemoryIds.contains(memoryId)
+        (lockedMemoryIds[memoryId] ?? 0) > 0
+    }
+
+    /// 锁定内存（引用计数 +1）。
+    private func lockMemory(_ memoryId: String) {
+        lockedMemoryIds[memoryId, default: 0] += 1
+    }
+
+    /// 解锁内存（引用计数 -1，归零才移除；交叠调用各自归还自己的计数）。
+    private func unlockMemory(_ memoryId: String) {
+        guard let count = lockedMemoryIds[memoryId], count > 1 else {
+            lockedMemoryIds.removeValue(forKey: memoryId)
+            return
+        }
+        lockedMemoryIds[memoryId] = count - 1
     }
 
     // MARK: - Change Detection (AC-1, AC-2)

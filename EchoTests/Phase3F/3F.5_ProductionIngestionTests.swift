@@ -678,6 +678,109 @@ struct ProductionIngestionTests {
         #expect(await store?.liveCount == 1)
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // 6. CodeRabbit 第二轮（N-1~N-4）修复回归
+    // ══════════════════════════════════════════════════════════════
+
+    @Test("purgeAll removes all queue files and reports accurate count (N-1)")
+    func test_purgeAllRemovesAll() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("echo-queue-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let queue = SharedImportQueueActor(directory: dir)
+        try await queue.enqueue(try makeEnvelope(payload: "purge-a"))
+        try await queue.enqueue(try makeEnvelope(payload: "purge-b"))
+        #expect(try await queue.count() == 2)
+
+        let removed = try await queue.purgeAll()
+        #expect(removed == 2)
+        #expect(try await queue.count() == 0)
+    }
+
+    @Test("purgeAll propagates deletion failure (N-1)")
+    func test_purgeAllPropagatesFailure() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("echo-queue-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let queue = SharedImportQueueActor(directory: dir)
+        try await queue.enqueue(try makeEnvelope(payload: "purge-fail"))
+
+        // immutable (uchg) 标志使 removeItem 抛 EPERM —— purgeAll 必须传播而非 try? 吞错
+        let pending = dir.appendingPathComponent("zz-immutable.json")
+        try Data("x".utf8).write(to: pending)
+        try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: pending.path)
+        defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: pending.path) }
+
+        do {
+            _ = try await queue.purgeAll()
+            #expect(Bool(false), "expected purgeAll to throw on immutable file")
+        } catch {
+            // expected — 删除失败传播（N-1）
+        }
+    }
+
+    @Test("AC-6 lock uses refcount so overlapping sync keeps the lock (N-2)")
+    func test_syncLockRefcountOverlap() async throws {
+        let registry = makeRegistry()
+        try await seedGenerations(registry)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        let pipeline = makePipeline(registry: registry, photoExtractor: FakePhotoAssetExtractor(
+            metadata: PhotoAssetContent(assetId: "PHAsset/lock-1", creationDate: Date(), exifMetadata: nil),
+            locallyAvailable: true
+        ))
+        _ = try await pipeline.ingestProductionPhoto(assetId: "PHAsset/lock-1", taskID: "task-lock-1", traceID: "trace-lock-1")
+
+        let sync = SyncPipeline(
+            embedder: ProductionTestEmbedder(),
+            privacyActor: PrivacyActor(db: db),
+            vectorStore: VectorStoreActor(dimension: 512),
+            excludedAssets: ExcludedAssetsActor(db: db, privacyActor: PrivacyActor(db: db)),
+            progressActor: .shared,
+            canonicalRepository: repo,
+            generationRegistry: registry
+        )
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/lock-1", sourceType: "photo").uuidString
+
+        // 模拟交叠：外部先锁（+1），sync 的 .modified 再锁（+1）→ 计数 2
+        await sync.lockMemoryForSync(memoryId: memoryId)
+        #expect(await sync.isMemoryLockedForSync(memoryId: memoryId))
+
+        // sync 完成（defer -1）→ 计数 1，外部所有权未被误释放，锁仍有效
+        let result = try await sync.sync(changes: [
+            ChangeEvent(assetId: "PHAsset/lock-1", source: .photo, changeType: .modified)
+        ])
+        #expect(result.failedCount == 0)
+        #expect(await sync.isMemoryLockedForSync(memoryId: memoryId))
+    }
+
+    @Test("EXIF scalar leaf values are preserved (N-4)")
+    func test_exifScalarLeavesPreserved() async throws {
+        let dict: [String: Any] = [
+            "ColorSpace": NSNumber(value: 1),
+            "PixelXDimension": NSNumber(value: 4032),
+            "LensModel": "iPhone 17 Pro",
+            "Orientation": 6,
+            "Flash": true,
+            "CaptureTime": Date(timeIntervalSince1970: 1_600_000_000),
+            "UnknownBlob": Data("blob".utf8),
+        ]
+        let safe = RealPhotoAssetExtractor.jsonSafe(dict) as? [String: Any]
+        #expect(safe != nil)
+        #expect(safe?["ColorSpace"] != nil)
+        #expect(safe?["PixelXDimension"] != nil)
+        #expect(safe?["LensModel"] as? String == "iPhone 17 Pro")
+        #expect(safe?["Orientation"] != nil)
+        #expect(safe?["Flash"] != nil)
+        #expect(safe?["CaptureTime"] is String)
+        #expect(safe?["UnknownBlob"] is String)
+        #expect(JSONSerialization.isValidJSONObject(safe as Any))
+    }
+
 }
 
 // MARK: - Signal Helper (deterministic async coordination)

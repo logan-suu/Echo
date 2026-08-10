@@ -10,6 +10,7 @@
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 //       本文件同时编译进 Echo 与 EchoShareExtension target，不得依赖 App target 专属符号
 //       队列为文件存储（每信封一个文件），App 与 Extension 通过 App Group 容器共享
+// PR#57 CodeRabbit fix: CR-14 purgeAll 清空队列（测试隔离）; round2 N-1 删除失败传播而非 try? 吞错
 // 生成时间: 2026-08-05
 // ==========================================
 
@@ -140,12 +141,13 @@ public actor SharedImportQueueActor {
     ///
     /// `rollbackProcessing` 仅恢复 processing→pending，无法清除既有 pending `.json`；
     /// 测试复用共享 App Group 目录时需此路径保证 `drain.processed` 精确。
+    /// 删除失败直接传播（N-1），计数仅在成功后累加，避免报告"已删除"实仍残留。
     @discardableResult
     public func purgeAll() throws -> Int {
         var removed = 0
         for suffix in [QueueState.pending.rawValue, QueueState.processing.rawValue, QueueState.corrupted.rawValue] {
             for file in try files(withSuffix: suffix) {
-                try? fileManager.removeItem(at: file)
+                try fileManager.removeItem(at: file)
                 removed += 1
             }
         }

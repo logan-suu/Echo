@@ -260,14 +260,14 @@ public actor TaskQueueActor {
         )
         do {
             try await job.body(context)
-            try? await progressActor.delete(taskId: job.taskId)
+            _ = try? await progressActor.delete(taskId: job.taskId)
             return .completed
         } catch is CancellationError {
             return .cancelled
         } catch TaskQueueError.paused {
             return .paused
         } catch {
-            try? await progressActor.delete(taskId: job.taskId)
+            _ = try? await progressActor.delete(taskId: job.taskId)
             return .failed(error)
         }
     }
