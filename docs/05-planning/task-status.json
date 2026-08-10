@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-09T14:06:40Z",
+  "last_updated": "2026-08-10T15:26:26Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -830,7 +830,7 @@
       "integration_task_id": "3F.11",
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase3F/Phase3FIntegrationTests.swift",
-      "last_updated": "2026-08-08T19:38:09Z",
+      "last_updated": "2026-08-10T15:26:26Z",
       "tasks": [
         {
           "id": "3F.0",
@@ -1314,7 +1314,7 @@
             "US-RES-003",
             "US-RES-004"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "Ingestion Lead",
             "approver": "Architecture Lead"
@@ -1342,18 +1342,21 @@
           "acceptance_evidence": [
             "四类真实来源 trace、canonical/vector/FTS 计数、取消重启恢复与 rollback 证据"
           ],
-          "last_updated": "2026-08-10T23:00:00Z",
-          "notes": "ADR-011 governs task progress. ✅ 3F.5 实现完成 (2026-08-10)。生产摄入路径：TaskQueueActor（串行 + ProgressActor 断点续传 + 取消保留进度）+ 4 个 source extractors（Photo/Video/SharedText/SharedAudio）+ IngestPipeline.ingestProductionPhoto/Video/SharedText/SharedAudio（经 CanonicalMemoryRepositoryActor 单事务写入 canonical + 每代向量 + FTS，ADR-010 路由）+ SyncPipeline 生产替换/删除路由 + AppDelegate 装配真实 E5/SigLIP2/Whisper（无 Stub）。PR#57 第一轮 review fix（W-01/W-03/W-05/C-01）+ CodeRabbit 24 条逐条审核（22 采纳 1 延后 1 驳回）：CR-1/CR-21 TaskQueue 取消 resume 等待方 + 暂停不阻塞 + cancel 即时移除；CR-2 commit guard；CR-4 PrivacyCheckpoint 前置到公开入口（DEF-57-001 resolved）；CR-5 生产错误 L1~L4 包装；CR-3 方案A SyncPipeline 生产替换经 canonical 确定性 ID upsert + 活跃路由向量（PIPE-012，不再写 legacy store）；CR-9 defer 释放 AC-6 锁；CR-11 UUID guard + deleteMemory false 计失败；CR-6 视频按时长均布采样；CR-7 音频 file:// URL 解析；CR-13 视频 modalities/转写字数；CR-10/CR-15/CR-19 AppComposition 暴露 text/vision embedder + asrEngine + 单一 canonical repository；CR-14 queue purgeAll；CR-23 EXIF sanitize；CR-24 fakes #if DEBUG；CR-18 sourceLocator 索引。测试：focused 17/17（含 CR-1 新增 2 用例），Sync/Canonical 相关 40/40，全量回归 939/939 0 失败。CR-22 延后 DEF-57-003；DEF-57-002 保持跟踪。CI Build, Lint & Test success（907 unit + 33 UI，0 失败，Coverage Gate 通过）。CodeRabbit 第二轮 4 条（N-1~N-4，commit c7c9d89 范围）全部修复：N-1 purgeAll 删除失败传播 + 计数精确；N-2 AC-6 锁引用计数（交叠 sync 不误释放）；N-3 canonical 配置缺 registry fail-closed；N-4 jsonSafe 保留 String/NSNumber/NSNull 标量叶值。新增 4 测试，全量 943/943 0 失败。CodeRabbit 第三轮 2 条（O-1/O-2，review 4896791449）全部修复：O-1 .removed 删除前锁定待删 ID（AC-6 引用计数 +1→delete→-1）；O-2 无 vision 路由时 SyncPipeline 显式失败（不回退写 text generation）。新增 2 测试（removal-path lock、no-vision fail-closed），全量 945/945 0 失败。round-4（原 DEF-57-004，不再延后）：productionGeneration(.visionDense) 无 vision 路由时抛 L3 productionRouteUnavailable，不再回退写 text generation（对齐 O-2；ocR/lexical 回退为文本模态维度兼容且无调用方，保留）。新增 1 测试，全量 946/946 0 失败。。",
+          "last_updated": "2026-08-10T15:26:26Z",
+          "notes": "ADR-011 governs task progress. ✅ 3F.5 实现完成 (2026-08-10)。生产摄入路径：TaskQueueActor（串行 + ProgressActor 断点续传 + 取消保留进度）+ 4 个 source extractors（Photo/Video/SharedText/SharedAudio）+ IngestPipeline.ingestProductionPhoto/Video/SharedText/SharedAudio（经 CanonicalMemoryRepositoryActor 单事务写入 canonical + 每代向量 + FTS，ADR-010 路由）+ SyncPipeline 生产替换/删除路由 + AppDelegate 装配真实 E5/SigLIP2/Whisper（无 Stub）。PR#57 第一轮 review fix（W-01/W-03/W-05/C-01）+ CodeRabbit 24 条逐条审核（22 采纳 1 延后 1 驳回）：CR-1/CR-21 TaskQueue 取消 resume 等待方 + 暂停不阻塞 + cancel 即时移除；CR-2 commit guard；CR-4 PrivacyCheckpoint 前置到公开入口（DEF-57-001 resolved）；CR-5 生产错误 L1~L4 包装；CR-3 方案A SyncPipeline 生产替换经 canonical 确定性 ID upsert + 活跃路由向量（PIPE-012，不再写 legacy store）；CR-9 defer 释放 AC-6 锁；CR-11 UUID guard + deleteMemory false 计失败；CR-6 视频按时长均布采样；CR-7 音频 file:// URL 解析；CR-13 视频 modalities/转写字数；CR-10/CR-15/CR-19 AppComposition 暴露 text/vision embedder + asrEngine + 单一 canonical repository；CR-14 queue purgeAll；CR-23 EXIF sanitize；CR-24 fakes #if DEBUG；CR-18 sourceLocator 索引。测试：focused 17/17（含 CR-1 新增 2 用例），Sync/Canonical 相关 40/40，全量回归 939/939 0 失败。CR-22 延后 DEF-57-003；DEF-57-002 保持跟踪。CI Build, Lint & Test success（907 unit + 33 UI，0 失败，Coverage Gate 通过）。CodeRabbit 第二轮 4 条（N-1~N-4，commit c7c9d89 范围）全部修复：N-1 purgeAll 删除失败传播 + 计数精确；N-2 AC-6 锁引用计数（交叠 sync 不误释放）；N-3 canonical 配置缺 registry fail-closed；N-4 jsonSafe 保留 String/NSNumber/NSNull 标量叶值。新增 4 测试，全量 943/943 0 失败。CodeRabbit 第三轮 2 条（O-1/O-2，review 4896791449）全部修复：O-1 .removed 删除前锁定待删 ID（AC-6 引用计数 +1→delete→-1）；O-2 无 vision 路由时 SyncPipeline 显式失败（不回退写 text generation）。新增 2 测试（removal-path lock、no-vision fail-closed），全量 945/945 0 失败。round-4（原 DEF-57-004，不再延后）：productionGeneration(.visionDense) 无 vision 路由时抛 L3 productionRouteUnavailable，不再回退写 text generation（对齐 O-2；ocR/lexical 回退为文本模态维度兼容且无调用方，保留）。          新增 1 测试，全量 946/946 0 失败。。\n(2026-08-10 pr-merge) PR #57 merged by human logan-suu at 2026-08-10T15:21:57Z (merge commit b0999d6). Status review -> done. DEF-57-001 resolved (CR-4, tracking_status resolved). DEF-57-002 (video default authorization, defer 3F.7) / DEF-57-003 (CR-22 production commit extraction, defer Phase 4) remain tracked. DEF-51-001 already closed by 3F.5. Cascade: 3F.6 flipped backlog -> ready per AGENTS.md §12.1. Phase 4 stays locked (entry_gate 3F.11 not done).",
           "pr": {
             "number": 57,
             "url": "https://github.com/logan-suu/Echo/pull/57",
             "head": "feature/phase3f-production-ingestion-3F.5",
             "base": "dev-1.0",
-            "created_at": "2026-08-10T14:45:00Z"
+            "created_at": "2026-08-10T14:45:00Z",
+            "merged_at": "2026-08-10T15:21:57Z",
+            "merge_commit": "b0999d64cb67fd8f0c515759f123bb1ba4fa3c10"
           },
           "status_transitions": {
             "in_progress_at": "2026-08-10T00:00:00Z",
-            "review_at": "2026-08-10T14:40:00Z"
+            "review_at": "2026-08-10T14:40:00Z",
+            "merged_at": "2026-08-10T15:21:57Z"
           }
         },
         {
@@ -1375,7 +1378,7 @@
             "US-SRC-010",
             "US-SRC-011"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "Search and Ranking Lead",
             "approver": "Privacy Engineering Lead"
@@ -1427,8 +1430,8 @@
             "US-SRC-011 subjective-ranking/feedback traces",
             "PendingOperations 手工重试与授权证据"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
-          "notes": "ADR-010 governs generation routing and feedback identity.",
+          "last_updated": "2026-08-10T15:26:26Z",
+          "notes": "ADR-010 governs generation routing and feedback identity.\n(2026-08-10 cascade) Dependency 3F.5 merged (PR #57), flipped backlog -> ready per AGENTS.md §12.1.",
           "pr": null
         },
         {

@@ -917,7 +917,8 @@
       "location": "PrivacyActor.swift:97,206",
       "reason": "PR#57 review 接受现状：视频属 Photos 授权范畴（US-ING-005），默认值变更随 photo 授权联动；未提供 onboarding 显式 video 确认。记录以跟踪是否需显式二次确认。",
       "defer_to": "3F.7 onboarding 全域接线阶段（若需显式 video 授权确认）",
-      "deferred_at": "2026-08-10"
+      "deferred_at": "2026-08-10",
+      "last_checked_at": "2026-08-10T15:26:26Z"
     },
     {
       "id": "DEF-57-003",
@@ -927,7 +928,8 @@
       "location": "IngestPipeline.swift:1103-1260",
       "reason": "PR#57 CodeRabbit CR-22 nitpick（CR 自评 Poor tradeoff）：重构量大、风险高于收益，无行为缺陷。当前已新增 productionEmbed*/productionCommit 辅助减少重复，完整抽取留待更大重构窗口。",
       "defer_to": "Phase 4 重构窗口（若需统一生产 commit 流程）",
-      "deferred_at": "2026-08-10"
+      "deferred_at": "2026-08-10",
+      "last_checked_at": "2026-08-10T15:26:26Z"
     }
   ]
 }
