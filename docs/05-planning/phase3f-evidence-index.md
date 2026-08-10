@@ -528,20 +528,20 @@ Task 3F.4 delivers the canonical storage and generation lifecycle per ADR-010. A
 ## Entry: 3F.5 — Production ingestion
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: 3F.5 Production ingestion — branch `feature/phase3f-production-ingestion-3F.5`
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: task-status.json 3F.5 ready → in_progress (2026-08-10); dependencies 3F.2/3F.3/3F.3a/3F.3b/3F.4 all done
+- Quoted AC and architecture constraints: US-ING-001/002/003/004/005/006, US-SRC-012/013, US-SYS-001, US-RES-001/002/003/004; ADR-010 (canonical + generation routing), ADR-011 (TaskQueue/Progress), AGENTS.md §4.3/§4.5
+- RED test command and observed failure: `xcodebuild test ... -only-testing:EchoTests/ProductionIngestionTests` — 4 initial failures (assetUnavailableLocally, notFound, privacyDenied video, unsupportedContentKind) before extractor/authorization/progress wiring
+- Focused test command / exit / passed count: `-only-testing:EchoTests/ProductionIngestionTests` — 15/15 passed (TaskQueue serial/cancel/completion + CR-1 cancel-resume/paused-no-starve, photo/text/audio/video production traces, fault rollback, no-stub real-type assertion, route resolution, audit traceID, sync canonical delete + CR-11 fault, drain production path)
+- Cumulative test command / exit / passed count: `-only-testing:EchoTests` — 905 unit tests / 0 failures (CI, ModelBundleTests skipped) + 33 UI tests; local full regression 937 tests / 0 failures (was 893 baseline + new)
+- Release simulator and device commands / exits: pending pre-merge run
+- Static/privacy/model/compliance commands / exits: SwiftLint exit 0 (modifier_order warnings match existing codebase convention)
+- Production path exercised: AppDelegate wires E5/SigLIP2/Whisper + CanonicalMemoryRepositoryActor + GenerationRegistryActor + TaskQueueActor; drainSharedImports routes through production ingestion when canonical configured (closes DEF-51-001 orphan-store writes)
+- Files and documentation changed: `Echo/Core/Actors/TaskQueueActor.swift` (new), `Echo/Core/Sources/PhotoAssetExtractor.swift` (new), `VideoAssetExtractor.swift` (new), `SharedTextExtractor.swift` (new), `SharedAudioExtractor.swift` (new), `Echo/Core/Pipelines/IngestPipeline.swift`, `SyncPipeline.swift`, `Echo/Core/Services/EmbedderService.swift`, `SigLIP2Embedder.swift`, `Echo/Core/Actors/PrivacyActor.swift`, `CanonicalMemoryRepositoryActor.swift`, `Echo/App/AppDelegate.swift`, `EchoTests/Phase3F/3F.5_ProductionIngestionTests.swift` (new), docs (README, architecture, data-flow, pitfalls, ADR-011, execution plan, evidence index, task-status, deferred-items)
+- Deferred items closed or created, with evidence links: DEF-51-001 (orphan VectorStoreActor) — AppDelegate now routes shared-import drain through canonical production path; DEF-56-004 (deleteMemory full-index rewrite) remains deferred to 3F.5/3F.6 production wiring
+- Known risks that do not weaken an in-scope gate: video production path embeds frames via `embedImageData` (SigLIP2) — real vision inference still depends on 3F.3a Core ML conversion approval (DEF-54-001); real PhotoKit/AVFoundation extraction requires simulator/device photo library, covered by injectable extractor contracts in unit tests
 
 <!-- PR-BODY:3F.5:START -->
 ## Overview

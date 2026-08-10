@@ -199,6 +199,8 @@ public actor DatabaseManager {
         if !memoryColumns.contains("userLocked") {
             try execute(sql: "ALTER TABLE Memory ADD COLUMN userLocked INTEGER NOT NULL DEFAULT 0")
         }
+        // CR-18 (PR#57): memoryIDs(forSourceLocator:) 按 sourceLocator 全表扫查询索引（idempotent）
+        try execute(sql: "CREATE INDEX IF NOT EXISTS idx_memory_sourcelocator ON Memory(sourceLocator)")
         // 一个记忆的多种表示 (R-A.1): modality-specific representations
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS Representation (

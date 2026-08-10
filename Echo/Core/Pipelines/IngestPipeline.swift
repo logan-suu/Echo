@@ -16,9 +16,17 @@
 //           AGENTS.md §4.4 (L1~L4 统一错误分级)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-07-09 (v1 图片), 2026-07-11 (v2 视频), 2026-07-12 (v3 文本+语音)
+// PR#57 review fix: W-01 视频含音频但 ASR 未加载时抛 L2（对齐 ingestProductionSharedAudio）;
+//                   W-05 inline runQueued 取消保留进度（§4.5）并清理 unused try? 结果
+// PR#57 CodeRabbit fix: CR-2 commit guard (productionNotConfigured), CR-4 checkpoint 前置到入口,
+//                       CR-5 生产错误 L1~L4 包装, CR-12 registry 条件, CR-13 视频 modalities/转写字数,
+//                       CR-10 visionEmbedder 路由（图片/视频帧 → SigLIP2, 推理门控 DEF-54-001）
+// PR#57 CodeRabbit fix (round 4): productionGeneration(.visionDense) 无 vision 路由时抛 L3
+//                                  productionRouteUnavailable，不再回退写 text generation（对齐 O-2）
 // ==========================================
 
 import Foundation
+import CryptoKit
 
 // MARK: - Ingest Pipeline Error
 
@@ -48,6 +56,12 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
     case emptyText
     /// Share 分享内容类型当前不受摄入支持（图片/文件分享由 3F.5 生产摄入处理）
     case unsupportedSharedContent(kind: String)
+    /// 生产摄入未配置（缺少 canonical repository / generation registry）
+    case productionNotConfigured
+    /// 生产摄入路由不可用（无活跃 generation 路由）
+    case productionRouteUnavailable
+    /// 资产未在本地下载（US-SRC-001 AC-6：isNetworkAccessAllowed=false）
+    case assetUnavailableLocally(assetId: String)
 
     /// L1~L4 错误分级
     public nonisolated var errorLevel: Int {
@@ -64,6 +78,9 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case .audioTranscriptionFailed:               return 2  // L2 可恢复（ASR 模型未加载等）
         case .emptyText:                              return 2  // L2 可恢复（调用方传入非法参数）
         case .unsupportedSharedContent:               return 2  // L2 可恢复（调用方传入非法参数）
+        case .productionNotConfigured:                return 3  // L3 阻断（装配缺失）
+        case .productionRouteUnavailable:             return 3  // L3 阻断（无活跃路由）
+        case .assetUnavailableLocally:                return 2  // L2 可恢复（资源未下载）
         }
     }
 
@@ -93,6 +110,12 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
             return "Text input is empty or whitespace-only"
         case .unsupportedSharedContent(let kind):
             return "Unsupported shared content kind: \(kind)"
+        case .productionNotConfigured:
+            return "Production ingestion not configured (missing canonical repository / generation registry)"
+        case .productionRouteUnavailable:
+            return "Production ingestion route unavailable (no active generation route)"
+        case .assetUnavailableLocally(let assetId):
+            return "Asset not downloaded locally: \(assetId)"
         }
     }
 
@@ -111,6 +134,9 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
         case (.audioTranscriptionFailed, .audioTranscriptionFailed): return true
         case (.emptyText, .emptyText): return true
         case (.unsupportedSharedContent(let a), .unsupportedSharedContent(let b)): return a == b
+        case (.productionNotConfigured, .productionNotConfigured): return true
+        case (.productionRouteUnavailable, .productionRouteUnavailable): return true
+        case (.assetUnavailableLocally(let a), .assetUnavailableLocally(let b)): return a == b
         default: return false
         }
     }
@@ -161,6 +187,16 @@ public actor IngestPipeline {
     private let privacyActor: PrivacyActor
     private let vectorStore: VectorStoreActor
     private let excludedAssets: ExcludedAssetsActor
+    private let canonicalRepository: CanonicalMemoryRepositoryActor?
+    private let generationRegistry: GenerationRegistryActor?
+    private let taskQueue: TaskQueueActor?
+    private let progressActor: ProgressActor?
+    private let photoExtractor: (any PhotoAssetExtracting)?
+    private let videoExtractor: (any VideoAssetExtracting)?
+    private let sharedTextExtractor: (any SharedTextExtracting)?
+    private let sharedAudioExtractor: (any SharedAudioExtracting)?
+    /// 视觉嵌入器（SigLIP2）— 图片/视频帧生产路径使用；缺省时回退 `embedder`（CR-10）
+    private let visionEmbedder: (any EmbedderProtocol)?
 
     // MARK: - Initialization
 
@@ -169,13 +205,31 @@ public actor IngestPipeline {
         asrEngine: (any ASREngineProtocol)? = nil,
         privacyActor: PrivacyActor = .shared,
         vectorStore: VectorStoreActor,
-        excludedAssets: ExcludedAssetsActor = .shared
+        excludedAssets: ExcludedAssetsActor = .shared,
+        canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
+        generationRegistry: GenerationRegistryActor? = nil,
+        taskQueue: TaskQueueActor? = nil,
+        progressActor: ProgressActor? = nil,
+        photoExtractor: (any PhotoAssetExtracting)? = nil,
+        videoExtractor: (any VideoAssetExtracting)? = nil,
+        sharedTextExtractor: (any SharedTextExtracting)? = nil,
+        sharedAudioExtractor: (any SharedAudioExtracting)? = nil,
+        visionEmbedder: (any EmbedderProtocol)? = nil
     ) {
         self.embedder = embedder
         self.asrEngine = asrEngine
         self.privacyActor = privacyActor
         self.vectorStore = vectorStore
         self.excludedAssets = excludedAssets
+        self.canonicalRepository = canonicalRepository
+        self.generationRegistry = generationRegistry
+        self.taskQueue = taskQueue
+        self.progressActor = progressActor
+        self.photoExtractor = photoExtractor
+        self.videoExtractor = videoExtractor
+        self.sharedTextExtractor = sharedTextExtractor
+        self.sharedAudioExtractor = sharedAudioExtractor
+        self.visionEmbedder = visionEmbedder
     }
 
     // MARK: - Image Ingestion (US-ING-004)
@@ -764,7 +818,20 @@ public actor IngestPipeline {
         for envelope in envelopes {
             guard let started = try await queue.beginProcessing(for: envelope.dedupeKey) else { continue }
             do {
-                _ = try await ingestShared(started, traceID: traceID)
+                // 3F.5 生产路径：已装配 canonical + generation registry 时经生产摄入
+                // 写入 canonical/每代向量存储；否则回退 legacy ingestShared（Phase 2 兼容）。
+                if canonicalRepository != nil, generationRegistry != nil {
+                    switch started.contentKind {
+                    case .text, .url:
+                        _ = try await ingestProductionSharedText(started, taskID: "shared-\(started.dedupeKey.prefix(12))", traceID: traceID)
+                    case .audio:
+                        _ = try await ingestProductionSharedAudio(started, taskID: "shared-\(started.dedupeKey.prefix(12))", traceID: traceID)
+                    case .image, .file:
+                        throw IngestError.unsupportedSharedContent(kind: started.contentKind.rawValue)
+                    }
+                } else {
+                    _ = try await ingestShared(started, traceID: traceID)
+                }
                 try await queue.finishProcessing(for: envelope.dedupeKey)
                 processed += 1
             } catch {
@@ -901,6 +968,582 @@ public actor IngestPipeline {
         }
         return embedding
     }
+
+    // MARK: - Production Ingestion (3F.5)
+
+    /// 生产摄入：图片（PhotoKit 真实来源）→ canonical + generation 索引。
+    ///
+    /// 与 `ingestImage` 的区别（ADR-010 / 数据流文档 §3.1）：
+    /// - 经 `CanonicalMemoryRepositoryActor.commit` 事务写入 canonical + representation + FTS
+    ///   + 每代向量存储（US-ING-006），不再写入单一遗留 vectorStore
+    /// - 经 `TaskQueueActor` 串行入队，`ProgressActor` 持久化进度（ADR-011）
+    /// - 使用 `PhotoAssetExtractor` 提取 EXIF 元数据（US-ING-004 AC-2）
+    ///
+    /// - Parameters:
+    ///   - assetId: PHAsset.localIdentifier（AC-4：直接引用，不复制存储）
+    ///   - taskID: 任务 ID（TaskQueue + Progress 跟踪）
+    ///   - traceID: 审计追溯 ID
+    /// - Returns: 生产摄入结果
+    public func ingestProductionPhoto(
+        assetId: String,
+        taskID: String,
+        traceID: String = UUID().uuidString
+    ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: ["photo"], traceID: traceID)
+        let extractor = photoExtractor ?? RealPhotoAssetExtractor()
+        guard await extractor.isLocallyAvailable(assetId: assetId) else {
+            throw IngestError.assetUnavailableLocally(assetId: assetId)
+        }
+        let metadata = try await extractor.extractMetadata(assetId: assetId)
+
+        let work = TaskQueueActor.QueuedJob(
+            taskId: taskID,
+            taskType: .fullIndex,
+            totalCount: 1
+        ) { context in
+            try await self.performProductionPhoto(
+                assetId: assetId,
+                exifMetadata: metadata.exifMetadata,
+                creationDate: metadata.creationDate,
+                context: context,
+                traceID: traceID
+            )
+        }
+        try await runQueued(work, traceID: traceID)
+        return ProductionIngestResult(
+            sourceLocator: assetId,
+            sourceType: "photo",
+            generationIds: [try await productionGeneration(for: .visionDense)]
+        )
+    }
+
+    /// 生产摄入：共享文本（Share Extension 信封）→ canonical + text generation。
+    public func ingestProductionSharedText(
+        _ envelope: SharedImportEnvelope,
+        taskID: String,
+        traceID: String = UUID().uuidString
+    ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: [envelope.sourceType.rawValue], traceID: traceID)
+        let extractor = sharedTextExtractor ?? RealSharedTextExtractor()
+        let content = try extractor.extractText(from: envelope)
+
+        let work = TaskQueueActor.QueuedJob(
+            taskId: taskID,
+            taskType: .dataSourceSync,
+            totalCount: 1
+        ) { context in
+            try await self.performProductionSharedText(
+                envelope: envelope,
+                content: content,
+                context: context,
+                traceID: traceID
+            )
+        }
+        try await runQueued(work, traceID: traceID)
+        return ProductionIngestResult(
+            sourceLocator: content.dedupeKey,
+            sourceType: content.sourceType,
+            generationIds: [try await productionGeneration(for: .textDense)]
+        )
+    }
+
+    /// 生产摄入：共享音频（Whisper 真实转写）→ canonical + text generation。
+    public func ingestProductionSharedAudio(
+        _ envelope: SharedImportEnvelope,
+        taskID: String,
+        traceID: String = UUID().uuidString
+    ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: [envelope.sourceType.rawValue], traceID: traceID)
+        guard asrEngine != nil else {
+            throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
+        }
+        let extractor = sharedAudioExtractor ?? RealSharedAudioExtractor()
+        let content = try extractor.extractAudio(from: envelope)
+
+        let work = TaskQueueActor.QueuedJob(
+            taskId: taskID,
+            taskType: .dataSourceSync,
+            totalCount: 1
+        ) { context in
+            try await self.performProductionSharedAudio(
+                envelope: envelope,
+                content: content,
+                context: context,
+                traceID: traceID
+            )
+        }
+        try await runQueued(work, traceID: traceID)
+        return ProductionIngestResult(
+            sourceLocator: content.dedupeKey,
+            sourceType: content.sourceType,
+            generationIds: [try await productionGeneration(for: .textDense)]
+        )
+    }
+
+    /// 生产摄入：视频（关键帧 ≤2fps/≤20 + 音频转写）→ canonical + vision/text generation。
+    public func ingestProductionVideo(
+        assetId: String,
+        taskID: String,
+        traceID: String = UUID().uuidString
+    ) async throws -> ProductionIngestResult {
+        try await validateProduction(.ingest, sourceTypes: ["video"], traceID: traceID)
+        let extractor = videoExtractor ?? RealVideoAssetExtractor()
+        let content = try await extractor.extractFrames(assetId: assetId)
+
+        let work = TaskQueueActor.QueuedJob(
+            taskId: taskID,
+            taskType: .fullIndex,
+            totalCount: max(1, content.frameImages.count + (content.hasAudio ? 1 : 0))
+        ) { context in
+            try await self.performProductionVideo(
+                assetId: assetId,
+                content: content,
+                context: context,
+                traceID: traceID
+            )
+        }
+        try await runQueued(work, traceID: traceID)
+        let generationIds = try await productionGenerations(for: content.hasAudio ? [.visionDense, .textDense] : [.visionDense])
+        return ProductionIngestResult(sourceLocator: assetId, sourceType: "video", generationIds: generationIds)
+    }
+
+    // MARK: - Production Execution (actor-isolated)
+
+    private func performProductionPhoto(
+        assetId: String,
+        exifMetadata: Data?,
+        creationDate: Date?,
+        context: TaskQueueActor.TaskContext,
+        traceID: String
+    ) async throws {
+        let started = Date()
+        try context.checkCancelled()
+        try await validateProduction(.ingest, sourceTypes: ["photo"], traceID: traceID)
+        try await checkExcluded(assetId: assetId)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
+
+        let visionVector = try await productionEmbedImage(assetId: assetId)
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: assetId, sourceType: "photo")
+        let memory = Memory(
+            memoryId: memoryId,
+            sourceLocator: assetId,
+            canonicalText: nil,
+            sourceType: "photo",
+            createdAt: creationDate ?? Date(),
+            recoverability: .full
+        )
+        let rep = Representation(
+            memoryId: memoryId,
+            modality: .visionDense,
+            preprocessVersion: "siglip2-v1",
+            contentHash: Self.sha256(of: visionVector)
+        )
+        let visionGen = try await productionGeneration(for: .visionDense)
+        try await productionCommit(
+            canonicalRepository,
+            memory: memory,
+            representations: [rep],
+            vectorsByGeneration: [
+                visionGen: [CanonicalVectorEntry(id: memoryId, vector: visionVector, metadata: exifMetadata)]
+            ],
+            traceID: traceID
+        )
+        let policy = await privacyActor.getPolicy()
+        try? await privacyActor.writeAuditLog(
+            eventType: .imageIngested,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: true,
+            sourceType: "photo",
+            affectedCount: 1,
+            excludedWritten: false,
+            sourceLanguage: nil,
+            elapsedMs: Int(Date().timeIntervalSince(started) * 1000)
+        )
+        try await context.report(processedIndex: 1, lastProcessedId: assetId)
+    }
+
+    private func performProductionSharedText(
+        envelope: SharedImportEnvelope,
+        content: SharedTextContent,
+        context: TaskQueueActor.TaskContext,
+        traceID: String
+    ) async throws {
+        let started = Date()
+        try context.checkCancelled()
+        try await validateProduction(.ingest, sourceTypes: [content.sourceType], traceID: traceID)
+        try await checkExcluded(assetId: content.dedupeKey)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
+
+        let textVector = try await productionEmbedText(content.originalText)
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: content.dedupeKey, sourceType: content.sourceType)
+        let memory = Memory(
+            memoryId: memoryId,
+            sourceLocator: content.dedupeKey,
+            canonicalText: content.originalText,
+            sourceType: content.sourceType,
+            createdAt: envelope.createdAt,
+            recoverability: .full
+        )
+        let rep = Representation(
+            memoryId: memoryId,
+            modality: .textDense,
+            preprocessVersion: "e5-v1",
+            contentHash: Self.sha256(of: content.originalText)
+        )
+        let textGen = try await productionGeneration(for: .textDense)
+        try await productionCommit(
+            canonicalRepository,
+            memory: memory,
+            representations: [rep],
+            vectorsByGeneration: [
+                textGen: [CanonicalVectorEntry(id: memoryId, vector: textVector)]
+            ],
+            traceID: traceID
+        )
+        let policy = await privacyActor.getPolicy()
+        try? await privacyActor.writeAuditLog(
+            eventType: .shareExtensionImported,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: true,
+            sourceType: content.sourceType,
+            affectedCount: 1,
+            excludedWritten: false,
+            elapsedMs: Int(Date().timeIntervalSince(started) * 1000),
+            content: "appBundleId=\(envelope.sourceAppBundleId)|contentType=\(envelope.contentKind.rawValue)"
+        )
+        try await context.report(processedIndex: 1, lastProcessedId: content.dedupeKey)
+    }
+
+    private func performProductionSharedAudio(
+        envelope: SharedImportEnvelope,
+        content: SharedAudioContent,
+        context: TaskQueueActor.TaskContext,
+        traceID: String
+    ) async throws {
+        let started = Date()
+        try context.checkCancelled()
+        guard asrEngine != nil else {
+            throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
+        }
+        try await validateProduction(.ingest, sourceTypes: [content.sourceType], traceID: traceID)
+        try await checkExcluded(assetId: content.dedupeKey)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
+
+        let transcript = try await productionTranscribe(content.fileURL)
+        let textVector = try await productionEmbedText(transcript)
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: content.dedupeKey, sourceType: content.sourceType)
+        let memory = Memory(
+            memoryId: memoryId,
+            sourceLocator: content.dedupeKey,
+            canonicalText: transcript,
+            sourceType: content.sourceType,
+            createdAt: envelope.createdAt,
+            recoverability: .full
+        )
+        let rep = Representation(
+            memoryId: memoryId,
+            modality: .textDense,
+            preprocessVersion: "whisper-tiny-q5_1",
+            contentHash: Self.sha256(of: transcript)
+        )
+        let textGen = try await productionGeneration(for: .textDense)
+        try await productionCommit(
+            canonicalRepository,
+            memory: memory,
+            representations: [rep],
+            vectorsByGeneration: [
+                textGen: [CanonicalVectorEntry(id: memoryId, vector: textVector)]
+            ],
+            traceID: traceID
+        )
+        let policy = await privacyActor.getPolicy()
+        try? await privacyActor.writeAuditLog(
+            eventType: .voiceIngested,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: true,
+            sourceType: content.sourceType,
+            affectedCount: 1,
+            excludedWritten: false,
+            sourceLanguage: nil,
+            elapsedMs: Int(Date().timeIntervalSince(started) * 1000),
+            content: "appBundleId=\(envelope.sourceAppBundleId)|contentType=audio"
+        )
+        try await context.report(processedIndex: 1, lastProcessedId: content.dedupeKey)
+    }
+
+    private func performProductionVideo(
+        assetId: String,
+        content: VideoAssetContent,
+        context: TaskQueueActor.TaskContext,
+        traceID: String
+    ) async throws {
+        let started = Date()
+        try context.checkCancelled()
+        try await validateProduction(.ingest, sourceTypes: ["video"], traceID: traceID)
+        try await checkExcluded(assetId: assetId)
+        guard let canonicalRepository else {
+            throw IngestError.productionNotConfigured
+        }
+
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: assetId, sourceType: "video")
+        var representations: [Representation] = []
+        var vectors: [String: [CanonicalVectorEntry]] = [:]
+        var audioTranscriptLength = 0
+
+        let visionGen = try await productionGeneration(for: .visionDense)
+        for (index, frameData) in content.frameImages.enumerated() {
+            try context.checkCancelled()
+            let frameVector = try await productionEmbedImageData(frameData)
+            representations.append(Representation(
+                memoryId: memoryId,
+                modality: .visionDense,
+                preprocessVersion: "siglip2-v1",
+                contentHash: Self.sha256(of: frameData)
+            ))
+            vectors[visionGen, default: []].append(
+                CanonicalVectorEntry(id: CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "\(assetId)|frame\(index)", sourceType: "video_frame"), vector: frameVector)
+            )
+            try await context.report(processedIndex: index + 1, lastProcessedId: "\(assetId)|frame\(index)")
+        }
+
+        if content.hasAudio {
+            try context.checkCancelled()
+            guard asrEngine != nil else {
+                throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
+            }
+            guard let audioURL = try await (videoExtractor ?? RealVideoAssetExtractor()).extractAudioTrack(assetId: assetId) else {
+                throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.transcriptionFailed(reason: "audio track unavailable"))
+            }
+            let transcript = try await productionTranscribe(audioURL)
+            audioTranscriptLength = transcript.count
+            let textVector = try await productionEmbedText(transcript)
+            let textGen = try await productionGeneration(for: .textDense)
+            representations.append(Representation(
+                memoryId: memoryId,
+                modality: .textDense,
+                preprocessVersion: "whisper-tiny-q5_1",
+                contentHash: Self.sha256(of: transcript)
+            ))
+            vectors[textGen, default: []].append(
+                CanonicalVectorEntry(id: memoryId, vector: textVector)
+            )
+            try await context.report(
+                processedIndex: content.frameImages.count + 1,
+                lastProcessedId: "\(assetId)|audio"
+            )
+        }
+
+        let memory = Memory(
+            memoryId: memoryId,
+            sourceLocator: assetId,
+            canonicalText: nil,
+            sourceType: "video",
+            createdAt: content.creationDate ?? Date(),
+            recoverability: .full
+        )
+        try await productionCommit(
+            canonicalRepository,
+            memory: memory,
+            representations: representations,
+            vectorsByGeneration: vectors,
+            traceID: traceID
+        )
+        let policy = await privacyActor.getPolicy()
+        try? await privacyActor.writeAuditLog(
+            eventType: .videoIngested,
+            traceID: traceID,
+            policyVersion: policy.policyVersion,
+            success: true,
+            sourceType: "video",
+            affectedCount: content.frameImages.count,
+            excludedWritten: false,
+            sourceLanguage: nil,
+            elapsedMs: Int(Date().timeIntervalSince(started) * 1000),
+            frameCount: content.frameImages.count,
+            audioTranscriptLength: audioTranscriptLength,
+            hasAudio: content.hasAudio
+        )
+    }
+
+    // MARK: - Production Helpers
+
+    /// 生产路径嵌入包装：错误映射为 `IngestError.embeddingFailed`（L3，CR-5）。
+    private func productionEmbedImage(assetId: String) async throws -> [Float] {
+        let visual = visionEmbedder ?? embedder
+        do {
+            return try await visual.embedImage(assetId: assetId)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径图像数据嵌入包装（视频帧，CR-5/CR-10）。
+    private func productionEmbedImageData(_ data: Data) async throws -> [Float] {
+        let visual = visionEmbedder ?? embedder
+        do {
+            return try await visual.embedImageData(data)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径文本嵌入包装：错误映射为 `IngestError.embeddingFailed`（L3，CR-5）。
+    private func productionEmbedText(_ text: String) async throws -> [Float] {
+        do {
+            return try await embedder.embedText(text)
+        } catch {
+            throw IngestError.embeddingFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径 ASR 转写包装：错误映射为 `IngestError.audioTranscriptionFailed`（L2，CR-5）。
+    private func productionTranscribe(_ url: URL) async throws -> String {
+        guard let asr = asrEngine else {
+            throw IngestError.audioTranscriptionFailed(underlying: ASREngineError.modelNotLoaded)
+        }
+        do {
+            return try await asr.transcribeFile(at: url)
+        } catch {
+            throw IngestError.audioTranscriptionFailed(underlying: error)
+        }
+    }
+
+    /// 生产路径 canonical commit 包装：错误映射为 `IngestError.vectorStoreWriteFailed`（L2，CR-5）。
+    private func productionCommit(
+        _ repository: CanonicalMemoryRepositoryActor,
+        memory: Memory,
+        representations: [Representation],
+        vectorsByGeneration: [String: [CanonicalVectorEntry]],
+        traceID: String
+    ) async throws {
+        do {
+            try await repository.commit(
+                memory: memory,
+                representations: representations,
+                vectorsByGeneration: vectorsByGeneration,
+                traceID: traceID
+            )
+        } catch {
+            throw IngestError.vectorStoreWriteFailed(underlying: error)
+        }
+    }
+
+    private func validateProduction(
+        _ operation: PrivacyOperation,
+        sourceTypes: [String],
+        traceID: String
+    ) async throws {
+        let checkpoint = await privacyActor.validate(
+            operation: operation,
+            traceID: traceID,
+            sourceTypes: sourceTypes
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+    }
+
+    private func checkExcluded(assetId: String) async throws {
+        do {
+            if try await excludedAssets.contains(assetId: assetId) {
+                throw IngestError.assetExcluded(assetId: assetId)
+            }
+        } catch let error as IngestError {
+            throw error
+        } catch {
+            throw IngestError.excludedAssetsLookupFailed(underlying: error)
+        }
+    }
+
+    /// 解析指定模态的活跃 generation ID（ADR-010 路由）。
+    private func productionGeneration(for modality: Modality) async throws -> String {
+        guard let generationRegistry else {
+            throw IngestError.productionNotConfigured
+        }
+        guard let route = try await generationRegistry.loadActiveRoute() else {
+            throw IngestError.productionRouteUnavailable
+        }
+        switch modality {
+        case .textDense:
+            return route.textGeneration
+        case .visionDense:
+            // round-4 (O-2 对齐)：vision 向量不得回退写入 text generation——
+            // 无 vision 路由时显式 L3 失败（否则 768d vision 向量错写 384d 文本代 → dimensionMismatch）。
+            guard let generation = route.visionGeneration else {
+                throw IngestError.productionRouteUnavailable
+            }
+            return generation
+        case .ocrText:
+            return route.ocrGeneration ?? route.textGeneration
+        case .lexical:
+            return route.lexicalGeneration ?? route.textGeneration
+        }
+    }
+
+    private func productionGenerations(for modalities: [Modality]) async throws -> [String] {
+        var ids: [String] = []
+        for modality in modalities {
+            let id = try await productionGeneration(for: modality)
+            if !ids.contains(id) { ids.append(id) }
+        }
+        return ids
+    }
+
+    /// 经 TaskQueueActor 串行执行并持久化进度；未配置队列时直接执行（测试）。
+    private func runQueued(_ job: TaskQueueActor.QueuedJob, traceID: String) async throws {
+        if let taskQueue {
+            try await taskQueue.enqueueAndWait(job)
+        } else {
+            // 内联执行：先保存初始进度，任务体完成/失败后清理（与 TaskQueue 语义一致）
+            let progressStore = progressActor ?? .shared
+            try await progressStore.save(progress: TaskProgress(
+                taskId: job.taskId,
+                taskType: job.taskType,
+                totalCount: job.totalCount
+            ))
+            let token = PauseToken()
+            do {
+                try await job.body(TaskQueueActor.TaskContext(
+                    taskId: job.taskId,
+                    progressActor: progressStore,
+                    pauseToken: token
+                ))
+                // 完成 → 清理进度（US-SYS-001 AC-4）
+                _ = try? await progressStore.delete(taskId: job.taskId)
+            } catch is CancellationError {
+                // 取消保留进度（AGENTS.md §4.5 断点续传），与 TaskQueueActor.run 语义一致
+                throw CancellationError()
+            } catch {
+                // 最终失败 → 清理进度
+                _ = try? await progressStore.delete(taskId: job.taskId)
+                throw error
+            }
+        }
+    }
+
+    private nonisolated static func sha256(of text: String) -> String {
+        let digest = CryptoKit.SHA256.hash(data: Data(text.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private nonisolated static func sha256(of data: Data) -> String {
+        let digest = CryptoKit.SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private nonisolated static func sha256(of vector: [Float]) -> String {
+        let data = vector.withUnsafeBytes { Data($0) }
+        return sha256(of: data)
+    }
 }
 
 // MARK: - Shared Import Drain Result
@@ -915,5 +1558,25 @@ public struct SharedImportDrainResult: Sendable, Equatable {
         self.processed = processed
         self.failed = failed
         self.recovered = recovered
+    }
+}
+
+// MARK: - Production Ingest Result
+
+/// 生产摄入结果（3F.5）— canonical + generation 索引写入完成摘要。
+public struct ProductionIngestResult: Sendable, Equatable {
+    public nonisolated let sourceLocator: String
+    public nonisolated let sourceType: String
+    /// 写入向量所落地的 generation ID 列表
+    public nonisolated let generationIds: [String]
+
+    public nonisolated init(
+        sourceLocator: String,
+        sourceType: String,
+        generationIds: [String]
+    ) {
+        self.sourceLocator = sourceLocator
+        self.sourceType = sourceType
+        self.generationIds = generationIds
     }
 }

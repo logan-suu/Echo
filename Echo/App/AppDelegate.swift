@@ -86,22 +86,36 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         )
 
         // 相册变更监听（US-SRC-012 AC-1, ADR-008 §决策-1）
-        let vectorStore = VectorStoreActor(dimension: 512)
+        // 3F.5 生产接线：经 GenerationRegistryActor 消费 per-generation 向量存储（ADR-010），
+        // 摄入/同步经 TaskQueueActor 串行 + ProgressActor 持久化。
+        // CR-19: sync 与 ingest 共享单一 CanonicalMemoryRepositoryActor（同一 DB/registry，单一串行域）。
+        let registry = composition.generationRegistry
+        let canonicalRepository = CanonicalMemoryRepositoryActor(
+            db: composition.databaseManager,
+            generationRegistry: registry
+        )
         let sync = SyncPipeline(
-            embedder: SigLIP2Embedder(),
+            embedder: composition.visionEmbedder,
             privacyActor: composition.privacyActor,
-            vectorStore: vectorStore,
+            vectorStore: VectorStoreActor(dimension: 512),
             excludedAssets: .shared,
-            progressActor: .shared
+            progressActor: .shared,
+            canonicalRepository: canonicalRepository,
+            generationRegistry: registry
         )
         await sync.registerPhotoLibraryObserver()
         syncPipeline = sync        // Share 队列排空（US-SRC-001/003, ADR-008 §决策-3）— 恰好一次消费
         let ingest = IngestPipeline(
-            embedder: E5Embedder(),
-            asrEngine: WhisperASREngine(),
+            embedder: composition.textEmbedder,
+            asrEngine: composition.asrEngine,
             privacyActor: composition.privacyActor,
-            vectorStore: vectorStore,
-            excludedAssets: .shared
+            vectorStore: VectorStoreActor(dimension: 512),
+            excludedAssets: .shared,
+            canonicalRepository: canonicalRepository,
+            generationRegistry: registry,
+            taskQueue: .shared,
+            progressActor: .shared,
+            visionEmbedder: composition.visionEmbedder
         )
         ingestPipeline = ingest
         _ = try? await ingest.drainSharedImports(from: .shared)
@@ -121,7 +135,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         guard #available(iOS 26, *) else { return }
         guard let adapter = photoSourceAdapter else { return }
         guard await adapter.shouldPresentLimitedLibraryPicker() else { return }
-        guard let rootVC = await Self.keyWindowRootViewController() else { return }
+        guard let rootVC = Self.keyWindowRootViewController() else { return }
         await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: rootVC)
         await adapter.markLimitedLibraryPickerPresented()
     }
