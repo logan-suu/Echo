@@ -132,6 +132,23 @@ struct ProductionIngestionTests {
         return activeRoute
     }
 
+    /// 仅 text 路由（visionGeneration == nil）——O-2 测试：图片同步须显式失败而非回退 text generation。
+    private func seedTextOnlyRoute(_ registry: GenerationRegistryActor) async throws -> ActiveRouteSet {
+        try await registry.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384)
+        )
+        try await registry.finishShadowBuild("text_dense/e5-v1", counts: 0, validationDigest: nil)
+        try await registry.setGenerationState("text_dense/e5-v1", state: .ready)
+        let route = try await registry.activateGeneration("text_dense/e5-v1")
+        let activeRoute = ActiveRouteSet(
+            textGeneration: "text_dense/e5-v1",
+            visionGeneration: nil,
+            version: route.version
+        )
+        try await registry.publishRoute(activeRoute)
+        return activeRoute
+    }
+
     private func makePipeline(
         registry: GenerationRegistryActor,
         taskQueue: TaskQueueActor? = nil,
@@ -786,6 +803,91 @@ struct ProductionIngestionTests {
         #expect(safe?["CaptureTime"] is String)
         #expect(safe?["UnknownBlob"] is String)
         #expect(JSONSerialization.isValidJSONObject(safe as Any))
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // 7. CodeRabbit 第三轮（O-1~O-2，review 4896791449）修复回归
+    // ══════════════════════════════════════════════════════════════
+
+    @Test("removed path locks records and preserves overlapping ownership (O-1)")
+    func test_syncRemovedPathLock() async throws {
+        let registry = makeRegistry()
+        try await seedGenerations(registry)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        let pipeline = makePipeline(registry: registry, photoExtractor: FakePhotoAssetExtractor(
+            metadata: PhotoAssetContent(assetId: "PHAsset/rem-lock", creationDate: Date(), exifMetadata: nil),
+            locallyAvailable: true
+        ))
+        _ = try await pipeline.ingestProductionPhoto(assetId: "PHAsset/rem-lock", taskID: "task-rem-lock", traceID: "trace-rem-lock")
+
+        let sync = SyncPipeline(
+            embedder: ProductionTestEmbedder(),
+            privacyActor: PrivacyActor(db: db),
+            vectorStore: VectorStoreActor(dimension: 512),
+            excludedAssets: ExcludedAssetsActor(db: db, privacyActor: PrivacyActor(db: db)),
+            progressActor: .shared,
+            canonicalRepository: repo,
+            generationRegistry: registry
+        )
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/rem-lock", sourceType: "photo").uuidString
+
+        // 外部先锁（+1）；.removed 路径锁定（+1）→ 计数 2，删除完成后 -1 → 计数 1，外部所有权保留
+        await sync.lockMemoryForSync(memoryId: memoryId)
+        let result = try await sync.sync(changes: [
+            ChangeEvent(assetId: "PHAsset/rem-lock", source: .photo, changeType: .removed)
+        ])
+        #expect(result.failedCount == 0)
+        #expect(await sync.isMemoryLockedForSync(memoryId: memoryId))
+    }
+
+    @Test("modified sync fails closed when no vision route (O-2)")
+    func test_syncModifiedNoVisionRouteFailsClosed() async throws {
+        let registry = makeRegistry()
+        let route = try await seedTextOnlyRoute(registry)
+        #expect(route.visionGeneration == nil)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        // 直接构造既有 canonical 记忆（text-only 部署下图片记忆仅存在于 text 代，
+        // 绕开 ingestProductionPhoto 的 vision 回退路径，聚焦 SyncPipeline O-2 守卫）。
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/no-vision", sourceType: "photo")
+        try await repo.commit(
+            memory: Memory(
+                memoryId: memoryId,
+                sourceLocator: "PHAsset/no-vision",
+                canonicalText: nil,
+                sourceType: "photo",
+                createdAt: Date(),
+                recoverability: .full
+            ),
+            representations: [Representation(
+                memoryId: memoryId,
+                modality: .textDense,
+                preprocessVersion: "e5-v1",
+                contentHash: "seed"
+            )],
+            vectorsByGeneration: [
+                "text_dense/e5-v1": [CanonicalVectorEntry(id: memoryId, vector: [Float](repeating: 0.5, count: 384))]
+            ],
+            traceID: "trace-seed-no-vision"
+        )
+
+        let sync = SyncPipeline(
+            embedder: ProductionTestEmbedder(),
+            privacyActor: PrivacyActor(db: db),
+            vectorStore: VectorStoreActor(dimension: 512),
+            excludedAssets: ExcludedAssetsActor(db: db, privacyActor: PrivacyActor(db: db)),
+            progressActor: .shared,
+            canonicalRepository: repo,
+            generationRegistry: registry
+        )
+        let result = try await sync.sync(changes: [
+            ChangeEvent(assetId: "PHAsset/no-vision", source: .photo, changeType: .modified)
+        ])
+        #expect(result.failedCount == 1)
+        #expect(result.replacedCount == 0)
+        // fail-closed：canonical 记录未被替换破坏
+        #expect(try await repo.loadMemory(memoryId: memoryId) != nil)
     }
 
 }

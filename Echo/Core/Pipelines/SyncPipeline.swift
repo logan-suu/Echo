@@ -25,6 +25,8 @@
 //                       CR-11 UUID guard 解析 + deleteMemory false 显式计失败
 // PR#57 CodeRabbit fix (round 2): N-2 AC-6 锁引用计数（交叠 sync 不误释放）,
 //                                 N-3 canonical 配置缺 registry 时 fail-closed
+// PR#57 CodeRabbit fix (round 3): O-1 .removed 删除前锁定待删 ID（AC-6）;
+//                                 O-2 无 vision 路由时显式失败（不回退写 text generation）
 // ==========================================
 
 import Foundation
@@ -421,7 +423,13 @@ public actor SyncPipeline {
                             preprocessVersion: "siglip2-v1",
                             contentHash: Self.sha256(of: newEmbedding)
                         )
-                        let generation = route.visionGeneration ?? route.textGeneration
+                        // O-2: 图片同步仅产出 .visionDense 表示——无 vision 路由时显式失败，
+                        // 不再把 vision 向量回退写入 text generation（维度/检索错乱）。
+                        guard let generation = route.visionGeneration else {
+                            throw SyncError.productionReplacementFailed(
+                                underlying: IngestError.productionRouteUnavailable
+                            )
+                        }
                         do {
                             try await canonicalRepository.commit(
                                 memory: memory,
@@ -462,6 +470,17 @@ public actor SyncPipeline {
                 case .removed:
                     // Delete old memories without re-ingestion
                     let oldMemoryIds = try await findMemories(byAssetId: change.assetId)
+                    // O-1: 删除前锁定待删 ID（AC-6）——deleteMemory 是 await 挂起点，
+                    // 若不加锁，并发编辑可通过 isMemoryLockedForSync 检查后被同步删除。
+                    // 引用计数语义与 .modified/.added 一致：+1 → delete → -1。
+                    for memId in oldMemoryIds {
+                        lockMemory(memId)
+                    }
+                    defer {
+                        for memId in oldMemoryIds {
+                            unlockMemory(memId)
+                        }
+                    }
                     for memId in oldMemoryIds {
                         if let canonicalRepository {
                             do {
