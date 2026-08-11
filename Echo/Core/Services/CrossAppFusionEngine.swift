@@ -85,24 +85,36 @@ public actor ProductionCrossAppFusionEngine: CrossAppSearchFusionEngine {
         intent: CrossAppIntent,
         traceID: String
     ) async throws -> [CrossAppSourceResult] {
-        // AC-2: Privacy Gate — 校验所有涉及数据源的授权状态（R-006 入口 Checkpoint）
+        // AC-2: 逐源授权（US-SRC-010）— 先求 authorized 交集（PR#58 CR-7）：
+        // 部分授权不应整查询 fail-closed，未授权源跳过、授权源继续；空子集才抛 unauthorizedSource。
+        let policy = await privacy.getPolicy()
+        let authorized = intent.sources.filter { policy.isAuthorized(sourceType: $0) }
+        guard !authorized.isEmpty else {
+            throw CrossAppIntentError.unauthorizedSource(sourceType: intent.sources.joined(separator: ","))
+        }
+
+        // R-006: 入口 Checkpoint（仅校验已授权子集；同意闸门 deny-by-default 仍在此生效）
         let checkpoint = await privacy.validate(
             operation: .search,
             traceID: traceID,
-            sourceTypes: intent.sources
+            sourceTypes: authorized
         )
         guard checkpoint.isAllowed else {
             throw CrossAppIntentError.unauthorizedSource(sourceType: intent.sources.joined(separator: ","))
         }
 
-        let policy = await privacy.getPolicy()
-        let authorized = intent.sources.filter { policy.isAuthorized(sourceType: $0) }
-
         // AC-2: 拒绝分发 — 未授权源不得调用 provider（fail-closed）
         var fused: [CrossAppSourceResult] = []
         for provider in providers where authorized.contains(provider.sourceType) {
-            let results = try await provider.search(query: intent.query, window: intent.temporalWindow)
-            fused.append(contentsOf: results)
+            // PR#58 CR-8: 单 provider 失败/超时被隔离，不丢弃已融合结果（AC-3/AC-5 继续）
+            do {
+                let results = try await Self.withProviderTimeout(seconds: Self.providerTimeoutSeconds) {
+                    try await provider.search(query: intent.query, window: intent.temporalWindow)
+                }
+                fused.append(contentsOf: results)
+            } catch {
+                // 该源失败/超时 → 跳过该源，继续其他源
+            }
         }
 
         // AC-3: 时间窗对齐 — 过滤窗口外结果 + 时间戳升序
@@ -113,7 +125,8 @@ public actor ProductionCrossAppFusionEngine: CrossAppSearchFusionEngine {
 
         // AC-5: 审计 `.crossAppSearch` — 记录【实际授权】源列表（非请求列表），hash-only
         let auditSources = authorized.sorted().joined(separator: ",")
-        try await privacy.writeAuditLog(
+        // PR#58 CR-31: 审计写入 best-effort（与 SearchPipeline 一致），失败不丢弃已融合结果
+        try? await privacy.writeAuditLog(
             eventType: .crossAppSearch,
             traceID: traceID,
             policyVersion: policy.policyVersion,
@@ -123,5 +136,26 @@ public actor ProductionCrossAppFusionEngine: CrossAppSearchFusionEngine {
         )
 
         return fused
+    }
+
+    /// 单 provider 检索超时阈值（秒，PR#58 CR-8）
+    private nonisolated static let providerTimeoutSeconds: Double = 2.0
+
+    /// 带超时的 provider 检索封装（竞速模式；超时抛 CancellationError 由调用方隔离）。
+    private nonisolated static func withProviderTimeout<T: Sendable>(
+        seconds: Double,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw CancellationError()
+            }
+            guard let result = try await group.next() else { throw CancellationError() }
+            group.cancelAll()
+            do { _ = try await group.next() } catch { /* cancelled, expected */ }
+            return result
+        }
     }
 }

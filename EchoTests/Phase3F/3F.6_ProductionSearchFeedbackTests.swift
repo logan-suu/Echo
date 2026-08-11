@@ -4,20 +4,21 @@
 //            US-RET-007 (结果缓存), US-RET-008 (超时降级), US-FBK-002 (反馈重排),
 //            US-PRV-001 (授权), US-SRC-011 (主观重排)
 //            docs/05-planning/phase3f-execution-plan.md → 3F.6 (Production search 与 feedback)
-// 任务: 3F.6 - Production search 与 feedback（TDD RED 测试套件）
+// 任务: 3F.6 - Production search 与 feedback（TDD GREEN 测试套件）
 // AC 覆盖: US-RET-007 AC-1/2/3/4 (缓存 TTL/失效/键维度), US-RET-008 AC-1/3 (超时 timedOut 降级),
 //          DEF-34-001 (RRF ID-keyed 元数据, 禁止 top-1 re-search), DEF-34-002 (L3 error 与 timeout 分离),
 //          US-RET-003 AC-2 (text/vision 分离向量空间), US-FBK-002 AC-1/2/3 (阈值/衰减/截断 + 同查询重排),
-//          US-PRV-001 AC-2 (被拒数据源不进 Retriever), US-RET-005 AC-1/2/4 (FIFO 历史/父记忆 ID 注入/审计)
-//          （US-RET-005 AC-3 LLM rewrite 按决策延后 approach a — 不测试）
+//          US-PRV-001 AC-2 (被拒数据源不进 Retriever), US-RET-005 AC-4 (followUp 审计)
+//          （US-RET-005 AC-1/2/3 按决策延后：AC-3 LLM rewrite 无生成式 LLM，AC-1 FIFO/AC-2 memoryIds
+//          注入未落地 — 仅 approach a 单轮 lastQuery 追踪，见 DEF-58-001/002）
 //          DEF-37-001 (L2 feedback 写 PendingOperations 且可见可手动重试), DEF-56-005 (generationId 透传),
 //          DEF-56-006 (searchCanonical ORDER BY rank)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §4.4 (L1~L4 错误分级), §13.2 (TDD 先写测试),
 //           R-006/R-007/R-008, §9.4 (串行执行)
-// 重要: TDD RED — 骨架方法（adapter.search / cache.lookup/store/invalidate / rerank /
-//       followUp 审计 / generationId 透传 / PendingOperations 写入 / searchCanonical 排序）尚未实现，
-//       期望大量断言失败；纯函数（makeKey / applyAdjustment / rrfFuse）与 Phase 2 既有行为期望通过。
-// 生成时间: 2026-08-11
+// 重要: TDD GREEN — 生产实现（adapter.search / cache.lookup/store/invalidate / rerank /
+//       followUp 审计 / generationId 透传 / PendingOperations 写入 / searchCanonical 排序）已实现，
+//       45/45 聚焦测试通过（PR#58 CR-18 头注释更新）。纯函数（makeKey / applyAdjustment / rrfFuse）稳定。
+// 生成时间: 2026-08-11 | 更新: 2026-08-11 (PR#58 review 修复)
 // ==========================================
 
 import Testing
@@ -70,45 +71,6 @@ public struct StableSubjectiveScorer: SubjectiveScorer {
 
     public nonisolated func subjectiveMatchScore(text: String) async throws -> Float {
         score
-    }
-}
-
-// MARK: - Inline Contract Types (US-RET-005 approach a)
-
-/// Contract for the FIFO conversation history 3F.6 must add (US-RET-005 AC-1):
-/// capped at 10 rounds, oldest dropped. Defined inline so the contract is proven
-/// before the production type exists.
-public actor SearchHistory {
-    private let maxEntries: Int
-    private var entries: [String] = []
-
-    public init(maxEntries: Int = 10) {
-        self.maxEntries = maxEntries
-    }
-
-    public func append(_ query: String) {
-        entries.append(query)
-        if entries.count > maxEntries {
-            entries.removeFirst(entries.count - maxEntries)
-        }
-    }
-
-    public var allEntries: [String] {
-        entries
-    }
-}
-
-/// Contract for the follow-up query context 3F.6 must add (US-RET-005 AC-2):
-/// the follow-up round carries the previous round's memory IDs as an implicit filter.
-public struct FollowUpContext: Sendable {
-    public nonisolated let queryText: String
-    public nonisolated let parentMemoryIds: [UUID]
-    public nonisolated let parentTraceID: String
-
-    public nonisolated init(queryText: String, parentMemoryIds: [UUID], parentTraceID: String) {
-        self.queryText = queryText
-        self.parentMemoryIds = parentMemoryIds
-        self.parentTraceID = parentTraceID
     }
 }
 
@@ -284,7 +246,6 @@ struct ProductionSearchFeedbackTests {
         try await seedGenerations(registry)
         let adapter = GenerationRoutedChannelAdapter(
             generationRegistry: registry,
-            generationKey: \.visionGeneration,
             kind: .visionDense,
             dimension: 768
         )
@@ -331,43 +292,62 @@ struct ProductionSearchFeedbackTests {
     // DEF-34-001: RRF Fusion + ID-keyed Metadata
     // ══════════════════════════════════════════════════════════════
 
-    @Test("DEF-34-001: fused results preserve metadata via ID-keyed lookup (no top-1 re-search)")
+    @Test("DEF-34-001: production assembly returns ID-keyed metadata (no top-1 re-search)")
     func test_DEF34_001_FusedMetadataFromIDKeyedLookup() async throws {
-        let pipeline = SearchPipeline(
-            embedder: StableEmbedder(),
-            privacyActor: PrivacyActor(db: db),
-            vectorStore: VectorStoreActor(dimension: 512)
-        )
+        // PR#58 CR-12: 直接驱动生产 searchMultiChannel 组装路径 —
+        // 不再只调 rrfFuse + 断言测试自造的字面量。
+        let registry = makeRegistry()
+        try await seedGenerations(registry)
+        let privacy = PrivacyActor(db: db)
+        try await privacy.updatePolicy(UserPolicy(
+            preferredLanguage: "zh-Hans",
+            authorizedSourceTypes: ["note"],
+            policyVersion: 1
+        ))
         let x = UUID(), y = UUID()
-        let textMeta = SearchChannelMetadata(
-            assetId: "note-x", sourceType: "note", timestamp: 1,
-            originalText: "text channel hit", sourceLanguage: "en-US", cosineSimilarity: 0.9
+        let query384 = [Float](repeating: 0.5, count: 384)
+        let textStore = await registry.vectorStore(for: "text_dense/e5-v1")
+        try await textStore?.ingest(
+            vector: query384, id: x,
+            metadata: try MemoryEntry(
+                assetId: "note-x", embedding: query384, sourceType: "note",
+                timestamp: Date(timeIntervalSince1970: 1), traceID: "t-def34",
+                originalText: "text channel hit"
+            ).encodeMetadata()
         )
-        let visionMeta = SearchChannelMetadata(
-            assetId: "photo-x", sourceType: "photo", timestamp: 2,
-            cosineSimilarity: 0.8
-        )
-        let textChannel = ChannelSearchResult(
-            channel: .textDense, rankedIds: [x, y], metadataByID: [x: textMeta]
-        )
-        let visionChannel = ChannelSearchResult(
-            channel: .visionDense, rankedIds: [x], metadataByID: [x: visionMeta]
+        try await textStore?.ingest(
+            vector: query384, id: y,
+            metadata: try MemoryEntry(
+                assetId: "note-y", embedding: query384, sourceType: "note",
+                timestamp: Date(timeIntervalSince1970: 2), traceID: "t-def34",
+                originalText: "text channel hit two"
+            ).encodeMetadata()
         )
 
-        let fused = pipeline.rrfFuse(
-            channelResults: [
-                SearchPipeline.ChannelResult(channel: "text_dense", rankedIds: [x, y]),
-                SearchPipeline.ChannelResult(channel: "vision_dense", rankedIds: [x]),
-            ],
+        let adapter = GenerationRoutedChannelAdapter(
+            generationRegistry: registry,
+            kind: .textDense,
+            dimension: 384,
+            privacyActor: privacy
+        )
+        let pipeline = SearchPipeline(
+            embedder: StableEmbedder(),
+            privacyActor: privacy,
+            vectorStore: VectorStoreActor(dimension: 512)
+        )
+        let items = await pipeline.searchMultiChannel(
+            adapters: [adapter],
+            queryVector: query384,
+            queryText: "west lake",
             k: 5
         )
-        #expect(fused.contains(x))
-        // Metadata must come from the ID-keyed dictionary of the winning channel —
-        // NOT from a top-1 re-search of the vector store.
-        #expect(textChannel.metadataByID[x]?.assetId == "note-x")
-        #expect(visionChannel.metadataByID[x]?.sourceType == "photo")
-        #expect(textChannel.metadataByID[x]?.originalText != visionChannel.metadataByID[x]?.originalText,
-            "per-channel metadata differs — assembly must key by fused ID (DEF-34-001)")
+        #expect(items.contains { $0.id == x }, "fused ID must be present in assembled output")
+        guard let itemX = items.first(where: { $0.id == x }) else { return }
+        // 元数据来自 ID-keyed 字典（DEF-34-001），而非向量库 top-1 重查
+        #expect(itemX.assetId == "note-x")
+        #expect(itemX.originalText == "text channel hit")
+        #expect(itemX.sourceType == "note")
+        #expect(items.first(where: { $0.id == y })?.assetId == "note-y")
     }
 
     @Test("RRF: doc present in both channels at rank 1 ranks above single-channel rank 1")
@@ -435,20 +415,28 @@ struct ProductionSearchFeedbackTests {
     func test_adapterSearch_ResolvesThroughActiveRoute() async throws {
         let registry = makeRegistry()
         try await seedGenerations(registry)
+        let privacy = PrivacyActor(db: db)
+        try await privacy.updatePolicy(UserPolicy(
+            preferredLanguage: "zh-Hans",
+            authorizedSourceTypes: ["photo"],
+            policyVersion: 1
+        ))
         let adapter = GenerationRoutedChannelAdapter(
             generationRegistry: registry,
-            generationKey: \.visionGeneration,
             kind: .visionDense,
-            dimension: 768
+            dimension: 768,
+            privacyActor: privacy
         )
         // Empty stores degrade to timedOut (US-RET-008, see test_AC1_TimeoutChannelReturnsTimedOutFlag),
-        // so seed one vision hit to exercise the non-empty retrieval path.
+        // so seed one photo-tagged vision hit to exercise the non-empty retrieval path
+        // (逐源授权过滤 PR#58 CR-9: sourceType "photo" 须在授权集内)。
         let visionStore = await registry.vectorStore(for: "vision_dense/siglip2-v1")
-        try await visionStore?.ingest(
-            vector: [Float](repeating: 0.5, count: 768),
-            id: UUID(),
-            metadata: nil
-        )
+        let hitID = UUID()
+        let photoMeta = try MemoryEntry(
+            assetId: "photo-cat", embedding: [Float](repeating: 0.5, count: 768),
+            sourceType: "photo", timestamp: Date(), traceID: "t-ret-003"
+        ).encodeMetadata()
+        try await visionStore?.ingest(vector: [Float](repeating: 0.5, count: 768), id: hitID, metadata: photoMeta)
         // Production contract: adapter resolves the active route → vision generation store
         // → returns hits for the query vector.
         let result = try await adapter.search(
@@ -458,6 +446,8 @@ struct ProductionSearchFeedbackTests {
         )
         #expect(result.channel == .visionDense)
         #expect(!result.rankedIds.isEmpty, "adapter must return hits from the active vision generation")
+        #expect(result.rankedIds.contains(hitID))
+        #expect(result.metadataByID[hitID]?.sourceType == "photo")
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -622,7 +612,7 @@ struct ProductionSearchFeedbackTests {
     // US-PRV-001: Authorization (denied source never reaches retriever)
     // ══════════════════════════════════════════════════════════════
 
-    @Test("PRV-001 AC-2: denied source data never reaches the retriever")
+    @Test("PRV-001 AC-2: denied source data never reaches the retriever (seeded + positive control)")
     func test_AC2_DeniedSourceNeverReachesRetriever() async throws {
         let registry = makeRegistry()
         try await seedGenerations(registry)
@@ -635,57 +625,55 @@ struct ProductionSearchFeedbackTests {
         ))
         let adapter = GenerationRoutedChannelAdapter(
             generationRegistry: registry,
-            generationKey: \.visionGeneration,
             kind: .visionDense,
-            dimension: 768
+            dimension: 768,
+            privacyActor: privacy
         )
-        // Production contract: the privacy gate denies the channel before retrieval —
-        // the channel must be absent/empty, never returning denied-source hits.
-        do {
-            let result = try await adapter.search(
-                queryVector: [Float](repeating: 0.5, count: 768),
-                queryText: "voice memo",
-                k: 5
-            )
-            #expect(result.rankedIds.isEmpty,
-                "US-PRV-001 AC-2: denied source data must never reach the retriever")
-        } catch {
-            #expect(Bool(false), "expected an empty channel result for the denied source, got throw: \(error)")
-        }
+        // Seed the vision store with ONE hit tagged as the denied "voice" source
+        // (PR#58 CR-13: 空索引已不能解释空结果 — 若被授权则必返回该命中)。
+        let voiceID = UUID()
+        let voiceMeta = try MemoryEntry(
+            assetId: "voice-memo", embedding: [Float](repeating: 0.5, count: 768),
+            sourceType: "voice", timestamp: Date(), traceID: "t-prv-001"
+        ).encodeMetadata()
+        let visionStore = await registry.vectorStore(for: "vision_dense/siglip2-v1")
+        try await visionStore?.ingest(vector: [Float](repeating: 0.5, count: 768), id: voiceID, metadata: voiceMeta)
+
+        // Production contract: the per-source gate filters the denied "voice" hit —
+        // the channel must be empty, never returning denied-source data.
+        let denied = try await adapter.search(
+            queryVector: [Float](repeating: 0.5, count: 768),
+            queryText: "voice memo",
+            k: 5
+        )
+        #expect(denied.rankedIds.isEmpty,
+            "US-PRV-001 AC-2: denied source data must never reach the retriever")
+
+        // Positive control (PR#58 CR-13): the same seeded hit IS retrievable when "voice"
+        // becomes authorized — proves the empty result is due to the privacy gate,
+        // not an empty index.
+        try await privacy.updatePolicy(UserPolicy(
+            preferredLanguage: "zh-Hans",
+            authorizedSourceTypes: ["photo", "note", "voice"],
+            policyVersion: 3
+        ))
+        let authorized = try await adapter.search(
+            queryVector: [Float](repeating: 0.5, count: 768),
+            queryText: "voice memo",
+            k: 5
+        )
+        #expect(authorized.rankedIds.contains(voiceID),
+            "positive control: the same hit must be retrievable once voice is authorized")
     }
 
     // ══════════════════════════════════════════════════════════════
-    // US-RET-005: Conversation History (approach a — FIFO only, NO LLM rewrite)
+    // US-RET-005: Follow-up Query (approach a — NO LLM rewrite)
     // ══════════════════════════════════════════════════════════════
-    // NOTE (AC-3 deferred by decision): approach a deliberately does NOT rewrite the
-    // follow-up query via LLM. AC-3 (LLM rewrite) is deferred — no test targets it.
+    // NOTE: AC-1 (FIFO ≤10 history) 与 AC-2 (memoryIds 隐式过滤注入) 未在 3F.6 落地 —
+    // production SearchPipeline 仅追踪单轮 lastSearchQuery/lastSearchTraceID（approach a），
+    // 见 DEF-58-002。此处仅覆盖真实生产行为 AC-4（.followUpQuery 审计）。
 
-    @Test("RET-005 AC-1: conversation history capped at 10 with FIFO truncation")
-    func test_AC1_HistoryCappedAt10FIFO() async throws {
-        let history = SearchHistory(maxEntries: 10)
-        for i in 0..<15 {
-            await history.append("query-\(i)")
-        }
-        let entries = await history.allEntries
-        #expect(entries.count == 10, "history must never exceed 10 rounds (AC-1)")
-        #expect(entries.first == "query-5", "oldest round must be dropped (FIFO)")
-        #expect(entries.last == "query-14")
-    }
-
-    @Test("RET-005 AC-2: follow-up query injects previous round memoryIds as implicit filter")
-    func test_AC2_FollowUpCarriesParentMemoryIds() async throws {
-        let parentIds = [UUID(), UUID(), UUID()]
-        let context = FollowUpContext(
-            queryText: "when did we go",
-            parentMemoryIds: parentIds,
-            parentTraceID: "parent-trace-1"
-        )
-        #expect(context.queryText == "when did we go")
-        #expect(context.parentMemoryIds == parentIds, "follow-up must carry parent memory IDs (AC-2)")
-        #expect(context.parentTraceID == "parent-trace-1")
-    }
-
-    @Test("RET-005 AC-4: follow-up search audits .followUpQuery with parentTraceID")
+    @Test("RET-005 AC-4: follow-up search audits .followUpQuery with current traceID + parent link")
     func test_AC4_FollowUpAuditCarriesParentTraceID() async throws {
         let privacy = PrivacyActor(db: db)
         try await privacy.updatePolicy(makeSearchPolicy())
@@ -700,12 +688,15 @@ struct ProductionSearchFeedbackTests {
         _ = try await pipeline.search(query: "west lake trip", k: 5)
 
         let rows = try await db.executeQuery(
-            sql: "SELECT traceID FROM AuditLog WHERE eventType = 'followUpQuery' ORDER BY timestamp DESC LIMIT 1",
+            sql: "SELECT traceID, sourceLanguage FROM AuditLog WHERE eventType = 'followUpQuery' ORDER BY timestamp DESC LIMIT 1",
             bindings: []
         )
         #expect(rows.first != nil, "follow-up search must write a .followUpQuery audit event (AC-4)")
-        #expect(rows.first?["traceID"]?.stringValue == parentTrace,
-            "follow-up audit must carry the parent traceID")
+        #expect(rows.first?["traceID"]?.stringValue != parentTrace,
+            "audit traceID must identify the current round, not the parent (PR#58 CR-4)")
+        let payload = rows.first?["sourceLanguage"]?.stringValue ?? ""
+        #expect(payload.contains(parentTrace),
+            "parent traceID must be carried in the sourceLanguage payload (AC-4 parentTraceId)")
     }
 
     // ══════════════════════════════════════════════════════════════

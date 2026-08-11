@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.0",
-  "_last_updated": "2026-08-11T00:00:00Z",
+  "_last_updated": "2026-08-11T06:30:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -136,7 +136,7 @@
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
     "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
-    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash"
+    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash; DEF-58-001 (RET-005 AC-3 LLM rewrite) defer_to=on-device generative model; DEF-58-002 (RET-005 AC-1 FIFO history + AC-2 memoryIds injection) defer_to=3F.7 search wiring or Phase 4; DEF-58-003 (feedback generation binds active route not result generation) defer_to=3F.7; DEF-58-004 (SubjectiveScorer ignores queryText) defer_to=3F.7 real CLIP scorer; DEF-58-005 (SearchResultItem subjectiveMatch field) defer_to=3F.7/3F.10; DEF-58-006 (parse async throws unused) & DEF-58-007 (regex hoist) defer_to=Phase 4 simplification window"
   },
   "deferred_from_pr_review": [
     {
@@ -949,8 +949,8 @@
       "title": "US-RET-005 AC-3 LLM 生成追问改写查询延后（离线运行时无生成式 LLM）",
       "severity": "🟡",
       "location": "docs/01-spec/用户故事与验收标准规格书.md → US-RET-005 AC-3; 3F.6 SearchPipeline follow-up 路径",
-      "reason": "Echo 为完全离线运行时（ADR-009），无生成式 LLM 可落地 AC-3「LLM 生成追问改写查询」。3F.6 按方案 a 实现 US-RET-005 AC-1/2/4/5（FIFO 历史 ≤10 轮 + memoryIds 隐式过滤 + .followUpQuery 审计），AC-3 标注延后。用户 2026-08-11 确认方案 a。",
-      "defer_to": "Phase 4/5 若引入端侧生成式模型时重新评估；当前保持 AC-1/2/4/5 落地、AC-3 延后",
+      "reason": "Echo 为完全离线运行时（ADR-009），无生成式 LLM 可落地 AC-3「LLM 生成追问改写查询」。方案 a 仅实现单轮 lastQuery 复用追踪（供 AC-4 审计）；AC-1 FIFO 历史与 AC-2 memoryIds 注入未落地，见 DEF-58-002。用户 2026-08-11 确认方案 a。",
+      "defer_to": "Phase 4/5 若引入端侧生成式模型时重新评估；当前仅 AC-4 落地（AC-1/2 见 DEF-58-002、AC-3 延后）",
       "deferred_at": "2026-08-11",
       "owners": [
         "AI",
@@ -960,10 +960,132 @@
         "3F.6"
       ],
       "acceptance_evidence": [
-        "US-RET-005 AC-1 FIFO 截断、AC-2 memoryIds 隐式过滤、AC-4 .followUpQuery 审计（含 parentTraceId/rewrittenQuery）测试证据；AC-3 无实现"
+        "US-RET-005 AC-4 .followUpQuery 审计（sourceLanguage 含 parentTraceId + rewrittenQuery SHA-256 摘要）测试证据；AC-1/2/3 无生产实现"
       ],
       "tracking_status": "open",
       "recheck_trigger": "Phase 4 模型选型或 Phase 3F 集成扫描"
+    },
+    {
+      "id": "DEF-58-002",
+      "pr": 58,
+      "title": "US-RET-005 AC-1/AC-2 未落地：production SearchPipeline 无 FIFO ≤10 历史与 memoryIds 隐式过滤（仅单轮 lastQuery 追踪）",
+      "severity": "🔴",
+      "location": "Echo/Core/Pipelines/SearchPipeline.swift:264-267,347-353; EchoTests/Phase3F/3F.6_ProductionSearchFeedbackTests.swift（AC-1/AC-2 stand-in 测试已移除）",
+      "reason": "PR 描述/规格书原声称 AC-1/AC-2 ✅（FIFO ≤10 轮 + 上轮 memoryIds 注入），但生产代码仅追踪单轮 lastSearchQuery/lastSearchTraceID；AC-1/AC-2 测试此前落在测试内联 SearchHistory/FollowUpContext 类型上（非生产）。PR#58 review（CR-11/C2）已移除 stand-in 测试并如实降级规格注记；FIFO 历史 + memoryIds 注入属功能特性，留待实现。",
+      "defer_to": "后续检索会话上下文任务（3F.7 接线前或 Phase 4）；当前以单轮追踪 + AC-4 审计满足对话轮次的最低语义",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.6",
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "AC-4 .followUpQuery 审计（本轮 traceID + parentTraceId + 查询哈希）测试证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或 3F.7 检索接线"
+    },
+    {
+      "id": "DEF-58-003",
+      "pr": 58,
+      "title": "反馈 generation 身份绑定活跃路由而非产生结果时的 generation（ADR-010 决策-4）",
+      "severity": "🟡",
+      "location": "Echo/Core/Pipelines/FeedbackPipeline.swift:203,319 (loadActiveRoute 解析)",
+      "reason": "CR-1: 路由可能在检索与反馈之间变更，FeedbackPipeline.recordFeedback/markBadCase 绑定的是反馈时活跃路由，非产生所选结果的 generation；retry payload 亦缺 generationId。当前无生产调用方（3F.7 接线），且 ADR-010 决策-4 文档化实现即 loadActiveRoute。修复需 API 增加所选结果 generationId 参数 + 调用方传值。",
+      "defer_to": "3F.7 UI→Core 接线时（FeedbackPipeline.recordFeedback 增加 generationId 参数并传入 retry payload）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "反馈绑定检索结果所属 generation 的端到端证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或 3F.7"
+    },
+    {
+      "id": "DEF-58-004",
+      "pr": 58,
+      "title": "BoundedReranker.rerank 忽略 queryText — SubjectiveScorer 仅对候选文本打分（US-SRC-011 查询无关）",
+      "severity": "🟡",
+      "location": "Echo/Core/Services/BoundedReranker.swift:116-118",
+      "reason": "CR-6: rerank 接受 queryText 但从未传给 scorer，SubjectiveScorer.subjectiveMatchScore(text:) 仅接收候选文本；主观重排与查询内容无关。修复需扩展 SubjectiveScorer 契约为 (queryText, candidateText) 并更新实现/调用点（含测试 scorer）。",
+      "defer_to": "3F.7 主观重排接入真实 CLIP scorer 时（契约扩展 + 生产实现）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI"
+      ],
+      "target_tasks": [
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "同一候选对不同查询获得不同主观分数 + 重排差异的测试证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或 3F.7"
+    },
+    {
+      "id": "DEF-58-005",
+      "pr": 58,
+      "title": "US-SRC-011 AC-3 SearchResultItem 缺 subjectiveMatch 字段（低置信主观标记不可生产输出）",
+      "severity": "🟡",
+      "location": "Echo/Core/Models 中 SearchResultItem（SearchPipeline.swift:162）；EchoTests/Phase3F/3F.6_CrossAppSearchTests.swift AC-3 测试",
+      "reason": "CR-20: AC-3 要求标记 .subjectiveMatch，但 SearchResultItem 无该字段，测试只能用硬编码 expectedFlags 包装断言（恒真）。PR#58 已把测试改为断言生产 rerank 真实重排输出（阈值 + boost 生效），字段标记契约延后至模型字段扩展。",
+      "defer_to": "SearchResultItem 增加 subjectiveMatch 字段 + BoundedReranker 填充时（3F.7/3F.10 展示层消费前）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "reranked 结果携带主观标记并驱动展示层图标的端到端证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或 3F.7"
+    },
+    {
+      "id": "DEF-58-006",
+      "pr": 58,
+      "title": "CrossAppIntentParser.parse async throws 未利用（纯本地分类，不悬挂不抛错）",
+      "severity": "🟡",
+      "location": "Echo/Core/Services/CrossAppIntentParser.swift:156 + CrossAppIntentParserProtocol:89",
+      "reason": "CR-32 nitpick: parse 为纯字符串分类，无 await/throw；协议 async throws 强制调用方 try/await。移除需改协议 + 全部调用点，属契约简化非缺陷。",
+      "defer_to": "Phase 4 契约简化窗口（若需要）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI"
+      ],
+      "target_tasks": [],
+      "acceptance_evidence": [],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描"
+    },
+    {
+      "id": "DEF-58-007",
+      "pr": 58,
+      "title": "CrossAppIntentParser 日期正则每次 parse 编译（NSRegularExpression 未 hoist）",
+      "severity": "🔵",
+      "location": "Echo/Core/Services/CrossAppIntentParser.swift:239-240",
+      "reason": "CR-33 nitpick: 正则模式常量但每调用编译一次。因 NSRegularExpression 非 Sendable，在 SWIFT_DEFAULT_ACTOR_ISOLATION=MainActor 下提为 nonisolated static 有 strict-concurrency 风险，PR#58 选择延后。",
+      "defer_to": "如需优化时先评估 Sendable 方案（如字符串常量 + 局部编译或 actor 隔离）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI"
+      ],
+      "target_tasks": [],
+      "acceptance_evidence": [],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描"
     }
   ]
 }

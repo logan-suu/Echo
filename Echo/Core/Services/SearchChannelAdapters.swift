@@ -164,14 +164,11 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
 
     // MARK: - Initialization
 
-    /// 路由 key（`KeyPath<ActiveRouteSet, String?>`，如 `\.visionGeneration`）经 `generationKey`
-    /// 参数接收，但**不存储**：`KeyPath` 非 Sendable，而协议一致性 Actor 在项目
-    /// `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` 下其 init 为 MainActor 隔离
-    /// （SE-0466），仅可初始化 Sendable 类型的隔离存储属性。通道 → 路由 key 的映射
-    /// 由 `generationID(for:in:)` 静态函数按 `channel` 类型完成（等效于 route[keyPath:]）。
+    /// 通道 → 路由 key 的映射由 `generationID(for:in:)` 静态函数按 `channel` 类型完成，
+    /// 等价 `route[keyPath: generationKey]`（PR#58 CR-28：移除未使用的 KeyPath 参数 —
+    /// KeyPath 非 Sendable，仅作映射键无存储价值）。
     public init(
         generationRegistry: GenerationRegistryActor,
-        generationKey: KeyPath<ActiveRouteSet, String?>,
         kind: SearchChannelKind,
         dimension: Int,
         privacyActor: PrivacyActor = .shared
@@ -180,7 +177,6 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
         self.channel = kind
         self.dimension = dimension
         self.privacyActor = privacyActor
-        _ = generationKey
     }
 
     // MARK: - SearchChannelAdapter
@@ -207,6 +203,17 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
         guard checkpoint.isAllowed else {
             // US-PRV-001 AC-2: 被拒数据源数据绝不进入 Retriever — 空通道结果
             return ChannelSearchResult(channel: channel, rankedIds: [], timedOut: false)
+        }
+
+        // PR#58 CR-22: lexical 通道尚未接入 LexicalEngine — fail-closed（L3 error），
+        // 禁止零向量检索产生垃圾排序参与 RRF 融合（README「lexical 就绪」仅指路由存在）。
+        if channel == .lexical {
+            return ChannelSearchResult(
+                channel: channel,
+                rankedIds: [],
+                timedOut: false,
+                error: ChannelAdapterError.lexicalNotConnected(channel: channel)
+            )
         }
 
         // 2. 解析活跃路由 → 该通道分代 ID（DEF-34-002: L3 路由缺失 ≠ 超时）
@@ -247,22 +254,31 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
             return ChannelSearchResult(channel: channel, rankedIds: [], timedOut: true)
         }
 
+        // PR#58 CR-9: 逐源授权过滤（US-PRV-001 AC-2，与经典 search() 的 policy 过滤一致）—
+        // 撤销数据源的历史命中不得经多通道返回；decode 失败的命中（sourceType 未知）同样剔除。
+        let policy = await privacyActor.getPolicy()
+
         // 6. 解码元数据（ID-keyed，DEF-34-001：融合后经 ID 映射组装，禁止 top-1 re-search）
         var metadataByID: [UUID: SearchChannelMetadata] = [:]
+        var rankedIds: [UUID] = []
         for result in results {
-            let metadata = try? MemoryEntry.decodeMetadata(from: result.metadata ?? Data())
+            guard let metadata = try? MemoryEntry.decodeMetadata(from: result.metadata ?? Data()) else { continue }
+            guard policy.isAuthorized(sourceType: SearchPipeline.normalizeSourceType(metadata.sourceType)) else {
+                continue
+            }
             metadataByID[result.id] = SearchChannelMetadata(
-                assetId: metadata?.assetId ?? "",
-                sourceType: metadata?.sourceType ?? "unknown",
-                timestamp: metadata?.timestamp ?? 0,
-                originalText: metadata?.originalText,
-                sourceLanguage: Self.detectLanguage(from: metadata?.originalText),
+                assetId: metadata.assetId,
+                sourceType: metadata.sourceType,
+                timestamp: metadata.timestamp,
+                originalText: metadata.originalText,
+                sourceLanguage: Self.detectLanguage(from: metadata.originalText),
                 cosineSimilarity: 1.0 - Float(result.distance)
             )
+            rankedIds.append(result.id)
         }
         return ChannelSearchResult(
             channel: channel,
-            rankedIds: results.map(\.id),
+            rankedIds: rankedIds,
             timedOut: false,
             metadataByID: metadataByID
         )
@@ -284,7 +300,8 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
     }
 
     /// 检测文本语言（NLTagger，置信度 < 0.9 标记 mixed；繁体映射 zh-Hans，AGENTS.md §6.1）。
-    private nonisolated static func detectLanguage(from text: String?) -> String? {
+    /// 与 SearchPipeline.detectLanguage 共享（PR#58 CR-30 单一实现，防漂移）。
+    nonisolated static func detectLanguage(from text: String?) -> String? {
         guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
@@ -337,30 +354,30 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
 
 /// 通道适配器统一错误类型（L1~L4 分级，AGENTS.md §4.4）。
 public enum ChannelAdapterError: Error, LocalizedError, Sendable, Equatable {
-    /// 骨架占位 — 通道尚未实现（TDD RED）
-    case notImplemented(channel: SearchChannelKind)
     /// 活跃路由缺少该通道的分代（L3 阻断：路由降级，通道被跳过）
     case generationRouteMissing(channel: SearchChannelKind)
     /// 通道检索超时（L1 瞬态：调用方按 timedOut 语义降级）
     case timeout(channel: SearchChannelKind)
+    /// 词法通道尚未接入 LexicalEngine（L3 阻断：fail-closed，禁止零向量检索，PR#58 CR-22）
+    case lexicalNotConnected(channel: SearchChannelKind)
 
     public var errorDescription: String? {
         switch self {
-        case .notImplemented(let channel):
-            return "Search channel \(channel.rawValue) not yet implemented"
         case .generationRouteMissing(let channel):
             return "Active route missing generation for channel \(channel.rawValue)"
         case .timeout(let channel):
             return "Search channel \(channel.rawValue) timed out"
+        case .lexicalNotConnected(let channel):
+            return "Search channel \(channel.rawValue) not connected (LexicalEngine pending)"
         }
     }
 
     // MARK: Equatable（SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，显式 nonisolated）
     public nonisolated static func == (lhs: ChannelAdapterError, rhs: ChannelAdapterError) -> Bool {
         switch (lhs, rhs) {
-        case (.notImplemented(let a), .notImplemented(let b)): return a == b
         case (.generationRouteMissing(let a), .generationRouteMissing(let b)): return a == b
         case (.timeout(let a), .timeout(let b)): return a == b
+        case (.lexicalNotConnected(let a), .lexicalNotConnected(let b)): return a == b
         default: return false
         }
     }

@@ -158,6 +158,35 @@ public actor FeedbackPipeline {
         )
     }
 
+    // MARK: - L2 PendingOperations Helper (DEF-37-001)
+
+    /// DEF-37-001 (L2): 反馈写入失败时入队 PendingOperations（可手动重试）。
+    ///
+    /// PendingOpsActor.add 在 DB 关闭时自动重连，保证 L2 恢复路径存活。
+    /// 参数负载使用 [String: String] 字典编码（FeedbackEntry 的 Codable 合成为
+    /// MainActor 隔离，无法在 actor 上下文直接 JSONEncoder.encode）。
+    /// recordFeedback 与 markBadCase 共用（PR#58 CR-2 一致性）。
+    private func enqueuePendingOperation(for entry: FeedbackEntry, error: Error) async {
+        let parameters: Data = (try? JSONEncoder().encode([
+            "memoryId": entry.memoryId.uuidString,
+            "queryText": entry.queryText,
+            "sentiment": entry.sentiment.rawValue,
+            "cosineSimilarity": String(entry.cosineSimilarity),
+            "createdAt": String(entry.createdAt.timeIntervalSince1970),
+            "isBadCase": entry.isBadCase ? "1" : "0",
+            "badCaseReason": entry.badCaseReason ?? "",
+        ])) ?? Data()
+        let operation = PendingOperation(
+            operationId: UUID().uuidString,
+            operationType: "feedback",
+            retryCount: 0,
+            parameters: parameters,
+            createdAt: Date(),
+            lastError: error.localizedDescription
+        )
+        try? await pendingOpsActor.add(operation: operation)
+    }
+
     // MARK: - Feedback Recording (US-FBK-001)
 
     /// 记录一条反馈（点赞 👍 或点踩 👎）。
@@ -206,26 +235,7 @@ public actor FeedbackPipeline {
             try await feedbackActor.recordFeedback(entry, traceID: traceID, generationId: generationId)
         } catch {
             // DEF-37-001 (L2): 记录失败写入 PendingOperations（可手动重试），随后 rethrow。
-            // PendingOpsActor.add 在 DB 关闭时自动重连，保证 L2 恢复路径存活。
-            // 参数负载使用 [String: String] 字典编码（FeedbackEntry 的 Codable 合成为
-            // MainActor 隔离，无法在 actor 上下文直接 JSONEncoder.encode）。
-            let parameters: Data = (try? JSONEncoder().encode([
-                "memoryId": entry.memoryId.uuidString,
-                "queryText": entry.queryText,
-                "sentiment": entry.sentiment.rawValue,
-                "cosineSimilarity": String(entry.cosineSimilarity),
-                "createdAt": String(entry.createdAt.timeIntervalSince1970),
-                "isBadCase": entry.isBadCase ? "1" : "0",
-            ])) ?? Data()
-            let operation = PendingOperation(
-                operationId: UUID().uuidString,
-                operationType: "feedback",
-                retryCount: 0,
-                parameters: parameters,
-                createdAt: Date(),
-                lastError: error.localizedDescription
-            )
-            try? await pendingOpsActor.add(operation: operation)
+            await enqueuePendingOperation(for: entry, error: error)
             throw FeedbackPipelineError.recordFailed(underlying: error)
         }
 
@@ -321,6 +331,9 @@ public actor FeedbackPipeline {
         do {
             try await feedbackActor.recordFeedback(entry, traceID: traceID, generationId: generationId)
         } catch {
+            // DEF-37-001 (L2): Bad Case 失败同样写 PendingOperations（PR#58 CR-2），
+            // 与 recordFeedback 一致 — 不静默丢弃 L2 可恢复失败。
+            await enqueuePendingOperation(for: entry, error: error)
             throw FeedbackPipelineError.recordFailed(underlying: error)
         }
 

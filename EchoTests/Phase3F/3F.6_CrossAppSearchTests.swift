@@ -9,13 +9,13 @@
 //          AC-3 (多源联合检索按时间窗对齐), AC-4 (结果标注数据来源图标),
 //          AC-5 (审计 .crossAppSearch 含「实际授权」source 列表，非请求列表)
 //          US-SRC-011 AC-2 (结果按主观匹配度排序而非仅客观分数),
-//          AC-3 (低置信度主观结果标记 .subjectiveMatch), AC-4 (准确/不准确反馈仅本地学习)
+//          AC-3 (主观阈值重排经生产 BoundedReranker), AC-4 (准确/不准确反馈仅本地学习)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §5.3 (反馈权重截断 clamp ±0.5),
 //           R-006 (PrivacyCheckpoint), R-007 (禁止 unchecked Sendable / Combine)
-// 重要: TDD RED — CrossAppIntentParser.parse / BoundedReranker.rerank 骨架抛 notImplemented；
-//       已实现锚点: isCrossAppQuery / applyAdjustment（本套件内稳定通过）；
-//       融合引擎仅为本文件内联契约（3F.6 实现阶段将替换为生产融合实现）
-// 生成时间: 2026-08-11
+// 重要: TDD GREEN — 生产 CrossAppIntentParser.parse / ProductionCrossAppFusionEngine /
+//       BoundedReranker.rerank 全部实现（PR#58 CR-10: 测试直连生产融合引擎，移除内联 TestEngine）；
+//       US-SRC-011 AC-3 .subjectiveMatch 字段延后 DEF-58-005。
+// 生成时间: 2026-08-11 | 更新: 2026-08-11 (PR#58 review 修复)
 // ==========================================
 
 import Testing
@@ -127,82 +127,6 @@ public actor RecordingSourceProvider: CrossAppSourceProvider {
     }
 }
 
-// MARK: - 融合引擎契约（测试内联占位；3F.6 实现阶段将产出生产融合引擎）
-
-/// US-SRC-010 AC-2~AC-5 融合引擎契约。
-///
-/// 生产实现（3F.6）按此契约落地：逐源 Privacy Gate（未授权源不调用 provider）→
-/// 多源检索 → 时间窗对齐 → 保留 sourceType 标签 → 审计 `.crossAppSearch`（实际授权源列表）。
-/// 本文件仅内联测试实现，用于 RED 阶段证明契约。
-public protocol CrossAppFusionEngine: Sendable {
-    func search(intent: CrossAppIntent, traceID: String) async throws -> [CrossAppSourceResult]
-}
-
-/// 测试内联融合引擎 — 实现 US-SRC-010 AC-2~AC-5 契约。
-///
-/// - AC-2: 仅对 `intent.sources ∩ policy.authorizedSourceTypes` 调用 provider（fail-closed）
-/// - AC-3: 结果按 `intent.temporalWindow` 过滤并时间戳升序对齐
-/// - AC-4: 保留每条结果的 sourceType 标签（展示层据此映射 ❤️📝📷）
-/// - AC-5: 审计写入 AuditLog `eventType='crossAppSearch'`，sourceType 为【实际授权】源列表
-///   （生产实现将使用 PrivacyActor.writeAuditLog + AuditEvent.crossAppSearch 枚举 case）
-public actor TestCrossAppFusionEngine: CrossAppFusionEngine {
-
-    private let privacy: PrivacyActor
-    private let db: DatabaseManager
-    private let providers: [any CrossAppSourceProvider]
-
-    public init(privacy: PrivacyActor, db: DatabaseManager, providers: [any CrossAppSourceProvider]) {
-        self.privacy = privacy
-        self.db = db
-        self.providers = providers
-    }
-
-    public nonisolated func search(
-        intent: CrossAppIntent,
-        traceID: String
-    ) async throws -> [CrossAppSourceResult] {
-        // AC-2: Privacy Gate — 校验所有涉及数据源的授权状态（R-006）
-        _ = await privacy.validate(
-            operation: .search,
-            traceID: traceID,
-            sourceTypes: intent.sources
-        )
-        let policy = await privacy.getPolicy()
-        let authorized = intent.sources.filter { policy.isAuthorized(sourceType: $0) }
-
-        // 拒绝分发：未授权源不得调用 provider（fail-closed，AC-2）
-        var fused: [CrossAppSourceResult] = []
-        for provider in providers where authorized.contains(provider.sourceType) {
-            let results = try await provider.search(query: intent.query, window: intent.temporalWindow)
-            fused.append(contentsOf: results)
-        }
-
-        // AC-3: 时间窗对齐 — 过滤窗口外结果 + 时间戳升序
-        if let window = intent.temporalWindow {
-            fused = fused.filter { window.contains(Date(timeIntervalSince1970: $0.timestamp)) }
-        }
-        fused.sort { $0.timestamp < $1.timestamp }
-
-        // AC-5: 审计 `.crossAppSearch` — 记录【实际授权】源列表（非请求列表）。
-        // 生产实现将在 AuditEvent 增加 .crossAppSearch case 后经 PrivacyActor.writeAuditLog 写入。
-        let auditSources = authorized.sorted().joined(separator: ",")
-        try await db.executeWrite(
-            sql: """
-                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType)
-                VALUES ('crossAppSearch', ?, ?, ?, 1, ?)
-                """,
-            bindings: [
-                .double(Date().timeIntervalSince1970),
-                .text(traceID),
-                .int(Int64(policy.policyVersion)),
-                .text(auditSources),
-            ]
-        )
-
-        return fused
-    }
-}
-
 // MARK: - 主观评分器（确定性测试实现）
 
 /// 确定性主观评分器 — 关键词 → 分数映射，多关键词命中取最低分（低置信度语义）。
@@ -224,24 +148,6 @@ public actor DeterministicSubjectiveScorer: SubjectiveScorer {
             lowered.contains(keyword) ? score : nil
         }
         return matches.min() ?? defaultScore
-    }
-}
-
-// MARK: - SubjectiveSearchItem（US-SRC-011 AC-3 契约包装）
-
-/// US-SRC-011 AC-3 契约：低置信度主观结果标记 `.subjectiveMatch`。
-///
-/// 当前 `SearchResultItem` 尚无 subjectiveMatch 字段，3F.6 实现阶段将扩展该字段；
-/// 本包装类型证明契约（id + 分数 + 标记），实现落地后测试改为读取 SearchResultItem 字段。
-public nonisolated struct SubjectiveSearchItem: Sendable {
-    public let id: UUID
-    public let matchScore: Float
-    public let subjectiveMatch: Bool
-
-    public init(id: UUID, matchScore: Float, subjectiveMatch: Bool) {
-        self.id = id
-        self.matchScore = matchScore
-        self.subjectiveMatch = subjectiveMatch
     }
 }
 
@@ -309,13 +215,11 @@ struct CrossAppSearchTests {
 
     // ══════════════════════════════════════════════════════════════
     // 1. US-SRC-010 AC-1: 跨域查询意图解析（CrossAppIntentParser）
-    //    RED: parse() 骨架抛 .notImplemented
     // ══════════════════════════════════════════════════════════════
 
     @Test("AC-1: health+memory intent — 失眠日记")
     func test_AC1_HealthMemoryIntentParsing() async throws {
         let parser = CrossAppIntentParser()
-        // RED: parse() 骨架抛 CrossAppIntentError.notImplemented
         let intent = try await parser.parse(query: "上次失眠时写的日记")
         #expect(intent.domain == .healthMemory)
         #expect(intent.sources.contains("health"))
@@ -325,7 +229,6 @@ struct CrossAppSearchTests {
     @Test("AC-1: health+photo intent — 心率超120时的运动照片")
     func test_AC1_HealthPhotoIntentParsing() async throws {
         let parser = CrossAppIntentParser()
-        // RED: parse() 骨架抛 .notImplemented；实现后须分发到跨 App 域（healthMemory 或 locationPhoto）
         let intent = try await parser.parse(query: "心率超120时的运动照片")
         #expect(intent.domain == .healthMemory || intent.domain == .locationPhoto)
         #expect(intent.sources.contains("photo"))
@@ -334,7 +237,6 @@ struct CrossAppSearchTests {
     @Test("AC-1: location+photo subjective intent — 有氛围感的夜景")
     func test_AC1_LocationPhotoIntentParsing() async throws {
         let parser = CrossAppIntentParser()
-        // RED: parse() 骨架抛 .notImplemented；US-SRC-011 主观照片查询 → locationPhoto + subjective
         let intent = try await parser.parse(query: "有氛围感的夜景")
         #expect(intent.domain == .locationPhoto)
         #expect(intent.sources.contains("photo"))
@@ -344,7 +246,6 @@ struct CrossAppSearchTests {
     @Test("AC-1: location+photo subjective intent — 适合做头像的构图")
     func test_AC1_CompositionIntentParsing() async throws {
         let parser = CrossAppIntentParser()
-        // RED: parse() 骨架抛 .notImplemented
         let intent = try await parser.parse(query: "适合做头像的构图")
         #expect(intent.domain == .locationPhoto)
         #expect(intent.sources.contains("photo"))
@@ -354,7 +255,6 @@ struct CrossAppSearchTests {
     @Test("AC-1: plain query — 今天吃的什么 → plainSearch")
     func test_AC1_PlainQueryParsing() async throws {
         let parser = CrossAppIntentParser()
-        // RED: parse() 骨架抛 .notImplemented
         let intent = try await parser.parse(query: "今天吃的什么")
         #expect(intent.domain == .plainSearch)
         #expect(!intent.subjective)
@@ -370,7 +270,6 @@ struct CrossAppSearchTests {
 
     // ══════════════════════════════════════════════════════════════
     // 2. US-SRC-010 AC-2: Privacy Gate 逐源授权（未授权源 provider 不被调用）
-    //    RED: 意图须经生产 parse() 产出，骨架抛 .notImplemented
     // ══════════════════════════════════════════════════════════════
 
     @Test("AC-2: denied health source provider is never invoked")
@@ -396,8 +295,8 @@ struct CrossAppSearchTests {
             ]
         )
 
-        let engine = TestCrossAppFusionEngine(privacy: privacy, db: db, providers: [healthProvider, memoryProvider])
-        // RED: 生产 parse() 骨架抛 .notImplemented — 意图无法产出，融合契约未落地
+        let engine = ProductionCrossAppFusionEngine(privacy: privacy, providers: [healthProvider, memoryProvider])
+        // 生产 parse()：解析健康记忆域 → sources ["health","memory"]
         let intent = try await CrossAppIntentParser().parse(query: "上次失眠时写的日记")
         let fused = try await engine.search(intent: intent, traceID: "trace-ac2-denied-health")
 
@@ -411,7 +310,6 @@ struct CrossAppSearchTests {
 
     // ══════════════════════════════════════════════════════════════
     // 3. US-SRC-010 AC-3: 多源联合检索按时间对齐
-    //    RED: 同上（parse 骨架抛 .notImplemented）
     // ══════════════════════════════════════════════════════════════
 
     @Test("AC-3: multi-source results aligned by temporal window and timestamp")
@@ -421,18 +319,19 @@ struct CrossAppSearchTests {
             UserPolicy(authorizedSourceTypes: ["health", "memory", "photo"], policyVersion: 2)
         )
 
-        // 2026-08-01 02:00 (UTC) 健康记录 + 02:30 日记；09-01 记录在窗口外
-        let t1 = CrossAppSearchTests.utcDate(2026, 8, 1, 2, 0).timeIntervalSince1970
-        let t2 = CrossAppSearchTests.utcDate(2026, 8, 1, 2, 30).timeIntervalSince1970
-        let outOfWindow = CrossAppSearchTests.utcDate(2026, 9, 1, 2, 0).timeIntervalSince1970
+        // 时间短语「8月1日」解析为【当前年】的窗口（PR#58 CR-19）—
+        // fixture 年份从当前日期派生，避免 2027 年后测试失效。
+        let year = Calendar.current.component(.year, from: Date())
+        let t1 = CrossAppSearchTests.utcDate(year, 8, 1, 2, 0).timeIntervalSince1970
+        let t2 = CrossAppSearchTests.utcDate(year, 8, 1, 2, 30).timeIntervalSince1970
+        let outOfWindow = CrossAppSearchTests.utcDate(year, 9, 1, 2, 0).timeIntervalSince1970
 
         let healthID = UUID()
         let diaryID = UUID()
         let staleID = UUID()
 
-        let engine = TestCrossAppFusionEngine(
+        let engine = ProductionCrossAppFusionEngine(
             privacy: privacy,
-            db: db,
             providers: [
                 RecordingSourceProvider(
                     sourceType: "health",
@@ -450,7 +349,6 @@ struct CrossAppSearchTests {
             ]
         )
 
-        // RED: parse 骨架抛 .notImplemented — 时间短语「8月1日」须产出 temporalWindow
         let intent = try await CrossAppIntentParser().parse(query: "8月1日失眠时写的日记")
         let fused = try await engine.search(intent: intent, traceID: "trace-ac3-temporal")
 
@@ -465,7 +363,6 @@ struct CrossAppSearchTests {
 
     // ══════════════════════════════════════════════════════════════
     // 4. US-SRC-010 AC-4: 结果标注数据来源标签/图标（❤️📝📷）
-    //    RED: 同上
     // ══════════════════════════════════════════════════════════════
 
     @Test("AC-4: fused results preserve source labels mapping to icons")
@@ -476,9 +373,8 @@ struct CrossAppSearchTests {
         )
 
         let now = Date().timeIntervalSince1970
-        let engine = TestCrossAppFusionEngine(
+        let engine = ProductionCrossAppFusionEngine(
             privacy: privacy,
-            db: db,
             providers: [
                 RecordingSourceProvider(
                     sourceType: "health",
@@ -495,7 +391,6 @@ struct CrossAppSearchTests {
             ]
         )
 
-        // RED: parse 骨架抛 .notImplemented
         let intent = try await CrossAppIntentParser().parse(query: "心率超120时的运动照片")
         let fused = try await engine.search(intent: intent, traceID: "trace-ac4-labels")
 
@@ -512,7 +407,6 @@ struct CrossAppSearchTests {
 
     // ══════════════════════════════════════════════════════════════
     // 5. US-SRC-010 AC-5: 审计 .crossAppSearch 含实际授权 source 列表
-    //    RED: 同上
     // ══════════════════════════════════════════════════════════════
 
     @Test("AC-5: audit carries actual authorized source list (not requested)")
@@ -524,9 +418,8 @@ struct CrossAppSearchTests {
         )
 
         let photoTracker = ProviderInvocationTracker()
-        let engine = TestCrossAppFusionEngine(
+        let engine = ProductionCrossAppFusionEngine(
             privacy: privacy,
-            db: db,
             providers: [
                 RecordingSourceProvider(
                     sourceType: "health",
@@ -537,7 +430,6 @@ struct CrossAppSearchTests {
         )
 
         let traceID = "trace-ac5-audit"
-        // RED: parse 骨架抛 .notImplemented
         let intent = try await CrossAppIntentParser().parse(query: "心率超120时的运动照片")
         _ = try await engine.search(intent: intent, traceID: traceID)
 
@@ -560,7 +452,6 @@ struct CrossAppSearchTests {
 
     // ══════════════════════════════════════════════════════════════
     // 6. US-SRC-011 AC-2: 结果按主观匹配度排序（BoundedReranker）
-    //    RED: rerank() 骨架抛 BoundedRerankError.notImplemented
     // ══════════════════════════════════════════════════════════════
 
     @Test("AC-2: rerank orders by combined cosine + subjective boost")
@@ -580,7 +471,6 @@ struct CrossAppSearchTests {
             SearchResultItem(id: b, assetId: "b", sourceType: "photo", timestamp: 2, originalText: "晨跑打卡记录", cosineSimilarity: 0.80),
         ]
 
-        // RED: rerank 骨架抛 .notImplemented
         let reranked = try await reranker.rerank(items: items, queryText: "有氛围感的夜景")
 
         // AC-2 契约: 主观匹配度优先于客观分数
@@ -590,11 +480,12 @@ struct CrossAppSearchTests {
     }
 
     // ══════════════════════════════════════════════════════════════
-    // 7. US-SRC-011 AC-3: 低置信度主观结果标记 .subjectiveMatch
-    //    RED: rerank() 骨架抛 .notImplemented
+    // 7. US-SRC-011 AC-3: 主观匹配重排（BoundedReranker 生产输出）
+    //    NOTE (PR#58 CR-20): SearchResultItem 尚无 subjectiveMatch 字段（延后 DEF-58-005），
+    //    本测试断言生产 rerank 的真实重排输出（阈值 + boost 生效）。
     // ══════════════════════════════════════════════════════════════
 
-    @Test("AC-3: low-confidence subjective results marked .subjectiveMatch")
+    @Test("AC-3: subjective boost reorders production rerank output by threshold")
     func test_AC3_LowConfidenceSubjectiveMarked() async throws {
         let scorer = DeterministicSubjectiveScorer(keywordScores: ["夜景": 0.85, "模糊": 0.35])
         let reranker = BoundedReranker(
@@ -602,8 +493,8 @@ struct CrossAppSearchTests {
             config: RerankConfig(subjectiveBoost: 0.15, subjectiveThreshold: 0.6, maxAdjustment: 0.5)
         )
 
-        // strong: 主观 0.85 ≥ 0.6 → 高置信主观结果（不标记）
-        // weak:   主观 0.35 < 0.6 → 低置信度主观结果（标记 .subjectiveMatch）
+        // strong: 主观 0.85 ≥ 0.6 → +0.15 → 0.85 + 0.15 = 1.00
+        // weak:   主观 0.35 < 0.6（含「模糊」命中取 min）→ 无奖励 → 0.55
         let strongID = UUID()
         let weakID = UUID()
         let items = [
@@ -611,26 +502,15 @@ struct CrossAppSearchTests {
             SearchResultItem(id: weakID, assetId: "weak", sourceType: "photo", timestamp: 2, originalText: "模糊的夜景角落", cosineSimilarity: 0.55),
         ]
 
-        // RED: rerank 骨架抛 .notImplemented
         let reranked = try await reranker.rerank(items: items, queryText: "有氛围感的夜景")
 
-        // AC-3 契约: SearchResultItem 将扩展 subjectiveMatch 字段；
-        // 本测试以 SubjectiveSearchItem 包装证明标记契约（3F.6 实现后改为读取字段）。
-        let expectedFlags: [UUID: Bool] = [
-            strongID: false, // 主观分数 ≥ 阈值 → 高置信
-            weakID: true,    // 主观分数 < 阈值 → .subjectiveMatch
-        ]
-        let wrapped = reranked.map {
-            SubjectiveSearchItem(id: $0.id, matchScore: $0.cosineSimilarity, subjectiveMatch: expectedFlags[$0.id] ?? false)
-        }
-        #expect(wrapped.count == 2)
-        #expect(wrapped.first { $0.id == weakID }?.subjectiveMatch == true)
-        #expect(wrapped.first { $0.id == strongID }?.subjectiveMatch == false)
+        // AC-3 契约（生产路径）：达到阈值的强主观结果被提升至首位
+        #expect(reranked.count == 2)
+        #expect(reranked.first?.id == strongID, "strong subjective result must be boosted above the weak one")
     }
 
     // ══════════════════════════════════════════════════════════════
     // 8. US-SRC-011 AC-4: 主观结果「准确/不准确」反馈（仅本地学习）
-    //    RED: rerank() 骨架抛 .notImplemented（反馈持久化本身已实现）
     // ══════════════════════════════════════════════════════════════
 
     @Test("AC-4: subjective feedback is query-conditioned and stored locally")
@@ -643,7 +523,6 @@ struct CrossAppSearchTests {
             SearchResultItem(id: photoID, assetId: "photo-subj", sourceType: "photo", timestamp: 1, originalText: "有氛围感的夜景照片", cosineSimilarity: 0.8),
         ]
 
-        // RED: rerank 骨架抛 .notImplemented — 主观结果须经重排产出
         let reranked = try await reranker.rerank(items: items, queryText: "有氛围感的夜景")
         let subjectiveResult = try #require(reranked.first)
 
@@ -713,3 +592,4 @@ struct CrossAppSearchTests {
         #expect(transcribed == "fixture transcript")
     }
 }
+

@@ -5,7 +5,7 @@
 // 任务: 3F.6 - Production search 与 feedback（检索结果缓存实现）
 // AC 覆盖: US-RET-007 AC-1 ✅ (TTL 过期视为未命中), AC-2 ✅ (策略变更批量失效旧缓存),
 //          AC-3 ✅ (TTL 内命中返回), AC-4 ✅ (缓存键含 policyVersion/modelVersion/queryHash),
-//          TTL 过期 (cacheTTL) + 条目上限 (maxEntries, LRU 逐出最旧)
+//          TTL 过期 (cacheTTL) + 条目上限 (maxEntries, v1 按写入时间 FIFO 逐出; 真 LRU 后续优化, CR-25)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离 — 可变缓存状态封装在 Actor 中),
 //           R-007 (禁止 unchecked Sendable), R-008 (跨 Actor 调用必须 await),
 //           R-006 (PrivacyCheckpoint 注入意图见各方法文档)
@@ -105,7 +105,7 @@ public actor SearchResultCacheActor {
         self.maxEntries = maxEntries
     }
 
-    // MARK: - Cache Operations (Placeholders — TDD RED)
+    // MARK: - Cache Operations
 
     /// 查询缓存条目（US-RET-007 AC-1/AC-3）。
     ///
@@ -125,7 +125,10 @@ public actor SearchResultCacheActor {
 
     /// 写入缓存条目（US-RET-007 AC-3）。
     ///
-    /// 超限逐出：`entries.count > maxEntries` 时移除 cachedAt 最旧条目（LRU 语义）。
+    /// 超限逐出：`entries.count > maxEntries` 时移除 cachedAt 最旧条目。
+    /// 语义说明（PR#58 CR-25）：v1 为**写入时间 FIFO 逐出**（lookup 不更新 cachedAt），
+    /// 非严格 LRU；频繁读取的热条目可能被更新的冷条目挤出 — 属 v1 已知简化，
+    /// 真 LRU（lastAccessedAt）列入后续优化。
     ///
     /// - Parameters:
     ///   - key: 缓存键
@@ -180,24 +183,5 @@ public actor SearchResultCacheActor {
             hash = hash &* 0x100000001b3
         }
         return String(format: "%016llx", hash)
-    }
-}
-
-// MARK: - Search Cache Error
-
-/// 检索结果缓存统一错误类型
-public enum SearchCacheError: Error, LocalizedError, Sendable {
-    /// 骨架占位 — 缓存操作尚未实现（TDD RED）
-    case notImplemented
-    /// 缓存条目已过期（TTL 判定，生产实现返回）
-    case ttlExpired
-
-    public var errorDescription: String? {
-        switch self {
-        case .notImplemented:
-            return "Search result cache not yet implemented"
-        case .ttlExpired:
-            return "Cached search result has expired"
-        }
     }
 }

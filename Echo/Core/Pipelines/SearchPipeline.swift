@@ -37,7 +37,6 @@
 // ==========================================
 
 import Foundation
-import NaturalLanguage
 import ProximaKit
 
 // MARK: - Search Pipeline Error
@@ -274,9 +273,6 @@ public actor SearchPipeline {
     /// 搜索超时阈值（秒，US-RET-008）
     private nonisolated let searchTimeoutSeconds: Double = 2.0
 
-    /// 语言检测置信度阈值（低于此值标记为 mixed）
-    private nonisolated let languageConfidenceThreshold: Float = 0.9
-
     // MARK: - R-3.7: RRF Configuration
 
     /// RRF 常数 k（默认 60，标准 RRF 参数）
@@ -346,10 +342,9 @@ public actor SearchPipeline {
 
         // Step 1.5: Follow-up tracking (US-RET-005 AC-4, approach a: same query reuse)
         // 上一轮存在且查询文本一致 → 本轮为跟进查询；审计携带父轮次 traceID。
+        // 会话状态仅在 checkpoint 通过后写入（PR#58 CR-3）：被拒查询不得成为下一轮的父轮次。
         let isFollowUp = lastSearchTraceID != nil && lastSearchQuery == trimmed
         let parentTrace = lastSearchTraceID
-        lastSearchQuery = trimmed
-        lastSearchTraceID = traceID
 
         // Step 2: PrivacyCheckpoint (R-006)
         let checkpoint = await privacyActor.validate(
@@ -360,6 +355,10 @@ public actor SearchPipeline {
         guard checkpoint.isAllowed else {
             throw SearchError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
         }
+
+        // Step 2.5: checkpoint 通过后更新会话状态（R-006 顺序 — 拒绝不污染 follow-up 追踪）
+        lastSearchQuery = trimmed
+        lastSearchTraceID = traceID
 
         // Step 3: Generate query embedding (multilingual-e5-small → 384d)
         let rawEmbedding: [Float]
@@ -536,12 +535,13 @@ public actor SearchPipeline {
             elapsedMs: elapsedMs
         )
 
-        // Step 13: Follow-up audit (US-RET-005 AC-4) — best-effort, 携带父轮次 traceID
+        // Step 13: Follow-up audit (US-RET-005 AC-4) — best-effort
+        // PR#58 CR-4: 审计 traceID 为本轮 traceID（§7.2 同一 Trace ID），父轮次经 sourceLanguage payload 携带。
         if isFollowUp, let parentTrace {
             let followUpInfo = encodeFollowUpMetadata(parentTraceID: parentTrace, query: trimmed)
             try? await privacyActor.writeAuditLog(
                 eventType: .followUpQuery,
-                traceID: parentTrace,
+                traceID: traceID,
                 policyVersion: checkpoint.policyVersion,
                 success: true,
                 sourceType: "search",
@@ -557,42 +557,12 @@ public actor SearchPipeline {
 
     /// 检测文本语言（US-RET-003 AC-1）。
     ///
-    /// 使用 NLTagger（iOS 18+），置信度 < 0.9 标记为 "mixed"。
-    /// 繁体/方言映射为 "zh-Hans"（AGENTS.md §6.1）。
+    /// 委托共享实现 `GenerationRoutedChannelAdapter.detectLanguage`（PR#58 CR-30 单一来源防漂移）。
     ///
     /// - Parameter text: 待检测文本
     /// - Returns: "zh-Hans"、"en-US" 或 "mixed"
     private nonisolated func detectLanguage(from text: String?) -> String? {
-        guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return nil
-        }
-
-        let tagger = NLTagger(tagSchemes: [.language])
-        tagger.string = text
-        let (hypotheses, _) = tagger.tagHypotheses(
-            at: text.startIndex,
-            unit: .document,
-            scheme: .language,
-            maximumCount: 1
-        )
-
-        // Get the highest-confidence language hypothesis
-        guard let (rawLanguage, confidence) = hypotheses.first,
-              confidence >= Double(languageConfidenceThreshold) else {
-            return "mixed"
-        }
-
-        // Map to supported languages (AGENTS.md §6.1)
-        switch rawLanguage {
-        case "en":
-            return "en-US"
-        case "zh-Hant", "zh-HK", "zh-TW", "yue", "zh":
-            return "zh-Hans"
-        case "zh-Hans":
-            return "zh-Hans"
-        default:
-            return "mixed"
-        }
+        GenerationRoutedChannelAdapter.detectLanguage(from: text)
     }
 
     /// 判断是否为跨语言匹配（US-RET-001 AC-3, US-RET-002）。
@@ -640,11 +610,13 @@ public actor SearchPipeline {
     ///
     /// 格式:
     /// ```json
-    /// { "parentTraceId": "<父轮次 traceID>", "rewrittenQuery": "<规范化查询>" }
+    /// { "parentTraceId": "<父轮次 traceID>", "rewrittenQuery": "<query SHA-256>" }
     /// ```
-    /// approach a 无 LLM rewrite — rewrittenQuery 恒等于原始查询（会话状态追踪，无外部调用）。
+    /// approach a 无 LLM rewrite — rewrittenQuery 存查询 SHA-256 摘要（AGENTS.md §5.4
+    /// 仅记录哈希摘要禁止原文，PR#58 CR-5），审计行不含用户查询原文。
     private nonisolated func encodeFollowUpMetadata(parentTraceID: String, query: String) -> String {
-        let dict: [String: Any] = ["parentTraceId": parentTraceID, "rewrittenQuery": query]
+        let queryDigest = AuditContentHasher.sha256Hex(query)
+        let dict: [String: Any] = ["parentTraceId": parentTraceID, "rewrittenQuery": queryDigest]
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let json = String(data: data, encoding: .utf8) else {
             return "{\"parentTraceId\":\"\(parentTraceID)\"}"
@@ -787,12 +759,15 @@ public actor SearchPipeline {
         }
 
         return scores
-            .sorted { $0.value > $1.value }
+            .sorted {
+                // 确定性 tie-break（§4.1 纯函数契约，PR#58 CR-15）：同分按 ID 升序，避免 Dictionary 迭代序抖动
+                $0.value == $1.value ? $0.key.uuidString < $1.key.uuidString : $0.value > $1.value
+            }
             .prefix(k)
             .map(\.key)
     }
 
-    /// 生产多通道检索（R-3.7 / DEF-34-001，3F.6）— 并行执行各通道适配器，RRF 融合。
+    /// 生产多通道检索（R-3.7 / DEF-34-001，3F.6）— 顺序执行各通道适配器，RRF 融合。
     ///
     /// ## 通道契约（US-RET-008 / DEF-34-002）
     /// - 每个适配器内部完成 PrivacyCheckpoint（R-006）、路由解析、超时降级 —
@@ -813,11 +788,11 @@ public actor SearchPipeline {
         queryVector: [Float]?,
         queryText: String,
         k: Int
-    ) async throws -> [SearchResultItem] {
+    ) async -> [SearchResultItem] {
         var channelResults: [ChannelResult] = []
         var metadataByID: [UUID: SearchChannelMetadata] = [:]
 
-        // 各通道顺序执行（每个适配器内部自带超时降级，绝不 throw 阻断融合）。
+        // 各通道顺序执行（每个适配器内部自带超时降级，绝不 throw 阻断融合；PR#58 CR-34 移除 throws）。
         // 未来可迁移到 withThrowingTaskGroup 并行；当前逐通道执行保证串行确定性。
         for adapter in adapters {
             guard let result = try? await adapter.search(
@@ -829,7 +804,12 @@ public actor SearchPipeline {
             if result.timedOut || result.error != nil { continue }
             channelResults.append(ChannelResult(channel: result.channel.rawValue, rankedIds: result.rankedIds))
             for (id, meta) in result.metadataByID {
-                metadataByID[id] = metadataByID[id] ?? meta
+                // PR#58 CR-35: 同一 ID 多通道命中保留 cosineSimilarity 更高者，避免依赖适配器数组顺序
+                if let existing = metadataByID[id] {
+                    if meta.cosineSimilarity > existing.cosineSimilarity { metadataByID[id] = meta }
+                } else {
+                    metadataByID[id] = meta
+                }
             }
         }
 

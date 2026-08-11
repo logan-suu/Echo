@@ -233,6 +233,10 @@ public struct CrossAppIntentParser: CrossAppIntentParserProtocol {
     /// 对齐结果（测试契约的 utcDate 构造同为 Gregorian UTC），故窗口时区固定 UTC。
     /// 未命中日期短语 → `nil`（不限时间窗）。
     ///
+    /// 年份假设（PR#58 CR-21）：无年份短语按当前年解析（有意设计）— 越界月/日
+    /// （如 13月40日）被显式拒绝，避免 Calendar 归一化跨年；round-trip 校验保证
+    /// 构造结果与解析分量一致。
+    ///
     /// - Parameter query: 用户查询文本
     /// - Returns: 当日闭区间时间窗，或 nil
     private nonisolated static func extractTemporalWindow(from query: String) -> ClosedRange<Date>? {
@@ -243,14 +247,17 @@ public struct CrossAppIntentParser: CrossAppIntentParserProtocol {
               let monthRange = Range(match.range(at: 1), in: query),
               let dayRange = Range(match.range(at: 2), in: query),
               let month = Int(query[monthRange]),
-              let day = Int(query[dayRange]) else { return nil }
+              let day = Int(query[dayRange]),
+              (1...12).contains(month),
+              (1...31).contains(day) else { return nil }
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let year = calendar.component(.year, from: Date())
-        guard let start = calendar.date(from: DateComponents(year: year, month: month, day: day)) else {
-            return nil
-        }
+        guard let start = calendar.date(from: DateComponents(year: year, month: month, day: day)),
+              calendar.component(.year, from: start) == year,
+              calendar.component(.month, from: start) == month,
+              calendar.component(.day, from: start) == day else { return nil }
         let end = start.addingTimeInterval(86_399)
         return start...end
     }
