@@ -214,6 +214,8 @@ struct DeviceMigrationTests {
         )
         // 冲突 1 条（同 ID），batchPolicy=.allSource → 用源版本；独有目标保留
         #expect(result.conflictCount == 1)
+        // 🔴-1 修复：merge 保留目标独有数据，完整性校验须逐条校验导入 ID 存在而非总数相等
+        #expect(result.integrityCheckPassed)
     }
 
     // MARK: - US-SRC-007 AC-2: ExcludedAssets 随本地迁移
@@ -268,6 +270,35 @@ struct DeviceMigrationTests {
         let match = entries.first { $0.traceID == traceID }
         #expect(match != nil)
         #expect(match?.contentHash != nil)
+        #expect(match?.success == true)
+    }
+
+    @Test("SRC-007 AC-7: method + batchPolicy threaded into import and audit (🟡-7 fix)")
+    func test_AC7_MethodAndBatchPolicyInAudit() async throws {
+        try await seedActiveRoute()
+        let actor = makeActor()
+        try await seedMemory(memoryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!, locator: "note-1", sourceType: "note", text: "note")
+        let (package, key) = try await actor.exportPackage()
+        try await db.execute(sql: "DELETE FROM MemoryFTS")
+        try await db.execute(sql: "DELETE FROM Representation")
+        try await db.execute(sql: "DELETE FROM Memory")
+
+        let traceID = "migration-method-trace-\(UUID().uuidString)"
+        let result = try await actor.importPackage(
+            package: package,
+            transferKey: key,
+            strategy: .overwrite,
+            batchPolicy: .allTarget,
+            fromDevice: "iPhone-A",
+            toDevice: "iPhone-B",
+            method: "localBackup",
+            traceID: traceID
+        )
+        #expect(result.integrityCheckPassed)
+        #expect(result.memoryCount == 1)
+        let entries = try await PrivacyActor.shared.fetchAuditLogs(limit: 50, eventType: .deviceMigrationCompleted)
+        let match = entries.first { $0.traceID == traceID }
+        #expect(match != nil)
         #expect(match?.success == true)
     }
 

@@ -1579,8 +1579,8 @@
             "Security, Privacy and Architecture approval records",
             "双设备 Live Simulator Review、AX tree、日志和无媒体 manifest"
           ],
-          "last_updated": "2026-08-11T08:20:00Z",
-          "notes": "✅ 3F.7 UI 到 Core 全域接线 (2026-08-11)。核心交付：DataOverviewService (US-SRC-009 live 值 + JSON 导出 + .dataOverviewAccessed 审计)、DeviceMigrationPackage/Service/Actor (ECHOMIG1 加密包 AES-GCM-256+HKDF-SHA256 + RFC 8785 JCS manifest + 精确 AAD + 逐块哈希 + fail-closed)、LiveAppAdapters (默认 live 接线)、SettingsViewModel live DataOverview 接线、SearchViewModel 默认 live pipeline、AuditEvent.dataOverviewAccessed。测试：4 新套件 35/35 (DeviceMigrationSecurity 17 + DeviceMigration 7 + DataOverview 6 + UIToCoreIntegration 5)，全量回归 995/995 0 失败，SwiftLint 0 errors。",
+          "last_updated": "2026-08-11T08:45:00Z",
+          "notes": "✅ 3F.7 UI 到 Core 全域接线 (2026-08-11)。核心交付：DataOverviewService (US-SRC-009 live 值 + JSON 导出 + .dataOverviewAccessed 审计)、DeviceMigrationPackage/Service/Actor (ECHOMIG1 加密包 AES-GCM-256+HKDF-SHA256 + RFC 8785 JCS manifest + 精确 AAD + 逐块哈希 + fail-closed)、LiveAppAdapters (默认 live 接线)、SettingsViewModel live DataOverview 接线、SearchViewModel 默认 live pipeline、AuditEvent.dataOverviewAccessed。测试：4 新套件 35/35 (DeviceMigrationSecurity 17 + DeviceMigration 7 + DataOverview 6 + UIToCoreIntegration 5)，全量回归 995/995 0 失败，SwiftLint 0 errors。\n(2026-08-11 PR#59 审查修复) 🔴-1 merge 完整性校验改为逐条 ID 校验（test_AC4 断言 integrityCheckPassed）；🟡-2 SearchViewModel 单实例 live pipeline 缓存（follow-up 审计回归 + test）；🟡-3 默认 live 路径 FeedbackPipeline 接线（反馈落库 + test）；🟡-7 审计 method/batchPolicy 参数化（AC-7 test）；🟡-4 makeSearchPipeline 返回 optional，无路由显式 route-unavailable（test）；🟡-5/6 AGENTS.md §7.3/.§5.2 文档同步；DEF-59-01/02/03 记录于 deferred-items.json。3F.7 套件 39/39（+4），受影响的 SearchViewModel/ProductionSearchFeedback 60/60。",
           "pr": {
             "number": 59,
             "url": "https://github.com/logan-suu/Echo/pull/59",

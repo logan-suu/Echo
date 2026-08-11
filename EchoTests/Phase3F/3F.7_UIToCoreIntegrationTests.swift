@@ -115,6 +115,115 @@ struct UIToCoreIntegrationTests {
         #expect(vm.viewState == .idle)
     }
 
+    // MARK: - 默认 live 接线回归修复（PR#59 审查）
+
+    private func seedActiveTextRoute() async throws -> GenerationRegistryActor {
+        let registry = GenerationRegistryActor(db: db)
+        try await registry.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384)
+        )
+        try await registry.finishShadowBuild("text_dense/e5-v1", counts: 0, validationDigest: nil)
+        try await registry.setGenerationState("text_dense/e5-v1", state: .ready)
+        let route = try await registry.activateGeneration("text_dense/e5-v1")
+        try await registry.publishRoute(ActiveRouteSet(textGeneration: route.textGeneration, version: route.version))
+        return registry
+    }
+
+    private func seedSearchPolicy() async throws {
+        try await db.executeWrite(
+            sql: "INSERT OR REPLACE INTO UserPolicyStore (id, preferredLanguage, authorizedSourceTypes, policyVersion, updatedAt) VALUES (1, ?, ?, ?, ?)",
+            bindings: [
+                .text("zh-Hans"),
+                .text(#"["search","photo","note","voice","text","video"]"#),
+                .int(1),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
+        try await PrivacyActor.shared.loadPolicy()
+    }
+
+    private func makeTestComposition(registry: GenerationRegistryActor) -> AppComposition {
+        AppComposition(
+            databaseManager: db,
+            generationRegistry: registry,
+            textEmbedder: MigrationTestEmbedder(),
+            visionEmbedder: MigrationTestEmbedder(),
+            asrEngine: nil
+        )
+    }
+
+    private func awaitSearchCompletion(_ vm: SearchViewModel, timeout: TimeInterval = 10) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if case .completed = vm.viewState { return }
+            if case .error = vm.viewState { return }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        Issue.record("Search did not reach terminal state: \(vm.viewState)")
+    }
+
+    @Test("3F.7: live pipeline reused across searches → follow-up audit fires (US-RET-005, 🟡-2 fix)")
+    func test_Search_LiveFollowUpReusesPipeline() async throws {
+        let registry = try await seedActiveTextRoute()
+        try await seedSearchPolicy()
+        let vm = SearchViewModel(composition: makeTestComposition(registry: registry))
+
+        vm.submitQuery("follow up test")
+        await awaitSearchCompletion(vm)
+        let firstPipeline = vm.resolvedPipeline
+        #expect(firstPipeline != nil, "live pipeline must be resolved and cached")
+
+        vm.submitQuery("follow up test")
+        await awaitSearchCompletion(vm)
+        #expect(vm.resolvedPipeline === firstPipeline, "same SearchPipeline instance must be reused (🟡-2)")
+
+        // 行为断言：同一实例上重复查询触发 .followUpQuery 审计（US-RET-005 AC-4）
+        let entries = try await PrivacyActor.shared.fetchAuditLogs(limit: 50, eventType: .followUpQuery)
+        #expect(entries.count >= 1, "repeated query on reused pipeline must write follow-up audit")
+    }
+
+    @Test("3F.7: live feedback intent persists to FeedbackStore (US-FBK-001, 🟡-3 fix)")
+    func test_Search_LiveFeedbackPersists() async throws {
+        let registry = try await seedActiveTextRoute()
+        let vm = SearchViewModel(composition: makeTestComposition(registry: registry))
+
+        vm.submitQuery("feedback query")
+        await awaitSearchCompletion(vm)
+
+        let memoryID = UUID()
+        let item = SearchResultItem(
+            id: memoryID,
+            assetId: "note-fb-1",
+            sourceType: "note",
+            timestamp: Date().timeIntervalSince1970,
+            originalText: "feedback note",
+            cosineSimilarity: 0.9
+        )
+        vm.recordLike(SearchResultModel(from: item))
+
+        // recordLike 经 Task 异步转发至 FeedbackPipeline → FeedbackActor；轮询等待落库
+        let deadline = Date().addingTimeInterval(5)
+        var persisted = 0
+        while Date() < deadline {
+            persisted = try await FeedbackActor.shared.count()
+            if persisted >= 1 { break }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        #expect(persisted >= 1, "live feedback intent must persist to FeedbackStore (US-FBK-001, 🟡-3)")
+    }
+
+    @Test("3F.7: no active route → explicit route-unavailable, not silent empty store (US-RET-008, 🟡-4 fix)")
+    func test_Search_NoRouteIsExplicitError() async throws {
+        let registry = GenerationRegistryActor(db: db)
+        let vm = SearchViewModel(composition: makeTestComposition(registry: registry))
+        vm.submitQuery("no route query")
+        await awaitSearchCompletion(vm)
+        guard case .error = vm.viewState else {
+            Issue.record("Expected .error route-unavailable, got \(vm.viewState)")
+            return
+        }
+    }
+
     // MARK: - 跨 surface journey
 
     @Test("3F.7: settings → data overview → JSON export journey")

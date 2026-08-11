@@ -419,10 +419,11 @@ TaskQueue 契约:
 ### 5.2 ExcludedAssets 契约（核心）
 
 ```yaml
-ExcludedAssets 写入条件（仅有三种）:
+ExcludedAssets 写入条件（仅有四种）:
   1. 用户选择“仅从 Echo 移除” → 写入 (US-PRV-004)
   2. 重新授权时用户选择“一键恢复排除项” → 批量移除 (US-PRV-001)
   3. 用户从已排除项目界面手动恢复 → 移除 (US-SRC-008)
+  4. 设备迁移导入时按源设备排除项恢复 → 写入 (US-SRC-007 AC-2)
 
 ExcludedAssets 禁止写入条件:
   - 系统自动删除旧记忆 (US-SRC-012) → 不写入
@@ -533,6 +534,7 @@ let checkpoint = await PrivacyActor.shared.validate(
 | `.scheduledScanCompleted`         | 定时扫描完成             | missedItemCount, excludedCount, userImportedCount         |
 | `.personSynced`                   | 人物同步                 | personCount, newPersons                                   |
 | `.deviceMigrationCompleted`       | 设备迁移完成             | fromDevice, toDevice, integrityCheckPassed, mergeStrategy |
+| `.dataOverviewAccessed`           | 数据概览访问（US-SRC-009 AC-5） | affectedCount, elapsedMs |
 | `.permissionChanged`              | 权限变更                 | sourceType, newScope                                      |
 | `.excluded`                       | 排除操作                 | assetIds                                                  |
 | `.excludedRestored`               | 恢复排除项               | assetIds                                                  |

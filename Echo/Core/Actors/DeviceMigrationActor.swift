@@ -6,6 +6,8 @@
 // 任务: 3F.7 - UI 到 Core 全域接线 (US-SRC-007)
 // AC 覆盖: US-SRC-007 AC-1 (仅本地传输), AC-2 (ExcludedAssets 随本地迁移), AC-4 (覆盖/合并/冲突),
 //          AC-5 (迁移后完整性校验), AC-6 (不导出全部原始记忆), AC-7 (.deviceMigrationCompleted 审计)
+//          PR#59 修复: 🔴-1 AC-5 完整性校验按策略语义 — overwrite 总数 / merge 逐条 ID 存在性
+//                      (向量/FTS 行级校验见 DEF-59-03); 🟡-7 审计 method(airdrop/localBackup) + batchPolicy 参数化
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §5.4 (hash-only 审计), R-001 (无网络), R-007/R-008
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-11
@@ -194,6 +196,7 @@ public actor DeviceMigrationActor {
     ///   - batchPolicy: 批量冲突策略（AC-4，merge 时使用）
     ///   - fromDevice: 源设备标识
     ///   - toDevice: 目标设备标识（当前设备）
+    ///   - method: 迁移方式（AC-7: "airdrop" / "localBackup"）
     ///   - traceID: 审计追溯 ID
     /// - Returns: 导入结果（含完整性校验）
     public func importPackage(
@@ -203,6 +206,7 @@ public actor DeviceMigrationActor {
         batchPolicy: BatchConflictPolicy = .allSource,
         fromDevice: String,
         toDevice: String,
+        method: String = "airdrop",
         traceID: String = UUID().uuidString
     ) async throws -> DeviceMigrationResult {
         let started = Date()
@@ -218,6 +222,7 @@ public actor DeviceMigrationActor {
         var excludedCount = 0
         var conflictCount = 0
         var overwrittenCount = 0
+        var importedMemoryIDs: [UUID] = []
 
         // (3) 覆盖策略：清除目标设备原有数据（仅 canonical/向量，不删原始文件）
         if strategy == .overwrite {
@@ -248,6 +253,7 @@ public actor DeviceMigrationActor {
                     }
                 }
                 try await applyMemory(memory, payload: payload, traceID: traceID)
+                importedMemoryIDs.append(memory.memoryId)
                 memoryCount += 1
             } else if record.type == "excludedAsset" {
                 let item = try decodeExcludedPayload(payload)
@@ -258,8 +264,14 @@ public actor DeviceMigrationActor {
             }
         }
 
-        // (5) 完整性校验（AC-5）：内存/向量/FTS 行数与记录数一致
-        let integrityPassed = try await verifyIntegrity(expectedMemory: memoryCount)
+        // (5) 完整性校验（AC-5）：导入结果与实际库一致
+        // - overwrite: 覆盖后仅保留导入数据 → Memory 表总数应等于导入数
+        // - merge: 目标独有数据保留，总数校验不适用 → 逐条校验每个导入记忆 ID 均存在
+        let integrityPassed = try await verifyIntegrity(
+            strategy: strategy,
+            importedMemoryIDs: importedMemoryIDs,
+            expectedMemory: memoryCount
+        )
 
         // (6) 审计（AC-7）
         let policy = await privacyActor.getPolicy()
@@ -271,7 +283,7 @@ public actor DeviceMigrationActor {
             sourceType: "migration",
             affectedCount: memoryCount,
             elapsedMs: Int(Date().timeIntervalSince(started) * 1000),
-            content: "fromDevice=\(fromDevice)|toDevice=\(toDevice)|integrityCheckPassed=\(integrityPassed)|method=airdrop|mergeStrategy=\(strategy.rawValue)|conflictResolutions=\(conflictCount)"
+            content: "fromDevice=\(fromDevice)|toDevice=\(toDevice)|integrityCheckPassed=\(integrityPassed)|method=\(method)|mergeStrategy=\(strategy.rawValue)|batchPolicy=\(batchPolicy.rawValue)|conflictResolutions=\(conflictCount)"
         )
 
         return DeviceMigrationResult(
@@ -402,11 +414,26 @@ public actor DeviceMigrationActor {
         )
     }
 
-    /// 完整性校验（AC-5）：导入的记忆行数与 manifest 记录数一致。
-    private func verifyIntegrity(expectedMemory: Int) async throws -> Bool {
-        let rows = try await db.executeQuery(sql: "SELECT COUNT(*) AS cnt FROM Memory", bindings: [])
-        let actual = rows.first?["cnt"]?.intValue.map(Int.init) ?? 0
-        return actual == expectedMemory
+    /// 完整性校验（AC-5）：导入结果与实际库一致。
+    /// - overwrite: 覆盖后仅保留导入数据 → Memory 表总数应等于导入数。
+    /// - merge: 目标独有数据保留，总数校验不适用 → 逐条校验每个导入记忆 ID 均存在。
+    /// 仅校验 Memory 表（canonical 行）语义；向量/FTS 逐行校验见 DEF-59-03（延后追踪）。
+    private func verifyIntegrity(
+        strategy: MigrationMergeStrategy,
+        importedMemoryIDs: [UUID],
+        expectedMemory: Int
+    ) async throws -> Bool {
+        switch strategy {
+        case .overwrite:
+            let rows = try await db.executeQuery(sql: "SELECT COUNT(*) AS cnt FROM Memory", bindings: [])
+            let actual = rows.first?["cnt"]?.intValue.map(Int.init) ?? 0
+            return actual == expectedMemory
+        case .merge:
+            for id in importedMemoryIDs {
+                guard try await canonicalRepository.loadMemory(memoryId: id) != nil else { return false }
+            }
+            return true
+        }
     }
 
     /// 解密 chunk 0 得到 manifest 明文（导入时用于记录解析）。

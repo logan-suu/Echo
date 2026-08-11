@@ -258,11 +258,11 @@ public struct DeviceMigrationService {
             throw DeviceMigrationError.resourceBoundExceeded("totalPlaintextBytes exceeds 4 GiB")
         }
 
-        // manifest（chunk 0 明文）
-        let manifestPlaintext = try JCSEncoder.canonicalJSON(
+        // 校验占位 manifest 可序列化（chunkCount 0 回填前先做一次序列化验证）
+        _ = try JCSEncoder.canonicalJSON(
             manifest: DeviceMigrationManifest(
                 archiveUUID: archiveUUID,
-                chunkCount: 0, // 占位，先计算数据块数再回填
+                chunkCount: 0,
                 totalPlaintextBytes: total,
                 records: records
             )

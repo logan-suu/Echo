@@ -136,7 +136,7 @@
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
     "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
-    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash; DEF-58-001 (RET-005 AC-3 LLM rewrite) defer_to=on-device generative model; DEF-58-002 (RET-005 AC-1 FIFO history + AC-2 memoryIds injection) defer_to=3F.7 search wiring or Phase 4; DEF-58-003 (feedback generation binds active route not result generation) defer_to=3F.7; DEF-58-004 (SubjectiveScorer ignores queryText) defer_to=3F.7 real CLIP scorer; DEF-58-005 (SearchResultItem subjectiveMatch field) defer_to=3F.7/3F.10; DEF-58-006 (parse async throws unused) & DEF-58-007 (regex hoist) defer_to=Phase 4 simplification window"
+    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash; DEF-58-001 (RET-005 AC-3 LLM rewrite) defer_to=on-device generative model; DEF-58-002 (RET-005 AC-1 FIFO history + AC-2 memoryIds injection) defer_to=3F.7 search wiring or Phase 4; DEF-58-003 (feedback generation binds active route not result generation) defer_to=3F.7; DEF-58-004 (SubjectiveScorer ignores queryText) defer_to=3F.7 real CLIP scorer; DEF-58-005 (SearchResultItem subjectiveMatch field) defer_to=3F.7/3F.10; DEF-58-006 (parse async throws unused) & DEF-58-007 (regex hoist) defer_to=Phase 4 simplification window; DEF-59-001/002/003 (migration import TaskQueueActor enqueue / AC-5 补导 / vector-FTS row-level integrity) defer_to=US-SRC-007 migration import surface wiring"
   },
   "deferred_from_pr_review": [
     {
@@ -1108,6 +1108,73 @@
       ],
       "tracking_status": "open",
       "recheck_trigger": "Phase 3F 集成扫描或 3F.7"
+    },
+    {
+      "id": "DEF-59-01",
+      "pr": 59,
+      "title": "🟡-8 迁移导入为长写入任务未入队 TaskQueueActor（逐条嵌入 + 写向量）",
+      "severity": "🟡",
+      "location": "Echo/Core/Actors/DeviceMigrationActor.swift importPackage (applyMemory 逐条 embed + commit)",
+      "reason": "AGENTS.md §4.3 要求任何写入 VectorStoreActor 的长任务经 TaskQueueActor 串行入队 + ProgressActor 断点续传。当前 importPackage 直接逐条嵌入/写入，无队列与进度持久化。PR#59 无迁移导入 UI surface（US-SRC-007 Finder/AirDrop 恢复为 3F.7 follow-up），无法从 UI 触发，故不阻塞本次交付。",
+      "defer_to": "US-SRC-007 迁移导入 UI surface 接线时（经 TaskQueueActor + ProgressActor 入队）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "iOS",
+        "Core"
+      ],
+      "target_tasks": [
+        "3F.7 follow-up"
+      ],
+      "acceptance_evidence": [
+        "迁移导入入队 + 进度持久化 + 断点续传证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或迁移导入 surface 接线"
+    },
+    {
+      "id": "DEF-59-02",
+      "pr": 59,
+      "title": "🔴-1 残留 US-SRC-007 AC-5「缺失项触发补导」未实现（本次仅交付 integrityCheckPassed 布尔结果）",
+      "severity": "🟡",
+      "location": "Echo/Core/Actors/DeviceMigrationActor.swift importPackage (verifyIntegrity)",
+      "reason": "AC-5 要求「迁移后首次启动自动校验数据完整性，缺失项触发补导」。PR#59 修复交付了按策略语义正确的完整性校验（overwrite 总数 / merge 逐条 ID），但「缺失项补导」需要持久化缺失清单 + 启动钩子重试导入，属跨启动状态机，超出本次接线修复范围。",
+      "defer_to": "迁移导入 surface + 启动恢复状态机接线时（3F.7 follow-up / 3F.11）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "iOS",
+        "Core"
+      ],
+      "target_tasks": [
+        "3F.7 follow-up",
+        "3F.11"
+      ],
+      "acceptance_evidence": [
+        "缺失项清单持久化 + 启动补导证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或迁移导入 surface 接线"
+    },
+    {
+      "id": "DEF-59-03",
+      "pr": 59,
+      "title": "verifyIntegrity 仅校验 Memory 表（canonical 行），向量/FTS 行级校验未实现",
+      "severity": "🟡",
+      "location": "Echo/Core/Actors/DeviceMigrationActor.swift verifyIntegrity",
+      "reason": "原注释声称校验「内存/向量/FTS 行数」但实现仅查 Memory 表。PR#59 修复将注释改为实际语义（Memory 表 + merge 逐条 ID 存在性），向量/FTS 行级一致性校验需考虑无 canonicalText 记忆无 Representation/FTS 行的语义，纳入后续增强。",
+      "defer_to": "迁移导入 surface 接线时一并实现向量/FTS 行级校验",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "iOS",
+        "Core"
+      ],
+      "target_tasks": [
+        "3F.7 follow-up"
+      ],
+      "acceptance_evidence": [
+        "Representation/FTS 行级一致性校验测试"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或迁移导入 surface 接线"
     }
   ]
 }

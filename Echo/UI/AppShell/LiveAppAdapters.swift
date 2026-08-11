@@ -23,12 +23,15 @@ public enum LiveAppAdapters {
 
     /// 从 composition 装配生产 SearchPipeline（3F.6 多通道检索 + 反馈）。
     ///
-    /// - Returns: 生产 SearchPipeline（使用活跃 generation 路由 + 文本嵌入器 + 反馈重排）
+    /// - Returns: 生产 SearchPipeline；无活跃 text generation 路由或该代向量存储未物化时返回 nil
+    ///   （route-unavailable，由调用方显式进入 L3 状态，不静默回退到空向量库）
     public static func makeSearchPipeline(
         composition: AppComposition = .shared
-    ) async -> SearchPipeline {
+    ) async -> SearchPipeline? {
         let registry = composition.generationRegistry
-        let activeStore = await resolveActiveTextStore(registry: registry) ?? VectorStoreActor(dimension: 512)
+        guard let activeStore = await resolveActiveTextStore(registry: registry) else {
+            return nil
+        }
         return SearchPipeline(
             embedder: composition.textEmbedder,
             privacyActor: composition.privacyActor,
