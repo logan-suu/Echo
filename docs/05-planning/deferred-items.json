@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.0",
-  "_last_updated": "2026-08-11T09:10:00Z",
+  "_last_updated": "2026-08-11T13:30:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -136,7 +136,7 @@
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
     "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
-    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash; DEF-58-001 (RET-005 AC-3 LLM rewrite) defer_to=on-device generative model; DEF-58-002 (RET-005 AC-1 FIFO history + AC-2 memoryIds injection) defer_to=3F.7 search wiring or Phase 4; DEF-58-003 (feedback generation binds active route not result generation) defer_to=3F.7; DEF-58-004 (SubjectiveScorer ignores queryText) defer_to=3F.7 real CLIP scorer; DEF-58-005 (SearchResultItem subjectiveMatch field) defer_to=3F.7/3F.10; DEF-58-006 (parse async throws unused) & DEF-58-007 (regex hoist) defer_to=Phase 4 simplification window; DEF-59-001/002/003 (migration import TaskQueueActor enqueue / AC-5 补导 / vector-FTS row-level integrity) defer_to=US-SRC-007 migration import surface wiring; DEF-59-004 (exportPackage PrivacyCheckpoint, PrivacyActor Files-外) defer_to=PrivacyActor-owning task; DEF-59-005 (staging atomic publication) defer_to=migration import surface; DEF-59-006 (canonical repo composition singleton, AppDelegate Files-外) defer_to=dependency-graph convergence; DEF-59-007 (streaming decrypt) defer_to=large-package support"
+    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash; DEF-58-001 (RET-005 AC-3 LLM rewrite) defer_to=on-device generative model; DEF-58-002 (RET-005 AC-1 FIFO history + AC-2 memoryIds injection) defer_to=3F.7 search wiring or Phase 4; DEF-58-003 (feedback generation binds active route not result generation) defer_to=3F.7; DEF-58-004 (SubjectiveScorer ignores queryText) defer_to=3F.7 real CLIP scorer; DEF-58-005 (SearchResultItem subjectiveMatch field) defer_to=3F.7/3F.10; DEF-58-006 (parse async throws unused) & DEF-58-007 (regex hoist) defer_to=Phase 4 simplification window; DEF-59-001/002/003 (migration import TaskQueueActor enqueue / AC-5 补导 / vector-FTS row-level integrity) defer_to=US-SRC-007 migration import surface wiring; DEF-59-004 (exportPackage PrivacyCheckpoint, PrivacyActor Files-外) defer_to=PrivacyActor-owning task; DEF-59-005 (staging atomic publication) defer_to=migration import surface; DEF-59-006 (canonical repo composition singleton, AppDelegate Files-外) defer_to=dependency-graph convergence; DEF-59-007 (streaming decrypt) defer_to=large-package support DEF-60-001/002 (PR #60: i18n 文案 → 3F.10; bare VectorStoreActor → Phase 4)"
   },
   "deferred_from_pr_review": [
     {
@@ -1262,6 +1262,50 @@
       ],
       "tracking_status": "open",
       "recheck_trigger": "Phase 3F 集成扫描"
+    },
+    {
+      "id": "DEF-60-001",
+      "pr": 60,
+      "title": "硬编码英文通知/权限文案未本地化（notification bodies + permission descriptions）",
+      "severity": "🟡",
+      "location": "Echo/Core/Pipelines/AwakeningPipeline.swift scheduleCardNotification（5 条 body）; Echo/UI/Awakening/AwakeningSettingsViewModel.swift loadLiveData（3 条 permission description）",
+      "reason": "代码库尚无 String Catalog 基础设施（全库零 .xcstrings、零 String(localized:) 使用），全部 UI/通知字符串统一延后至 3F.10 i18n 任务；本 PR 遵循既有 i18n-deferred 模式（HomeViewModel.swift 同例，PR #60 架构预审已确认降级为 🟡）。",
+      "defer_to": "3F.10 i18n、accessibility 与 production errors（3F.9 后的下一个 ready 任务）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.10"
+      ],
+      "acceptance_evidence": [
+        "notification bodies + permission descriptions 全部迁入 String Catalog（zh-Hans/en-US 双语）"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描"
+    },
+    {
+      "id": "DEF-60-002",
+      "pr": 60,
+      "title": "AppDelegate 裸建 VectorStoreActor(dimension: 512) 绕过 GenerationRegistryActor",
+      "severity": "🟡",
+      "location": "Echo/App/AppDelegate.swift:155（AwakeningPipeline SearchPipeline vectorStore）; 同文件 :113/:125（sync/ingest 既有同模式）",
+      "reason": "与 AppDelegate 既有 sync/ingest 接线一致（非本 PR 新引入反模式），归拢至 GenerationRegistryActor（ADR-010 分代索引管理）属 Phase 4 架构整理，本 PR 不做局部偏离。",
+      "defer_to": "Phase 4（entry_gate 3F.11 合并后）架构归拢",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "Phase 4"
+      ],
+      "acceptance_evidence": [
+        "AppDelegate 所有 vectorStore 创建统一经 GenerationRegistryActor 活跃路由解析"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 4 集成扫描"
     }
   ]
 }

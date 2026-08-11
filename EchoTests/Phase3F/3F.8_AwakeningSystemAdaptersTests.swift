@@ -9,6 +9,7 @@
 //          ADR-012 决策-2 (权限感知 denied/accepted), 决策-3 (通知请求与响应路由分离),
 //          决策-5 (卡片持久化/去重/重启), 决策-7 (通知内容最小化)
 // 架构约束: AGENTS.md §9.1 (单元测试), R-007, 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
+// 3F.8 review fix (C-1): StubLocationProvider 适配 @MainActor + eventStream 协议
 // 生成时间: 2026-08-11
 // ==========================================
 
@@ -19,11 +20,25 @@ import Foundation
 // MARK: - Test Doubles
 
 /// 确定性地理围栏事件提供者 — 注入 Fake 测试系统信号（ADR-012 决策-3 "injected test signals"）
-final class StubLocationProvider: LocationProviding, @unchecked Sendable {
+/// 3F.8 review fix (C-1): 协议改为 @MainActor + eventStream — 适配 AsyncStream 事件流
+@MainActor
+final class StubLocationProvider: LocationProviding {
     var authState: LocationAuthState = .authorizedWhenInUse
     var regions: [GeofenceRegion] = []
-    var onGeofenceEvent: (@Sendable (GeofenceEvent) -> Void)?
     var startError: Error?
+    private let stream: AsyncStream<GeofenceEvent>
+    private let continuation: AsyncStream<GeofenceEvent>.Continuation
+
+    var eventStream: AsyncStream<GeofenceEvent> { stream }
+
+    init() {
+        (self.stream, self.continuation) = AsyncStream.makeStream(of: GeofenceEvent.self)
+    }
+
+    /// 测试辅助：向事件流发送地理围栏事件
+    func send(_ event: GeofenceEvent) {
+        continuation.yield(event)
+    }
 
     func currentAuthorizationState() async -> LocationAuthState { authState }
     func requestWhenInUseAuthorization() async -> LocationAuthState { authState }

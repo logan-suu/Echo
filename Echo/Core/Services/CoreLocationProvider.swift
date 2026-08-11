@@ -13,6 +13,8 @@
 //           @preconcurrency + MainActor 模式), 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
 // 重要: CLLocationManager 为 @MainActor SDK，类默认 MainActor 隔离（正确持有 manager）；
 //       CLLocationManagerDelegate 为 nonisolated 同步回调，经 Task { @MainActor } 转发事件
+// PR Review fix (2026-08-11): onGeofenceEvent 回调 → AsyncStream<GeofenceEvent> eventStream,
+//          显式 @MainActor 协议+类隔离 — 修复 CI Xcode 16.4 'Sendable-conforming class is mutable'
 // 生成时间: 2026-08-11
 // ==========================================
 
@@ -81,9 +83,10 @@ public enum GeofenceEvent: Sendable, Equatable {
 /// 生产实现 `CoreLocationProvider` 包装 CLLocationManager；测试可注入
 /// 确定性事件流（ADR-012 决策-3 "injected test system signals"）。
 /// 仅传递值类型（LocationAuthState / GeofenceRegion / GeofenceEvent）。
+@MainActor
 public protocol LocationProviding: AnyObject, Sendable {
-    /// 地理围栏事件回调（enter/exit）
-    var onGeofenceEvent: (@Sendable (GeofenceEvent) -> Void)? { get set }
+    /// 地理围栏事件流（enter/exit）— 替代回调，消除 Sendable 类可变存储属性（CI Xcode 16.4 阻断）
+    var eventStream: AsyncStream<GeofenceEvent> { get }
 
     /// 当前授权状态
     func currentAuthorizationState() async -> LocationAuthState
@@ -104,19 +107,21 @@ public protocol LocationProviding: AnyObject, Sendable {
 /// - 授权状态全处理（ADR-012 决策-2）：notDetermined/denied/restricted/authorized 均映射
 /// - 地理围栏监控：`startMonitoring` 注册 CLCircularRegion，didEnter/didExit 转发事件
 /// - 权限感知：授权被拒时 `startMonitoring` 抛 `.privacyDenied`（AC-5 静默禁用语义）；
-///   `onGeofenceEvent` 由调用方（AppDelegate）接入并转发 AwakeningPipeline
+///   `eventStream` 由调用方（AppDelegate）以 for-await 消费并转发 AwakeningPipeline
+@MainActor
 public final class CoreLocationProvider: NSObject, LocationProviding, CLLocationManagerDelegate {
 
     // MARK: - Properties
 
-    /// 地理围栏事件回调（MainActor 隔离，经 delegate 回调转发）
-    public var onGeofenceEvent: (@Sendable (GeofenceEvent) -> Void)?
-
     private let manager: CLLocationManager
+    /// 地理围栏事件流存储（AsyncStream.makeStream 全 let 模式，无可变存储 — 修复 CI Sendable 错误）
+    private let eventStreamStorage: AsyncStream<GeofenceEvent>
+    private let eventContinuation: AsyncStream<GeofenceEvent>.Continuation
 
     // MARK: - Init
 
     public override init() {
+        (self.eventStreamStorage, self.eventContinuation) = AsyncStream.makeStream(of: GeofenceEvent.self)
         self.manager = CLLocationManager()
         super.init()
         self.manager.delegate = self
@@ -124,6 +129,8 @@ public final class CoreLocationProvider: NSObject, LocationProviding, CLLocation
     }
 
     // MARK: - LocationProviding
+
+    public var eventStream: AsyncStream<GeofenceEvent> { eventStreamStorage }
 
     public func currentAuthorizationState() async -> LocationAuthState {
         LocationAuthMapper.map(manager.authorizationStatus)
@@ -176,7 +183,7 @@ public final class CoreLocationProvider: NSObject, LocationProviding, CLLocation
     ) {
         let event = GeofenceEvent.enter(regionIdentifier: region.identifier)
         Task { @MainActor [weak self] in
-            self?.onGeofenceEvent?(event)
+            self?.eventContinuation.yield(event)
         }
     }
 
@@ -186,7 +193,7 @@ public final class CoreLocationProvider: NSObject, LocationProviding, CLLocation
     ) {
         let event = GeofenceEvent.exit(regionIdentifier: region.identifier)
         Task { @MainActor [weak self] in
-            self?.onGeofenceEvent?(event)
+            self?.eventContinuation.yield(event)
         }
     }
 }

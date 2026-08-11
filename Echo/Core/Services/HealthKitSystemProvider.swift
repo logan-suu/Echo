@@ -14,6 +14,7 @@
 //           R-001 (纯本地, 无网络)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，struct stored/computed 需 nonisolated
 //       生产 provider 仅返回「最小化时序样本」(timestamp + 来源身份)，不存储/不透传原始健康值
+// PR Review fix (2026-08-11): semaphore → withCheckedContinuation; UUID 强解包 → compactMap guard
 // 生成时间: 2026-08-11
 // ==========================================
 
@@ -91,15 +92,10 @@ public struct RealHealthStore: HealthStoreServing {
     public nonisolated func requestAuthorization() async -> HealthAuthState {
         let hrvType = HKQuantityType(.heartRateVariabilitySDNN)
         let types: Set<HKSampleType> = [hrvType]
-        let granted = await MainActor.run {
-            var result = false
-            let semaphore = DispatchSemaphore(value: 0)
+        let granted = await withCheckedContinuation { continuation in
             self.store.requestAuthorization(toShare: nil, read: types) { success, _ in
-                result = success
-                semaphore.signal()
+                continuation.resume(returning: success)
             }
-            semaphore.wait()
-            return result
         }
         return granted ? .authorized : .denied
     }
@@ -121,21 +117,16 @@ public struct RealHealthStore: HealthStoreServing {
             predicate = nil
         }
 
-        let samples: [HKQuantitySample] = await MainActor.run {
-            let semaphore = DispatchSemaphore(value: 0)
-            var result: [HKQuantitySample] = []
+        let samples: [HKQuantitySample] = await withCheckedContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: hrvType,
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
             ) { _, samples, _ in
-                result = samples as? [HKQuantitySample] ?? []
-                semaphore.signal()
+                continuation.resume(returning: samples as? [HKQuantitySample] ?? [])
             }
             self.store.execute(query)
-            semaphore.wait()
-            return result
         }
 
         return samples.map { sample in
@@ -186,9 +177,11 @@ public final class HealthKitSystemProvider: HealthKitProvider, CrossAppSourcePro
         guard auth == .authorized else { return [] }
 
         let samples = try await store.fetchHRVSamples(in: window)
-        return samples.map { sample in
-            CrossAppSourceResult(
-                memoryId: UUID(uuidString: "00000000-0000-0000-0000-\(Self.healthID(from: sample.timestamp))")!,
+        return samples.compactMap { sample -> CrossAppSourceResult? in
+            let suffix = Self.healthID(from: sample.timestamp)
+            guard let memoryId = UUID(uuidString: "00000000-0000-0000-0000-\(suffix)") else { return nil }
+            return CrossAppSourceResult(
+                memoryId: memoryId,
                 sourceType: sourceType,
                 timestamp: sample.timestamp,
                 snippet: nil,

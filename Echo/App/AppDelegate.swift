@@ -7,6 +7,7 @@
 //       3F.1 - Production composition root (ADR-007 §决策-1)
 //       3F.2 - PhotoKit、Share Extension 与真实来源 (US-SRC-001 AC-1/AC-5, US-SRC-012 AC-1)
 // 用途: BGTask 注册 (US-SYS-001 后台任务面板) + 来源边界装配
+// 3F.8 review fix (C-1/W-4): onGeofenceEvent 回调 → eventStream for-await 消费; awakeningPipeline 属性持有
 // 架构约束: 遵循 AGENTS.md §9 (后台任务与断点续传), deny-by-default (ADR-007 §决策-2)
 // 生成时间: 2026-07-04, 2026-08-05 (3F.2 来源装配)
 // ==========================================
@@ -35,6 +36,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     private let notificationRouter: NotificationResponseRouting = NotificationResponseRouter()
     /// 3F.8: 唤醒卡片持久化存储（ADR-012 决策-5）
     private let awakeningCardRepository = AwakeningCardRepositoryActor()
+    /// 3F.8: 唤醒管线（含地理围栏事件流消费）— 持有防释放（W-4 review fix）
+    private var awakeningPipeline: AwakeningPipeline?
 
     func application(
         _ application: UIApplication,
@@ -159,13 +162,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             cardRepository: awakeningCardRepository
         )
         // 地理围栏事件 → 唤醒管线（US-AWK-001 AC-1 仅 enter 触发, AC-2 exit 重置）
-        locProvider.onGeofenceEvent = { @Sendable event in
-            Task { @MainActor in
+        // 3F.8 review fix (C-1/W-4): eventStream for-await 消费 + awakeningPipeline 属性持有
+        awakeningPipeline = awakening
+        Task { @MainActor [weak self] in
+            guard let self, let pipeline = self.awakeningPipeline else { return }
+            for await event in locProvider.eventStream {
                 switch event {
                 case .enter(let regionId):
-                    _ = await awakening.handleGeofenceEnter(regionId: regionId)
+                    _ = await pipeline.handleGeofenceEnter(regionId: regionId)
                 case .exit(let regionId):
-                    _ = await awakening.handleGeofenceExit(regionId: regionId)
+                    _ = await pipeline.handleGeofenceExit(regionId: regionId)
                 }
             }
         }
