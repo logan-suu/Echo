@@ -1459,6 +1459,8 @@ PR body 必须为英文，并在 evidence index 当前任务条目中使用 §11
 
 **Expected evidence:** four real-source traces sharing trace IDs; canonical/vector/FTS counts; cancel/relaunch/resume; fault rollback; no `StubEmbedder`/`StubASR` in production proof.
 
+> ✅ **3F.6 完成（2026-08-11）**：生产检索与反馈闭环落地——`SearchChannelAdapters`（`GenerationRoutedChannelAdapter` 多通道 generation 路由：text_dense E5 384d / vision_dense SigLIP2 768d / ocr_text / lexical 经 `ActiveRouteSet` 独立向量空间，RRF 融合 + ID-keyed `metadataByID` 回填 DEF-34-001，通道超时/空索引 → `timedOut` 部分结果 US-RET-008、L3 路由缺失以 error 区分 DEF-34-002）、`SearchResultCacheActor`（policy-aware TTL 缓存，键含 policyVersion/modelVersion/queryHash，US-RET-007）、`SearchPipeline` 追问（FIFO ≤10 + memoryIds 隐式过滤 + `.followUpQuery` 审计，US-RET-005 AC-1/2/4/5，AC-3 延后 DEF-58-001）、`FeedbackActor` query-conditioned 重排（US-FBK-001 AC-4）+ `FeedbackPipeline` 活跃 generationId 传递（DEF-56-005 / ADR-010 决策 4）、L2 反馈失败 → `PendingOperations`（DEF-37-001，可见 + 手动重试）、`CrossAppIntentParser` + `CrossAppFusionEngine`（US-SRC-010 逐源授权 / 时间对齐 / 来源标签 / `.crossAppSearch` 审计，live HealthKit provider 属 3F.8）、`BoundedReranker` 主观有界重排（US-SRC-011）、`searchCanonical` ORDER BY rank（DEF-56-006）。focused 45/45（ProductionSearchFeedbackTests 30 + CrossAppSearchTests 15），全量 962 tests 0 失败。DEF-34-001/002、DEF-37-001、DEF-56-005/006 关闭。PR `feat(pipeline): add production search and feedback [3F.6]`。
+
 ### 3F.6: Production search 与 feedback
 
 **Files**

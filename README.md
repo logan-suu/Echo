@@ -27,6 +27,8 @@ Echo 是一款**完全离线**的端侧 AI 记忆助手。它自动索引你的 
 > 📌 **当前状态**：核心架构（Actor 隔离、认知管线、隐私校验、反馈学习）已实现并通过测试；AI 推理层（3F.3）已接入 E5 真实推理 + SigLIP2 工件与 fail-closed 桥接，Whisper 真实转写由 3F.3b 接入（whisper.cpp v1.9.2）。数据源接入遵循 R-5.2 决策（Photos 自动 + 备忘录/语音备忘录 Share 分享）。
 >
 > 📌 **3F.2 已交付（2026-08-05）**：真实来源边界——`PhotoKitSourceAdapter`（授权状态机 + 撤回即停 + 本地仅下载策略 + `.dataSourceConnected` 审计）、`PhotoKitChangeObserver`（变更去重）、`EchoShareExtension` target（Share 预览确认 → App Group 信封原子入队）、`SharedImportQueueActor`（去重 + 恰好一次消费，App 重启恢复）、`IngestPipeline.ingestShared`/`drainSharedImports`（R-006 + ExcludedAssets fail-closed + hash-only `.shareExtensionImported` 审计）。App/Extension 共享 `group.com.echo.Echo` App Group。真实模型工件推理（E5/SigLIP2/Whisper）由 3F.3 接入；真实来源 E2E 证据于 3F.11 no-fixture 门禁验证。
+>
+> 📌 **3F.6 已交付（2026-08-11）**：生产检索与反馈闭环——多通道 generation 路由检索（text_dense/vision_dense/ocr_text/lexical 经 `ActiveRouteSet`）+ RRF 融合 + ID-keyed 元数据回填、通道超时 → `timedOut` 部分结果（US-RET-008）、policy-aware 结果缓存（US-RET-007）、追问查询 FIFO ≤10 + memoryIds 隐式过滤 + `.followUpQuery` 审计（US-RET-005，AC-3 LLM 改写延后 DEF-58-001）、query-conditioned 反馈重排 + 反馈 generation 身份（ADR-010）、L2 反馈失败 → `PendingOperations`、跨 App 意图解析与时间对齐融合 + 逐源授权 + `.crossAppSearch` 审计（US-SRC-010）、主观有界重排（US-SRC-011）、`searchCanonical` ORDER BY rank（DEF-56-006）。SigLIP2 视觉推理仍依赖 3F.3a Core ML 转换审批，视觉/OCR 通道空索引降级为 timedOut 部分结果（不阻断其他通道）。
 
 ---
 
@@ -38,7 +40,7 @@ Echo 是一款**完全离线**的端侧 AI 记忆助手。它自动索引你的 
 | **隐私可审计**   | 隐私校验 (`PrivacyCheckpoint`) 全覆盖，审计日志保留 30 天 | ✅ |
 | **零网络依赖**   | 所有模型随 App 打包，无网络下载                           | ✅ |
 | **反馈学习**     | 纯本地反馈驱动重排（余弦阈值 ≥0.80，权重截断 ±0.5）       | ✅ |
-| **跨语言检索**   | E5 语义空间 + RRF 多通道融合，中英双语互检（Recall@10 ≥ 85% 目标） | 🔶 |
+| **跨语言检索**   | E5 语义空间 + 生产多通道 RRF 融合（3F.6：text_dense/lexical 通道就绪；SigLIP2 视觉/OCR 通道空索引降级 timedOut 部分结果），中英双语互检（Recall@10 ≥ 85% 目标） | 🔶 |
 | **主动唤醒**     | 地理围栏 / 日期纪念日 / 情绪感知，三栖唤醒引擎            | 🔶 |
 | **透明可控**     | 实时后台任务面板、统一错误矩阵、断点续传                  | 🔶 |
 | **AI 创作**      | 情感内容生成、叙事报告、私有 Prompt 模板                  | 🔮 |
@@ -314,6 +316,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 - **3F.4** Canonical storage 与 generation 生命周期（✅ 2026-08-09：`CanonicalMemoryRepositoryActor` 确定性 ID + 事务 CRUD + 全删除边界；`GenerationRegistryActor` shadow build / 原子发布 / 回滚 / 重启恢复 / 持久化；反馈 generation 身份；US-AWK-007 编辑字段持久化）
 - **3F.5** Production ingestion（✅ 2026-08-10：生产摄入路径——`ingestProductionPhoto/Video/SharedText/SharedAudio` 经 `CanonicalMemoryRepositoryActor` 单事务写入 canonical + 每代向量 + FTS，向量路由由 `GenerationRegistryActor` 活跃路由解析（ADR-010）；`TaskQueueActor` 串行入队 + `ProgressActor` 断点续传（ADR-011）；`SyncPipeline` 生产删除路由；AppDelegate 装配真实 E5/SigLIP2/Whisper，无 Stub）
 - **3F.5** Production ingestion
+- **3F.6** Production search 与 feedback（✅ 2026-08-11：生产多通道检索——`SearchChannelAdapters` 按 `ActiveRouteSet` 逐通道解析每代向量存储（text_dense E5 384d / vision_dense SigLIP2 768d / ocr_text / lexical），RRF 融合 + ID-keyed `metadataByID` 回填（DEF-34-001），通道超时 → `timedOut` 部分结果、L3 路由缺失以 error 区分（US-RET-008 / DEF-34-002）；`SearchResultCacheActor` policy-aware TTL 缓存（US-RET-007）；追问查询 FIFO 历史 ≤10 轮 + memoryIds 隐式过滤 + `.followUpQuery` 审计（US-RET-005 AC-1/2/4/5，AC-3 LLM 改写延后 DEF-58-001）；`FeedbackActor` 按 queryText 条件化重排（US-FBK-001 AC-4）+ `FeedbackPipeline` 传递活跃 generationId（ADR-010），L2 反馈失败 → `PendingOperations`（DEF-37-001）；`CrossAppIntentParser` + `CrossAppFusionEngine` 跨 App 意图解析与时间对齐融合、逐源授权 + `.crossAppSearch` 审计（US-SRC-010，live HealthKit provider 属 3F.8）；`BoundedReranker` 主观有界重排（US-SRC-011）；`searchCanonical` ORDER BY rank（DEF-56-006））
 - **3F.6** Production search 与 feedback
 - **3F.7** UI 到 Core 全域接线
 - **3F.8** Awakening 与 system adapters

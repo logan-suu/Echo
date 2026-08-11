@@ -4,11 +4,13 @@
 //            §7.3 (审计事件完整清单)
 //            docs/decisions/ADR-007-production-composition-consent.md §决策-4 (AuditLog schema/存储迁移)
 // 任务: 3F.1 - Production composition、首次启动、同意与隐私
+//       3F.6 - 跟进查询审计事件（US-RET-005 AC-4）
 // AC 覆盖: AGENTS.md §5.4 (必填字段 eventType/timestamp/traceID/policyVersion/success, hash-only, 30天, 加密),
-//          US-PRV-006 AC-6 (retentionPolicyEvaluated), ADR-007 §决策-3 (purgeFailed 审计)
+//          US-PRV-006 AC-6 (retentionPolicyEvaluated), ADR-007 §决策-3 (purgeFailed 审计),
+//          US-RET-005 AC-4 ✅ (followUpQuery, 2026-08-11 3F.6), US-SRC-010 AC-5 ✅ (crossAppSearch)
 // 架构约束: AGENTS.md R-007 (禁止 unchecked Sendable), 仅记录哈希摘要禁止原文
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-08-04
+// 生成时间: 2026-08-04 | 更新: 2026-08-11 (3F.6 followUpQuery/crossAppSearch)
 // ==========================================
 
 import Foundation
@@ -73,6 +75,10 @@ public enum AuditEvent: String, Sendable, Codable {
     case retentionPolicyEvaluated
     /// Share Extension 显式分享摄入 (US-SRC-003 AC-4: 含 appBundleId + contentType)
     case shareExtensionImported
+    /// 跨 App 检索融合 (US-SRC-010 AC-5: sourceType 记录【实际授权】源列表，非请求列表)
+    case crossAppSearch
+    /// 跟进查询（对话轮次，US-RET-005 AC-4: 审计携带父轮次 traceID，sourceLanguage 含 parentTraceId）
+    case followUpQuery
 }
 
 // MARK: - Audit Log Entry

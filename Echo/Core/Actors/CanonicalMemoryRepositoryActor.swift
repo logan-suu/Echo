@@ -12,6 +12,7 @@
 //          F-3 searchCanonical FTS5 语法转义 (token 化短语 AND)
 //          2026-08-09 PR#56 二轮: CR-3 FTS 行与 representation 解耦 (每记忆一行),
 //          CR-1 deleteMemory 缺参回退 memory 定位, Nitpick-1 故障注入 DEBUG-only
+//          2026-08-11 3F.6: searchCanonical ORDER BY rank (DEF-56-006, FTS5 bm25 相关性排序)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007, R-008 (跨 Actor await)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-09
@@ -198,8 +199,9 @@ public actor CanonicalMemoryRepositoryActor {
         }
         guard !tokens.isEmpty else { return [] }
         let ftsQuery = tokens.joined(separator: " ")
+        // DEF-56-006: FTS5 rank（bm25 负分）升序 = 最相关优先，排序先于 LIMIT 截断
         let rows = try await db.executeQuery(
-            sql: "SELECT memoryId FROM MemoryFTS WHERE MemoryFTS MATCH ? LIMIT ?",
+            sql: "SELECT memoryId FROM MemoryFTS WHERE MemoryFTS MATCH ? ORDER BY rank LIMIT ?",
             bindings: [.text(ftsQuery), .int(Int64(limit))]
         )
         return rows.compactMap { row in

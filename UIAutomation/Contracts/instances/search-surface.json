@@ -27,7 +27,8 @@
     "loaded",
     "empty",
     "error",
-    "lowConfidence"
+    "lowConfidence",
+    "partialResults"
   ],
   "version": "1.0.0"
 }

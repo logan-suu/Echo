@@ -1,0 +1,72 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "search-partial-results",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "discovery",
+  "payload": {
+    "query": "猫",
+    "partialResults": true,
+    "channelProvenance": {
+      "successfulChannels": [
+        { "channel": "text_dense", "generationId": "text_dense/e5-v1" },
+        { "channel": "lexical", "generationId": "lexical/fts5-v1" }
+      ],
+      "unavailableChannels": [
+        { "channel": "vision_dense", "generationId": "vision_dense/siglip2-v1", "reason": "timeout" },
+        { "channel": "ocr_text", "generationId": "ocr_text/e5-v1", "reason": "route missing" }
+      ]
+    },
+    "results": [
+      {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "assetId": "photo-zh-3",
+        "sourceType": "photo",
+        "timestamp": 1723608000,
+        "originalText": null,
+        "sourceLanguage": null,
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.88,
+        "alignmentScore": null,
+        "feedbackAdjustment": null,
+        "lowConfidence": false,
+        "fallbackReason": null,
+        "unappliedFilters": []
+      },
+      {
+        "id": "44444444-4444-4444-4444-444444444444",
+        "assetId": "note-zh-4",
+        "sourceType": "note",
+        "timestamp": 1723521600,
+        "originalText": "楼下那只三花猫今天又来了",
+        "sourceLanguage": "zh-Hans",
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.84,
+        "alignmentScore": null,
+        "feedbackAdjustment": null,
+        "lowConfidence": false,
+        "fallbackReason": null,
+        "unappliedFilters": []
+      },
+      {
+        "id": "55555555-5555-5555-5555-555555555555",
+        "assetId": "voice-zh-5",
+        "sourceType": "voice",
+        "timestamp": 1723435200,
+        "originalText": "猫咪一直蹲在窗台上晒太阳",
+        "sourceLanguage": "zh-Hans",
+        "crossLanguageMatch": false,
+        "cosineSimilarity": 0.79,
+        "alignmentScore": null,
+        "feedbackAdjustment": null,
+        "lowConfidence": false,
+        "fallbackReason": null,
+        "unappliedFilters": []
+      }
+    ]
+  },
+  "controlledVariables": ["timestamp", "id", "cosineSimilarity"],
+  "version": "1.0.0"
+}

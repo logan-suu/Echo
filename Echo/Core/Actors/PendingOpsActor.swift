@@ -2,8 +2,9 @@
 // 文件: PendingOpsActor.swift
 // 对应规格: docs/02-architecture/架构设计文档.md §5 (L2 可恢复错误处理)
 // 任务: 1.4 - 集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表
+//        3F.6 - add 自动重连（DEF-37-001: DB 关闭时 L2 PendingOperations 写入存活）
 // 架构约束: AGENTS.md §4.4 (L1~L4 错误分级), AGENTS.md §4.2 (Actor 隔离)
-// 生成时间: 2026-07-04
+// 生成时间: 2026-07-04 | 更新: 2026-08-11 (3F.6 自动重连)
 // ==========================================
 
 import Foundation
@@ -18,7 +19,19 @@ public actor PendingOpsActor {
     }
 
     /// L2 失败操作入队
+    ///
+    /// DEF-37-001: 数据库连接已关闭（connectionFailed）时自动重连并重试一次，
+    /// 保证 L2 PendingOperations 写入在故障注入场景下仍然存活。
     public func add(operation: PendingOperation) async throws {
+        do {
+            try await performAdd(operation)
+        } catch DatabaseError.connectionFailed {
+            try await db.open()
+            try await performAdd(operation)
+        }
+    }
+
+    private func performAdd(_ operation: PendingOperation) async throws {
         try await db.executeWrite(
             sql: "INSERT INTO PendingOperations (operationId, operationType, retryCount, parameters, createdAt, lastError) VALUES (?, ?, ?, ?, ?, ?)",
             bindings: [

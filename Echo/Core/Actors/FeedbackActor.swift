@@ -4,10 +4,13 @@
 //            docs/02-architecture/架构设计文档.md §8 (反馈学习与重排集成)
 // 任务: 1.4 - 集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表
 //        2.7 - FeedbackActor + 重排公式（阈值0.80，截断±0.5）
+//        3F.6 - computeAdjustment 查询文本条件化（US-FBK-001 AC-4: memoryId + query 关联）
 // AC 覆盖: US-FBK-002 AC-1 (阈值≥0.80), AC-2 (时间衰减 90d/180d), AC-3 (截断±0.5),
 //           AC-4 (本地存储), AC-5 (清空), AC-6 (撤销), AC-7 (审计 .feedbackReceived/.feedbackReset/.feedbackRevoked)
+//           US-FBK-001 AC-4 ✅ (feedback 仅对相同 queryText 生效, DEF-56-006 关联)
 // 架构约束: AGENTS.md §5.3 (反馈存储契约), AGENTS.md §7.3 (审计事件)
 // 生成时间: 2026-07-04 | 更新: 2026-07-12 (AC-7 审计集成, PR review: policyVersion fix)
+//                    | 更新: 2026-08-11 (3F.6 查询文本条件化)
 // ==========================================
 
 import Foundation
@@ -93,8 +96,10 @@ public actor FeedbackActor {
     }
 
     /// 计算反馈重排调整值（US-FBK-002 AC-1~3）
+    ///
+    /// US-FBK-001 AC-4: 反馈与 memoryId + queryText 关联 — 仅相同 queryText 的反馈参与调整。
     public func computeAdjustment(for memoryId: UUID, queryText: String) async throws -> FeedbackAdjustment {
-        let entries = try await fetchEntries(for: memoryId)
+        let entries = try await fetchEntries(for: memoryId).filter { $0.queryText == queryText }
         guard !entries.isEmpty else {
             return FeedbackAdjustment(adjustment: 0, feedbackCount: 0)
         }

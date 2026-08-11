@@ -1,0 +1,28 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "partialResults",
+  "surfaceId": "search-results",
+  "dataConditions": {
+    "query": "猫",
+    "results": ">= 1 result mapped from fixture search-partial-results.json with partialResults=true",
+    "hasSearched": true,
+    "partialResults": {
+      "successfulChannels": [
+        { "channel": "text_dense", "generationId": "text_dense/e5-v1" },
+        { "channel": "lexical", "generationId": "lexical/fts5-v1" }
+      ],
+      "unavailableChannels": [
+        { "channel": "vision_dense", "generationId": "vision_dense/siglip2-v1", "reason": "timeout" },
+        { "channel": "ocr_text", "generationId": "ocr_text/e5-v1", "reason": "route missing" }
+      ]
+    }
+  },
+  "allowedActions": ["search.submit", "search.clear", "result.like", "result.dislike", "result.markBadCase"],
+  "expectedSemantics": {
+    "searchField": "Search your memories",
+    "banner": "Some results may be incomplete",
+    "resultCards": "[type], [description], [time], [location]",
+    "readingOrder": ["searchField", "resultCard_0", "resultCard_1", "resultCard_2"]
+  },
+  "version": "1.0.0"
+}
