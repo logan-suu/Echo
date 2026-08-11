@@ -132,9 +132,10 @@ struct DeviceMigrationTests {
             text: "a photo memory"
         )
         let (package, _) = try await actor.exportPackage()
-        // 包内绝不包含原始文件名/路径内容（canonical 引用仅字段值）
-        let text = String(data: package, encoding: .utf8) ?? ""
-        #expect(!text.contains("photo-1\n")) // header 无 sourceLocator 原文（locator 仅存在于加密载荷）
+        // 包内绝不包含原始记忆内容（canonicalText/sourceLocator 明文仅存在于加密载荷，
+        // 原始字节流中不得出现——对 AES-GCM 密文做 UTF-8 解码恒 nil，故按原始字节断言）
+        #expect(package.range(of: Data("photo-1".utf8)) == nil)
+        #expect(package.range(of: Data("a photo memory".utf8)) == nil)
         #expect(!package.isEmpty)
     }
 
@@ -187,7 +188,7 @@ struct DeviceMigrationTests {
         )
         // overwrite 清除目标原有数据（source + target 2 条）并写入源数据
         #expect(result.overwrittenCount == 2)
-        #expect(try await actor.loadMemoryCount() == 1)
+        #expect(try await actor.loadMemoryCount(using: db) == 1)
     }
 
     @Test("SRC-007 AC-4: merge keeps both unique memories and flags conflicts")
@@ -216,6 +217,42 @@ struct DeviceMigrationTests {
         #expect(result.conflictCount == 1)
         // 🔴-1 修复：merge 保留目标独有数据，完整性校验须逐条校验导入 ID 存在而非总数相等
         #expect(result.integrityCheckPassed)
+        // 目标独有记忆必须存活（PR#59 CR Minor：merge 不丢弃目标独有数据）
+        let uniqueRows = try await db.executeQuery(
+            sql: "SELECT memoryId FROM Memory WHERE memoryId = ?",
+            bindings: [.text("66666666-6666-6666-6666-666666666666")]
+        )
+        #expect(!uniqueRows.isEmpty, "merge 保留目标独有记忆")
+    }
+
+    @Test("SRC-007 AC-4: allBoth keeps both target and source versions (CR-1 fix)")
+    func test_AC4_AllBothKeepsBothVersions() async throws {
+        try await seedActiveRoute()
+        let actor = makeActor()
+        let sourceID = UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!
+        try await seedMemory(memoryId: sourceID, locator: "note-src", sourceType: "note", text: "source note")
+        let (package, key) = try await actor.exportPackage()
+
+        // 目标设备有同 ID 冲突记忆（INSERT OR REPLACE 覆盖为 target 版本）
+        try await seedMemory(memoryId: sourceID, locator: "note-src", sourceType: "note", text: "target note")
+
+        let result = try await actor.importPackage(
+            package: package,
+            transferKey: key,
+            strategy: .merge,
+            batchPolicy: .allBoth,
+            fromDevice: "iPhone-A",
+            toDevice: "iPhone-B"
+        )
+        #expect(result.conflictCount == 1)
+        #expect(result.integrityCheckPassed)
+        // 目标版本保留原 ID + 源版本以派生确定性 ID 导入副本 → 两行共存
+        let rows = try await db.executeQuery(sql: "SELECT memoryId FROM Memory ORDER BY memoryId", bindings: [])
+        #expect(rows.count == 2)
+        // 派生 ID 确定性：同一源 ID 派生结果一致
+        let derived = DeviceMigrationActor.derivedMemoryID(from: sourceID)
+        #expect(DeviceMigrationActor.derivedMemoryID(from: sourceID) == derived)
+        #expect(derived != sourceID)
     }
 
     // MARK: - US-SRC-007 AC-2: ExcludedAssets 随本地迁移
@@ -327,7 +364,7 @@ struct DeviceMigrationTests {
             threw = true
         }
         #expect(threw, "wrong transfer key must fail closed")
-        let count = try await actor.loadMemoryCount()
+        let count = try await actor.loadMemoryCount(using: db)
         #expect(count == 0, "failed import must not mutate active DB")
     }
 }
@@ -336,8 +373,9 @@ struct DeviceMigrationTests {
 
 public extension DeviceMigrationActor {
     /// 读取当前 Memory 表行数（测试辅助，不触发审计）。
-    func loadMemoryCount() async throws -> Int {
-        let rows = try await DatabaseManager.shared.executeQuery(
+    /// 显式传入 db，避免硬编码 DatabaseManager.shared（Nitpick：与注入 db 一致）。
+    func loadMemoryCount(using db: DatabaseManager) async throws -> Int {
+        let rows = try await db.executeQuery(
             sql: "SELECT COUNT(*) AS cnt FROM Memory",
             bindings: []
         )

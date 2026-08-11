@@ -93,8 +93,8 @@ public enum LiveAppAdapters {
 
     // MARK: - Private Helpers
 
-    /// 异步解析活跃 text generation 向量存储（供需要 await 的调用方使用）。
-    public static func resolveActiveTextStore(
+    /// 异步解析活跃 text generation 向量存储（内部辅助，无需公开）。
+    static func resolveActiveTextStore(
         registry: GenerationRegistryActor
     ) async -> VectorStoreActor? {
         guard let route = try? await registry.loadActiveRoute() else { return nil }

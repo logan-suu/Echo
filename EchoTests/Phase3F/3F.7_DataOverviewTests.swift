@@ -78,6 +78,17 @@ struct DataOverviewTests {
         #expect(snap.databaseBytes > 0)
     }
 
+    @Test("SRC-009 AC-1: translationCache exposes byte size (US-SET-003 cache row)")
+    func test_AC1_CacheByteSize() async throws {
+        try await db.executeWrite(
+            sql: "INSERT OR REPLACE INTO translationCache (memoryId, languagePair, translatedText, createdAt) VALUES (?, ?, ?, ?)",
+            bindings: [.text("m-1"), .text("zh-Hans-en-US"), .text("Hello world"), .double(Date().timeIntervalSince1970)]
+        )
+        let snap = try await makeService().snapshot()
+        #expect(snap.translationCacheCount == 1)
+        #expect(snap.translationCacheBytes == Int64("Hello world".utf8.count))
+    }
+
     @Test("SRC-009 AC-1: snapshot exposes model totals")
     func test_AC1_ModelTotals() async throws {
         let snap = try await makeService().snapshot()

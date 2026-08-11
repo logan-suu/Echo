@@ -5,6 +5,8 @@
 // 任务: 3F.7 - UI 到 Core 全域接线
 // AC 覆盖: US-SRC-009 AC-1 (各数据源条目数/存储占用/向量维度), AC-2 (模型状态),
 //          AC-3 (≤5s 实时更新), AC-4 (JSON 导出), AC-5 (.dataOverviewAccessed 审计)
+//          PR#59 CR 修复: translationCacheBytes (US-SET-003 缓存占用), DataOverviewError LocalizedError,
+//                         审计写失败 os.Logger 可观测, URL.resourceValues 文件大小
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §5.4 (hash-only 审计), §4.4 (L1~L4 错误分级),
 //           R-006/R-007/R-008
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
@@ -12,6 +14,7 @@
 // ==========================================
 
 import Foundation
+import os
 
 // MARK: - Data Overview Snapshot
 
@@ -27,6 +30,8 @@ public struct DataOverviewSnapshot: Sendable, Equatable {
     public nonisolated let vectorStoreBytes: Int64
     /// 翻译缓存条目数
     public nonisolated let translationCacheCount: Int
+    /// 翻译缓存存储字节数（US-SET-003 缓存占用展示用）
+    public nonisolated let translationCacheBytes: Int64
     /// 活跃 generation 的向量维度（键 = generationId）
     public nonisolated let vectorDimensions: [String: Int]
     /// 模型加载状态摘要（loaded / loading / failed / notLoaded 计数）
@@ -43,6 +48,7 @@ public struct DataOverviewSnapshot: Sendable, Equatable {
         databaseBytes: Int64,
         vectorStoreBytes: Int64,
         translationCacheCount: Int,
+        translationCacheBytes: Int64,
         vectorDimensions: [String: Int],
         modelLoadedCount: Int,
         modelFailedCount: Int,
@@ -55,6 +61,7 @@ public struct DataOverviewSnapshot: Sendable, Equatable {
         self.databaseBytes = databaseBytes
         self.vectorStoreBytes = vectorStoreBytes
         self.translationCacheCount = translationCacheCount
+        self.translationCacheBytes = translationCacheBytes
         self.vectorDimensions = vectorDimensions
         self.modelLoadedCount = modelLoadedCount
         self.modelFailedCount = modelFailedCount
@@ -109,12 +116,12 @@ public actor DataOverviewService {
         let memoryCount = counts.values.reduce(0, +)
         let databaseBytes = try await dbFileSize()
         let vectorStoreBytes = try await vectorStoreSize()
-        let cacheCount = try await translationCacheCount()
+        let (cacheCount, cacheBytes) = try await translationCacheStats()
         let dimensions = try await activeVectorDimensions()
 
         let status = await modelLoader.overallStatus
 
-        try? await privacyActor.writeAuditLog(
+        let auditResult = try? await privacyActor.writeAuditLog(
             eventType: .dataOverviewAccessed,
             traceID: traceID,
             policyVersion: policy.policyVersion,
@@ -123,6 +130,10 @@ public actor DataOverviewService {
             elapsedMs: Int(Date().timeIntervalSince(started) * 1000),
             content: "databaseBytes=\(databaseBytes)|vectorBytes=\(vectorStoreBytes)|generations=\(dimensions.count)"
         )
+        if auditResult == nil {
+            // 审计写入失败为 best-effort（不阻断），但需可观测（PR#59 CR Minor）
+            auditLogger.error("dataOverviewAccessed audit write failed (traceID \(traceID, privacy: .public))")
+        }
 
         return DataOverviewSnapshot(
             countsBySourceType: counts,
@@ -130,6 +141,7 @@ public actor DataOverviewService {
             databaseBytes: databaseBytes,
             vectorStoreBytes: vectorStoreBytes,
             translationCacheCount: cacheCount,
+            translationCacheBytes: cacheBytes,
             vectorDimensions: dimensions,
             modelLoadedCount: status.loadedCount,
             modelFailedCount: status.failedCount,
@@ -200,20 +212,24 @@ public actor DataOverviewService {
         var total: Int64 = 0
         for gen in generations {
             let url = await generationRegistry.storeFileURL(for: gen.generationId)
-            if let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? nil {
-                total += size
+            let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize
+            if let size {
+                total += Int64(size)
             }
         }
         return total
     }
 
-    /// translationCache 条目数。
-    private func translationCacheCount() async throws -> Int {
+    /// translationCache 条目数与存储字节数。
+    private func translationCacheStats() async throws -> (count: Int, bytes: Int64) {
         let rows = try await db.executeQuery(
-            sql: "SELECT COUNT(*) AS cnt FROM translationCache",
+            sql: "SELECT COUNT(*) AS cnt, COALESCE(SUM(length(translatedText)), 0) AS bytes FROM translationCache",
             bindings: []
         )
-        return rows.first?["cnt"]?.intValue.map(Int.init) ?? 0
+        let row = rows.first
+        let count = row?["cnt"]?.intValue.map(Int.init) ?? 0
+        let bytes = row?["bytes"]?.intValue ?? 0
+        return (count, bytes)
     }
 
     /// 活跃 generation 的向量维度（generationId → dimension）。
@@ -230,13 +246,16 @@ public actor DataOverviewService {
 // MARK: - Error
 
 /// 数据概览错误（L2 可恢复）。
-public enum DataOverviewError: Error {
+public enum DataOverviewError: Error, LocalizedError {
     /// JSON 导出失败
     case exportFailed
 
-    public var errorDescription: String? {
+    public nonisolated var errorDescription: String? {
         switch self {
         case .exportFailed: return "Unable to export data overview"
         }
     }
 }
+
+/// 审计写失败日志（best-effort 审计不阻断 Pipeline 时可观测）。
+nonisolated private let auditLogger = Logger(subsystem: "com.echo.Echo", category: "audit")

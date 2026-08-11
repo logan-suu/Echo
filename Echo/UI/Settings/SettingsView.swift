@@ -48,11 +48,12 @@ struct SettingsView: View {
 
     @State private var viewModel: SettingsViewModel
 
-    init(viewModel: SettingsViewModel = SettingsViewModel(
-        composition: AppComposition.shared,
-        dataOverviewService: LiveAppAdapters.makeDataOverviewService()
-    )) {
-        _viewModel = State(initialValue: viewModel)
+    /// 注入或默认构造 ViewModel；State 首次构建后复用同一实例（Nitpick：避免默认参数每次重建 VM）。
+    init(viewModel: SettingsViewModel? = nil) {
+        _viewModel = State(initialValue: viewModel ?? SettingsViewModel(
+            composition: AppComposition.shared,
+            dataOverviewService: LiveAppAdapters.makeDataOverviewService()
+        ))
     }
 
     var body: some View {

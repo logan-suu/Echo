@@ -5,6 +5,8 @@
 // 任务: 3F.7 - UI 到 Core 全域接线 (US-SRC-007 迁移安全子契约)
 // AC 覆盖: ECHOMIG1 固定头 / K_i 派生 / AES-GCM-256 逐块加密 / RFC 8785 JCS manifest /
 //          manifestSHA256 校验 / 精确 AAD / chunk framing / 逐记录哈希 / staging 原子发布
+//          PR#59 CR 修复: CR-3 importPackage 返回 (manifest, payloads) 消除重复解析;
+//                         CR-6 强制 maxPackageBytes / maxExpansionRatio / maxRecordCount / combined-size 资源边界
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §5.4 (hash-only), R-007 (禁止 unchecked Sendable),
 //           仅系统 CryptoKit; 禁止网络/云服务 (R-001/R-005, US-SRC-007 AC-1)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
@@ -211,8 +213,8 @@ public struct DeviceMigrationService {
         guard data.count >= 4 + 4 + 12 + 16 else {
             throw DeviceMigrationError.tamperDetected("chunk too short")
         }
-        let index = Int(UInt32(data.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian))
-        let length = Int(UInt32(data.subdata(in: 4..<8).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian))
+        let index = Int(UInt32(data.prefix(4).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.bigEndian))
+        let length = Int(UInt32(data.subdata(in: 4..<8).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.bigEndian))
         let nonce = try AES.GCM.Nonce(data: data.subdata(in: 8..<20))
         let expectedCipher = 4 + 4 + 12 + length + 16
         guard data.count == expectedCipher else {
@@ -348,20 +350,23 @@ public struct DeviceMigrationService {
 
     // MARK: - Import
 
-    /// 导入并校验 ECHOMIG1 加密包（全部校验通过才返回解密载荷，发布由调用方原子执行）。
+    /// 导入并校验 ECHOMIG1 加密包（全部校验通过才返回 manifest + 解密载荷，发布由调用方原子执行）。
     ///
     /// - Parameters:
     ///   - package: 包字节
     ///   - transferKey: 用户输入的传输密钥
-    /// - Returns: 校验通过的记录载荷流（record.id → Data）
+    /// - Returns: 校验通过的解析后 manifest 与记录载荷流（record.id → Data）
     public nonisolated static func importPackage(
         _ package: Data,
         transferKey: SymmetricKey
-    ) throws -> [String: Data] {
+    ) throws -> (manifest: DeviceMigrationManifest, payloads: [String: Data]) {
         // (1) 解析固定头与 chunk 帧
         let header = try EchoMigrationHeader.parse(package)
 
-        // (2) 资源边界：combined 上限
+        // (2) 资源边界：包体积 / 明文总量（CR-6）
+        guard package.count <= EchoMigrationFormat.maxPackageBytes else {
+            throw DeviceMigrationError.resourceBoundExceeded("package exceeds maxPackageBytes")
+        }
         guard header.totalPlaintextBytes <= EchoMigrationFormat.maxTotalPlaintextBytes else {
             throw DeviceMigrationError.resourceBoundExceeded("totalPlaintextBytes exceeds 4 GiB")
         }
@@ -378,8 +383,8 @@ public struct DeviceMigrationService {
             guard cursor + 8 <= package.count else {
                 throw DeviceMigrationError.malformedHeader("truncated chunk framing")
             }
-            let index = Int(UInt32(package.subdata(in: cursor..<(cursor + 4)).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian))
-            let length = Int(UInt32(package.subdata(in: (cursor + 4)..<(cursor + 8)).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian))
+            let index = Int(UInt32(package.subdata(in: cursor..<(cursor + 4)).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.bigEndian))
+            let length = Int(UInt32(package.subdata(in: (cursor + 4)..<(cursor + 8)).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.bigEndian))
             guard length >= 1 else {
                 throw DeviceMigrationError.malformedHeader("zero-length chunk at index \(index)")
             }
@@ -427,7 +432,7 @@ public struct DeviceMigrationService {
             throw DeviceMigrationError.hashMismatch("manifestSHA256 mismatch")
         }
 
-        // (5) schema/字段一致性
+        // (5) schema/字段一致性 + 记录数 / combined 体积上限（CR-6）
         let manifest = try JCSEncoder.parseManifest(manifestPlaintext)
         guard manifest.archiveUUID.lowercased() == header.archiveUUID.lowercased() else {
             throw DeviceMigrationError.invalidManifest("archiveUUID mismatch")
@@ -443,6 +448,19 @@ public struct DeviceMigrationService {
         }
         guard manifest.recordCount >= 1 else {
             throw DeviceMigrationError.invalidManifest("recordCount must be >= 1")
+        }
+        guard manifest.recordCount <= EchoMigrationFormat.maxRecordCount else {
+            throw DeviceMigrationError.resourceBoundExceeded("recordCount exceeds 1,000,000")
+        }
+        let (combined, combinedOverflow) = manifestPlaintext.count.addingReportingOverflow(manifest.totalPlaintextBytes)
+        guard !combinedOverflow, combined <= EchoMigrationFormat.maxPackageBytes else {
+            throw DeviceMigrationError.resourceBoundExceeded("manifest + data exceeds package limit")
+        }
+        // 膨胀率 100:1 — 以（manifest + data）明文为基准；固定头/块开销远低于比例，
+        // 因此结构合法的最小包（totalPlaintextBytes=1）不会被误拒（§4.6.7 smallest-valid）。
+        let (maxExpanded, ratioOverflow) = combined.multipliedReportingOverflow(by: EchoMigrationFormat.maxExpansionRatio)
+        guard !ratioOverflow, package.count <= maxExpanded else {
+            throw DeviceMigrationError.resourceBoundExceeded("expansion ratio exceeds 100:1")
         }
         for record in manifest.records where record.byteLength < 1 {
             throw DeviceMigrationError.invalidManifest("record byteLength must be >= 1")
@@ -494,7 +512,7 @@ public struct DeviceMigrationService {
             result[record.id] = slice
             offset = end
         }
-        return result
+        return (manifest, result)
     }
 
     /// 从 chunk 帧中读取明文长度（index 之后的 4 字节）。
@@ -502,7 +520,7 @@ public struct DeviceMigrationService {
         guard chunk.count >= 8 else {
             throw DeviceMigrationError.malformedHeader("chunk too short for length")
         }
-        return Int(UInt32(chunk.subdata(in: 4..<8).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian))
+        return Int(UInt32(chunk.subdata(in: 4..<8).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.bigEndian))
     }
 }
 

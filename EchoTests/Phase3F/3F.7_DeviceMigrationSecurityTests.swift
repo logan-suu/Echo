@@ -81,13 +81,14 @@ struct DeviceMigrationSecurityTests {
         #expect(parsed.chunkCount == 2)
         #expect(parsed.totalPlaintextBytes == 1)
 
-        // wrong magic
-        let wrongMagic = bytes
+        // wrong magic — 整个替换首行（magic 为 8 字节 "ECHOMIG1" + LF）
         var threwUnsupported = false
-        do { _ = try EchoMigrationHeader.parse(Data("NOPE\n".utf8) + bytes.dropFirst(7)) } catch { threwUnsupported = true }
+        do {
+            let wrongMagicBytes = Data("NOPE\n".utf8) + bytes.dropFirst("ECHOMIG1\n".count)
+            _ = try EchoMigrationHeader.parse(wrongMagicBytes)
+        } catch { threwUnsupported = true }
         #expect(threwUnsupported)
         // wrong algorithm
-        let wrongAlgo = bytes.withUnsafeBytes { Data($0) }
         var bad = Data()
         bad.append(Data("ECHOMIG1\n".utf8))
         bad.append(Data("algorithm=WRONG\n".utf8))
@@ -95,7 +96,6 @@ struct DeviceMigrationSecurityTests {
         var threwUnsupported2 = false
         do { _ = try EchoMigrationHeader.parse(bad) } catch { threwUnsupported2 = true }
         #expect(threwUnsupported2)
-        _ = wrongAlgo
     }
 
     @Test("Header: manifestSHA256 must be exactly 64 lowercase hex")
@@ -150,8 +150,9 @@ struct DeviceMigrationSecurityTests {
 
         let package = try DeviceMigrationService.exportPackage(records: records, payloads: payloads, transferKey: key)
         let result = try DeviceMigrationService.importPackage(package, transferKey: key)
-        #expect(result.count == 1)
-        #expect(String(data: result["11111111-1111-1111-1111-111111111111"]!, encoding: .utf8) == "hello world")
+        #expect(result.manifest.recordCount == 1)
+        #expect(result.payloads.count == 1)
+        #expect(String(data: result.payloads["11111111-1111-1111-1111-111111111111"]!, encoding: .utf8) == "hello world")
     }
 
     @Test("Round-trip: cross-boundary record spanning data chunks")
@@ -164,7 +165,7 @@ struct DeviceMigrationSecurityTests {
         ]
         let package = try DeviceMigrationService.exportPackage(records: records, payloads: ["11111111-1111-1111-1111-111111111111": big], transferKey: key)
         let result = try DeviceMigrationService.importPackage(package, transferKey: key)
-        #expect(result["11111111-1111-1111-1111-111111111111"] == big)
+        #expect(result.payloads["11111111-1111-1111-1111-111111111111"] == big)
     }
 
     @Test("Import: wrong transfer key fails closed (AES-GCM tag verification)")
@@ -187,10 +188,9 @@ struct DeviceMigrationSecurityTests {
             DeviceMigrationRecord(type: "memory", id: "11111111-1111-1111-1111-111111111111", byteLength: 4, sha256: SHA256.hash(data: Data("test".utf8)).hexString),
         ]
         let package = try DeviceMigrationService.exportPackage(records: records, payloads: ["11111111-1111-1111-1111-111111111111": Data("test".utf8)], transferKey: key)
-        // Flip a byte in the data chunk ciphertext region
+        // 翻转末尾字节（位于最后数据块的 tag 区域）→ AES-GCM 认证必须失败
         var tampered = package
-        let headerBytes = try EchoMigrationHeader.parse(package).encode()
-        tampered[headerBytes.count + 40] ^= 0x01
+        tampered[tampered.count - 1] ^= 0x01
         var threwtamperDetected = false
         do { _ = try DeviceMigrationService.importPackage(tampered, transferKey: key) } catch { threwtamperDetected = true }
         #expect(threwtamperDetected)
@@ -221,16 +221,92 @@ struct DeviceMigrationSecurityTests {
     @Test("Import: recordCount=0 / empty records rejected via manifest validation")
     func test_Import_RejectsEmptyRecords() throws {
         let key = SymmetricKey(size: .bits256)
-        let records = [
-            DeviceMigrationRecord(type: "memory", id: "11111111-1111-1111-1111-111111111111", byteLength: 1, sha256: SHA256.hash(data: Data([0x01])).hexString),
-        ]
-        let package = try DeviceMigrationService.exportPackage(records: records, payloads: ["11111111-1111-1111-1111-111111111111": Data([0x01])], transferKey: key)
-        // Build a manifest-only variant by removing data chunk (truncation must be rejected)
-        let headerBytes = try EchoMigrationHeader.parse(package).encode()
-        let truncated = package.prefix(headerBytes.count + 8 + 12 + 16) // only chunk-0 prefix, missing data chunk
-        var threwmalformedHeader = false
-        do { _ = try DeviceMigrationService.importPackage(Data(truncated), transferKey: key) } catch { threwmalformedHeader = true }
-        #expect(threwmalformedHeader)
+        // 构造结构合法但 recordCount=0 的包（空 records manifest + 1 字节数据块）
+        let archiveUUID = "11111111-1111-1111-1111-111111111111"
+        let manifest = DeviceMigrationManifest(
+            archiveUUID: archiveUUID,
+            chunkCount: 2,
+            totalPlaintextBytes: 1,
+            records: []
+        )
+        let manifestPlaintext = try JCSEncoder.canonicalJSON(manifest: manifest)
+        let manifestSHA256 = SHA256.hash(data: manifestPlaintext).hexString
+        let header = EchoMigrationHeader(
+            archiveUUID: archiveUUID,
+            chunkCount: 2,
+            totalPlaintextBytes: 1,
+            manifestSHA256: manifestSHA256
+        )
+        var package = header.encode()
+        let manifestKey = DeviceMigrationService.deriveChunkKey(transferKey: key, archiveUUID: archiveUUID, chunkIndex: 0)
+        let manifestAAD = DeviceMigrationService.chunkAAD(archiveUUID: archiveUUID, schemaVersion: 1, chunkIndex: 0, chunkCount: 2, plaintextLength: manifestPlaintext.count, manifestSHA256: manifestSHA256)
+        package.append(try DeviceMigrationService.encryptChunk(index: 0, plaintext: manifestPlaintext, key: manifestKey, aad: manifestAAD))
+        let dataKey = DeviceMigrationService.deriveChunkKey(transferKey: key, archiveUUID: archiveUUID, chunkIndex: 1)
+        let dataAAD = DeviceMigrationService.chunkAAD(archiveUUID: archiveUUID, schemaVersion: 1, chunkIndex: 1, chunkCount: 2, plaintextLength: 1, manifestSHA256: manifestSHA256)
+        package.append(try DeviceMigrationService.encryptChunk(index: 1, plaintext: Data([0x01]), key: dataKey, aad: dataAAD))
+
+        var threwinvalidManifest = false
+        do { _ = try DeviceMigrationService.importPackage(package, transferKey: key) } catch { threwinvalidManifest = true }
+        #expect(threwinvalidManifest)
+    }
+
+    @Test("Import: recordCount above maxRecordCount fails closed (CR-6)")
+    func test_Import_RejectsRecordCountOverLimit() throws {
+        let key = SymmetricKey(size: .bits256)
+        // 手工构造 recordCount > maxRecordCount 的合法形包，必须在资源边界处拒绝
+        let archiveUUID = "11111111-1111-1111-1111-111111111111"
+        let fakeCount = EchoMigrationFormat.maxRecordCount + 1
+        // 用 JCSEncoder 无法直接注入错误 recordCount（recordCount 由 records.count 计算），
+        // 因此手工构建 manifest 明文 JSON 并加密，验证 import 在 manifest 校验阶段拒绝。
+        let json = "{\"archiveUUID\":\"\(archiveUUID)\",\"chunkCount\":2,\"recordCount\":\(fakeCount),\"records\":[],\"schemaVersion\":1,\"totalPlaintextBytes\":1}"
+        let manifestPlaintext = Data(json.utf8)
+        let manifestSHA256 = SHA256.hash(data: manifestPlaintext).hexString
+        let header = EchoMigrationHeader(
+            archiveUUID: archiveUUID,
+            chunkCount: 2,
+            totalPlaintextBytes: 1,
+            manifestSHA256: manifestSHA256
+        )
+        var package = header.encode()
+        let manifestKey = DeviceMigrationService.deriveChunkKey(transferKey: key, archiveUUID: archiveUUID, chunkIndex: 0)
+        let manifestAAD = DeviceMigrationService.chunkAAD(archiveUUID: archiveUUID, schemaVersion: 1, chunkIndex: 0, chunkCount: 2, plaintextLength: manifestPlaintext.count, manifestSHA256: manifestSHA256)
+        package.append(try DeviceMigrationService.encryptChunk(index: 0, plaintext: manifestPlaintext, key: manifestKey, aad: manifestAAD))
+        let dataKey = DeviceMigrationService.deriveChunkKey(transferKey: key, archiveUUID: archiveUUID, chunkIndex: 1)
+        let dataAAD = DeviceMigrationService.chunkAAD(archiveUUID: archiveUUID, schemaVersion: 1, chunkIndex: 1, chunkCount: 2, plaintextLength: 1, manifestSHA256: manifestSHA256)
+        package.append(try DeviceMigrationService.encryptChunk(index: 1, plaintext: Data([0x01]), key: dataKey, aad: dataAAD))
+
+        var threw = false
+        do { _ = try DeviceMigrationService.importPackage(package, transferKey: key) } catch { threw = true }
+        #expect(threw)
+    }
+
+    @Test("Import: manifest + data combined size over maxPackageBytes fails closed (CR-6)")
+    func test_Import_RejectsCombinedSizeOverLimit() throws {
+        let key = SymmetricKey(size: .bits256)
+        // 手工构造 manifest 声明 totalPlaintextBytes > maxPackageBytes（combined-size 资源边界拒绝，无需 2GiB 分配）
+        let archiveUUID = "11111111-1111-1111-1111-111111111111"
+        let oversizedTotal = EchoMigrationFormat.maxPackageBytes + 1
+        let sha = String(repeating: "a", count: 64)
+        let json = "{\"archiveUUID\":\"\(archiveUUID)\",\"chunkCount\":2,\"recordCount\":1,\"records\":[{\"byteLength\":\(oversizedTotal),\"id\":\"11111111-1111-1111-1111-111111111111\",\"sha256\":\"\(sha)\",\"type\":\"memory\"}],\"schemaVersion\":1,\"totalPlaintextBytes\":\(oversizedTotal)}"
+        let manifestPlaintext = Data(json.utf8)
+        let manifestSHA256 = SHA256.hash(data: manifestPlaintext).hexString
+        let header = EchoMigrationHeader(
+            archiveUUID: archiveUUID,
+            chunkCount: 2,
+            totalPlaintextBytes: oversizedTotal,
+            manifestSHA256: manifestSHA256
+        )
+        var package = header.encode()
+        let manifestKey = DeviceMigrationService.deriveChunkKey(transferKey: key, archiveUUID: archiveUUID, chunkIndex: 0)
+        let manifestAAD = DeviceMigrationService.chunkAAD(archiveUUID: archiveUUID, schemaVersion: 1, chunkIndex: 0, chunkCount: 2, plaintextLength: manifestPlaintext.count, manifestSHA256: manifestSHA256)
+        package.append(try DeviceMigrationService.encryptChunk(index: 0, plaintext: manifestPlaintext, key: manifestKey, aad: manifestAAD))
+        let dataKey = DeviceMigrationService.deriveChunkKey(transferKey: key, archiveUUID: archiveUUID, chunkIndex: 1)
+        let dataAAD = DeviceMigrationService.chunkAAD(archiveUUID: archiveUUID, schemaVersion: 1, chunkIndex: 1, chunkCount: 2, plaintextLength: 1, manifestSHA256: manifestSHA256)
+        package.append(try DeviceMigrationService.encryptChunk(index: 1, plaintext: Data([0x01]), key: dataKey, aad: dataAAD))
+
+        var threw = false
+        do { _ = try DeviceMigrationService.importPackage(package, transferKey: key) } catch { threw = true }
+        #expect(threw)
     }
 
     @Test("Import: truncated package (short data stream) fails closed")

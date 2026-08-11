@@ -266,7 +266,7 @@ public enum JCSEncoder {
 // MARK: - Error
 
 /// 设备迁移错误（L2 可恢复 — 迁移失败不阻断既有数据，reject 保持活动库不变）。
-public enum DeviceMigrationError: Error, Equatable {
+public enum DeviceMigrationError: Error, LocalizedError, Equatable {
     case unsupportedFormat(String)
     case malformedHeader(String)
     case invalidManifest(String)
@@ -278,7 +278,7 @@ public enum DeviceMigrationError: Error, Equatable {
     case pathTraversal(String)
     case publicationFailed(String)
 
-    public var errorDescription: String? {
+    public nonisolated var errorDescription: String? {
         switch self {
         case .unsupportedFormat(let s): return "Unsupported migration format: \(s)"
         case .malformedHeader(let s): return "Malformed migration header: \(s)"

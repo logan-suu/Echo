@@ -230,7 +230,7 @@ final class SearchViewModel {
     }
 
     /// 生产 live FeedbackPipeline — 显式注入优先；否则经 composition 解析并缓存（US-FBK-001/003 默认 live）。
-    private var activeFeedbackPipeline: FeedbackPipeline? {
+    private func makeActiveFeedbackPipeline() -> FeedbackPipeline? {
         if let injected = feedbackPipeline { return injected }
         guard let composition else { return nil }
         if let cached = resolvedFeedbackPipeline { return cached }
@@ -265,25 +265,23 @@ final class SearchViewModel {
             do {
                 // 3F.7: 显式注入的 pipeline 优先（测试/Preview fixture）；否则经 composition 解析
                 // 生产 live pipeline（单实例缓存，US-RET-005 follow-up 会话状态跨轮次保留）。
-                if let pipeline = self.searchPipeline {
-                    let items = try await pipeline.search(
-                        query: self.query,
-                        k: 10,
-                        traceID: UUID().uuidString
-                    )
-                    guard !Task.isCancelled else {
-                        self.viewState = .cancelled
-                        return
-                    }
-                    self.results = items.map(SearchResultModel.init)
+                let pipeline: SearchPipeline?
+                if let injected = self.searchPipeline {
+                    pipeline = injected
                 } else if self.composition != nil {
-                    guard let live = await self.resolveLiveSearchPipeline() else {
+                    pipeline = await self.resolveLiveSearchPipeline()
+                    if pipeline == nil {
                         // 无活跃 generation 路由（US-RET-008 / ADR-007 §决策-5）— 显式 route-unavailable，
                         // 而非静默回退到空向量库返回空结果。
                         self.viewState = .error(.l3Blocking(message: "Search is currently unavailable"))
                         return
                     }
-                    let items = try await live.search(
+                } else {
+                    pipeline = nil
+                }
+
+                if let pipeline {
+                    let items = try await pipeline.search(
                         query: self.query,
                         k: 10,
                         traceID: UUID().uuidString
@@ -368,7 +366,7 @@ final class SearchViewModel {
     /// 记录点赞。转发到 FeedbackPipeline（存在时），并更新本地 UI 反馈状态。
     func recordLike(_ result: SearchResultModel) {
         feedbackStates[result.id] = .liked
-        guard let pipeline = activeFeedbackPipeline else { return }
+        guard let pipeline = makeActiveFeedbackPipeline() else { return }
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -387,7 +385,7 @@ final class SearchViewModel {
     /// 记录点踩。转发到 FeedbackPipeline（存在时），并更新本地 UI 反馈状态。
     func recordDislike(_ result: SearchResultModel) {
         feedbackStates[result.id] = .disliked
-        guard let pipeline = activeFeedbackPipeline else { return }
+        guard let pipeline = makeActiveFeedbackPipeline() else { return }
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -405,7 +403,7 @@ final class SearchViewModel {
     /// 标记 Bad Case (US-FBK-003)。转发到 FeedbackPipeline（存在时），并更新本地 UI 状态。
     func markBadCase(_ result: SearchResultModel) {
         feedbackStates[result.id] = .badCase
-        guard let pipeline = activeFeedbackPipeline else { return }
+        guard let pipeline = makeActiveFeedbackPipeline() else { return }
         Task { [weak self] in
             guard let self else { return }
             do {

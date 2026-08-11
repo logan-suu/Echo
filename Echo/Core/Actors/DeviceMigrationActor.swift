@@ -7,7 +7,9 @@
 // AC 覆盖: US-SRC-007 AC-1 (仅本地传输), AC-2 (ExcludedAssets 随本地迁移), AC-4 (覆盖/合并/冲突),
 //          AC-5 (迁移后完整性校验), AC-6 (不导出全部原始记忆), AC-7 (.deviceMigrationCompleted 审计)
 //          PR#59 修复: 🔴-1 AC-5 完整性校验按策略语义 — overwrite 总数 / merge 逐条 ID 存在性
-//                      (向量/FTS 行级校验见 DEF-59-03); 🟡-7 审计 method(airdrop/localBackup) + batchPolicy 参数化
+//                      (向量/FTS 行级校验见 DEF-59-003); 🟡-7 审计 method/batchPolicy 参数化
+//          PR#59 CR 修复: CR-1 allBoth 派生确定性 ID 保留两版本; CR-3 复用 importPackage 返回的 manifest;
+//                         CR-4 传播 deleteMemory/excludedAssets.add 错误; CR-5 audit success=integrityPassed
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §5.4 (hash-only 审计), R-001 (无网络), R-007/R-008
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-11
@@ -26,23 +28,16 @@ public enum MigrationMergeStrategy: String, Sendable, Codable, Equatable {
     case merge
 }
 
-/// 单条冲突的解决方式（逐项自定义，US-SRC-007 AC-4）。
-public enum ConflictResolution: String, Sendable, Codable, Equatable {
-    /// 使用源设备版本
-    case source
-    /// 使用目标设备版本
-    case target
-    /// 两者都保留
-    case both
-}
-
 /// 批量冲突应用策略（US-SRC-007 AC-4：显示冲突总数，允许批量应用）。
+///
+/// 注：AC-4 的「逐项自定义」冲突解析属迁移 UI surface（per-record resolution），
+/// 无 UI 接线时不存在消费方，因此不在此声明 per-record 枚举（见 PR#59 CR-1 处置）。
 public enum BatchConflictPolicy: String, Sendable, Codable, Equatable {
     /// 全部使用源设备版本
     case allSource
     /// 全部使用目标设备版本
     case allTarget
-    /// 两者都保留
+    /// 两者都保留 — 目标版本保留原 ID，源版本以派生确定性 ID 导入副本（两版本共存）
     case allBoth
 }
 
@@ -135,7 +130,8 @@ public actor DeviceMigrationActor {
         }
 
         // ExcludedAssets 随本地迁移（AC-2）
-        let excluded = try await excludedAssets.listAll(limit: 1_000_000, offset: 0)
+        // 一次全量读取，上限与 §4.6.7 的 maxRecordCount 对齐（排除项表通常远小于该上限）
+        let excluded = try await excludedAssets.listAll(limit: EchoMigrationFormat.maxRecordCount, offset: 0)
         for item in excluded {
             let payload = excludedPayload(assetId: item.assetId, sourceType: item.sourceType, excludedAt: item.excludedAt)
             let digest = SHA256.hash(data: payload).hexString
@@ -210,13 +206,9 @@ public actor DeviceMigrationActor {
         traceID: String = UUID().uuidString
     ) async throws -> DeviceMigrationResult {
         let started = Date()
-        // (1) 全量校验（§4.6.7 validation order）— 失败时活动库/路由保持不变
-        let payloads = try DeviceMigrationService.importPackage(package, transferKey: transferKey)
-
-        // (2) 解析记录（type 校验）
-        let header = try EchoMigrationHeader.parse(package)
-        let manifestBytes = try decryptManifestPlaintext(package: package, header: header, transferKey: transferKey)
-        let manifest = try JCSEncoder.parseManifest(manifestBytes)
+        // (1) 全量校验（§4.6.7 validation order）— 失败时活动库/路由保持不变。
+        //     importPackage 返回解析好的 manifest，避免重复解析包（CR-3）。
+        let (manifest, payloads) = try DeviceMigrationService.importPackage(package, transferKey: transferKey)
 
         var memoryCount = 0
         var excludedCount = 0
@@ -224,11 +216,13 @@ public actor DeviceMigrationActor {
         var overwrittenCount = 0
         var importedMemoryIDs: [UUID] = []
 
-        // (3) 覆盖策略：清除目标设备原有数据（仅 canonical/向量，不删原始文件）
+        // (2) 覆盖策略：清除目标设备原有数据（仅 canonical/向量，不删原始文件）。
+        //     删除失败必须传播（CR-4），不得静默继续。
         if strategy == .overwrite {
             let existing = try await loadAllMemories()
             for memory in existing {
-                _ = try? await canonicalRepository.deleteMemory(
+                try Task.checkCancellation()
+                _ = try await canonicalRepository.deleteMemory(
                     memoryId: memory.memoryId,
                     writeExcluded: false,
                     traceID: traceID
@@ -237,8 +231,25 @@ public actor DeviceMigrationActor {
             overwrittenCount = existing.count
         }
 
+        // (3) 应用记录前解析一次活跃路由 + 文本嵌入器（避免每记录重复解析，Nitpick）
+        let hasMemories = manifest.records.contains { $0.type == "memory" }
+        var activeRoute: ActiveRouteSet?
+        var embedder: (any EmbedderProtocol)?
+        if hasMemories {
+            guard let route = try await generationRegistry.loadActiveRoute() else {
+                throw DeviceMigrationError.publicationFailed("no active generation route")
+            }
+            activeRoute = route
+            if let injected = textEmbedder {
+                embedder = injected
+            } else {
+                embedder = await MainActor.run { E5Embedder() }
+            }
+        }
+
         // (4) 应用记录
         for record in manifest.records {
+            try Task.checkCancellation()
             guard let payload = payloads[record.id] else { continue }
             if record.type == "memory" {
                 let memory = try decodeCanonicalPayload(payload)
@@ -247,17 +258,42 @@ public actor DeviceMigrationActor {
                     conflictCount += 1
                     switch batchPolicy {
                     case .allTarget:
-                        continue // 保留目标版本
-                    case .allSource, .allBoth:
-                        break // 用源版本
+                        continue
+                    case .allSource:
+                        break
+                    case .allBoth:
+                        // 两者都保留：目标版本保留原 ID，源版本以派生确定性 ID 导入副本（CR-1）
+                        let bothCopy = Memory(
+                            memoryId: Self.derivedMemoryID(from: memory.memoryId),
+                            sourceLocator: memory.sourceLocator,
+                            canonicalText: memory.canonicalText,
+                            sourceType: memory.sourceType,
+                            createdAt: memory.createdAt,
+                            updatedAt: memory.updatedAt,
+                            recoverability: memory.recoverability,
+                            originalTimestamp: memory.originalTimestamp,
+                            userEdited: memory.userEdited,
+                            userLocked: memory.userLocked
+                        )
+                        guard let route = activeRoute, let embedder else {
+                            throw DeviceMigrationError.publicationFailed("no active generation route")
+                        }
+                        try await applyMemory(bothCopy, payload: payload, traceID: traceID, route: route, embedder: embedder)
+                        importedMemoryIDs.append(bothCopy.memoryId)
+                        memoryCount += 1
+                        continue
                     }
                 }
-                try await applyMemory(memory, payload: payload, traceID: traceID)
+                guard let route = activeRoute, let embedder else {
+                    throw DeviceMigrationError.publicationFailed("no active generation route")
+                }
+                try await applyMemory(memory, payload: payload, traceID: traceID, route: route, embedder: embedder)
                 importedMemoryIDs.append(memory.memoryId)
                 memoryCount += 1
             } else if record.type == "excludedAsset" {
                 let item = try decodeExcludedPayload(payload)
-                _ = try? await excludedAssets.add(assetId: item.assetId, sourceType: item.sourceType, traceID: traceID)
+                // 写入错误传播（CR-4）；excludedCount 仅在成功后自增
+                try await excludedAssets.add(assetId: item.assetId, sourceType: item.sourceType, traceID: traceID)
                 excludedCount += 1
             } else {
                 throw DeviceMigrationError.unsupportedRecordType(record.type)
@@ -273,13 +309,13 @@ public actor DeviceMigrationActor {
             expectedMemory: memoryCount
         )
 
-        // (6) 审计（AC-7）
+        // (6) 审计（AC-7）— success 反映 integrityCheckPassed（CR-5），失败迁移可被审计查询
         let policy = await privacyActor.getPolicy()
         try? await privacyActor.writeAuditLog(
             eventType: .deviceMigrationCompleted,
             traceID: traceID,
             policyVersion: policy.policyVersion,
-            success: true,
+            success: integrityPassed,
             sourceType: "migration",
             affectedCount: memoryCount,
             elapsedMs: Int(Date().timeIntervalSince(started) * 1000),
@@ -382,20 +418,17 @@ public actor DeviceMigrationActor {
     }
 
     /// 应用单条记忆（commit 到 canonical + 活跃 generation 向量）。
-    private func applyMemory(_ memory: Memory, payload: Data, traceID: String) async throws {
-        // 重新嵌入 canonicalText 以写入活跃 generation（ADR-010 路由）
-        guard let route = try await generationRegistry.loadActiveRoute() else {
-            throw DeviceMigrationError.publicationFailed("no active generation route")
-        }
+    /// route/embedder 由 importPackage 预先解析一次传入（Nitpick：避免每记录重复解析）。
+    private func applyMemory(
+        _ memory: Memory,
+        payload: Data,
+        traceID: String,
+        route: ActiveRouteSet,
+        embedder: any EmbedderProtocol
+    ) async throws {
         var representations: [Representation] = []
         var vectors: [String: [CanonicalVectorEntry]] = [:]
         if let text = memory.canonicalText, !text.isEmpty {
-            let embedder: any EmbedderProtocol
-            if let injected = textEmbedder {
-                embedder = injected
-            } else {
-                embedder = await MainActor.run { E5Embedder() }
-            }
             let embedding = try await embedder.embedText(text)
             let textGen = route.textGeneration
             representations.append(Representation(
@@ -436,28 +469,18 @@ public actor DeviceMigrationActor {
         }
     }
 
-    /// 解密 chunk 0 得到 manifest 明文（导入时用于记录解析）。
-    private nonisolated func decryptManifestPlaintext(
-        package: Data,
-        header: EchoMigrationHeader,
-        transferKey: SymmetricKey
-    ) throws -> Data {
-        let headerBytes = header.encode()
-        let chunk0Start = headerBytes.count
-        let index = Int(UInt32(package.subdata(in: chunk0Start..<(chunk0Start + 4)).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian))
-        let length = Int(UInt32(package.subdata(in: (chunk0Start + 4)..<(chunk0Start + 8)).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian))
-        let totalChunk = 8 + 12 + length + 16
-        let chunk0 = package.subdata(in: chunk0Start..<(chunk0Start + totalChunk))
-        let key = DeviceMigrationService.deriveChunkKey(transferKey: transferKey, archiveUUID: header.archiveUUID, chunkIndex: index)
-        let aad = DeviceMigrationService.chunkAAD(
-            archiveUUID: header.archiveUUID,
-            schemaVersion: header.schemaVersion,
-            chunkIndex: index,
-            chunkCount: header.chunkCount,
-            plaintextLength: length,
-            manifestSHA256: header.manifestSHA256
-        )
-        let (_, plaintext) = try DeviceMigrationService.decryptChunk(chunk0, key: key, aad: aad)
-        return plaintext
+    /// 为「两者都保留」冲突导入副本派生确定性不冲突的 memoryId（CR-1）。
+    /// SHA-256(源 memoryId 小写字符串 + 域盐) 取 16 字节 → UUID v5 风格，确定且防碰撞。
+    public nonisolated static func derivedMemoryID(from sourceID: UUID) -> UUID {
+        var data = Data()
+        data.append(sourceID.uuidString.lowercased().data(using: .utf8)!)
+        data.append("|echo-migration-keep-both".data(using: .utf8)!)
+        let digest = SHA256.hash(data: data)
+        var uuidBytes = Array(digest.prefix(16))
+        uuidBytes[6] = (uuidBytes[6] & 0x0F) | 0x50
+        uuidBytes[8] = (uuidBytes[8] & 0x3F) | 0x80
+        var uuid = UUID()
+        withUnsafeMutableBytes(of: &uuid) { $0.copyBytes(from: Data(uuidBytes)) }
+        return uuid
     }
 }
