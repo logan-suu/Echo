@@ -6,6 +6,8 @@
 
 > ✅ **3F.4 落地（2026-08-09）**：决策 1/2/3/4/5/7 已实现并有测试证据（`EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift`，26 用例；全量 891 测试 0 失败）。决策 6（迁移发布子契约）由 3F.7 US-SRC-007 与 ADR-008 共同管辖，本任务不实现迁移包格式。
 
+> ✅ **3F.6 落地（2026-08-11）**：决策 4 的反馈 generation 身份现已端到端接线——`FeedbackPipeline.recordFeedback/recordLike/recordDislike/markBadCase` 经 `GenerationRegistryActor.loadActiveRoute()` 解析活跃 text generation，传入 `FeedbackActor.recordFeedback(generationId:)`（`test_generationIdPassedThroughPipeline`）。决策 2 的 generation 路由检索已落地：`SearchChannelAdapters` 生产多通道检索消费 `ActiveRouteSet`（text_dense/vision_dense/ocr_text/lexical，独立向量空间）；空 vision 索引降级为 timedOut 部分结果（US-RET-008），不产生 mixed-generation 路由（`validateRoute` 保留）。
+
 ## 背景
 
 基线中 ING-006（canonical 事务性 vector/text/FTS 提交、故障注入回滚、事务审计路径）完全未映射；384→512 填充与单 store 生产路由存在（须删除）；`GenerationRegistryActor`/`ActiveRouteSet` 已有骨架但无重启恢复/原子发布/回滚；反馈身份（generation 维度）与全删除边界无生产验证；`originalTimestamp`/`userLocked` 持久化缺失（DEF-38-001/002）。

@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.0",
-  "_last_updated": "2026-08-10T18:00:00Z",
+  "_last_updated": "2026-08-11T00:00:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -145,10 +145,10 @@
       "title": "RRF 元数据回填逻辑重写（按 ID 取元数据，替代 top-1 重查）",
       "severity": "🟡",
       "location": "SearchPipeline.swift:~801 (searchMultiChannel)",
-      "reason": "当前为死代码（无调用方）。vectorStore.search(k:1) 返回 top-1 近邻而非指定 ID 文档，融合 ID 被静默丢弃。接入前必须重写为按 ID 点查或缓存元数据。",
+      "reason": "当前为死代码（无调用方）。vectorStore.search(k:1) 返回 top-1 近邻而非指定 ID 文档，融合 ID 被静默丢弃。接入前必须重写为按 ID 点查或缓存元数据。 | CLOSED by 3F.6 (2026-08-11): GenerationRoutedChannelAdapter.search 解码 memoryId → SearchChannelMetadata 的 ID-keyed 字典（metadataByID），RRF 融合后按 fused ID 从字典回填，不再 top-1 重查。证据：3F.6_ProductionSearchFeedbackTests.swift test_DEF34_001_FusedMetadataFromIDKeyedLookup + test_AC1_TimeoutChannelReturnsTimedOutFlag 通过（30/30）。",
       "defer_to": "R-3 通道集成时（R-3.2/R-3.5/R-3.6 接入后）",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-11",
       "owners": [
         "AI",
         "iOS"
@@ -159,7 +159,9 @@
       "acceptance_evidence": [
         "ID-based metadata、timeout/error 分离、partial results 测试"
       ],
-      "tracking_status": "open",
+      "tracking_status": "resolved",
+      "resolved_at": "2026-08-11",
+      "resolved_by": "3F.6 Production search 与 feedback — ID-keyed metadataByID 回填 + 全量回归 962/0",
       "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
@@ -168,10 +170,10 @@
       "title": "text_dense 通道错误处理区分 timeout 与 L3 阻断",
       "severity": "🟡",
       "location": "SearchPipeline.swift:~778 (searchMultiChannel catch)",
-      "reason": "当前 catch {} 捕获所有错误，可能掩盖 L3 阻断错误（如模型损坏）。应区分 timeout（跳过通道）与其他错误（记录审计 + 上报）。",
+      "reason": "当前 catch {} 捕获所有错误，可能掩盖 L3 阻断错误（如模型损坏）。应区分 timeout（跳过通道）与其他错误（记录审计 + 上报）。 | CLOSED by 3F.6 (2026-08-11): GenerationRoutedChannelAdapter 错误语义分离 — L3 路由缺失 → error: .generationRouteMissing (timedOut=false)；L1 超时/空索引 → timedOut: true (error=nil)。证据：3F.6_ProductionSearchFeedbackTests.swift test_DEF34_002_L3ErrorDistinguishedFromTimeout + test_AC1_TimeoutChannelReturnsTimedOutFlag 通过（30/30）。",
       "defer_to": "R-3 通道集成时",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-11",
       "owners": [
         "AI",
         "iOS"
@@ -182,7 +184,9 @@
       "acceptance_evidence": [
         "ID-based metadata、timeout/error 分离、partial results 测试"
       ],
-      "tracking_status": "open",
+      "tracking_status": "resolved",
+      "resolved_at": "2026-08-11",
+      "resolved_by": "3F.6 Production search 与 feedback — timeout/L3 错误身份分离 + 全量回归 962/0",
       "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
@@ -290,10 +294,10 @@
       "title": "反馈写入失败静默降级，未写入 PendingOperations（L2 契约）",
       "severity": "🟡",
       "location": "SearchViewModel.swift:314,333,351 (recordLike/recordDislike/markBadCase catch)",
-      "reason": "反馈转发失败时 UI 层空 catch 静默降级（本地状态已即时更新）。正确修复需在 FeedbackPipeline（Core 受保护层）内部将 L2 错误写入 PendingOperations + 统一 Toast 重试 UI，超出 3.2 UI 切片边界。",
+      "reason": "反馈转发失败时 UI 层空 catch 静默降级（本地状态已即时更新）。正确修复需在 FeedbackPipeline（Core 受保护层）内部将 L2 错误写入 PendingOperations + 统一 Toast 重试 UI，超出 3.2 UI 切片边界。 | CLOSED by 3F.6 (2026-08-11): FeedbackPipeline.recordFeedback catch 块构造 PendingOperation(operationType: \"feedback\", retryCount: 0) 写入 PendingOpsActor（add 支持 db 关闭自动重连），随后 rethrow recordFailed（不吞错）。证据：3F.6_ProductionSearchFeedbackTests.swift test_L2FeedbackFailureVisibleInPendingOperations 通过（db.close → recordLike 抛错 → db.open → PendingOpsActor.listAll 含 feedback 操作）。",
       "defer_to": "Task 3.6 统一错误处理 UI（L2 Toast + PendingOperations 接入）时",
       "deferred_at": "2026-08-01",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-11",
       "owners": [
         "AI",
         "iOS"
@@ -305,7 +309,9 @@
       "acceptance_evidence": [
         "feedback L2 写 PendingOperations 且仅手动重试"
       ],
-      "tracking_status": "open",
+      "tracking_status": "resolved",
+      "resolved_at": "2026-08-11",
+      "resolved_by": "3F.6 Production search 与 feedback — FeedbackPipeline L2 → PendingOperations（可见 + 可手动重试）+ 全量回归 962/0",
       "recheck_trigger": "target task review or Phase 3F integration scan"
     },
     {
@@ -852,9 +858,12 @@
       "title": "FeedbackPipeline 未传 generationId → 生产反馈存 NULL",
       "severity": "🟡",
       "location": "FeedbackPipeline.swift",
-      "reason": "存储层+API 已支持 (本 PR 正确)，管线接线属 3F.6 范围",
+      "reason": "存储层+API 已支持 (本 PR 正确)，管线接线属 3F.6 范围 | CLOSED by 3F.6 (2026-08-11): FeedbackPipeline.recordFeedback/recordLike/recordDislike/markBadCase 经 GenerationRegistryActor.loadActiveRoute() 解析活跃 text generation，传入 feedbackActor.recordFeedback(generationId:)。证据：3F.6_ProductionSearchFeedbackTests.swift test_generationIdPassedThroughPipeline 通过（FeedbackActor.generationId(for:) == \"text_dense/e5-v1\"）。",
       "defer_to": "3F.6 Production search 与 feedback",
-      "deferred_at": "2026-08-09"
+      "deferred_at": "2026-08-09",
+      "tracking_status": "resolved",
+      "resolved_at": "2026-08-11",
+      "resolved_by": "3F.6 — generationId passthrough + 全量回归 962/0"
     },
     {
       "id": "DEF-56-006",
@@ -862,9 +871,12 @@
       "title": "searchCanonical 未 ORDER BY rank 再 LIMIT",
       "severity": "🟡",
       "location": "CanonicalMemoryRepositoryActor.swift searchCanonical",
-      "reason": "检索排序属 3F.6 检索管线，非本 PR 阻塞",
+      "reason": "检索排序属 3F.6 检索管线，非本 PR 阻塞 | CLOSED by 3F.6 (2026-08-11): searchCanonical SQL 增加 ORDER BY rank（FTS5 相关性）于 LIMIT 之前，保留 FTS 注入安全分词。证据：3F.6_ProductionSearchFeedbackTests.swift test_searchCanonicalOrderedByRelevance 通过（更高 FTS 相关性记忆排第一）。",
       "defer_to": "3F.6 检索管线接入时",
-      "deferred_at": "2026-08-09"
+      "deferred_at": "2026-08-09",
+      "tracking_status": "resolved",
+      "resolved_at": "2026-08-11",
+      "resolved_by": "3F.6 — searchCanonical ORDER BY rank + 全量回归 962/0"
     },
     {
       "id": "DEF-56-007",
@@ -930,6 +942,28 @@
       "defer_to": "Phase 4 重构窗口（若需统一生产 commit 流程）",
       "deferred_at": "2026-08-10",
       "last_checked_at": "2026-08-10T15:26:26Z"
+    },
+    {
+      "id": "DEF-58-001",
+      "pr": 58,
+      "title": "US-RET-005 AC-3 LLM 生成追问改写查询延后（离线运行时无生成式 LLM）",
+      "severity": "🟡",
+      "location": "docs/01-spec/用户故事与验收标准规格书.md → US-RET-005 AC-3; 3F.6 SearchPipeline follow-up 路径",
+      "reason": "Echo 为完全离线运行时（ADR-009），无生成式 LLM 可落地 AC-3「LLM 生成追问改写查询」。3F.6 按方案 a 实现 US-RET-005 AC-1/2/4/5（FIFO 历史 ≤10 轮 + memoryIds 隐式过滤 + .followUpQuery 审计），AC-3 标注延后。用户 2026-08-11 确认方案 a。",
+      "defer_to": "Phase 4/5 若引入端侧生成式模型时重新评估；当前保持 AC-1/2/4/5 落地、AC-3 延后",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "AI",
+        "iOS"
+      ],
+      "target_tasks": [
+        "3F.6"
+      ],
+      "acceptance_evidence": [
+        "US-RET-005 AC-1 FIFO 截断、AC-2 memoryIds 隐式过滤、AC-4 .followUpQuery 审计（含 parentTraceId/rewrittenQuery）测试证据；AC-3 无实现"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 4 模型选型或 Phase 3F 集成扫描"
     }
   ]
 }

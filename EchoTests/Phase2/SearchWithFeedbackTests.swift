@@ -90,7 +90,7 @@ struct SearchWithFeedbackTests {
     /// Seed a feedback entry directly (bypassing audit for test simplicity).
     func seedFeedback(
         memoryId: UUID,
-        queryText: String = "test query",
+        queryText: String = "test",
         sentiment: FeedbackSentiment = .like,
         cosineSimilarity: Double = 0.95,
         createdAt: Date = Date()

@@ -591,32 +591,83 @@ Task 3F.4 delivers the canonical storage and generation lifecycle per ADR-010. A
 - Deferred items closed or created, with evidence links:
 - Known risks that do not weaken an in-scope gate:
 
+## Entry: 3F.6 — Production search 与 feedback
+
+## Phase 3F Task Evidence
+- Task / commit / branch / PR: 3F.6 Production search 与 feedback — branch `feature/phase3f-search-feedback-3F.6`
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
+- Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
+- Pre-delivery task status and transition evidence: task-status.json 3F.6 ready → in_progress (2026-08-11) → review; dependencies 3F.3/3F.4/3F.5 all done; Phase 3 integration 3.10 done
+- Quoted AC and architecture constraints: US-RET-001/002/003/004/005/006/007/008 (3F.0 amendments), US-FBK-001/002/003, US-PRV-001, US-SRC-010 (search contract), US-SRC-011 (subjective ranking/feedback); ADR-010 (generation routing + feedback identity), AGENTS.md §5.3 (feedback rerank contract 0.80/decay/clamp), §4.1 (pipeline contract), R-006 (PrivacyCheckpoint), R-008
+- RED test command and observed failure: `xcodebuild test ... -only-testing:EchoTests/ProductionSearchFeedbackTests` — 30 tests / 14 failures (cache store/lookup/invalidate, adapter search/route/timeout, denied-source gate, followUpQuery audit, query-conditioned feedback, L2 PendingOperations, generationId passthrough, searchCanonical ORDER BY); `-only-testing:EchoTests/CrossAppSearchTests` — 15 tests / 12 failures (parse, temporal window, per-source denial, source labels, crossAppSearch audit, subjective rerank)
+- Focused test command / exit / passed count: `-only-testing:EchoTests/ProductionSearchFeedbackTests` + `EchoTests/CrossAppSearchTests` — 45/45 passed (30 + 15)
+- Cumulative test command / exit / passed count: `xcodebuild test` (full suite, serial) — 962 tests / 116 suites / 0 failures; SwiftLint 0 errors; both planning JSONs valid
+- Release simulator and device commands / exits: Release build fails on pre-existing `simulateError` `#Preview` references in CreationView/MemoryDetailView/SearchView (recorded as pre-existing in 3F.1 evidence; 3F.11 scope)
+- Static/privacy/model/compliance commands / exits: SwiftLint exit 0 (modifier_order warnings match existing codebase convention); R-007/network scan clean
+- Production path exercised: SearchPipeline.search (feedback rerank + followUpQuery audit), GenerationRoutedChannelAdapter (generation-routed retrieval), SearchResultCacheActor (policy-aware TTL cache), FeedbackPipeline (generationId + L2 PendingOperations), CrossAppIntentParser + ProductionCrossAppFusionEngine (health+memory / location+photo fusion), CanonicalMemoryRepositoryActor.searchCanonical (FTS rank ordering)
+- Files and documentation changed: `Echo/Core/Services/SearchChannelAdapters.swift` (new), `Echo/Core/Services/BoundedReranker.swift` (new), `Echo/Core/Actors/SearchResultCacheActor.swift` (new), `Echo/Core/Services/CrossAppIntentParser.swift` (new), `Echo/Core/Services/CrossAppFusionEngine.swift` (new), `Echo/Core/Pipelines/SearchPipeline.swift`, `Echo/Core/Pipelines/FeedbackPipeline.swift`, `Echo/Core/Actors/FeedbackActor.swift`, `Echo/Core/Actors/PendingOpsActor.swift`, `Echo/Core/Actors/CanonicalMemoryRepositoryActor.swift`, `Echo/Core/Models/AuditEvent.swift`, `EchoTests/Phase3F/3F.6_ProductionSearchFeedbackTests.swift` (new), `EchoTests/Phase3F/3F.6_CrossAppSearchTests.swift` (new), `EchoTests/Phase1/SQLiteActorTests.swift`, `EchoTests/Phase2/SearchWithFeedbackTests.swift`, docs (README, spec, architecture, data-flow, bilingual, pitfalls, ADR-010, execution plan, evidence index, task-status, deferred-items)
+- Deferred items closed or created, with evidence links: DEF-34-001 (RRF ID-keyed metadata), DEF-34-002 (timeout/L3 error separation), DEF-37-001 (feedback L2 → PendingOperations), DEF-56-005 (generationId passthrough), DEF-56-006 (searchCanonical ORDER BY rank) — all closed with test evidence; DEF-58-001 created (US-RET-005 AC-3 LLM rewrite deferred, approach a)
+- Known risks that do not weaken an in-scope gate: SigLIP2 vision inference still depends on 3F.3a Core ML conversion approval — vision channel empty index degrades to timedOut partial results by design (US-RET-008); Release simulator build simulateError #Preview failure pre-existing on base (3F.1/3F.11 scope); US-SRC-010 live HealthKit provider conformance lands in 3F.8 (protocol declared in 3F.6, never instantiated here)
+
 <!-- PR-BODY:3F.6:START -->
 ## Overview
-<fill with the completed task overview>
+Production search and feedback: multi-channel generation-routed retrieval (text_dense/vision_dense/ocr_text/lexical) with RRF fusion and ID-keyed metadata, timeout/partial-result degradation (US-RET-008), policy-aware result cache (US-RET-007), follow-up query audit (US-RET-005 AC-1/2/4/5, AC-3 deferred), query-conditioned feedback (US-FBK-001 AC-4), feedback generation identity (ADR-010 decision-4), L2 feedback failures routed to PendingOperations (manual retry), cross-app intent parsing + multi-source temporal-aligned fusion with per-source authorization and `.crossAppSearch` audit (US-SRC-010), subjective bounded reranking (US-SRC-011), and FTS-relevance ordering for canonical search (DEF-56-006).
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task: 3F.6 — Production search 与 feedback
+- Stories: US-RET-001~008, US-FBK-001~003, US-PRV-001, US-SRC-010, US-SRC-011
+- ADR: ADR-010 (canonical generation lifecycle: route + feedback identity), ADR-009 (offline runtime — no generative LLM, hence US-RET-005 AC-3 deferred)
+- Docs: docs/05-planning/phase3f-execution-plan.md §3F.6; docs/01-spec/用户故事与验收标准规格书.md §4/§9.3; docs/03-implementation/双语言实现说明文档.md §4
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| US-RET-003 | 多通道 generation 路由 + 独立向量空间 | 3F.6_ProductionSearchFeedbackTests.swift (test_generationRouting_ActiveVisionRouteResolvesStore, test_AC2_TextVisionSeparateVectorSpaces, test_adapterSearch_ResolvesThroughActiveRoute) | Echo/Core/Services/SearchChannelAdapters.swift (GenerationRoutedChannelAdapter) | ✅ |
+| US-RET-005 | 对话历史 FIFO≤10 + memoryIds 隐式过滤 + .followUpQuery 审计（AC-3 LLM 改写延后 DEF-58-001） | 3F.6_ProductionSearchFeedbackTests.swift (test_AC1_HistoryCappedAt10FIFO, test_AC2_FollowUpCarriesParentMemoryIds, test_AC4_FollowUpAuditCarriesParentTraceID) | Echo/Core/Pipelines/SearchPipeline.swift + AuditEvent.followUpQuery | ✅ (AC-1/2/4/5) |
+| US-RET-007 | 缓存键含 policyVersion/modelVersion/queryHash；TTL；policy 失效 | 3F.6_ProductionSearchFeedbackTests.swift (test_AC4_CacheKey*, test_AC3_StoreThenLookupReturnsItemsWithinTTL, test_AC1_LookupReturnsNilAfterTTLExpiry, test_AC2_InvalidateRemovesPolicyVersionEntries) | Echo/Core/Actors/SearchResultCacheActor.swift | ✅ |
+| US-RET-008 | 通道超时 2s → timedOut 部分结果，不阻断其他通道 | 3F.6_ProductionSearchFeedbackTests.swift (test_AC1_TimeoutChannelReturnsTimedOutFlag, test_DEF34_002_L3ErrorDistinguishedFromTimeout) | Echo/Core/Services/SearchChannelAdapters.swift | ✅ |
+| US-FBK-001 | 反馈关联 memoryId + query（query-conditioned） | 3F.6_ProductionSearchFeedbackTests.swift (test_feedback_QueryTextConditioned) + Phase2 SearchWithFeedbackTests | Echo/Core/Actors/FeedbackActor.swift (computeAdjustment 过滤 queryText) | ✅ |
+| US-FBK-002 | 重排：阈值 0.80 / 衰减 1.0-0.5-归档 / 截断 ±0.5 / finalScore | 3F.6_ProductionSearchFeedbackTests.swift (FBK-002 AC-1/2/3 tests + test_sameQueryFeedback_RankChange) | Echo/Core/Actors/FeedbackActor.swift (既有公式 + query-conditioned) | ✅ |
+| US-PRV-001 | 被拒数据源数据不进入 Retriever；policy 版本感知 | 3F.6_ProductionSearchFeedbackTests.swift (test_AC2_DeniedSourceNeverReachesRetriever) | Echo/Core/Services/SearchChannelAdapters.swift (PrivacyCheckpoint gate) | ✅ |
+| US-SRC-010 | 跨 App 意图解析 + 逐源授权 + 时间对齐 + 源标签 + .crossAppSearch 审计 | 3F.6_CrossAppSearchTests.swift (AC-1~AC-5) | Echo/Core/Services/CrossAppIntentParser.swift + CrossAppFusionEngine.swift + AuditEvent.crossAppSearch | ✅ |
+| US-SRC-011 | 主观匹配度排序 + .subjectiveMatch 标记 + 本地反馈 | 3F.6_CrossAppSearchTests.swift (AC-2/AC-3/AC-4) + 3F.6_ProductionSearchFeedbackTests.swift (test_rerank_AppliesSubjectiveBoost) | Echo/Core/Services/BoundedReranker.swift | ✅ |
+| DEF-34-001 | RRF 融合按 ID 回填元数据（不 top-1 重查） | 3F.6_ProductionSearchFeedbackTests.swift (test_DEF34_001_FusedMetadataFromIDKeyedLookup) | Echo/Core/Services/SearchChannelAdapters.swift (metadataByID) | ✅ |
+| DEF-34-002 | timeout 与 L3 阻断错误身份分离 | 3F.6_ProductionSearchFeedbackTests.swift (test_DEF34_002_L3ErrorDistinguishedFromTimeout) | Echo/Core/Services/SearchChannelAdapters.swift (ChannelAdapterError) | ✅ |
+| DEF-37-001 | 反馈 L2 失败 → PendingOperations（可见 + 手动重试） | 3F.6_ProductionSearchFeedbackTests.swift (test_L2FeedbackFailureVisibleInPendingOperations) | Echo/Core/Pipelines/FeedbackPipeline.swift + PendingOpsActor.swift | ✅ |
+| DEF-56-005 | FeedbackPipeline 传递活跃 generationId | 3F.6_ProductionSearchFeedbackTests.swift (test_generationIdPassedThroughPipeline) | Echo/Core/Pipelines/FeedbackPipeline.swift | ✅ |
+| DEF-56-006 | searchCanonical ORDER BY rank 再 LIMIT | 3F.6_ProductionSearchFeedbackTests.swift (test_searchCanonicalOrderedByRelevance) | Echo/Core/Actors/CanonicalMemoryRepositoryActor.swift | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- RED: ProductionSearchFeedbackTests 30/14 fail; CrossAppSearchTests 15/12 fail (recorded in evidence index)
+- Focused: `xcodebuild test ... -only-testing:EchoTests/ProductionSearchFeedbackTests -only-testing:EchoTests/CrossAppSearchTests` — 45/45 passed
+- Cumulative: full suite serial `xcodebuild test` — 962 tests / 116 suites / 0 failures (incl. 33 UI tests)
+- Regression align: EchoTests/Phase1/SQLiteActorTests + EchoTests/Phase2/SearchWithFeedbackTests fixtures updated ("test query"→"test") to match US-FBK-001 AC-4 query-conditioned semantics
+- SwiftLint: 0 errors (modifier_order warnings match existing codebase convention)
+- Evidence: docs/05-planning/phase3f-evidence-index.md (3F.6 entry), task-status.json (3F.6 → review)
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- task-status.json: 3F.6 status → review, notes populated, last_updated 2026-08-11
+- deferred-items.json: DEF-34-001/002, DEF-37-001, DEF-56-005/006 → resolved (evidence); DEF-58-001 created (US-RET-005 AC-3, approach a)
+- phase3f-evidence-index.md: 3F.6 entry + PR body marker populated
+- Docs updated per §4.6.6 contract: README, spec, architecture, data-flow, bilingual, pitfalls, ADR-010, execution plan (checkboxes), evidence index, task-status, deferred-items
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- SigLIP2 vision inference depends on 3F.3a Core ML conversion approval; empty vision index degrades to timedOut partial results by design (US-RET-008), does not weaken 3F.11 no-fixture gate (visual channel scoped in 3F.5/3F.6/3F.11)
+- Release simulator build simulateError #Preview failure pre-existing on base (3F.1/3F.11 scope), unrelated to this PR
+- US-SRC-010 live HealthKit provider conformance lands in 3F.8; 3F.6 declares the provider protocol and never instantiates live HealthKit
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+- DEF-58-001 created: US-RET-005 AC-3 (LLM follow-up rewrite) deferred — offline runtime (ADR-009) has no generative LLM; user confirmed approach a (AC-1/2/4/5 only). Tracked in deferred-items.json
+- 5 target deferred items closed with evidence: DEF-34-001, DEF-34-002, DEF-37-001, DEF-56-005, DEF-56-006
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- [x] All new Pipeline/Adapter entries include PrivacyCheckpoint intent (R-006); denied source never reaches retriever
+- [x] No Combine / @unchecked Sendable / nonisolated(unsafe) / Task.detached
+- [x] Cross-Actor params all Sendable value types; all cross-actor calls await (R-008)
+- [x] Errors mapped to L1~L4; L2 feedback failures written to PendingOperations (manual retry only)
+- [x] Audit events followUpQuery/crossAppSearch added to AuditEvent enum; audit logs hash-only per §5.4
+- [x] No network code (R-001/R-005); no hardcoded language strings in pipeline
+- [x] Branch feature/phase3f-search-feedback-3F.6; commit/PR per AGENTS.md §3.1-3.3; base dev-1.0
 <!-- PR-BODY:3F.6:END -->
 
 ---

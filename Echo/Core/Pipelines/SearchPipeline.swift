@@ -9,6 +9,7 @@
 // 任务: 2.6 - SearchPipeline：向量检索 + FTS5 过滤
 //        2.8 - 集成反馈到 SearchPipeline
 //        2.9 - 跨语言低置信度降级（US-RET-006）
+//        3F.6 - 跟进查询审计（US-RET-005 AC-4）+ 生产多通道检索（R-3.7/DEF-34-001）
 // AC 覆盖: US-RET-001 AC-1 ✅ (余弦相似度), AC-3 ✅ (crossLanguageMatch标记), AC-4 ✅ (审计),
 //          AC-2 🔮 (Cross-Encoder, Phase 3), AC-5 🔮 (Recall@10, Golden Dataset Phase 3)
 //          US-RET-002 ✅ (中文→英文, 同 RET-001)
@@ -21,13 +22,18 @@
 //          US-RET-006 AC-1 ✅ (alignmentScore<0.6→lowConfidence), AC-3 ✅ (结果不被过滤),
 //          AC-5 ✅ (审计 alignmentScore/fallbackReason/lowConfidenceCount/fallbackReasons)
 //          AC-2 🔮 (UI提示文案, Phase 3 SearchView), AC-4 🔮 (不准确反馈按钮, Phase 3 SearchView)
+//          US-RET-005 AC-4 ✅ (followUpQuery 审计携带父 traceID, 2026-08-11 3F.6)
+//          DEF-34-001 ✅ (RRF 融合 + ID-keyed 元数据组装, 禁止 top-1 re-search, 2026-08-11 3F.6)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           AGENTS.md §5.3 (反馈存储契约),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
 //           AGENTS.md §4.4 (L1~L4 统一错误分级),
 //           PIPE-002 (翻译仅限展示层, Retriever 返回源语言原文)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-07-12
+// 注: 3F.6 起 Pipeline 持有两条会话级可变状态（lastSearchTraceID/lastSearchQuery）用于
+//     US-RET-005 AC-4 跟进查询审计（approach a: 同查询复用，无 LLM rewrite）—
+//     actor 串行执行保证无竞争；此为该 AC 的唯一可落地实现（§12.4 决策记录于 3F.6 PR）
+// 生成时间: 2026-07-12 | 更新: 2026-08-11 (3F.6)
 // ==========================================
 
 import Foundation
@@ -253,6 +259,13 @@ public actor SearchPipeline {
     private let vectorStore: VectorStoreActor
     private let feedbackActor: FeedbackActor
 
+    // MARK: - Session State (US-RET-005 AC-4)
+
+    /// 上一次检索的 traceID（跟进查询审计的父 traceID；nil = 尚无前序轮次）
+    private var lastSearchTraceID: String?
+    /// 上一次检索的规范化查询文本（approach a: 仅同查询复用视为跟进，无 LLM rewrite）
+    private var lastSearchQuery: String?
+
     // MARK: - Configuration
 
     /// ANN 检索候选集大小（供后续精排/过滤使用）
@@ -330,6 +343,13 @@ public actor SearchPipeline {
         guard !trimmed.isEmpty else {
             throw SearchError.emptyQuery
         }
+
+        // Step 1.5: Follow-up tracking (US-RET-005 AC-4, approach a: same query reuse)
+        // 上一轮存在且查询文本一致 → 本轮为跟进查询；审计携带父轮次 traceID。
+        let isFollowUp = lastSearchTraceID != nil && lastSearchQuery == trimmed
+        let parentTrace = lastSearchTraceID
+        lastSearchQuery = trimmed
+        lastSearchTraceID = traceID
 
         // Step 2: PrivacyCheckpoint (R-006)
         let checkpoint = await privacyActor.validate(
@@ -516,6 +536,20 @@ public actor SearchPipeline {
             elapsedMs: elapsedMs
         )
 
+        // Step 13: Follow-up audit (US-RET-005 AC-4) — best-effort, 携带父轮次 traceID
+        if isFollowUp, let parentTrace {
+            let followUpInfo = encodeFollowUpMetadata(parentTraceID: parentTrace, query: trimmed)
+            try? await privacyActor.writeAuditLog(
+                eventType: .followUpQuery,
+                traceID: parentTrace,
+                policyVersion: checkpoint.policyVersion,
+                success: true,
+                sourceType: "search",
+                affectedCount: topK.count,
+                sourceLanguage: followUpInfo
+            )
+        }
+
         return topK
     }
 
@@ -598,6 +632,22 @@ public actor SearchPipeline {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let json = String(data: data, encoding: .utf8) else {
             return query ?? results.joined(separator: ",")
+        }
+        return json
+    }
+
+    /// 编码跟进查询审计元数据（US-RET-005 AC-4，写入 sourceLanguage 字段）。
+    ///
+    /// 格式:
+    /// ```json
+    /// { "parentTraceId": "<父轮次 traceID>", "rewrittenQuery": "<规范化查询>" }
+    /// ```
+    /// approach a 无 LLM rewrite — rewrittenQuery 恒等于原始查询（会话状态追踪，无外部调用）。
+    private nonisolated func encodeFollowUpMetadata(parentTraceID: String, query: String) -> String {
+        let dict: [String: Any] = ["parentTraceId": parentTraceID, "rewrittenQuery": query]
+        guard let data = try? JSONSerialization.data(withJSONObject: dict),
+              let json = String(data: data, encoding: .utf8) else {
+            return "{\"parentTraceId\":\"\(parentTraceID)\"}"
         }
         return json
     }
@@ -742,70 +792,64 @@ public actor SearchPipeline {
             .map(\.key)
     }
 
-    /// 多通道搜索（R-3.7）— 并行执行各通道，RRF 融合。
+    /// 生产多通道检索（R-3.7 / DEF-34-001，3F.6）— 并行执行各通道适配器，RRF 融合。
     ///
-    /// 当前活跃通道：text_dense（E5 384d ANN）。
-    /// 待接入通道：vision_dense（SigLIP2）、ocr_text（Vision OCR）、lexical（JiebaFTS5）。
-    /// 超时通道被跳过，不影响其他通道结果。
+    /// ## 通道契约（US-RET-008 / DEF-34-002）
+    /// - 每个适配器内部完成 PrivacyCheckpoint（R-006）、路由解析、超时降级 —
+    ///   适配器绝不 throw 阻断融合（错误经 timedOut / error 字段携带）
+    /// - timedOut / error 通道被跳过（部分结果与 L3 错误均不参与融合，不影响其他通道）
+    ///
+    /// ## 元数据组装（DEF-34-001）
+    /// 融合结果经通道 ID-keyed 元数据映射组装 SearchResultItem — 禁止 top-1 re-search。
     ///
     /// - Parameters:
-    ///   - queryVector: 查询向量（text_dense 通道）
-    ///   - k: 返回结果数
-    /// - Returns: 融合后的 SearchResultItem 列表
+    ///   - adapters: 参与融合的通道适配器（text_dense/vision_dense/ocr_text/lexical）
+    ///   - queryVector: 查询向量（稠密通道使用；nil 时适配器按通道维度零向量处理）
+    ///   - queryText: 查询原文（词法通道使用）
+    ///   - k: 融合后返回 top-K 结果数
+    /// - Returns: 按 RRF 分数降序的 SearchResultItem 列表（ID-keyed 元数据组装）
     func searchMultiChannel(
-        queryVector: [Float],
+        adapters: [any SearchChannelAdapter],
+        queryVector: [Float]?,
+        queryText: String,
         k: Int
     ) async throws -> [SearchResultItem] {
         var channelResults: [ChannelResult] = []
+        var metadataByID: [UUID: SearchChannelMetadata] = [:]
 
-        // Channel 1: text_dense (E5 384d ANN) — active
-        do {
-            let searchK = max(k, min(annCandidateCount, 100))
-            let annResults = try await withTimeout(seconds: Self.channelTimeoutSeconds) {
-                await self.vectorStore.search(query: queryVector, k: searchK)
+        // 各通道顺序执行（每个适配器内部自带超时降级，绝不 throw 阻断融合）。
+        // 未来可迁移到 withThrowingTaskGroup 并行；当前逐通道执行保证串行确定性。
+        for adapter in adapters {
+            guard let result = try? await adapter.search(
+                queryVector: queryVector,
+                queryText: queryText,
+                k: k
+            ) else { continue }
+            // 降级通道（timedOut / L3 error）被跳过 — 不影响其他通道结果（US-RET-008 AC-3）
+            if result.timedOut || result.error != nil { continue }
+            channelResults.append(ChannelResult(channel: result.channel.rawValue, rankedIds: result.rankedIds))
+            for (id, meta) in result.metadataByID {
+                metadataByID[id] = metadataByID[id] ?? meta
             }
-            let rankedIds = annResults.map(\.id)
-            channelResults.append(ChannelResult(channel: "text_dense", rankedIds: rankedIds))
-        } catch {
-            // text_dense channel timeout/failure — skip, continue with other channels
         }
 
-        // Channel 2: vision_dense (SigLIP2) — scaffold, not yet active
-        // TODO (R-3.2): SigLIP2Embedder.embedImage → vision_dense generation search
-
-        // Channel 3: ocr_text (Vision OCR) — scaffold, not yet active
-        // TODO (R-3.5): VisionOCREngine → ocr_text generation search
-
-        // Channel 4: lexical (JiebaFTS5 BM25) — scaffold, not yet active
-        // TODO (R-3.6): LexicalEngine.search → lexical channel
-
-        // RRF fusion
+        // RRF 融合（加权，超时/错误通道已剔除）
         let fusedIds = rrfFuse(channelResults: channelResults, k: k)
 
-        // Convert fused IDs back to SearchResultItems (preserve metadata from text_dense)
-        // For now, re-fetch from vector store for the fused set
+        // DEF-34-001: 元数据来自融合 ID 的 ID-keyed 映射 — 禁止 top-1 re-search
         var items: [SearchResultItem] = []
         for id in fusedIds {
-            // Look up metadata from the text_dense channel results
-            if channelResults.first(where: { $0.channel == "text_dense" })?.rankedIds.contains(id) == true {
-                // Re-search to get full metadata (simplified; production would cache)
-                let results = await vectorStore.search(query: queryVector, k: 1)
-                if let result = results.first, result.id == id {
-                    let metadata = try? MemoryEntry.decodeMetadata(from: result.metadata ?? Data())
-                    items.append(SearchResultItem(
-                        id: result.id,
-                        assetId: metadata?.assetId ?? "",
-                        sourceType: metadata?.sourceType ?? "unknown",
-                        timestamp: metadata?.timestamp ?? Date().timeIntervalSince1970,
-                        originalText: metadata?.originalText,
-                        sourceLanguage: detectLanguage(from: metadata?.originalText),
-                        crossLanguageMatch: false,
-                        cosineSimilarity: 1.0 - Float(result.distance)
-                    ))
-                }
-            }
+            guard let meta = metadataByID[id] else { continue }
+            items.append(SearchResultItem(
+                id: id,
+                assetId: meta.assetId,
+                sourceType: meta.sourceType,
+                timestamp: meta.timestamp,
+                originalText: meta.originalText,
+                sourceLanguage: meta.sourceLanguage,
+                cosineSimilarity: meta.cosineSimilarity
+            ))
         }
-
         return items
     }
 

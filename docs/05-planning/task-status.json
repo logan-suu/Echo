@@ -1378,7 +1378,7 @@
             "US-SRC-010",
             "US-SRC-011"
           ],
-          "status": "ready",
+          "status": "review",
           "owner": {
             "implementation": "Search and Ranking Lead",
             "approver": "Privacy Engineering Lead"
@@ -1430,8 +1430,8 @@
             "US-SRC-011 subjective-ranking/feedback traces",
             "PendingOperations 手工重试与授权证据"
           ],
-          "last_updated": "2026-08-10T15:26:26Z",
-          "notes": "ADR-010 governs generation routing and feedback identity.\n(2026-08-10 cascade) Dependency 3F.5 merged (PR #57), flipped backlog -> ready per AGENTS.md §12.1.",
+          "last_updated": "2026-08-11T04:00:00Z",
+          "notes": "ADR-010 governs generation routing and feedback identity.\n(2026-08-10 cascade) Dependency 3F.5 merged (PR #57), flipped backlog -> ready per AGENTS.md §12.1.\n(2026-08-11 in_progress) 3F.6 started. US-RET-005 AC-3 (LLM follow-up rewrite) deferred per user decision (approach a): implement AC-1/2/4/5 only (FIFO history + memoryIds implicit filter), record deferred item DEF-58-001.\n(2026-08-11 review) 3F.6 实现完成。生产检索与反馈：SearchResultCacheActor（US-RET-007 TTL/policyVersion 失效）、GenerationRoutedChannelAdapter（generation 路由 + 空索引 timedOut 降级 + timeout/L3 错误分离 DEF-34-002 + ID-keyed metadataByID DEF-34-001）、SearchPipeline followUpQuery 审计（US-RET-005 AC-4）、CrossAppIntentParser（US-SRC-010 AC-1 中文日期/主观意图 + temporalWindow）、BoundedReranker（US-SRC-011 主观重排 + 截断）、ProductionCrossAppFusionEngine（逐源授权 + 时间对齐 + .crossAppSearch 审计）、FeedbackActor computeAdjustment query-conditioned（US-FBK-001 AC-4）、FeedbackPipeline generationId passthrough（DEF-56-005）+ L2 → PendingOperations（DEF-37-001，PendingOpsActor 自动重连）、searchCanonical ORDER BY rank（DEF-56-006）。AuditEvent 新增 followUpQuery/crossAppSearch case。测试：3F.6_ProductionSearchFeedbackTests 30/30 + 3F.6_CrossAppSearchTests 15/15（RED 阶段 14+12 失败）；既有测试 queryText 对齐修复（SQLiteActorTests/SearchWithFeedbackTests fixture 记录与查询 queryText 统一为 test）；全量回归 962 tests / 116 suites 0 失败；SwiftLint 0 errors。DEF-34-001/002、DEF-37-001、DEF-56-005/006 已关闭（带证据）。Release 构建 simulateError #Preview 失败为 pre-existing（3F.1 记录）。",
           "pr": null
         },
         {

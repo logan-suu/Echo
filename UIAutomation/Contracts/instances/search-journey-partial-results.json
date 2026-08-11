@@ -1,0 +1,16 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "search-partial-results",
+  "steps": [
+    { "surfaceId": "search-results", "stateId": "idle", "actionId": "search.submit" },
+    { "surfaceId": "search-results", "stateId": "loading", "actionId": "search.submit" },
+    { "surfaceId": "search-results", "stateId": "partialResults", "actionId": "result.like" }
+  ],
+  "preconditionFixtures": ["search-partial-results"],
+  "assertions": [
+    { "type": "result_count", "expected": ">= 1" },
+    { "type": "partial_results_banner", "expected": "present; partial results not rendered as full success or total error" },
+    { "type": "channel_provenance", "expected": "successful channels listed; unavailable channels carry reasons (timeout / route missing)" }
+  ],
+  "version": "1.0.0"
+}

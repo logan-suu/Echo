@@ -103,7 +103,7 @@ struct FeedbackActorTests {
 
     func makeEntry(memoryId: UUID, sentiment: FeedbackSentiment, sim: Double, daysAgo: Int = 0) -> FeedbackEntry {
         let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
-        return FeedbackEntry(memoryId: memoryId, queryText: "test query", sentiment: sentiment, cosineSimilarity: sim, createdAt: date)
+        return FeedbackEntry(memoryId: memoryId, queryText: "test", sentiment: sentiment, cosineSimilarity: sim, createdAt: date)
     }
 
     @Test("recordFeedback stores entry and increments count")

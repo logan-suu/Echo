@@ -4,6 +4,7 @@
 //            US-FBK-003 (本地 Bad Case 标记/撤销)
 //            docs/02-architecture/数据流全链路技术说明文档.md §6 (反馈学习数据流)
 // 任务: 2.13 - FeedbackPipeline：点赞/点踩/Bad Case 记录
+//        3F.6 - generationId 透传 (DEF-56-005) + L2 失败写 PendingOperations (DEF-37-001)
 // AC 覆盖: US-FBK-001 AC-2 ✅ (写入 FeedbackStore), AC-4 ✅ (关联 memoryId+queryEmbedding),
 //           AC-5 ✅ (审计 .feedbackReceived, via FeedbackActor)
 //           US-FBK-003 AC-2 ✅ (Bad Case 含查询词/返回结果/标记时间/可选原因),
@@ -12,7 +13,10 @@
 //           US-FBK-003 AC-1 🔮 ("标记问题" UI, Phase 3 SearchView)
 //           US-FBK-003 AC-3 🔮 ("我的反馈记录"页面, Phase 3 SettingsView)
 //           US-FBK-003 AC-4 🔮 ("撤销"按钮, Phase 3 SettingsView)
+//           DEF-37-001 ✅ (L2 recordFailed → PendingOperations 可手动重试)
+//           DEF-56-005 ✅ (活跃 text generation 透传 FeedbackActor, ADR-010 决策-4)
 // 生成时间: 2026-07-12 | PR review 修复 (40c6b30): W1 fetchBadCases/fetchFeedback +PrivacyCheckpoint, W4 isBadCase() 原子查询
+// 更新: 2026-08-11 (3F.6 generationId 透传 + PendingOperations 写入)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — actor 持有不可变引用),
 //           AGENTS.md §4.2 (Actor 隔离契约), R-006 (PrivacyCheckpoint 强制注入),
 //           AGENTS.md §5.3 (反馈仅本地存储), AGENTS.md §7.3 (审计事件完整清单)
@@ -95,15 +99,21 @@ public actor FeedbackPipeline {
 
     private let feedbackActor: FeedbackActor
     private let privacyActor: PrivacyActor
+    private let pendingOpsActor: PendingOpsActor
+    private let generationRegistry: GenerationRegistryActor
 
     // MARK: - Initialization
 
     public init(
         feedbackActor: FeedbackActor = .shared,
-        privacyActor: PrivacyActor = .shared
+        privacyActor: PrivacyActor = .shared,
+        pendingOpsActor: PendingOpsActor = .shared,
+        generationRegistry: GenerationRegistryActor = .shared
     ) {
         self.feedbackActor = feedbackActor
         self.privacyActor = privacyActor
+        self.pendingOpsActor = pendingOpsActor
+        self.generationRegistry = generationRegistry
     }
 
     // MARK: - Privacy Checkpoint Helper
@@ -188,9 +198,34 @@ public actor FeedbackPipeline {
             badCaseReason: nil
         )
 
+        // DEF-56-005: 解析活跃文本 generation 并绑定反馈（ADR-010 决策-4）。
+        // 路由未发布/DB 关闭时为 nil（不阻断反馈记录）。
+        let generationId = (try? await generationRegistry.loadActiveRoute())?.textGeneration
+
         do {
-            try await feedbackActor.recordFeedback(entry, traceID: traceID)
+            try await feedbackActor.recordFeedback(entry, traceID: traceID, generationId: generationId)
         } catch {
+            // DEF-37-001 (L2): 记录失败写入 PendingOperations（可手动重试），随后 rethrow。
+            // PendingOpsActor.add 在 DB 关闭时自动重连，保证 L2 恢复路径存活。
+            // 参数负载使用 [String: String] 字典编码（FeedbackEntry 的 Codable 合成为
+            // MainActor 隔离，无法在 actor 上下文直接 JSONEncoder.encode）。
+            let parameters: Data = (try? JSONEncoder().encode([
+                "memoryId": entry.memoryId.uuidString,
+                "queryText": entry.queryText,
+                "sentiment": entry.sentiment.rawValue,
+                "cosineSimilarity": String(entry.cosineSimilarity),
+                "createdAt": String(entry.createdAt.timeIntervalSince1970),
+                "isBadCase": entry.isBadCase ? "1" : "0",
+            ])) ?? Data()
+            let operation = PendingOperation(
+                operationId: UUID().uuidString,
+                operationType: "feedback",
+                retryCount: 0,
+                parameters: parameters,
+                createdAt: Date(),
+                lastError: error.localizedDescription
+            )
+            try? await pendingOpsActor.add(operation: operation)
             throw FeedbackPipelineError.recordFailed(underlying: error)
         }
 
@@ -280,8 +315,11 @@ public actor FeedbackPipeline {
             badCaseReason: reason
         )
 
+        // DEF-56-005: Bad Case 同样绑定活跃 text generation（ADR-010 决策-4）
+        let generationId = (try? await generationRegistry.loadActiveRoute())?.textGeneration
+
         do {
-            try await feedbackActor.recordFeedback(entry, traceID: traceID)
+            try await feedbackActor.recordFeedback(entry, traceID: traceID, generationId: generationId)
         } catch {
             throw FeedbackPipelineError.recordFailed(underlying: error)
         }
