@@ -752,10 +752,18 @@ Production awakening system adapters per ADR-012: real `CoreLocationProvider` (C
 | US-SRC-010 AC-5 | `.crossAppSearch` audit with authorized source list | EchoTests/Phase3F/3F.8_CrossAppHealthIntegrationTests.swift | ProductionCrossAppFusionEngine (3F.6) | ✅ |
 | ADR-012 决策-4 | Data minimization — no raw health values passed through | EchoTests/Phase3F/3F.8_CrossAppHealthIntegrationTests.swift | HealthKitSystemProvider + RealHealthStore (minimized samples only) | ✅ |
 
+## Review Fixes (2026-08-11, AI pre-review pr-review-echo)
+- **C-1 (🔴, CI Xcode 16.4 build fail)**: `LocationProviding.onGeofenceEvent` callback → `AsyncStream<GeofenceEvent>` `eventStream` + explicit `@MainActor` on protocol & class (all-`let` storage, toolchain-independent). Commit a56a3d9.
+- **W-1 (🟡)**: `HealthKitSystemProvider` `DispatchSemaphore.wait()` → `withCheckedContinuation` (requestAuthorization + fetchHRVSamples) — eliminates MainActor UI-freeze/deadlock risk.
+- **W-3 (🟡)**: force-unwrapped `UUID(uuidString:)!` → `compactMap` + `guard` in `search(query:window:)`.
+- **W-4 (🟡)**: `AwakeningPipeline` retained via `AppDelegate.awakeningPipeline` property + `for await` event-loop consumption.
+- **W-2 (🟡 deferred → DEF-60-001)**: hardcoded EN notification/permission strings — no String Catalog infra exists; codebase-wide i18n owned by 3F.10.
+- **W-5 (🟡 deferred → DEF-60-002)**: 4th bare `VectorStoreActor(dimension: 512)` — consistent with existing sync/ingest wiring; Phase 4 consolidation to GenerationRegistryActor.
+
 ## Testing
 - Focused: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/AwakeningSystemAdaptersTests -only-testing:EchoTests/CrossAppHealthIntegrationTests` → exit 0, 26 tests / 0 failures.
 - Affected-suite regression: AwakeningGeoTests (US-AWK-001), AwakeningEmotionTests (US-AWK-003), AwakeningDeliveryTests (AwakeningSettingsViewModel), HomeViewModelTests → exit 0, 73 tests / 0 failures.
-- Full cumulative gate (all Phase 1~3F unit + integration) run at delivery per §6.1.
+- Full cumulative gate post review-fix (2026-08-11): **1062 tests / 0 failures** — unit 1029 tests / 122 suites + UI 33 tests / 9 suites (TEST SUCCEEDED).
 - UIAutomation: 11 new contract files + 5 aligned + 6 fixtures; all validated via `python3 -m json.tool`.
 
 ## Documentation and Ledger
@@ -767,7 +775,9 @@ Production awakening system adapters per ADR-012: real `CoreLocationProvider` (C
 - Real HealthKit/Location/Notification authorization paths require live simulator/device grants; CI unit tests exercise injected system signals through the production adapters (ADR-012 决策-3), with 3F.11 no-fixture E2E as final authorization gate.
 
 ## Deferred Items
-- DEF-001 (AWK-004 Widget) and DEF-002 (AWK-006 Siri) remain deferred per ADR-012 决策-6. No new deferrals created by 3F.8.
+- DEF-001 (AWK-004 Widget) and DEF-002 (AWK-006 Siri) remain deferred per ADR-012 决策-6.
+- **DEF-60-001** (W-2, PR #60): hardcoded EN notification/permission strings → defer_to 3F.10 i18n task.
+- **DEF-60-002** (W-5, PR #60): bare `VectorStoreActor(dimension: 512)` in AppDelegate → defer_to Phase 4 GenerationRegistryActor consolidation.
 
 ## Self-Check
 - All new pipeline methods call PrivacyCheckpoint at entry (handleAnniversaryAwakening validates `.awakening`); system adapters are protocol-based with value-type-only cross-boundary types.
