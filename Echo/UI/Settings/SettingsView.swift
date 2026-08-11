@@ -46,7 +46,14 @@ import SwiftUI
 /// - About: 永久保留策略 (US-SET-002)
 struct SettingsView: View {
 
-    @State private var viewModel = SettingsViewModel()
+    @State private var viewModel: SettingsViewModel
+
+    init(viewModel: SettingsViewModel = SettingsViewModel(
+        composition: AppComposition.shared,
+        dataOverviewService: LiveAppAdapters.makeDataOverviewService()
+    )) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
         content

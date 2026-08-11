@@ -102,21 +102,64 @@ final class SettingsViewModel {
     /// 撤回同意/注销用 composition（3F.1 生产接线，fixture 模式可为 nil）
     private let composition: AppComposition?
 
+    /// 数据概览服务（US-SRC-009 live 值，3F.7 接线）— nil 时回退 fixture 占位
+    private let dataOverviewService: DataOverviewService?
+
     init(fixtureLoader: SettingsFixtureLoader = .shared,
-         composition: AppComposition? = nil) {
+         composition: AppComposition? = nil,
+         dataOverviewService: DataOverviewService? = nil) {
         self.fixtureLoader = fixtureLoader
         self.composition = composition
+        self.dataOverviewService = dataOverviewService
     }
 
     func loadSettings() async {
         state = .loading
         do {
-            try await Task.sleep(nanoseconds: 300_000_000)
-            let sections = try fixtureLoader.loadSettings()
-            state = .completed(sections)
+            // 3F.7: live 数据概览（US-SRC-009）优先；无 service 时回退 fixture（Preview/旧测试）
+            if let overview = dataOverviewService {
+                let snap = try await overview.snapshot()
+                let live = SettingsSections(
+                    dataSources: makeLiveDataSources(snap),
+                    storage: StorageInfo(
+                        indexCount: snap.memoryCount,
+                        vectorStoreSize: byteCount(snap.vectorStoreBytes),
+                        cacheSize: "\(snap.translationCacheCount) items",
+                        databaseSize: byteCount(snap.databaseBytes)
+                    ),
+                    modelStatus: ModelStatusInfo(
+                        totalModels: snap.modelTotalCount,
+                        loadedCount: snap.modelLoadedCount,
+                        failedCount: snap.modelFailedCount,
+                        notLoadedCount: snap.modelNotLoadedCount,
+                        isDegraded: snap.modelFailedCount > 0
+                    ),
+                    excludedCount: try await ExcludedAssetsActor.shared.count(),
+                    feedbackCount: try await FeedbackActor.shared.count(),
+                    pendingOpsCount: try await PendingOpsActor.shared.count()
+                )
+                state = .completed(live)
+            } else {
+                try await Task.sleep(nanoseconds: 300_000_000)
+                let sections = try fixtureLoader.loadSettings()
+                state = .completed(sections)
+            }
         } catch {
             state = .error(.l2Recoverable(error.localizedDescription))
         }
+    }
+
+    private func byteCount(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+
+    private func makeLiveDataSources(_ snap: DataOverviewSnapshot) -> [DataSourceItem] {
+        [
+            DataSourceItem(id: "photo", displayName: "Photos", systemImage: "photo.on.rectangle", isAuthorized: true, itemCount: snap.countsBySourceType["photo"] ?? 0),
+            DataSourceItem(id: "video", displayName: "Videos", systemImage: "video", isAuthorized: true, itemCount: snap.countsBySourceType["video"] ?? 0),
+            DataSourceItem(id: "note", displayName: "Notes", systemImage: "note.text", isAuthorized: true, itemCount: snap.countsBySourceType["note"] ?? 0),
+            DataSourceItem(id: "voice", displayName: "Voice Memos", systemImage: "waveform", isAuthorized: true, itemCount: snap.countsBySourceType["voice"] ?? 0),
+        ]
     }
 
     func toggleSync(_ enabled: Bool) {

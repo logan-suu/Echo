@@ -179,10 +179,12 @@ final class SearchViewModel {
     // MARK: - Dependencies (Immutable Actor References)
 
     /// SearchPipeline 引用 — 不可变 actor 引用 (docs/ui/architecture.md §6.4)
-    /// 可选注入: Phase 3.9 完整集成后通过 DI 容器注入
+    /// 默认 nil → 首次搜索时经 composition 解析 live pipeline（3F.7 默认 live，无 fixture fallback）
     private let searchPipeline: SearchPipeline?
     /// FeedbackPipeline 引用 — 反馈转发 (US-FBK-001/003)
     private let feedbackPipeline: FeedbackPipeline?
+    /// 生产 composition — pipeline 未注入时解析 live 依赖（3F.7）
+    private let composition: AppComposition?
 
     /// 当前活跃的搜索 Task
     private var searchTask: Task<Void, Never>?
@@ -195,12 +197,17 @@ final class SearchViewModel {
     /// 初始化 SearchViewModel。
     ///
     /// - Parameters:
-    ///   - searchPipeline: SearchPipeline 实例（可选注入）
+    ///   - searchPipeline: SearchPipeline 实例（可选注入；nil → 默认解析 live composition pipeline）
     ///   - feedbackPipeline: FeedbackPipeline 实例（可选注入）
-    ///   Phase 3.9 完整集成后通过 DI 容器注入。
-    init(searchPipeline: SearchPipeline? = nil, feedbackPipeline: FeedbackPipeline? = nil) {
+    ///   - composition: 生产 composition（默认 .shared）
+    init(
+        searchPipeline: SearchPipeline? = nil,
+        feedbackPipeline: FeedbackPipeline? = nil,
+        composition: AppComposition? = nil
+    ) {
         self.searchPipeline = searchPipeline
         self.feedbackPipeline = feedbackPipeline
+        self.composition = composition
     }
 
     // MARK: - Actions
@@ -227,10 +234,21 @@ final class SearchViewModel {
             guard let self else { return }
 
             do {
-                // 🔮 Phase 3.9+: SearchPipeline 完整接入。当前 UI 切片在 Preview/测试中
-                // 通过 loadPreloadedResults 注入确定性数据。真实检索依赖 embedder + vectorStore
-                // 运行时初始化（见 3.11 引导流程 Core 初始化）。
-                if let pipeline = self.searchPipeline {
+                // 3F.7: 默认 live pipeline — 未注入时经 composition 解析生产检索/反馈适配器。
+                // 仅显式注入（测试/Preview fixture）保留 stub 分支。
+                if self.searchPipeline == nil && self.composition != nil {
+                    let livePipeline = await LiveAppAdapters.makeSearchPipeline(composition: self.composition!)
+                    let items = try await livePipeline.search(
+                        query: self.query,
+                        k: 10,
+                        traceID: UUID().uuidString
+                    )
+                    guard !Task.isCancelled else {
+                        self.viewState = .cancelled
+                        return
+                    }
+                    self.results = items.map(SearchResultModel.init)
+                } else if let pipeline = self.searchPipeline {
                     let items = try await pipeline.search(
                         query: self.query,
                         k: 10,
@@ -242,8 +260,7 @@ final class SearchViewModel {
                     }
                     self.results = items.map(SearchResultModel.init)
                 } else {
-                    // 无 Pipeline（UI 切片模式）：返回 fixture 注入的 stub 结果，
-                    // 模拟真实检索（Phase 3.9 接入 SearchPipeline 后此分支移除）。
+                    // 无 Pipeline（测试/Preview fixture 模式）：返回 fixture 注入的 stub 结果
                     try await Task.sleep(nanoseconds: 300_000_000)
                     guard !Task.isCancelled else {
                         self.viewState = .cancelled

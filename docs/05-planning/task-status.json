@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-11T07:19:26Z",
+  "last_updated": "2026-08-11T08:20:00Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -1466,7 +1466,7 @@
             "US-SRC-007",
             "US-SRC-009"
           ],
-          "status": "ready",
+          "status": "review",
           "owner": {
             "implementation": "iOS UI Integration Lead and iOS Platform Security Lead",
             "approver": "Security Engineering Lead, Privacy Engineering Lead and Architecture Lead"
@@ -1579,8 +1579,8 @@
             "Security, Privacy and Architecture approval records",
             "双设备 Live Simulator Review、AX tree、日志和无媒体 manifest"
           ],
-          "last_updated": "2026-08-11T07:19:26Z",
-          "notes": "Owns search, detail, background-task, resume and degradation UIAutomation assets declared in the 3F.7 record and contract.\n(2026-08-11 cascade) Dependency 3F.6 merged (PR #58), flipped backlog -> ready per AGENTS.md §12.1.",
+          "last_updated": "2026-08-11T08:20:00Z",
+          "notes": "✅ 3F.7 UI 到 Core 全域接线 (2026-08-11)。核心交付：DataOverviewService (US-SRC-009 live 值 + JSON 导出 + .dataOverviewAccessed 审计)、DeviceMigrationPackage/Service/Actor (ECHOMIG1 加密包 AES-GCM-256+HKDF-SHA256 + RFC 8785 JCS manifest + 精确 AAD + 逐块哈希 + fail-closed)、LiveAppAdapters (默认 live 接线)、SettingsViewModel live DataOverview 接线、SearchViewModel 默认 live pipeline、AuditEvent.dataOverviewAccessed。测试：4 新套件 35/35 (DeviceMigrationSecurity 17 + DeviceMigration 7 + DataOverview 6 + UIToCoreIntegration 5)，全量回归 995/995 0 失败，SwiftLint 0 errors。",
           "pr": null
         },
         {
