@@ -1086,6 +1086,28 @@
       "acceptance_evidence": [],
       "tracking_status": "open",
       "recheck_trigger": "Phase 3F 集成扫描"
+    },
+    {
+      "id": "DEF-58-008",
+      "pr": 58,
+      "title": "UIAutomation partial-results 契约三处表示不一致（partialResults object/boolean/未声明）",
+      "severity": "🟡",
+      "location": "UIAutomation/Contracts/instances/search-surface.json:30-31, search-state-partial-results.json:9-18, UIAutomation/Fixtures/search/search-partial-results.json:11-21",
+      "reason": "CR-14: 三个站点对部分结果负载的形状描述不一致（state 契约 object、fixture boolean + channelProvenance、surface 未声明），UI 适配器无法确定性消费。属 UI 自动化合约一致性，非本次 Core 检索缺陷；3F.7 UI→Core 接线时按 UI 适配器实际消费形状统一。",
+      "defer_to": "3F.7 UI→Core 接线（SearchView/SearchViewModel 消费 partial results 时统一 canonical shape）",
+      "deferred_at": "2026-08-11",
+      "owners": [
+        "iOS",
+        "QA"
+      ],
+      "target_tasks": [
+        "3F.7"
+      ],
+      "acceptance_evidence": [
+        "UI 适配器确定性渲染 partial-results 的自动化证据"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase 3F 集成扫描或 3F.7"
     }
   ]
 }
