@@ -319,7 +319,7 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 - **3F.6** Production search 与 feedback（✅ 2026-08-11：生产多通道检索——`SearchChannelAdapters` 按 `ActiveRouteSet` 逐通道解析每代向量存储（text_dense E5 384d / vision_dense SigLIP2 768d / ocr_text / lexical），RRF 融合 + ID-keyed `metadataByID` 回填（DEF-34-001），通道超时 → `timedOut` 部分结果、L3 路由缺失以 error 区分（US-RET-008 / DEF-34-002）；`SearchResultCacheActor` policy-aware TTL 缓存（US-RET-007）；追问查询 FIFO 历史 ≤10 轮 + memoryIds 隐式过滤 + `.followUpQuery` 审计（US-RET-005 AC-1/2/4/5，AC-3 LLM 改写延后 DEF-58-001）；`FeedbackActor` 按 queryText 条件化重排（US-FBK-001 AC-4）+ `FeedbackPipeline` 传递活跃 generationId（ADR-010），L2 反馈失败 → `PendingOperations`（DEF-37-001）；`CrossAppIntentParser` + `CrossAppFusionEngine` 跨 App 意图解析与时间对齐融合、逐源授权 + `.crossAppSearch` 审计（US-SRC-010，live HealthKit provider 属 3F.8）；`BoundedReranker` 主观有界重排（US-SRC-011）；`searchCanonical` ORDER BY rank（DEF-56-006））
 - **3F.6** Production search 与 feedback
 - **3F.7** UI 到 Core 全域接线
-- **3F.8** Awakening 与 system adapters
+- **3F.8** Awakening 与 system adapters（✅ 2026-08-11：生产唤醒系统适配器——ADR-012 全决策落地。`CoreLocationProvider`（CLLocationManager 地理围栏 enter/exit + 权限感知，US-AWK-001）、`HealthKitSystemProvider`（符合 `CrossAppSourceProvider` sourceType="health" → 3F.6 US-SRC-010 fusion，仅返回授权范围内最小化时序样本，denied 来源不查询，ADR-012 决策-4）、`LocalNotificationAdapter`（通知请求/调度，内容最小化，请求与响应路由分离）+ `NotificationResponseRouter`（点击→详情路由，US-AWK-005）、`AwakeningCardRepositoryActor`（SQLite 卡片持久化 + cardId 重启去重，决策-5）；`AwakeningPipeline` 增补 best-effort 纪念日日期窗口（US-AWK-002）+ `.dateAwakening` 审计；`AwakeningSettingsViewModel` 读取真实系统权限状态；`HomeViewModel` 加载持久化卡片；AppDelegate 装配全部适配器）
 - **3F.9** Apple Translation 与 grounded creation
 - **3F.10** i18n、accessibility 与 production errors
 - **3F.11** Production E2E 与 Phase 4 准入门禁（阶段集成测试）

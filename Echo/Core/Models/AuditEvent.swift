@@ -62,6 +62,8 @@ public enum AuditEvent: String, Sendable, Codable {
     case retrieval
     case contextualAwakening
     case emotionalAwakening
+    /// 日期/纪念日唤醒 (US-AWK-002 AC-5: triggerType=anniversary, yearsAgo=[1,3,5])
+    case dateAwakening
     // 3F.1 新增 (ADR-007):
     /// 用户同意 PIPL 隐私政策 (US-PRV-008)
     case consentAccepted

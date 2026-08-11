@@ -713,47 +713,67 @@ Status legend: ✅ implemented + tested · 🔴 deferred/not implemented (tracke
 ## Entry: 3F.8 — Awakening 与 system adapters
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
-- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
+- Task / commit / branch / PR: `3F.8` / commit recorded at delivery / `feature/phase3f-awakening-adapters-3F.8` / PR created at delivery
+- Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead `/Users/logansu/Documents/Dev/SwiftProjects/Echo` (main repo root) / owner `logansu` / clean base `origin/dev-1.0`
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: atomic `ready → in_progress` write at `2026-08-11T12:00:00Z`; pre-delivery `review` transition at delivery (per §4.2, before §6.2.2)
+- Quoted AC and architecture constraints: US-AWK-001 AC-1/2/5/6 (geofence enter-only, exit reset, silent permission disable, `.contextualAwakening` audit), US-AWK-002 AC-3/4/5 (anniversary card / no-match no-push / `.dateAwakening` audit), US-AWK-003 AC-1 (HealthKit HRV mood), US-AWK-005 AC-1/3 (card notification + response→detail route), US-SRC-010 AC-2/3/4/5 (denied health not queried, minimized temporal samples, source identity, `.crossAppSearch` audit), ADR-012 决策-1 (best-effort windows), 决策-2 (permission-aware), 决策-3 (real adapters + request/route separation), 决策-4 (HealthKit data minimization), 决策-5 (card persistence/dedupe), 决策-7 (notification content minimization)
+- RED test command and observed failure: `xcodebuild test ... -only-testing:EchoTests/AwakeningSystemAdaptersTests` (RED observed before implementation — absent system adapters produced missing-symbol compile failures); `-only-testing:EchoTests/CrossAppHealthIntegrationTests` (RED — `HealthKitSystemProvider` / `CrossAppSourceProvider` conformance absent)
+- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/AwakeningSystemAdaptersTests -only-testing:EchoTests/CrossAppHealthIntegrationTests` → exit 0, 26 tests (19 + 7) / 0 failures
+- Cumulative test command / exit / passed count: affected suites re-run — AwakeningGeoTests + AwakeningEmotionTests + HomeViewModelTests + AwakeningSettingsViewModelTests → exit 0, 73 tests / 0 failures (no regression from pipeline/ViewModel changes); full cumulative gate runs at delivery
+- Release simulator and device commands / exits: `xcodebuild build -project Echo.xcodeproj -scheme Echo -configuration Release -destination 'generic/platform=iOS Simulator'` — run at delivery; device compile `CODE_SIGNING_ALLOWED=NO` per §6.1
+- Static/privacy/model/compliance commands / exits: SwiftLint 0 errors; R-007 scan (no unchecked Sendable / Combine in business code — `@unchecked Sendable` confined to test doubles + system-framework boundary `@preconcurrency`); planning ledger JSON validated via `python3 -m json.tool`
+- Production path exercised: AppDelegate.configureSources wires `CoreLocationProvider` (geofence enter/exit → AwakeningPipeline), `HealthKitSystemProvider` (HealthKitProvider mood + CrossAppSourceProvider for US-SRC-010 fusion), `LocalNotificationAdapter` + `NotificationResponseRouter` (request/route separation), `AwakeningCardRepositoryActor` (schema + persistence)
+- Files and documentation changed: the exhaustive `3F.8` Files list (Modify + Create) in the execution plan `§7` and `§4.6.8`; no file outside that list changed except `Echo/Core/Models/AuditEvent.swift` (added `.dateAwakening` audit case required by US-AWK-002 AC-5, same precedent as 3F.6 adding `followUpQuery`/`crossAppSearch`)
+- Deferred items closed or created, with evidence links: DEF-001 (AWK-004 Widget) and DEF-002 (AWK-006 Siri) remain deferred per ADR-012 决策-6 — no new deferrals created by 3F.8
+- Known risks that do not weaken an in-scope gate: real HealthKit/Location/Notification behavior requires live simulator/device authorization; CI unit tests exercise injected system signals through the production adapters (per ADR-012 决策-3), with 3F.11 no-fixture E2E as the final authorization gate. `HealthKitSystemProvider.healthID` uses FNV-1a deterministic hashing (not Swift `hashValue`) for stable cross-process dedup.
 
 <!-- PR-BODY:3F.8:START -->
 ## Overview
-<fill with the completed task overview>
+Production awakening system adapters per ADR-012: real `CoreLocationProvider` (CLLocationManager geofence enter/exit + permission-aware), `HealthKitSystemProvider` (conforms to `CrossAppSourceProvider` with sourceType "health" for 3F.6 US-SRC-010 fusion, returns only minimized authorized temporal samples, denied source never queried), `LocalNotificationAdapter` (request/schedule, content minimization, request-response separation), `NotificationResponseRouter` (pure-function notification tap → detail route), `AwakeningCardRepositoryActor` (SQLite-backed persisted card storage with cardId dedup across restarts). `AwakeningPipeline` extended with card persistence + notification scheduling on geofence/emotion/anniversary cards, best-effort anniversary date window (US-AWK-002), and `.dateAwakening` audit. `AwakeningSettingsViewModel` reads live system permission state via adapters (fixture fallback preserved). `HomeViewModel` loads persisted cards. `AppDelegate` wires all adapters into the production composition. `Echo-Info.plist` adds location/health usage strings; `Echo.entitlements` adds HealthKit entitlement.
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task ID: 3F.8 — Awakening 与 system adapters
+- Stories: US-AWK-001, US-AWK-002, US-AWK-003, US-AWK-005, US-SRC-010
+- Documents: docs/decisions/ADR-012-awakening-system-boundary.md (governing), docs/01-spec/用户故事与验收标准规格书.md, docs/02-architecture/架构设计文档.md, docs/02-architecture/数据流全链路技术说明文档.md, docs/ui/testing-and-artifacts.md, docs/ui/echo-readiness.md, docs/05-planning/phase3f-execution-plan.md §4.6.8, docs/05-planning/phase3f-evidence-index.md, docs/05-planning/task-status.json, docs/05-planning/deferred-items.json
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| US-AWK-001 AC-1/2 | Geofence enter triggers awakening; exit resets; no-repeat without exit | EchoTests/Phase3F/3F.8_AwakeningSystemAdaptersTests.swift | Echo/Core/Services/CoreLocationProvider.swift + AwakeningPipeline.handleGeofenceEnter/Exit | ✅ |
+| US-AWK-001 AC-5 | Location permission denied → silent disable | EchoTests/Phase3F/3F.8_AwakeningSystemAdaptersTests.swift | AwakeningPipeline privacy checkpoint + CoreLocationProvider.startMonitoring denial | ✅ |
+| US-AWK-002 AC-3/4 | Anniversary card generation; no-match no push | EchoTests/Phase3F/3F.8_AwakeningSystemAdaptersTests.swift | AwakeningPipeline.handleAnniversaryAwakening | ✅ |
+| US-AWK-002 AC-5 | `.dateAwakening` audit with yearsAgo | EchoTests/Phase3F/3F.8_AwakeningSystemAdaptersTests.swift | AwakeningPipeline.writeDateAwakeningAudit + AuditEvent.dateAwakening | ✅ |
+| US-AWK-003 AC-1 | HealthKit HRV mood inference | EchoTests/Phase3F/3F.8_AwakeningSystemAdaptersTests.swift | Echo/Core/Services/HealthKitSystemProvider.swift inferMoodFromHRV | ✅ |
+| US-AWK-005 AC-1/3 | Card notification content minimization; response → detail route | EchoTests/Phase3F/3F.8_AwakeningSystemAdaptersTests.swift | Echo/Core/Services/LocalNotificationAdapter.swift + NotificationResponseRouter.swift | ✅ |
+| ADR-012 决策-5 | Card persistence/dedupe across restart | EchoTests/Phase3F/3F.8_AwakeningSystemAdaptersTests.swift | Echo/Core/Actors/AwakeningCardRepositoryActor.swift | ✅ |
+| US-SRC-010 AC-2 | Denied health source not queried / excluded from fusion | EchoTests/Phase3F/3F.8_CrossAppHealthIntegrationTests.swift | HealthKitSystemProvider.search auth gate + ProductionCrossAppFusionEngine per-source gate | ✅ |
+| US-SRC-010 AC-3/4 | Minimized temporal samples, source identity preserved | EchoTests/Phase3F/3F.8_CrossAppHealthIntegrationTests.swift | HealthKitSystemProvider.search | ✅ |
+| US-SRC-010 AC-5 | `.crossAppSearch` audit with authorized source list | EchoTests/Phase3F/3F.8_CrossAppHealthIntegrationTests.swift | ProductionCrossAppFusionEngine (3F.6) | ✅ |
+| ADR-012 决策-4 | Data minimization — no raw health values passed through | EchoTests/Phase3F/3F.8_CrossAppHealthIntegrationTests.swift | HealthKitSystemProvider + RealHealthStore (minimized samples only) | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- Focused: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/AwakeningSystemAdaptersTests -only-testing:EchoTests/CrossAppHealthIntegrationTests` → exit 0, 26 tests / 0 failures.
+- Affected-suite regression: AwakeningGeoTests (US-AWK-001), AwakeningEmotionTests (US-AWK-003), AwakeningDeliveryTests (AwakeningSettingsViewModel), HomeViewModelTests → exit 0, 73 tests / 0 failures.
+- Full cumulative gate (all Phase 1~3F unit + integration) run at delivery per §6.1.
+- UIAutomation: 11 new contract files + 5 aligned + 6 fixtures; all validated via `python3 -m json.tool`.
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- task-status.json: 3F.8 `ready → in_progress → review`, `last_updated` updated.
+- phase3f-evidence-index.md: 3F.8 entry populated with real results; PR-BODY marker filled.
+- ADR-012: implementation-conformance noted in evidence index; no ADR text change required (implementation matches decision 1–7).
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- Real HealthKit/Location/Notification authorization paths require live simulator/device grants; CI unit tests exercise injected system signals through the production adapters (ADR-012 决策-3), with 3F.11 no-fixture E2E as final authorization gate.
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+- DEF-001 (AWK-004 Widget) and DEF-002 (AWK-006 Siri) remain deferred per ADR-012 决策-6. No new deferrals created by 3F.8.
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- All new pipeline methods call PrivacyCheckpoint at entry (handleAnniversaryAwakening validates `.awakening`); system adapters are protocol-based with value-type-only cross-boundary types.
+- No Combine / `@unchecked Sendable` in business code (`@unchecked Sendable` confined to test doubles and `@preconcurrency` framework boundary classes, matching PhotoKit pattern).
+- No network calls; R-001/R-005 preserved.
+- Audit logs hash-only; notification userInfo carries only memoryId + triggerType (no raw content).
 <!-- PR-BODY:3F.8:END -->
 
 ---

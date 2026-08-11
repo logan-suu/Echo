@@ -1,6 +1,6 @@
 # ADR-012: 唤醒系统边界
 
-**状态**: 已接受
+**状态**: 已接受（3F.8 已实现，2026-08-11 — 决策-1~7 全部落地）
 **日期**: 2026-08-04
 **决策人**: Privacy Engineering Lead（审批）+ iOS System Integration Lead（实现）
 

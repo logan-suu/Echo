@@ -1,0 +1,15 @@
+{
+  "surfaceId": "awakening-settings",
+  "stateId": "all-disabled",
+  "fixtureId": "awakening-all-disabled",
+  "description": "All permissions granted but all three awakening types disabled by the user",
+  "expected": {
+    "notificationPermission": "granted",
+    "locationPermission": "granted",
+    "healthPermission": "granted",
+    "isGeofenceEnabled": false,
+    "isEmotionEnabled": false,
+    "isAnniversaryEnabled": false,
+    "geofenceCount": 1
+  }
+}

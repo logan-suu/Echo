@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.openSystemSettings",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.openSystemSettings",
+  "expectedOutcome": "System Settings app opened for the relevant permission",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

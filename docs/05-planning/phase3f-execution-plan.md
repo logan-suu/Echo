@@ -1582,6 +1582,8 @@ xcodebuild test \
 
 ### 3F.8: Awakening 与 system adapters
 
+> ✅ **3F.8 已交付（2026-08-11）**：ADR-012 决策-1~7 落地——`CoreLocationProvider`（CLLocationManager 地理围栏 enter/exit + 权限感知）、`HealthKitSystemProvider`（符合 `CrossAppSourceProvider` sourceType="health"，US-SRC-010 3F.6 fusion；仅最小化时序样本；denied 不查询）、`LocalNotificationAdapter` + `NotificationResponseRouter`（请求/路由分离，内容最小化）、`AwakeningCardRepositoryActor`（SQLite 持久化 + 重启去重）；AwakeningPipeline 增补 best-effort 纪念日窗口 + `.dateAwakening` 审计；Settings/Home ViewModel 与 AppDelegate 装配完成。聚焦套件 AwakeningSystemAdaptersTests 19/19 + CrossAppHealthIntegrationTests 7/7，受影响套件全量回归通过。
+
 **Files**
 
 - Modify: `Echo/Core/Pipelines/AwakeningPipeline.swift`; `Echo/UI/Awakening/AwakeningSettingsViewModel.swift`; `Echo/UI/Home/HomeViewModel.swift`; `Echo/App/AppDelegate.swift`; `Echo/Config/Echo-Info.plist`; `Echo/Config/Echo.entitlements`.

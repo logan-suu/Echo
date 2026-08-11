@@ -25,6 +25,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     private var ingestPipeline: IngestPipeline?
     /// PhotoKit 来源适配器（iOS 26 limited 选择器主动弹出）— 持有防释放
     private var photoSourceAdapter: PhotoKitSourceAdapter?
+    /// 3F.8: 系统适配器 — 定位服务（地理围栏事件流）— 持有防释放
+    private var locationProvider: (any LocationProviding)?
+    /// 3F.8: HealthKit 系统适配器（US-SRC-010 live provider + US-AWK-003 情绪）— 持有防释放
+    private var healthKitSystemProvider: HealthKitSystemProvider?
+    /// 3F.8: 本地通知调度 — 持有防释放
+    private var notificationAdapter: (any NotificationScheduling)?
+    /// 3F.8: 通知响应路由（US-AWK-005 点击跳转）
+    private let notificationRouter: NotificationResponseRouting = NotificationResponseRouter()
+    /// 3F.8: 唤醒卡片持久化存储（ADR-012 决策-5）
+    private let awakeningCardRepository = AwakeningCardRepositoryActor()
 
     func application(
         _ application: UIApplication,
@@ -119,6 +129,46 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         )
         ingestPipeline = ingest
         _ = try? await ingest.drainSharedImports(from: .shared)
+
+        // 3F.8: 唤醒系统适配器装配（ADR-012 决策-3: 真实系统适配器接入生产）。
+        // - 定位服务: CoreLocationProvider 地理围栏 enter/exit 事件 → AwakeningPipeline
+        // - HealthKit: HealthKitSystemProvider 同时符合 HealthKitProvider（情绪）与
+        //   CrossAppSourceProvider（US-SRC-010 3F.6 fusion）
+        // - 通知: LocalNotificationAdapter 调度（请求与响应路由分离 — NotificationResponseRouter）
+        // - 卡片: AwakeningCardRepositoryActor 持久化 + 去重（决策-5）
+        let locProvider = CoreLocationProvider()
+        locationProvider = locProvider
+        healthKitSystemProvider = HealthKitSystemProvider()
+        let notifAdapter = LocalNotificationAdapter()
+        notificationAdapter = notifAdapter
+        _ = notificationRouter
+        try? await awakeningCardRepository.ensureSchema()
+
+        let awakening = AwakeningPipeline(
+            privacyActor: composition.privacyActor,
+            searchPipeline: SearchPipeline(
+                embedder: composition.textEmbedder,
+                privacyActor: composition.privacyActor,
+                vectorStore: VectorStoreActor(dimension: 512)
+            ),
+            stateStore: GeofenceStateStore(),
+            healthKitProvider: healthKitSystemProvider,
+            sentimentProvider: nil,
+            locationProvider: locProvider,
+            notificationScheduler: notifAdapter,
+            cardRepository: awakeningCardRepository
+        )
+        // 地理围栏事件 → 唤醒管线（US-AWK-001 AC-1 仅 enter 触发, AC-2 exit 重置）
+        locProvider.onGeofenceEvent = { @Sendable event in
+            Task { @MainActor in
+                switch event {
+                case .enter(let regionId):
+                    _ = await awakening.handleGeofenceEnter(regionId: regionId)
+                case .exit(let regionId):
+                    _ = await awakening.handleGeofenceExit(regionId: regionId)
+                }
+            }
+        }
 
         // 兜底补弹：didBecomeActive 可能早于本方法执行（configureSources 异步），
         // 此处确保装配完成后仍未弹出时补一次（3F.2 review fix #2）

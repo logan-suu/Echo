@@ -1,0 +1,50 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "awakening-loaded",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "state": "loaded",
+    "notificationPermission": "granted",
+    "locationPermission": "granted",
+    "healthPermission": "granted",
+    "isGeofenceEnabled": true,
+    "isEmotionEnabled": true,
+    "isAnniversaryEnabled": true,
+    "geofences": [
+      {
+        "id": "geo-campus",
+        "displayName": "University Campus",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "radiusMeters": 500,
+        "isActive": true,
+        "lastTriggeredAt": 1723401600,
+        "memoryCount": 47
+      },
+      {
+        "id": "geo-home",
+        "displayName": "Home",
+        "latitude": 37.7849,
+        "longitude": -122.4094,
+        "radiusMeters": 200,
+        "isActive": true,
+        "lastTriggeredAt": 1722873600,
+        "memoryCount": 156
+      },
+      {
+        "id": "geo-park",
+        "displayName": "Central Park",
+        "latitude": 37.76,
+        "longitude": -122.43,
+        "radiusMeters": 800,
+        "isActive": false,
+        "lastTriggeredAt": 1721788800,
+        "memoryCount": 23
+      }
+    ]
+  }
+}

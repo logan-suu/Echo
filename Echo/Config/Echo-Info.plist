@@ -10,6 +10,12 @@
 	<string>Echo reads your photos and videos on this device to build searchable memories. Everything stays on your device.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Echo never writes to your photo library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Echo uses your location to surface memories when you arrive at meaningful places. Location data never leaves your device.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Echo uses your location to surface memories when you arrive at meaningful places, including in the background for geofence monitoring. Location data never leaves your device.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Echo reads heart rate variability samples to gently surface positive memories when you may feel low. Only minimized samples are used and never leave your device.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<false/>
 	<key>UILaunchScreen</key>

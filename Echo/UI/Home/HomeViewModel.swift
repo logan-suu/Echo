@@ -159,6 +159,9 @@ final class HomeViewModel {
     /// 可选注入: Phase 3 初期卡片由事件驱动，Pipeline 作为可选依赖
     private let awakeningPipeline: AwakeningPipeline?
 
+    /// 3F.8: 唤醒卡片持久化存储（ADR-012 决策-5）— 启动时加载最近卡片
+    private let cardRepository: AwakeningCardRepositoryActor?
+
     /// 当前活跃的加载 Task
     private var loadingTask: Task<Void, Never>?
 
@@ -168,8 +171,13 @@ final class HomeViewModel {
     ///
     /// - Parameter awakeningPipeline: AwakeningPipeline 实例（可选注入）。
     ///   Phase 3.12+ 完整集成后通过 DI 容器注入。
-    init(awakeningPipeline: AwakeningPipeline? = nil) {
+    /// - Parameter cardRepository: 唤醒卡片持久化存储（3F.8，可选注入）。
+    init(
+        awakeningPipeline: AwakeningPipeline? = nil,
+        cardRepository: AwakeningCardRepositoryActor? = nil
+    ) {
         self.awakeningPipeline = awakeningPipeline
+        self.cardRepository = cardRepository
     }
 
     // MARK: - Actions
@@ -192,13 +200,13 @@ final class HomeViewModel {
             guard let self else { return }
 
             do {
-                // 🔮 Phase 3.12+: 从 AwakeningPipeline 获取已持久化的卡片列表
-                // 当前 AwakeningPipeline 为事件驱动 (geofence enter / emotion detection)，
-                // 卡片通过本地通知投递。此处预留加载接口。
-                if let pipeline = self.awakeningPipeline {
+                // 3F.8: 从持久化卡片存储加载最近唤醒卡片（ADR-012 决策-5，重启去重后展示）
+                if let cardRepository {
+                    let cards = (try? await cardRepository.fetchRecent(limit: 20)) ?? []
+                    self.awakeningCards = cards.map(AwakeningCardModel.init)
+                } else if let pipeline = self.awakeningPipeline {
                     // Example: cards would be fetched from a local store
                     // let cards = await pipeline.fetchRecentCards()
-                    // self.awakeningCards = cards.map(AwakeningCardModel.init)
                     _ = pipeline // Silenced for now; Phase 3.12+ wires the store
                 }
 

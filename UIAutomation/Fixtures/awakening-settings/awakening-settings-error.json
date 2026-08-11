@@ -1,0 +1,14 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "awakening-error",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "state": "error",
+    "errorLevel": "l2Recoverable",
+    "retryButton": true
+  }
+}

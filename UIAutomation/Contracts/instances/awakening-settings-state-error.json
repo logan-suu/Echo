@@ -1,0 +1,10 @@
+{
+  "surfaceId": "awakening-settings",
+  "stateId": "error",
+  "fixtureId": "awakening-error",
+  "description": "System adapter failure — permission state could not be read (L2 recoverable)",
+  "expected": {
+    "errorLevel": "l2Recoverable",
+    "retryButton": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.toggleAnniversary",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.toggleAnniversaryAwakening",
+  "expectedOutcome": "Anniversary awakening toggle flips; gated by notification authorization",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

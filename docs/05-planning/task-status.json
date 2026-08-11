@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-11T11:45:00Z",
+  "last_updated": "2026-08-11T12:30:00Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -1604,7 +1604,7 @@
             "US-AWK-005",
             "US-SRC-010"
           ],
-          "status": "ready",
+          "status": "review",
           "owner": {
             "implementation": "iOS System Integration Lead",
             "approver": "Privacy Engineering Lead"
@@ -1659,8 +1659,8 @@
             "US-SRC-010 live HealthKit provider protocol conformance, denial, minimized temporal mapping and 3F.6 fusion integration",
             "Privacy approver 对 HealthKit 最小化与通知边界签字"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
-          "notes": "Creates the missing awakening states, actions, journeys and six deterministic fixtures declared by the surface contract.",
+          "last_updated": "2026-08-11T12:30:00Z",
+          "notes": "✅ 3F.8 实现完成 (2026-08-11)。ADR-012 决策-1~7 落地：CoreLocationProvider（CLLocationManager 围栏 enter/exit + 权限感知）、HealthKitSystemProvider（CrossAppSourceProvider sourceType=health → 3F.6 fusion，最小化时序样本，denied 不查询）、LocalNotificationAdapter + NotificationResponseRouter（请求/路由分离，内容最小化）、AwakeningCardRepositoryActor（SQLite 持久化 + 重启去重）；AwakeningPipeline 增补 best-effort 纪念日窗口 + .dateAwakening 审计；AwakeningSettingsViewModel 读取真实系统权限；HomeViewModel 加载持久化卡片；AppDelegate 装配；Info.plist/entitlements 增补位置/健康权限。聚焦套件 26/26（AwakeningSystemAdaptersTests 19 + CrossAppHealthIntegrationTests 7），受影响套件回归 73/73（Geo/Emotion/Home/SettingsViewModel）无回归，SwiftLint 新文件 0 error。AuditEvent 新增 .dateAwakening（US-AWK-002 AC-5，同 3F.6 加审计事件先例）。",
           "pr": null
         },
         {
