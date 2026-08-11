@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.requestNotification",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.requestNotificationPermission",
+  "expectedOutcome": "UNUserNotificationCenter authorization requested; granted/denied state reflected",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

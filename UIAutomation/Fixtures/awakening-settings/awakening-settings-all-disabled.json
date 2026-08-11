@@ -1,0 +1,30 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "awakening-all-disabled",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "state": "all-disabled",
+    "notificationPermission": "granted",
+    "locationPermission": "granted",
+    "healthPermission": "granted",
+    "isGeofenceEnabled": false,
+    "isEmotionEnabled": false,
+    "isAnniversaryEnabled": false,
+    "geofences": [
+      {
+        "id": "geo-campus",
+        "displayName": "University Campus",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "radiusMeters": 500,
+        "isActive": true,
+        "lastTriggeredAt": 1723401600,
+        "memoryCount": 47
+      }
+    ]
+  }
+}

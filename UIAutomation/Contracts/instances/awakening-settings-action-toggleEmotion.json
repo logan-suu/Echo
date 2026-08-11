@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.toggleEmotion",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.toggleEmotionAwakening",
+  "expectedOutcome": "Emotion awakening toggle flips; gated by HealthKit authorization",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.showGeofenceDetail",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.showGeofenceDetails",
+  "expectedOutcome": "Geofence detail sheet presented with region metadata",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

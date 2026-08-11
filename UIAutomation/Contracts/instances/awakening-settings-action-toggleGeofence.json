@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.toggleGeofence",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.toggleGeofenceAwakening",
+  "expectedOutcome": "Geofence awakening toggle flips; persisted to system adapter",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

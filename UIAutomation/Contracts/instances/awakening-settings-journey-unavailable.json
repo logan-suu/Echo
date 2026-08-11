@@ -1,0 +1,13 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "awakening-settings-unavailable",
+  "steps": [
+    { "surfaceId": "awakening-settings", "stateId": "unavailable", "actionId": "awakening.openSystemSettings" }
+  ],
+  "preconditionFixtures": ["awakening-unavailable"],
+  "assertions": [
+    { "type": "permission_state", "expected": "notification denied permanently" },
+    { "type": "open_settings", "expected": "open system settings button presented" }
+  ],
+  "version": "1.0.0"
+}

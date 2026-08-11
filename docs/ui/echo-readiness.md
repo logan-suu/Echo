@@ -12,6 +12,8 @@
 3. 仓库尚无稳定的 ViewModel 层、设计系统和确定性 UI fixtures
 4. UI 自动化不能假设应用启动、数据库打开、隐私文案、CI 路径或模型资源已适合无人值守运行
 
+> 📌 **3F.8（2026-08-11）生产唤醒系统适配器就绪**：`CoreLocationProvider`、`HealthKitSystemProvider`、`LocalNotificationAdapter`、`NotificationResponseRouter`、`AwakeningCardRepositoryActor` 接入生产（ADR-012）。Awakening 设置页经 `AwakeningSettingsViewModel` 读取真实系统权限状态（location/health/notification），geofence 列表来自 `LocationProviding.monitoredRegions()`。真实授权行为仍需 3F.11 no-fixture 双设备 Live Simulator Review 验证；CI 单元测试通过注入系统信号（`StubLocationProvider` / `StubHealthStore` / `StubNotificationScheduler`）驱动生产适配器。
+
 ---
 
 ## 2. 五类就绪门禁

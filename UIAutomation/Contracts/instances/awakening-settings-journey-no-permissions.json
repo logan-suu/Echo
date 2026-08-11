@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "awakening-settings-no-permissions",
+  "steps": [
+    { "surfaceId": "awakening-settings", "stateId": "empty-permissions", "actionId": "awakening.requestNotification" },
+    { "surfaceId": "awakening-settings", "stateId": "loaded", "actionId": "awakening.openSystemSettings" }
+  ],
+  "preconditionFixtures": ["awakening-no-permissions"],
+  "assertions": [
+    { "type": "permission_state", "expected": "all not granted" },
+    { "type": "toggle_state", "expected": "all three toggles disabled" },
+    { "type": "open_settings", "expected": "system settings button presented" }
+  ],
+  "version": "1.0.0"
+}

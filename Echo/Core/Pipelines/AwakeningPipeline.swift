@@ -402,6 +402,12 @@ public actor AwakeningPipeline {
     private let stateStore: GeofenceStateStore
     private let healthKitProvider: HealthKitProvider?
     private let sentimentProvider: SentimentProvider?
+    /// 3F.8: 系统适配器 — 定位服务（地理围栏事件流）
+    private let locationProvider: (any LocationProviding)?
+    /// 3F.8: 本地通知调度（US-AWK-005 投递；与响应路由分离）
+    private let notificationScheduler: (any NotificationScheduling)?
+    /// 3F.8: 唤醒卡片持久化存储（ADR-012 决策-5）
+    private let cardRepository: AwakeningCardRepositoryActor?
 
     // MARK: - Emotion State (US-AWK-003)
 
@@ -432,13 +438,19 @@ public actor AwakeningPipeline {
         searchPipeline: SearchPipeline,
         stateStore: GeofenceStateStore = GeofenceStateStore(),
         healthKitProvider: HealthKitProvider? = nil,
-        sentimentProvider: SentimentProvider? = nil
+        sentimentProvider: SentimentProvider? = nil,
+        locationProvider: (any LocationProviding)? = nil,
+        notificationScheduler: (any NotificationScheduling)? = nil,
+        cardRepository: AwakeningCardRepositoryActor? = nil
     ) {
         self.privacyActor = privacyActor
         self.searchPipeline = searchPipeline
         self.stateStore = stateStore
         self.healthKitProvider = healthKitProvider
         self.sentimentProvider = sentimentProvider
+        self.locationProvider = locationProvider
+        self.notificationScheduler = notificationScheduler
+        self.cardRepository = cardRepository
     }
 
     // MARK: - Public API
@@ -513,6 +525,10 @@ public actor AwakeningPipeline {
 
         // Step 5: Generate card (AC-4)
         let card = generateCard(for: matching, regionId: regionId)
+
+        // Step 5.5: 3F.8 — 持久化卡片 + 调度通知（best-effort，失败不阻断唤醒返回）
+        await persistCard(card)
+        await scheduleCardNotification(card)
 
         // Step 6: Audit (AC-6)
         let memoryIds = matching.map(\.id)
@@ -606,6 +622,153 @@ public actor AwakeningPipeline {
     /// 解析唤醒审计元数据（从 sourceLanguage JSON 字段反序列化）。
     public nonisolated func parseAwakeningMetadata(from jsonString: String) -> AwakeningAuditMetadata? {
         return AwakeningAuditMetadata.decode(from: jsonString)
+    }
+
+    // =========================================================================
+    // MARK: - Card Persistence & Notification (3F.8, ADR-012 决策-5/3)
+    // =========================================================================
+
+    /// 持久化唤醒卡片（ADR-012 决策-5: 卡片持久化 + 重启去重）。
+    ///
+    /// best-effort：cardRepository 未注入或写入失败时静默跳过（不阻断唤醒返回）。
+    public func persistCard(_ card: AwakeningCard) async {
+        guard let cardRepository else { return }
+        try? await cardRepository.save(card)
+    }
+
+    /// 调度本地通知（US-AWK-005 投递；与响应路由分离 — ADR-012 决策-3）。
+    ///
+    /// best-effort：notificationScheduler 未注入或通知权限 denied 时静默跳过。
+    /// 通知内容最小化（决策-7）：标题 + 温和正文 + memoryId（路由用），不含原文。
+    public func scheduleCardNotification(_ card: AwakeningCard) async {
+        guard let notificationScheduler else { return }
+        let body: String
+        switch card.triggerType {
+        case "geofenceOnly":
+            body = "A memory from \(card.regionId)"
+        case "emotionNegative":
+            body = "A bright moment from the past"
+        case "emotionNeutral":
+            body = "A quiet moment to reflect"
+        case "anniversary":
+            body = "Memories from years past on this day"
+        default:
+            body = "A memory surfaced for you"
+        }
+        let content = EchoNotificationContent(
+            title: "Echo Memory",
+            body: body,
+            memoryId: card.memoryIds.first,
+            triggerType: card.triggerType
+        )
+        _ = await notificationScheduler.schedule(content, at: Date().addingTimeInterval(1))
+    }
+
+    // =========================================================================
+    // MARK: - Date / Anniversary Awakening (US-AWK-002, ADR-012 决策-1)
+    // =========================================================================
+
+    /// 处理日期/纪念日唤醒（US-AWK-002 AC-1/AC-3/AC-4）。
+    ///
+    /// ADR-012 决策-1：放弃精确 9:00 保证，采用 best-effort 窗口 — 由调用方在
+    /// 系统允许的最早可用机会触发本方法；无匹配记忆时不推送（AC-4）。
+    ///
+    /// - Parameters:
+    ///   - dateMonthDay: 检查的月/日（如 "0607" 表示 6 月 7 日）；默认当前日期
+    ///   - matchedMemoryIDs: 匹配 dateMonthDay 的记忆 ID 列表（由调用方按日期检索）
+    ///   - traceID: 审计追溯 ID
+    /// - Returns: 处理结果（processed 含卡片 / noMemories 不推送）
+    public func handleAnniversaryAwakening(
+        dateMonthDay: String? = nil,
+        matchedMemoryIDs: [UUID],
+        traceID: String = UUID().uuidString
+    ) async -> AwakeningEnterResult {
+        // Step 1: PrivacyCheckpoint (R-006)
+        let checkpoint = await privacyActor.validate(
+            operation: .awakening,
+            traceID: traceID,
+            sourceTypes: ["anniversary"]
+        )
+        guard checkpoint.isAllowed else {
+            return .permissionDenied
+        }
+
+        // Step 2: AC-4 — 无匹配记忆时不推送
+        guard !matchedMemoryIDs.isEmpty else {
+            await writeDateAwakeningAudit(
+                traceID: traceID,
+                dateMonthDay: dateMonthDay ?? Self.currentMonthDay(),
+                yearsAgo: [],
+                memoryIDs: [],
+                policyVersion: checkpoint.policyVersion,
+                success: true
+            )
+            return .noMemories
+        }
+
+        // Step 3: 生成卡片（AC-3）
+        let card = AwakeningCard(
+            cardId: UUID(),
+            memoryIds: matchedMemoryIDs,
+            triggerType: "anniversary",
+            regionId: dateMonthDay ?? Self.currentMonthDay(),
+            createdAt: Date()
+        )
+
+        // Step 4: 3F.8 — 持久化 + 调度通知（best-effort）
+        await persistCard(card)
+        await scheduleCardNotification(card)
+
+        // Step 5: AC-5 审计（.dateAwakening）
+        await writeDateAwakeningAudit(
+            traceID: traceID,
+            dateMonthDay: card.regionId,
+            yearsAgo: [1, 3, 5],
+            memoryIDs: matchedMemoryIDs,
+            policyVersion: checkpoint.policyVersion,
+            success: true
+        )
+
+        return .processed(card: card)
+    }
+
+    /// 写入日期唤醒审计（US-AWK-002 AC-5: .dateAwakening, triggerType=anniversary, yearsAgo）。
+    public func writeDateAwakeningAudit(
+        traceID: String,
+        dateMonthDay: String,
+        yearsAgo: [Int],
+        memoryIDs: [UUID],
+        policyVersion: Int,
+        success: Bool
+    ) async {
+        let metadataDict: [String: Any] = [
+            "triggerType": "anniversary",
+            "dateMonthDay": dateMonthDay,
+            "yearsAgo": yearsAgo,
+            "memoryIds": memoryIDs.map(\.uuidString)
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: metadataDict),
+              let json = String(data: data, encoding: .utf8) else { return }
+
+        try? await privacyActor.writeAuditLog(
+            eventType: .dateAwakening,
+            traceID: traceID,
+            policyVersion: policyVersion,
+            success: success,
+            sourceType: "anniversary",
+            affectedCount: memoryIDs.count,
+            sourceLanguage: json
+        )
+    }
+
+    /// 当前月/日（MMdd 格式，如 0607），用于 anniversary 默认检查。
+    public nonisolated static func currentMonthDay(
+        now: Date = Date(),
+        calendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> String {
+        let month = calendar.component(.month, from: now)
+        let day = calendar.component(.day, from: now)
+        return String(format: "%02d%02d", month, day)
     }
 
     // =========================================================================
@@ -949,6 +1112,12 @@ public actor AwakeningPipeline {
             policyVersion: checkpoint.policyVersion,
             success: true
         )
+
+        // Step 8: 3F.8 — 卡片持久化 + 通知调度（best-effort，失败不阻断唤醒返回）
+        if let card {
+            await persistCard(card)
+            await scheduleCardNotification(card)
+        }
 
         if let card {
             return .processed(card: card)

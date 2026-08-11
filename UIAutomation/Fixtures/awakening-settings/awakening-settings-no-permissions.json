@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
+  "fixtureId": "awakening-no-permissions",
+  "schemaVersion": "1.0.0",
+  "locale": "zh-Hans",
+  "theme": "light",
+  "dynamicTypeSize": "Large",
+  "surfaceFamily": "task",
+  "payload": {
+    "state": "empty-permissions",
+    "notificationPermission": "not-granted",
+    "locationPermission": "not-granted",
+    "healthPermission": "not-granted",
+    "isGeofenceEnabled": false,
+    "isEmotionEnabled": false,
+    "isAnniversaryEnabled": false,
+    "geofences": []
+  }
+}
