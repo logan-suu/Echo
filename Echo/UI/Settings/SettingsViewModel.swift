@@ -18,6 +18,7 @@
 //            US-SET-004 AC-1 ✅ / AC-2 🔶 (迁移指引, sub-page deferred to 3.9), US-FBK-002 AC-5 ✅ (清除所有反馈),
 //            US-PRV-005 AC-1/AC-2/AC-4 ✅ (冷却期 UI), US-PRV-008 AC-5 ✅ (撤回同意→注销清除),
 //            L1~L4 错误映射 ✅
+//            PR#59 CR-7: live 授权状态 — UserPolicy 驱动 note/voice, PhotoKit currentAccess 驱动 photo/video
 // Legend: ✅ implemented | 🔶 stub/skeleton (entry point exists, detail deferred to Phase 3.9) | 🔮 planned future phase
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
@@ -102,21 +103,74 @@ final class SettingsViewModel {
     /// 撤回同意/注销用 composition（3F.1 生产接线，fixture 模式可为 nil）
     private let composition: AppComposition?
 
+    /// 数据概览服务（US-SRC-009 live 值，3F.7 接线）— nil 时回退 fixture 占位
+    private let dataOverviewService: DataOverviewService?
+
     init(fixtureLoader: SettingsFixtureLoader = .shared,
-         composition: AppComposition? = nil) {
+         composition: AppComposition? = nil,
+         dataOverviewService: DataOverviewService? = nil) {
         self.fixtureLoader = fixtureLoader
         self.composition = composition
+        self.dataOverviewService = dataOverviewService
     }
 
     func loadSettings() async {
         state = .loading
         do {
-            try await Task.sleep(nanoseconds: 300_000_000)
-            let sections = try fixtureLoader.loadSettings()
-            state = .completed(sections)
+            // 3F.7: live 数据概览（US-SRC-009）优先；无 service 时回退 fixture（Preview/旧测试）
+            if let overview = dataOverviewService {
+                let snap = try await overview.snapshot()
+                // CR-7：live 授权状态 — policy 驱动 note/voice，PhotoKit 驱动 photo/video
+                let policy = await composition?.privacyActor.getPolicy()
+                let photoAccess = await PhotoKitSourceAdapter().currentAccess()
+                let isPhotoAuthorized = photoAccess == .authorized || photoAccess == .limited
+                let authorization: [String: Bool] = [
+                    "photo": isPhotoAuthorized,
+                    "video": isPhotoAuthorized,
+                    "note": policy?.isAuthorized(sourceType: "note") ?? false,
+                    "voice": policy?.isAuthorized(sourceType: "voice") ?? false,
+                ]
+                let live = SettingsSections(
+                    dataSources: makeLiveDataSources(snap, authorization: authorization),
+                    storage: StorageInfo(
+                        indexCount: snap.memoryCount,
+                        vectorStoreSize: byteCount(snap.vectorStoreBytes),
+                        cacheSize: byteCount(snap.translationCacheBytes),
+                        databaseSize: byteCount(snap.databaseBytes)
+                    ),
+                    modelStatus: ModelStatusInfo(
+                        totalModels: snap.modelTotalCount,
+                        loadedCount: snap.modelLoadedCount,
+                        failedCount: snap.modelFailedCount,
+                        notLoadedCount: snap.modelNotLoadedCount,
+                        isDegraded: snap.modelFailedCount > 0
+                    ),
+                    excludedCount: try await ExcludedAssetsActor.shared.count(),
+                    feedbackCount: try await FeedbackActor.shared.count(),
+                    pendingOpsCount: try await PendingOpsActor.shared.count()
+                )
+                state = .completed(live)
+            } else {
+                try await Task.sleep(nanoseconds: 300_000_000)
+                let sections = try fixtureLoader.loadSettings()
+                state = .completed(sections)
+            }
         } catch {
             state = .error(.l2Recoverable(error.localizedDescription))
         }
+    }
+
+    private func byteCount(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+
+    private func makeLiveDataSources(_ snap: DataOverviewSnapshot, authorization: [String: Bool]) -> [DataSourceItem] {
+        [
+            DataSourceItem(id: "photo", displayName: "Photos", systemImage: "photo.on.rectangle", isAuthorized: authorization["photo"] ?? false, itemCount: snap.countsBySourceType["photo"] ?? 0),
+            DataSourceItem(id: "video", displayName: "Videos", systemImage: "video", isAuthorized: authorization["video"] ?? false, itemCount: snap.countsBySourceType["video"] ?? 0),
+            DataSourceItem(id: "note", displayName: "Notes", systemImage: "note.text", isAuthorized: authorization["note"] ?? false, itemCount: snap.countsBySourceType["note"] ?? 0),
+            DataSourceItem(id: "voice", displayName: "Voice Memos", systemImage: "waveform", isAuthorized: authorization["voice"] ?? false, itemCount: snap.countsBySourceType["voice"] ?? 0),
+        ]
     }
 
     func toggleSync(_ enabled: Bool) {

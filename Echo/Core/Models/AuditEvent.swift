@@ -79,6 +79,8 @@ public enum AuditEvent: String, Sendable, Codable {
     case crossAppSearch
     /// 跟进查询（对话轮次，US-RET-005 AC-4: 审计携带父轮次 traceID，sourceLanguage 含 parentTraceId）
     case followUpQuery
+    /// 数据概览被访问 (US-SRC-009 AC-5, 3F.7)
+    case dataOverviewAccessed
 }
 
 // MARK: - Audit Log Entry

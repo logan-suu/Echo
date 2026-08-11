@@ -6,9 +6,13 @@
 //            docs/ui/echo-memory-canvas-style.md §14 (筛选与搜索 UI 模式), §6.2 (List 回退)
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.2 - SearchView + SearchViewModel + Feedback + Low-confidence banner + Scan results
+//       3F.7 - UI 到 Core 全域接线 (live pipeline 默认接线, PR#59)
 // AC 覆盖: US-RET-001 AC-3 ✅ (结果展示, 字段映射) / 🔮 (pipeline 标记 Phase 3.9),
 //          US-RET-006 AC-1/AC-2/AC-4 ✅ (低置信度横幅 + 规格文案), US-FBK-001 AC-1 ✅ (👍/👎),
 //          US-FBK-003 AC-1 ✅ (Bad Case 标记), L1~L4 错误映射 ✅ (mapError, PR #37 review fix)
+//          PR#59 修复: 🟡-2 live pipeline 单实例缓存 (US-RET-005 follow-up 会话状态复用),
+//                      🟡-3 默认 live 路径 FeedbackPipeline 接线 (US-FBK-001/003 落库),
+//                      🟡-4 无路由 → 显式 route-unavailable (US-RET-008), 不再静默空结果
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
@@ -179,10 +183,16 @@ final class SearchViewModel {
     // MARK: - Dependencies (Immutable Actor References)
 
     /// SearchPipeline 引用 — 不可变 actor 引用 (docs/ui/architecture.md §6.4)
-    /// 可选注入: Phase 3.9 完整集成后通过 DI 容器注入
+    /// 默认 nil → 首次搜索时经 composition 解析 live pipeline（3F.7 默认 live，无 fixture fallback）
     private let searchPipeline: SearchPipeline?
     /// FeedbackPipeline 引用 — 反馈转发 (US-FBK-001/003)
     private let feedbackPipeline: FeedbackPipeline?
+    /// 生产 composition — pipeline 未注入时解析 live 依赖（3F.7）
+    private let composition: AppComposition?
+    /// 首次 live 解析后缓存的 SearchPipeline — 复用单实例，保证 follow-up 会话状态（US-RET-005）跨轮次保留
+    private(set) var resolvedPipeline: SearchPipeline?
+    /// 首次 live 解析后缓存的 FeedbackPipeline — 反馈转发（US-FBK-001/003）默认 live
+    private(set) var resolvedFeedbackPipeline: FeedbackPipeline?
 
     /// 当前活跃的搜索 Task
     private var searchTask: Task<Void, Never>?
@@ -195,12 +205,38 @@ final class SearchViewModel {
     /// 初始化 SearchViewModel。
     ///
     /// - Parameters:
-    ///   - searchPipeline: SearchPipeline 实例（可选注入）
+    ///   - searchPipeline: SearchPipeline 实例（可选注入；nil → 默认解析 live composition pipeline）
     ///   - feedbackPipeline: FeedbackPipeline 实例（可选注入）
-    ///   Phase 3.9 完整集成后通过 DI 容器注入。
-    init(searchPipeline: SearchPipeline? = nil, feedbackPipeline: FeedbackPipeline? = nil) {
+    ///   - composition: 生产 composition（默认 .shared）
+    init(
+        searchPipeline: SearchPipeline? = nil,
+        feedbackPipeline: FeedbackPipeline? = nil,
+        composition: AppComposition? = nil
+    ) {
         self.searchPipeline = searchPipeline
         self.feedbackPipeline = feedbackPipeline
+        self.composition = composition
+    }
+
+    /// 解析（并缓存）生产 live SearchPipeline — 仅首次经 composition 解析，之后复用同一实例。
+    /// 单实例复用是 follow-up 查询跟踪（US-RET-005 AC-4 lastSearchTraceID/lastSearchQuery）
+    /// 跨轮次生效的前提。无活跃 text generation 路由/未物化向量存储时返回 nil（route-unavailable）。
+    private func resolveLiveSearchPipeline() async -> SearchPipeline? {
+        if let cached = resolvedPipeline { return cached }
+        guard let composition else { return nil }
+        let live = await LiveAppAdapters.makeSearchPipeline(composition: composition)
+        resolvedPipeline = live
+        return live
+    }
+
+    /// 生产 live FeedbackPipeline — 显式注入优先；否则经 composition 解析并缓存（US-FBK-001/003 默认 live）。
+    private func makeActiveFeedbackPipeline() -> FeedbackPipeline? {
+        if let injected = feedbackPipeline { return injected }
+        guard let composition else { return nil }
+        if let cached = resolvedFeedbackPipeline { return cached }
+        let live = LiveAppAdapters.makeFeedbackPipeline(composition: composition)
+        resolvedFeedbackPipeline = live
+        return live
     }
 
     // MARK: - Actions
@@ -227,10 +263,24 @@ final class SearchViewModel {
             guard let self else { return }
 
             do {
-                // 🔮 Phase 3.9+: SearchPipeline 完整接入。当前 UI 切片在 Preview/测试中
-                // 通过 loadPreloadedResults 注入确定性数据。真实检索依赖 embedder + vectorStore
-                // 运行时初始化（见 3.11 引导流程 Core 初始化）。
-                if let pipeline = self.searchPipeline {
+                // 3F.7: 显式注入的 pipeline 优先（测试/Preview fixture）；否则经 composition 解析
+                // 生产 live pipeline（单实例缓存，US-RET-005 follow-up 会话状态跨轮次保留）。
+                let pipeline: SearchPipeline?
+                if let injected = self.searchPipeline {
+                    pipeline = injected
+                } else if self.composition != nil {
+                    pipeline = await self.resolveLiveSearchPipeline()
+                    if pipeline == nil {
+                        // 无活跃 generation 路由（US-RET-008 / ADR-007 §决策-5）— 显式 route-unavailable，
+                        // 而非静默回退到空向量库返回空结果。
+                        self.viewState = .error(.l3Blocking(message: "Search is currently unavailable"))
+                        return
+                    }
+                } else {
+                    pipeline = nil
+                }
+
+                if let pipeline {
                     let items = try await pipeline.search(
                         query: self.query,
                         k: 10,
@@ -242,8 +292,7 @@ final class SearchViewModel {
                     }
                     self.results = items.map(SearchResultModel.init)
                 } else {
-                    // 无 Pipeline（UI 切片模式）：返回 fixture 注入的 stub 结果，
-                    // 模拟真实检索（Phase 3.9 接入 SearchPipeline 后此分支移除）。
+                    // 无 Pipeline（测试/Preview fixture 模式）：返回 fixture 注入的 stub 结果
                     try await Task.sleep(nanoseconds: 300_000_000)
                     guard !Task.isCancelled else {
                         self.viewState = .cancelled
@@ -317,7 +366,7 @@ final class SearchViewModel {
     /// 记录点赞。转发到 FeedbackPipeline（存在时），并更新本地 UI 反馈状态。
     func recordLike(_ result: SearchResultModel) {
         feedbackStates[result.id] = .liked
-        guard let pipeline = feedbackPipeline else { return }
+        guard let pipeline = makeActiveFeedbackPipeline() else { return }
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -336,7 +385,7 @@ final class SearchViewModel {
     /// 记录点踩。转发到 FeedbackPipeline（存在时），并更新本地 UI 反馈状态。
     func recordDislike(_ result: SearchResultModel) {
         feedbackStates[result.id] = .disliked
-        guard let pipeline = feedbackPipeline else { return }
+        guard let pipeline = makeActiveFeedbackPipeline() else { return }
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -354,7 +403,7 @@ final class SearchViewModel {
     /// 标记 Bad Case (US-FBK-003)。转发到 FeedbackPipeline（存在时），并更新本地 UI 状态。
     func markBadCase(_ result: SearchResultModel) {
         feedbackStates[result.id] = .badCase
-        guard let pipeline = feedbackPipeline else { return }
+        guard let pipeline = makeActiveFeedbackPipeline() else { return }
         Task { [weak self] in
             guard let self else { return }
             do {
