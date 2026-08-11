@@ -275,6 +275,7 @@ enum CreationFixtureLoader {
     // MARK: - creation-saved
 
     /// 已保存到备忘录 — Toast + 链接 (US-SYN-003 AC-5)。
+    /// ADR-013 决策 4 (3F.9): Notes 交接仅用系统 share/export，不伪造 notes:// URL → noteLink 恒 nil。
     private static var saved: CreationModel {
         CreationModel(
             selectedTemplate: .letter,
@@ -292,7 +293,7 @@ enum CreationFixtureLoader {
             ],
             sourceMemoryCount: 1,
             emptyReason: nil,
-            noteLink: "notes://echo/creation/2025-letter",
+            noteLink: nil,
             savePhase: .saved
         )
     }

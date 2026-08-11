@@ -1,0 +1,24 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "availability-fallback",
+  "surfaceId": "translation",
+  "steps": [
+    {
+      "action": "toggle",
+      "fromState": "original",
+      "toState": "availability-checking"
+    },
+    {
+      "condition": "LanguageAvailability.status == .unsupported for zh-Hans -> en-US",
+      "action": "fallback",
+      "toState": "unavailable"
+    }
+  ],
+  "expectedFinalState": "unavailable",
+  "assertions": [
+    "Original text retained + source language label (US-DIS-002 AC-3 ADR-005)",
+    "No translation provided (never fabricated, ADR-013 decision 1)",
+    "Toggle remains interactive (Show translation / Show original)"
+  ],
+  "version": "1.0.0"
+}

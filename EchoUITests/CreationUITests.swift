@@ -54,9 +54,9 @@ final class CreationUITests: XCTestCase {
         XCTAssertTrue(app.buttons["creation-save-to-notes"].exists)
     }
 
-    /// 生成结果 → 保存到备忘录 → Toast + 链接
+    /// 生成结果 → 保存到备忘录 → 系统分享面板 (ADR-013 决策 4: 用户中介 Notes 交接)
     @MainActor
-    func test_saveToNotesShowsToast() throws {
+    func test_saveToNotesShowsShareSheet() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "memory-detail-loaded"]
         app.launch()
@@ -77,9 +77,11 @@ final class CreationUITests: XCTestCase {
         XCTAssertTrue(save.waitForExistence(timeout: 5))
         save.tap()
 
-        // 保存 Toast + 打开链接
-        let openNote = app.buttons["creation-open-note"]
-        XCTAssertTrue(openNote.waitForExistence(timeout: 5), "Open note link should appear after save")
+        // ADR-013 决策 4: Notes 交接仅用系统 share sheet（用户中介），禁止 notes:// 深链。
+        let share = app.buttons["creation-share-link"]
+        XCTAssertTrue(share.waitForExistence(timeout: 5), "System share sheet should present after save-to-notes")
+        let done = app.buttons["creation-share-done"]
+        XCTAssertTrue(done.exists, "Share sheet should expose Done to dismiss")
     }
 
     /// Prompt 草稿编辑确认 (US-SYN-005 AC-4)

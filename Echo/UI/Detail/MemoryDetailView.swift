@@ -150,6 +150,12 @@ struct MemoryDetailView: View {
         if let model = MemoryDetailFixtureLoader.load(fixtureID) {
             viewModel.loadPreloaded(model)
         } else if let model = TranslationFixtureLoader.load(fixtureID) {
+            // 3F.9: 生产默认 translationService 已切换为 AppleTranslationService；
+            // 翻译 fixture 路径注入 FixtureTranslationService 保持确定性（XCUITest/Live Sim）。
+            viewModel = MemoryDetailViewModel(
+                translationService: FixtureTranslationService(),
+                translationCache: TranslationCache()
+            )
             viewModel.loadPreloaded(model)
         } else if fixtureID == "memory-detail-error" {
             viewModel.simulateError(.l2Recoverable(message: "Unable to load this memory. Please try again."))

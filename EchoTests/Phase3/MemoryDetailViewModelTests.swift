@@ -28,6 +28,17 @@ struct MemoryDetailViewModelTests {
         return vm
     }
 
+    /// 3F.9: 生产默认 translationService 已切换为 AppleTranslationService。
+    /// fixture 翻译路径（US-DIS-002）显式注入 FixtureTranslationService + 内存缓存保持确定性。
+    private func makeFixtureTranslationVM(
+        cache: (any TranslationCaching)? = nil
+    ) -> MemoryDetailViewModel {
+        MemoryDetailViewModel(
+            translationService: FixtureTranslationService(),
+            translationCache: cache ?? TranslationCache()
+        )
+    }
+
     // MARK: - State Transitions
 
     @Test("AC: idle → loading → completed via load(memoryId:)")
@@ -103,7 +114,7 @@ struct MemoryDetailViewModelTests {
 
     @Test("US-DIS-002 AC-1/AC-4: toggle triggers on-demand translation on expand (fixture service)")
     func toggleTriggersOnDemandTranslation() async {
-        let vm = MemoryDetailViewModel()
+        let vm = makeFixtureTranslationVM()
         let model = TranslationFixtureLoader.load("translation-zh-en-high")!
         vm.loadPreloaded(model)
 
@@ -121,7 +132,7 @@ struct MemoryDetailViewModelTests {
     @Test("US-DIS-002 AC-2: cache-first — second expand after collapse uses cached result without re-fetch")
     func toggleUsesCacheOnSecondExpand() async {
         let cache = TranslationCache()
-        let vm = MemoryDetailViewModel(translationCache: cache)
+        let vm = makeFixtureTranslationVM(cache: cache)
         let model = TranslationFixtureLoader.load("translation-zh-en-high")!
         vm.loadPreloaded(model)
 
@@ -139,7 +150,7 @@ struct MemoryDetailViewModelTests {
 
     @Test("US-DIS-002 AC-1: collapse cancels in-flight translation")
     func collapseCancelsInFlightTranslation() async {
-        let vm = MemoryDetailViewModel()
+        let vm = makeFixtureTranslationVM()
         let model = TranslationFixtureLoader.load("translation-zh-en-high")!
         vm.loadPreloaded(model)
 
@@ -152,7 +163,7 @@ struct MemoryDetailViewModelTests {
 
     @Test("US-DIS-002 AC-3/AC-4: low-confidence fixture resolves with detection confidence <0.9 and retains original")
     func lowConfidenceFixtureKeepsOriginal() async {
-        let vm = MemoryDetailViewModel()
+        let vm = makeFixtureTranslationVM()
         let model = TranslationFixtureLoader.load("translation-zh-en-low")!
         vm.loadPreloaded(model)
 
@@ -166,7 +177,7 @@ struct MemoryDetailViewModelTests {
 
     @Test("US-DIS-002 AC-2: translation service error surfaces L2 error phase (retry available)")
     func translationErrorShowsL2ErrorPhase() async {
-        let vm = MemoryDetailViewModel()
+        let vm = makeFixtureTranslationVM()
         let model = TranslationFixtureLoader.load("translation-error")!
         vm.loadPreloaded(model)
 

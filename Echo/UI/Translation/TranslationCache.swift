@@ -10,26 +10,49 @@
 
 import Foundation
 
+// MARK: - Shared Cache Entry
+
+/// 展示层翻译缓存条目 — 内存缓存与持久缓存共用 (US-DIS-002 AC-5)。
+struct CachedTranslationEntry: Sendable, Equatable, Codable {
+    /// 源文本（缓存键组成部分）
+    let sourceText: String
+    /// 源语言
+    let sourceLanguage: String
+    /// 目标语言
+    let targetLanguage: String
+    /// 译文
+    let translatedText: String
+    /// 源语言检测置信度 (ADR-005)
+    let sourceLanguageConfidence: Double
+    /// 写入时间
+    let cachedAt: Date
+}
+
+/// 翻译缓存契约 — 内存 (`TranslationCache`) 与持久 (`PersistentTranslationCache`) 统一接口。
+protocol TranslationCaching: Sendable {
+    /// 查询缓存 — 未命中或已过期返回 nil。
+    func lookup(key: String) async -> CachedTranslationEntry?
+    /// 写入缓存。
+    func store(
+        sourceText: String,
+        sourceLanguage: String,
+        targetLanguage: String,
+        translatedText: String,
+        sourceLanguageConfidence: Double
+    ) async
+    /// 当前缓存条目数。
+    var count: Int { get async }
+    /// 缓存是否为空。
+    var isEmpty: Bool { get async }
+}
+
 /// 展示层翻译缓存 — TTL=7d (US-DIS-002 AC-5)。
 ///
-/// 独立于 Core 存储 (translationCache 字段属 Core 模型，Phase 3.9 接入)。
-/// 本 actor 提供展示层确定性的内存缓存，供 TranslationService 与 Preview/测试使用。
-actor TranslationCache {
-    /// 缓存条目
-    struct Entry: Sendable, Equatable {
-        /// 源文本（缓存键组成部分）
-        let sourceText: String
-        /// 源语言
-        let sourceLanguage: String
-        /// 目标语言
-        let targetLanguage: String
-        /// 译文
-        let translatedText: String
-        /// 源语言检测置信度 (ADR-005)
-        let sourceLanguageConfidence: Double
-        /// 写入时间
-        let cachedAt: Date
-    }
+/// 内存实现 — Preview / 单元测试 / UI 切片确定性路径。
+/// 生产路径使用 `PersistentTranslationCache`（持久化跨重启，ADR-013 决策 2）。
+actor TranslationCache: TranslationCaching {
+    /// 缓存条目 — 共享值类型
+    typealias Entry = CachedTranslationEntry
 
     /// 缓存字典 — 键为 `sourceLanguage|targetLanguage|sourceText` 哈希
     private var storage: [String: Entry] = [:]
@@ -49,7 +72,7 @@ actor TranslationCache {
     }
 
     /// 生成缓存键 — 确定性 (sourceLanguage|targetLanguage|sourceText)
-    static func makeKey(
+    nonisolated static func makeKey(
         sourceText: String,
         sourceLanguage: String,
         targetLanguage: String

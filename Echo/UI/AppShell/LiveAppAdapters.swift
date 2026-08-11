@@ -81,6 +81,45 @@ public enum LiveAppAdapters {
         )
     }
 
+    /// 装配生产展示层翻译服务 (US-DIS-002, ADR-013 决策 1) —
+    /// Apple Translation（LanguageAvailability 检查 + 术语表优先 + 绝不编造质量分数）。
+    static func makeTranslationService() -> any TranslationService {
+        AppleTranslationService()
+    }
+
+    /// 装配生产持久翻译缓存 (US-DIS-002 AC-5, ADR-013 决策 2) —
+    /// TTL=7d 持久化跨重启；独立于 Core 存储，仅缓存译文。
+    static func makePersistentTranslationCache() -> any TranslationCaching {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = base.appendingPathComponent("EchoTranslationCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return PersistentTranslationCache(directory: dir)
+    }
+
+    /// 装配生产创作管线 (ADR-013 决策 3: grounded creation)。
+    ///
+    /// 离线 LLM 运行时落地时返回 CreativePipeline；运行时未获批/未落地返回 nil
+    /// （调用方走 fixture 确定性路径或 L2 错误，ADR-009 决策 4 fail-closed）。
+    static func makeCreativePipeline(
+        composition: AppComposition = .shared
+    ) -> CreativePipeline? {
+        guard let llmProvider = LiveAppAdapters.resolveLLMProvider() else { return nil }
+        return CreativePipeline(
+            llmProvider: llmProvider,
+            aligner: LanguageAligner(llmProvider: llmProvider, preferredLanguage: "en-US"),
+            privacyActor: composition.privacyActor
+        )
+    }
+
+    /// 解析离线 LLM 推理来源 (ADR-009 决策 4)。
+    ///
+    /// 当前未获批捆绑 LLM 运行时（model-provenance-register 无 LLM 工件）→ 返回 nil。
+    /// LLM 运行时获批接入后在此装配（fail-closed：无运行时则不提供 grounded 生成）。
+    private static func resolveLLMProvider() -> (any LLMProvider)? {
+        nil
+    }
+
     /// 装配生产 CanonicalMemoryRepositoryActor（详情页编辑/删除）。
     public static func makeCanonicalRepository(
         composition: AppComposition = .shared

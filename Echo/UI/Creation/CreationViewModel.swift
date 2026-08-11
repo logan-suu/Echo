@@ -125,6 +125,16 @@ final class CreationViewModel {
     private var saveTask: Task<Void, Never>?
     /// UI 切片模式模拟创作源 — fixture 注入
     private var stubCreation: CreationModel?
+    /// 生产创作管线 (ADR-013 决策 3: grounded creation) — 3F.9 接线；nil = 运行时未落地 → fixture/错误路径
+    private let creativePipeline: CreativePipeline?
+    /// 创作源记忆（grounded 输入，经检索结果映射）— 3F.9 生产路径
+    private var sourceMemories: [CreativeSource] = []
+
+    init(
+        creativePipeline: CreativePipeline? = nil
+    ) {
+        self.creativePipeline = creativePipeline
+    }
 
     // MARK: - Actions
 
@@ -136,7 +146,8 @@ final class CreationViewModel {
 
     /// 生成内容 — 设置 state = .generating，完成后进入 generated/empty/error。
     ///
-    /// 🔮 Phase 3.9+: 调用创作 Pipeline（检索源记忆 + LLM 合成）。当前 UI 切片通过 fixture 模拟。
+    /// 生产路径 (3F.9): 配置了 CreativePipeline 时经 grounded 生成（ADR-013 决策 3，
+    /// 检索源记忆 → LLM 合成 → 溯源锚点）；未配置时走 fixture 模拟（UI 切片确定性路径）。
     func generate() {
         guard viewState == .idle, selectedTemplate != nil else { return }
 
@@ -147,6 +158,12 @@ final class CreationViewModel {
 
         generateTask = Task { [weak self] in
             guard let self else { return }
+
+            // 生产路径: grounded generation (ADR-013 决策 3)
+            if let pipeline = self.creativePipeline, let template = self.selectedTemplate {
+                await self.generateViaPipeline(pipeline, template: template)
+                return
+            }
 
             // 短暂模拟生成以展示 generating 态
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -173,6 +190,89 @@ final class CreationViewModel {
         }
     }
 
+    /// 经生产管线 grounded 生成 — 源记忆经检索结果映射（无源 → 空态）。
+    private func generateViaPipeline(_ pipeline: CreativePipeline, template: CreationTemplate) async {
+        do {
+            let coreTemplate: CreativeTemplate
+            switch template {
+            case .letter:   coreTemplate = .letter
+            case .report:   coreTemplate = .report
+            case .poem:     coreTemplate = .poem
+            case .timeline: coreTemplate = .timeline
+            }
+
+            let output = try await pipeline.generate(
+                template: coreTemplate,
+                sources: sourceMemories,
+                traceID: UUID().uuidString
+            )
+
+            guard !Task.isCancelled else {
+                viewState = .idle
+                return
+            }
+
+            guard !output.didFallback else {
+                viewState = .error(.l2Recoverable(
+                    message: "Generation is currently unavailable. Please try again."
+                ))
+                return
+            }
+
+            guard !output.paragraphs.isEmpty else {
+                creation = nil
+                viewState = .empty
+                return
+            }
+
+            creation = mapToCreationModel(output)
+            viewState = .generated
+        } catch CreativeError.noSources {
+            creation = nil
+            viewState = .empty
+        } catch CreativeError.runtimeUnavailable {
+            viewState = .error(.l2Recoverable(
+                message: "Offline generation runtime is not available. Please try again."
+            ))
+        } catch {
+            viewState = .error(.l2Recoverable(
+                message: "Generation is currently unavailable. Please try again."
+            ))
+        }
+    }
+
+    /// 映射 grounded 输出为 UI 展示模型（适配器职责，docs/ui/architecture.md §7）。
+    private func mapToCreationModel(_ output: CreativeOutput) -> CreationModel {
+        let uiTemplate: CreationTemplate
+        switch output.template {
+        case .letter:   uiTemplate = .letter
+        case .report:   uiTemplate = .report
+        case .poem:     uiTemplate = .poem
+        case .timeline: uiTemplate = .timeline
+        }
+
+        let paragraphs = output.paragraphs.map { paragraph in
+            CreationParagraph(
+                id: paragraph.id,
+                text: paragraph.text,
+                citation: paragraph.anchor.map {
+                    CreationCitation(memoryId: $0.memoryID, hasSource: $0.hasSource)
+                }
+            )
+        }
+
+        return CreationModel(
+            selectedTemplate: uiTemplate,
+            title: output.title,
+            periodType: output.periodType,
+            paragraphs: paragraphs,
+            sourceMemoryCount: output.sourceMemoryCount,
+            emptyReason: output.emptyReason,
+            noteLink: nil,
+            savePhase: .none
+        )
+    }
+
     /// 重新生成 (generated → generating)。
     func regenerate() {
         guard viewState == .generated else { return }
@@ -197,9 +297,9 @@ final class CreationViewModel {
         isExportPickerPresented = true
     }
 
-    /// 确认导出格式 — 呈现系统分享 Sheet (PDF/Markdown 导出入口)。
+    /// 确认导出格式 — 呈现系统分享 Sheet (PDF/Markdown 导出入口, US-SYN-003 AC-3)。
     ///
-    /// 🔮 Phase 3.9+: 生成 PDF/Markdown 文件内容。当前为分享 Sheet 入口。
+    /// 3F.9 (ADR-013 决策 4): 经 `CreationExportService` 生成导出内容后呈现系统 share sheet。
     func export(format: ExportFormat) {
         isExportPickerPresented = false
         isSharePresented = true
@@ -211,34 +311,13 @@ final class CreationViewModel {
         isSharePresented = true
     }
 
-    /// 保存到备忘录 (US-SYN-003 AC-4) — generated → saving → saved | error。
+    /// 保存到备忘录 (US-SYN-003 AC-4)。
     ///
-    /// 🔮 Phase 3.9+: 调用 NoteStore 创建新笔记。当前 UI 切片模拟保存。
+    /// ADR-013 决策 4 (3F.9): Notes 交接**仅用系统 share/export 流（用户中介）**，
+    /// 禁止 `notes://` 深链与私有 NoteStore 直写。直接呈现系统分享面板，由用户选择保存到备忘录。
     func saveToNotes() {
         guard viewState == .generated else { return }
-        viewState = .saving
-
-        saveTask?.cancel()
-
-        saveTask = Task { [weak self] in
-            guard let self else { return }
-
-            // 模拟保存延迟
-            try? await Task.sleep(nanoseconds: 300_000_000)
-
-            guard !Task.isCancelled else {
-                self.viewState = .generated
-                return
-            }
-
-            // 模拟保存成功 — 提供确定性的笔记链接 (AC-5 Toast + 链接)
-            self.creation?.savePhase = .saved
-            let title = self.creation?.title ?? "Echo creation"
-            self.creation?.noteLink = "notes://echo/creation/\(title.lowercased().replacingOccurrences(of: " ", with: "-"))"
-            self.noteLink = self.creation?.noteLink
-            self.saveToastMessage = "Saved to Notes: \(title)"
-            self.viewState = .saved
-        }
+        isSharePresented = true
     }
 
     /// 打开已保存的笔记链接 (US-SYN-003 AC-5)。
@@ -299,9 +378,9 @@ final class CreationViewModel {
             viewState = .generated
         }
         noteLink = model.noteLink
-        if model.savePhase == .saved, let link = model.noteLink {
+        if model.savePhase == .saved {
+            // ADR-013 决策 4: 无 notes:// 深链 — saved 态保留 Toast，不提供伪造链接
             saveToastMessage = "Saved to Notes: \(model.title ?? "Echo creation")"
-            noteLink = link
             viewState = .saved
         }
     }
@@ -319,6 +398,13 @@ final class CreationViewModel {
         viewState = .error(level)
     }
     #endif
+
+    /// 注入 grounded 创作源记忆（US-SYN-003 AC-2: 严格引用检索结果）。
+    ///
+    /// 生产路径从检索结果映射 `CreativeSource` 后调用；UI 切片/测试可注入确定性源。
+    func loadSourceMemories(_ sources: [CreativeSource]) {
+        sourceMemories = sources
+    }
 
     /// 消除错误状态，返回 idle。
     func dismissError() {
