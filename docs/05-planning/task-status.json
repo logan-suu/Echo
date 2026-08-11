@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-11T04:00:00Z",
+  "last_updated": "2026-08-11T07:19:26Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -1378,7 +1378,7 @@
             "US-SRC-010",
             "US-SRC-011"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "Search and Ranking Lead",
             "approver": "Privacy Engineering Lead"
@@ -1430,9 +1430,20 @@
             "US-SRC-011 subjective-ranking/feedback traces",
             "PendingOperations 手工重试与授权证据"
           ],
-          "last_updated": "2026-08-11T14:30:00Z",
-          "notes": "ADR-010 governs generation routing and feedback identity.\n(2026-08-10 cascade) Dependency 3F.5 merged (PR #57), flipped backlog -> ready per AGENTS.md §12.1.\n(2026-08-11 in_progress) 3F.6 started. US-RET-005 AC-3 (LLM follow-up rewrite) deferred per user decision (approach a), DEF-58-001 recorded.\n(2026-08-11 review) 3F.6 实现完成。生产检索与反馈：SearchResultCacheActor（US-RET-007 TTL/policyVersion 失效）、GenerationRoutedChannelAdapter（generation 路由 + 空索引 timedOut 降级 + timeout/L3 错误分离 DEF-34-002 + ID-keyed metadataByID DEF-34-001）、SearchPipeline followUpQuery 审计（US-RET-005 AC-4）、CrossAppIntentParser（US-SRC-010 AC-1 中文日期/主观意图 + temporalWindow）、BoundedReranker（US-SRC-011 主观重排 + 截断）、ProductionCrossAppFusionEngine（逐源授权 + 时间对齐 + .crossAppSearch 审计）、FeedbackActor computeAdjustment query-conditioned（US-FBK-001 AC-4）、FeedbackPipeline generationId passthrough（DEF-56-005）+ L2 → PendingOperations（DEF-37-001）、searchCanonical ORDER BY rank（DEF-56-006）。AuditEvent 新增 followUpQuery/crossAppSearch case。聚焦套件 43/43（28+15），全量回归 962 tests / 116 suites 0 失败，SwiftLint 0 errors。DEF-34-001/002、DEF-37-001、DEF-56-005/006 已关闭（带证据）。Release simulateError #Preview 失败为 pre-existing（3F.1 记录）。\n(2026-08-11 PR#58 review) 3 阻断项修复：① followUp 审计查询明文 → SHA-256 哈希（§5.4）；② US-RET-005 AC-1/AC-2 覆盖纠正（生产仅单轮 lastQuery 追踪，非 FIFO≤10+memoryIds；stand-in 测试移除；DEF-58-002 记录）；③ 多通道路径逐源授权（adapter 按 policy 过滤 + PRV-001 阳性对照）。CodeRabbit 25 条：24 采纳修复、1 驳回（CR-17 markdownlint 无门禁）、延后 8 条（DEF-58-002~008）。聚焦套件 43/43 通过、回归 117/13 通过。PR #58 描述已按 §15.5 刷新。",
-          "pr": null
+          "last_updated": "2026-08-11T07:19:26Z",
+          "notes": "ADR-010 governs generation routing and feedback identity.\n(2026-08-10 cascade) Dependency 3F.5 merged (PR #57), flipped backlog -> ready per AGENTS.md §12.1.\n(2026-08-11 in_progress) 3F.6 started. US-RET-005 AC-3 (LLM follow-up rewrite) deferred per user decision (approach a), DEF-58-001 recorded.\n(2026-08-11 review) 3F.6 实现完成。生产检索与反馈：SearchResultCacheActor（US-RET-007 TTL/policyVersion 失效）、GenerationRoutedChannelAdapter（generation 路由 + 空索引 timedOut 降级 + timeout/L3 错误分离 DEF-34-002 + ID-keyed metadataByID DEF-34-001）、SearchPipeline followUpQuery 审计（US-RET-005 AC-4）、CrossAppIntentParser（US-SRC-010 AC-1 中文日期/主观意图 + temporalWindow）、BoundedReranker（US-SRC-011 主观重排 + 截断）、ProductionCrossAppFusionEngine（逐源授权 + 时间对齐 + .crossAppSearch 审计）、FeedbackActor computeAdjustment query-conditioned（US-FBK-001 AC-4）、FeedbackPipeline generationId passthrough（DEF-56-005）+ L2 → PendingOperations（DEF-37-001）、searchCanonical ORDER BY rank（DEF-56-006）。AuditEvent 新增 followUpQuery/crossAppSearch case。聚焦套件 43/43（28+15），全量回归 962 tests / 116 suites 0 失败，SwiftLint 0 errors。DEF-34-001/002、DEF-37-001、DEF-56-005/006 已关闭（带证据）。Release simulateError #Preview 失败为 pre-existing（3F.1 记录）。\n(2026-08-11 PR#58 review) 3 阻断项修复：① followUp 审计查询明文 → SHA-256 哈希（§5.4）；② US-RET-005 AC-1/AC-2 覆盖纠正（生产仅单轮 lastQuery 追踪，非 FIFO≤10+memoryIds；stand-in 测试移除；DEF-58-002 记录）；③ 多通道路径逐源授权（adapter 按 policy 过滤 + PRV-001 阳性对照）。CodeRabbit 25 条：24 采纳修复、1 驳回（CR-17 markdownlint 无门禁）、延后 8 条（DEF-58-002~008）。聚焦套件 43/43 通过、回归 117/13 通过。PR #58 描述已按 §15.5 刷新。\n(2026-08-11 pr-merge) PR #58 merged by human at 2026-08-11T07:17:34Z (merge commit 5bcf881). Status review -> done. DEF-58-001~008 remain tracked (all 8 recorded, DEF-56-005/006/009 + DEF-57-001 prior-resolved). Cascade: 3F.7 flipped backlog -> ready per AGENTS.md §12.1. Phase 4 stays locked (entry_gate 3F.11 not done).",
+          "pr": {
+            "number": 58,
+            "url": "https://github.com/logan-suu/Echo/pull/58",
+            "head": "feature/phase3f-search-feedback-3F.6",
+            "base": "dev-1.0",
+            "created_at": "2026-08-11T03:01:12Z",
+            "merged_at": "2026-08-11T07:17:34Z",
+            "merge_commit": "5bcf881a21719218e002effabac7b9e3d460e69f"
+          },
+          "status_transitions": {
+            "merged_at": "2026-08-11T07:17:34Z"
+          }
         },
         {
           "id": "3F.7",
@@ -1455,7 +1466,7 @@
             "US-SRC-007",
             "US-SRC-009"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "iOS UI Integration Lead and iOS Platform Security Lead",
             "approver": "Security Engineering Lead, Privacy Engineering Lead and Architecture Lead"
@@ -1568,8 +1579,8 @@
             "Security, Privacy and Architecture approval records",
             "双设备 Live Simulator Review、AX tree、日志和无媒体 manifest"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
-          "notes": "Owns search, detail, background-task, resume and degradation UIAutomation assets declared in the 3F.7 record and contract.",
+          "last_updated": "2026-08-11T07:19:26Z",
+          "notes": "Owns search, detail, background-task, resume and degradation UIAutomation assets declared in the 3F.7 record and contract.\n(2026-08-11 cascade) Dependency 3F.6 merged (PR #58), flipped backlog -> ready per AGENTS.md §12.1.",
           "pr": null
         },
         {
