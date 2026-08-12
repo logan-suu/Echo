@@ -104,28 +104,26 @@ struct CreationViewModelTests {
         #expect(vm.creation?.title?.contains("2025") == true)
     }
 
-    // MARK: - US-SYN-003 AC-4/AC-5: Save to Notes
+    // MARK: - US-SYN-003 AC-4/AC-5: Save to Notes (ADR-013 decision 4)
 
-    @Test("US-SYN-003 AC-4: saveToNotes transitions generated -> saving -> saved with link")
-    func saveToNotesCompletes() async throws {
+    @Test("US-SYN-003 AC-4 ADR-013: saveToNotes presents system share sheet (user-mediated Notes handoff)")
+    func saveToNotesPresentsSystemShare() async throws {
         let vm = CreationViewModel()
         vm.loadPreloaded(CreationFixtureLoader.load("creation-generated-letter")!)
         vm.saveToNotes()
-        #expect(vm.viewState == .saving)
-
-        // 等待模拟保存完成
-        try await Task.sleep(nanoseconds: 500_000_000)
-        #expect(vm.viewState == .saved)
-        #expect(vm.noteLink?.hasPrefix("notes://") == true)
-        #expect(vm.saveToastMessage?.contains("Saved to Notes") == true)
+        // ADR-013 决策 4: Notes 交接仅用系统 share/export 流（用户中介），不伪造 notes:// URL。
+        #expect(vm.isSharePresented == true)
+        #expect(vm.viewState == .generated)
+        #expect(vm.noteLink == nil)
     }
 
-    @Test("US-SYN-003 AC-5: save toast and link preserved on loadPreloaded(saved)")
+    @Test("US-SYN-003 AC-5 ADR-013: saved fixture preserves toast but no fabricated notes URL")
     func savedFixturePreservesToastAndLink() {
         let vm = CreationViewModel()
         vm.loadPreloaded(CreationFixtureLoader.load("creation-saved")!)
         #expect(vm.viewState == .saved)
-        #expect(vm.noteLink == "notes://echo/creation/2025-letter")
+        // ADR-013 决策 4: 禁止 notes://echo/... 深链 — noteLink 恒 nil
+        #expect(vm.noteLink == nil)
         #expect(vm.saveToastMessage != nil)
     }
 

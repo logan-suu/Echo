@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-11T12:30:00Z",
+  "last_updated": "2026-08-11T16:00:00Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -1688,7 +1688,7 @@
             "US-SYN-007",
             "US-SYN-008"
           ],
-          "status": "ready",
+          "status": "review",
           "owner": {
             "implementation": "Language and Creation Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1770,9 +1770,15 @@
             "Apple Translation availability、uncertain fallback、七天 cache 与重启证据",
             "grounded anchors、Markdown/PDF/share 与模型分发批准"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
-          "notes": "Scope follows the human-approved 3F.0 LLM decision.",
-          "pr": null
+          "last_updated": "2026-08-12",
+          "notes": "PR #61 review-fix (2026-08-12): B-1 resolved (iOS 26-only TranslationSession(installedSource:) replaced with hidden host view + TranslationSessionBridge via .translationTask; @preconcurrency import for non-Sendable session). W-1 unused binding, W-2 L2 grading comment, W-3 UserPolicy preferredLanguage (R-004), W-4 NSFileProtectionComplete all fixed. Verified: build OK, 139 suites 0 failures, SwiftLint clean.",
+          "pr": {
+            "base": "dev-1.0",
+            "head": "feature/phase3f-translation-creation-3F.9",
+            "created_at": "2026-08-11T16:00:00Z",
+            "number": 61,
+            "url": "https://github.com/logan-suu/Echo/pull/61"
+          }
         },
         {
           "id": "3F.10",

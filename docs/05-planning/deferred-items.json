@@ -594,8 +594,11 @@
       "acceptance_evidence": [
         "Apple Translation 与七天 cache 跨重启"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "closed",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "closed_at": "2026-08-11",
+      "closed_by_task": "3F.9",
+      "closure_evidence": "AppleTranslationService implements TranslationService.translate: LanguageAvailability check first (SystemTranslationAvailability wraps LanguageAvailability), terminology precedence (TerminologyTable), never fabricates quality score (NLTagger source-language confidence per ADR-005), real TranslationSession executor (SystemTranslationExecutor). MemoryDetailViewModel production default now AppleTranslationService + PersistentTranslationCache. See Echo/UI/Translation/AppleTranslationService.swift + EchoTests/Phase3F/3F.9_TranslationCreationTests.swift (AppleTranslationService suite, 4/4)."
     },
     {
       "id": "DEF-43-003",
@@ -606,7 +609,7 @@
       "reason": "AC-5 requires 'translationCache, TTL=7d'. Implemented display-layer in-memory actor cache (TTL=7d, clock-injectable). Core translationCache field on Memory (persisted) + write path deferred to Phase 3.9; cache does not survive app relaunch.",
       "defer_to": "Phase 3.9 Core translationCache 字段写入 + 持久化",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-11",
       "owners": [
         "iOS",
         "Storage"
@@ -617,8 +620,11 @@
       "acceptance_evidence": [
         "Apple Translation 与七天 cache 跨重启"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "closed",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "closed_at": "2026-08-11",
+      "closed_by_task": "3F.9",
+      "closure_evidence": "PersistentTranslationCache (Echo/UI/Translation/PersistentTranslationCache.swift) is file-backed (JSON in Application Support/EchoTranslationCache), TTL=7d, survives relaunch via lazy disk load on first access. MemoryDetailViewModel production default now uses PersistentTranslationCache (any TranslationCaching protocol shared with in-memory TranslationCache). Relaunch test proves same-directory new instance reads persisted entry. See EchoTests/Phase3F/3F.9_TranslationCreationTests.swift (PersistentTranslationCache suite survivesRelaunch, 4/4)."
     },
     {
       "id": "DEF-44-001",
@@ -629,7 +635,7 @@
       "reason": "New creation surface strings ('AI Creation', 'Choose a template', 'Generate', 'Copy', 'Export PDF / Markdown', 'Share / Print', 'Save to Notes', prompt editor labels, toast/error messages, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4. Also: creation generate/save are fixture-driven — Core CreativePipeline + NoteStore write path deferred (US-SYN-003 AC-4 real save).",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4) + Core 创作 Pipeline 接入时",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-08-11",
       "owners": [
         "AI",
         "iOS",
@@ -642,8 +648,9 @@
       "acceptance_evidence": [
         "grounded creation、i18n、AX"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "target task review or Phase 3F integration scan"
+      "tracking_status": "partial",
+      "recheck_trigger": "target task review or Phase 3F integration scan",
+      "partial_note": "CreativePipeline grounded creation + CreationExportService (Markdown/PDF/share) delivered by 3F.9 (see Echo/Core/Pipelines/CreativePipeline.swift + Echo/Core/Services/CreationExportService.swift + EchoTests/Phase3F/3F.9_TranslationCreationTests.swift, 3 suites 11/11). notes:// deep link removed per ADR-013 decision 4 (system share flow only). i18n String Catalog migration remains 3F.10 scope (creation surface strings still hardcoded English)."
     },
     {
       "id": "DEF-45-001",

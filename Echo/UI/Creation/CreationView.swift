@@ -425,28 +425,23 @@ struct CreationView: View {
         }
     }
 
-    /// 已保存 Toast + 链接 (US-SYN-003 AC-5)。
+    /// 已保存 Toast (US-SYN-003 AC-5)。
+    /// ADR-013 决策 4 (3F.9): Notes 交接仅用系统 share/export，无 notes:// 深链 → 无 "Open" 链接。
     private var savedToast: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Color.green)
 
-            Text(viewModel.saveToastMessage ?? "Saved to Notes")
+            Text(viewModel.saveToastMessage ?? "Saved")
                 .font(.subheadline)
                 .foregroundStyle(Color.primary)
 
             Spacer()
-
-            if let link = viewModel.noteLink, let url = URL(string: link) {
-                Link("Open", destination: url)
-                    .font(.subheadline)
-                    .accessibilityIdentifier("creation-open-note")
-            }
         }
         .padding(12)
         .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(viewModel.saveToastMessage ?? "Saved to Notes")
+        .accessibilityLabel(viewModel.saveToastMessage ?? "Saved")
     }
 
     // MARK: - Empty State (US-SYN-003 无匹配源记忆)

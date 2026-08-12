@@ -267,8 +267,8 @@ final class MemoryDetailViewModel {
     /// 展示层翻译服务 — 按需翻译 (US-DIS-002 AC-2)
     private let translationService: any TranslationService
 
-    /// 展示层翻译缓存 — TTL=7d (US-DIS-002 AC-5)
-    private let translationCache: TranslationCache
+    /// 展示层翻译缓存 — TTL=7d (US-DIS-002 AC-5) — 生产持久缓存 / 测试内存缓存
+    private let translationCache: any TranslationCaching
 
     /// 当前活跃的翻译 Task — 视图消失时取消
     private var translationTask: Task<Void, Never>?
@@ -293,11 +293,21 @@ final class MemoryDetailViewModel {
     // MARK: - Initialization
 
     init(
-        translationService: any TranslationService = FixtureTranslationService(),
-        translationCache: TranslationCache = TranslationCache()
+        translationService: any TranslationService = AppleTranslationService(),
+        translationCache: any TranslationCaching = MemoryDetailViewModel.defaultPersistentCache()
     ) {
         self.translationService = translationService
         self.translationCache = translationCache
+    }
+
+    /// 生产默认持久缓存目录 — Application Support 下 EchoTranslationCache。
+    /// 展示层翻译缓存独立于 Core 存储，仅缓存译文（不重复持久化源文本）。
+    static func defaultPersistentCache() -> PersistentTranslationCache {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = base.appendingPathComponent("EchoTranslationCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return PersistentTranslationCache(directory: dir)
     }
 
     // MARK: - Actions

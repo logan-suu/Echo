@@ -1,0 +1,18 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "availability-checking",
+  "surfaceId": "translation",
+  "dataConditions": {
+    "memory": "Text memory (zh-Hans), preferredLanguage = en-US",
+    "translationVisible": true,
+    "availabilityCheckInFlight": true,
+    "translatedText": null
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "translationToggle": "Show original",
+    "progress": "ProgressView visible while LanguageAvailability check runs",
+    "checkingLabel": "Checking…"
+  },
+  "version": "1.0.0"
+}

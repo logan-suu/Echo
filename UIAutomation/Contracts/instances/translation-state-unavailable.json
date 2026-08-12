@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "unavailable",
+  "surfaceId": "translation",
+  "dataConditions": {
+    "memory": "Text memory (zh-Hans), preferredLanguage = en-US",
+    "translationVisible": true,
+    "availability": "unsupported language pair (LanguageAvailability.status == .unsupported)",
+    "translatedText": null
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "originalText": "Original text retained as primary content",
+    "languageLabel": "Source language label shown (e.g. zh-Hans)",
+    "unavailableHint": "Translation unavailable for this language pair",
+    "translatedText": "No translation provided (never fabricated)"
+  },
+  "version": "1.0.0"
+}

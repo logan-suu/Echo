@@ -95,6 +95,10 @@ struct AppRootView: View {
             }
         }
         .tint(Color.accentColor)
+        // iOS 18.x 无 TranslationSession 公开构造器 — 隐藏 host view 常驻获取 session (PR #61 review B-1)
+        .background {
+            TranslationSessionHostView()
+        }
         .fullScreenCover(isPresented: $isOnboardingPresented) {
             OnboardingView(viewModel: onboardingViewModel,
                            onCompleted: {

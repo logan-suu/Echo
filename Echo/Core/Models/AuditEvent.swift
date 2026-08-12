@@ -83,6 +83,12 @@ public enum AuditEvent: String, Sendable, Codable {
     case followUpQuery
     /// 数据概览被访问 (US-SRC-009 AC-5, 3F.7)
     case dataOverviewAccessed
+    /// grounded 合成 (US-SYN-002 AC-5: 含 citationCount, noSourceCount)
+    case synthesis
+    /// 创作生成 (US-SYN-003 AC-6: 含 templateType, sourceMemoryCount, exportFormat, savedToNotes)
+    case creativeGeneration
+    /// 合成失败模板降级 (US-SYN-008 AC-5: 含 failureReason)
+    case synthesisFallback
 }
 
 // MARK: - Audit Log Entry
