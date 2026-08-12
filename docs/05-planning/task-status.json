@@ -1934,7 +1934,13 @@
           ],
           "last_updated": "2026-08-12T13:30:00Z",
           "notes": "Finalizes pre-merge evidence only; a human-triggered finalizer records merge SHA and unlocks Phase 4.",
-          "pr": null,
+          "pr": {
+            "number": 63,
+            "url": "https://github.com/logan-suu/Echo/pull/63",
+            "head": "test/phase3f-production-gate-3F.11",
+            "base": "dev-1.0",
+            "created_at": "2026-08-12T13:35:00Z"
+          },
           "status_transitions": {
             "in_progress_at": "2026-08-12T13:10:00Z",
             "review_at": "2026-08-12T13:30:00Z"
