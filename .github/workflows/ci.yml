@@ -207,6 +207,19 @@ jobs:
           python3 Scripts/validate_accessibility_contracts.py || exit 1
           echo "::endgroup::"
 
+      # ── Static Analysis: 3F.11 release compliance gate (ADR-014 decision 3) ──
+      # Discovers every executable app/extension target (Echo + EchoShareExtension)
+      # and scans per-target networking / linked-SDK / secret / entitlement /
+      # privacy-manifest / required-reason API / purpose-string findings.
+      - name: Static Analysis (3F.11 per-target release compliance, ADR-014 §决策-3)
+        run: |
+          echo "::group::Release compliance validator unit tests"
+          python3 -m unittest Scripts.validate_release_compliance_tests || exit 1
+          echo "::endgroup::"
+          echo "::group::Per-target release compliance report"
+          python3 Scripts/validate_release_compliance.py || exit 1
+          echo "::endgroup::"
+
       # ── Resolve SPM dependencies ──
       - name: Resolve package dependencies
         run: |

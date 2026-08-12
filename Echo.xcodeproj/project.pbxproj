@@ -49,6 +49,8 @@
 		2A3F0200000000000000A3A1 /* EchoShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "EchoShareExtension/EchoShareExtension.entitlements"; sourceTree = "<group>"; };
 		2A3F0200000000000000A4A1 /* Echo-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Echo/Config/Echo-Info.plist"; sourceTree = "<group>"; };
 		2A3F0200000000000000A5A1 /* Echo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Echo/Config/Echo.entitlements"; sourceTree = "<group>"; };
+		2A3F0200000000000000A8A1 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Echo/Config/Release.xcconfig"; sourceTree = "<group>"; };
+		2A3F0200000000000000A9A1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Echo/Config/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
 		2A3F0200000000000000A6A1 /* SharedImportEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Echo/Core/Models/SharedImportEnvelope.swift"; sourceTree = "<group>"; };
 		2A3F0200000000000000A7A1 /* SharedImportQueueActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Echo/Core/Actors/SharedImportQueueActor.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -572,6 +574,7 @@
 		};
 		231256E22FE983AF0065B780 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2A3F0200000000000000A8A1 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -738,6 +741,7 @@
 		};
 		2A3F0200000000000000E3A1 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2A3F0200000000000000A8A1 /* Release.xcconfig */;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = EchoShareExtension/EchoShareExtension.entitlements;
