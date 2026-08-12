@@ -1797,7 +1797,7 @@
             "US-SYS-001",
             "US-SRC-009"
           ],
-          "status": "ready",
+          "status": "in_progress",
           "owner": {
             "implementation": "Localization and Accessibility Lead",
             "approver": "Release Quality Lead"
@@ -1860,8 +1860,11 @@
             "US-SRC-009 merged-into-US-SYS-001 localized and accessible task/resume/error trace",
             "ADR-011 与架构、数据流、避坑的 degradation 合同一致性"
           ],
-          "last_updated": "2026-08-12T06:49:34Z",
-          "notes": "Owns complete declared degradation and L1-L4 UIAutomation coverage.",
+          "last_updated": "2026-08-12T07:15:00Z",
+          "notes": "Owns complete declared degradation and L1-L4 UIAutomation coverage.\n(2026-08-12 human scope decisions, init-session consistency check) DECISION-1: added Echo/Core/Models/AuditEvent.swift to 3F.10 Files list — STRICT scope: add only `.languageUnified` (US-DIS-001 AC-5) and `.backgroundTaskUIAccessed` (US-SYS-001 AC-7); `.backgroundTaskInterrupted` already exists (AGENTS.md §7.3 cross-check), nothing more. DECISION-2: added Echo/Core/Actors/DeviceMigrationActor.swift + Echo/Core/Actors/PrivacyActor.swift to 3F.10 Files list — SOLE purpose: resolve DEF-59-004 (missing PrivacyCheckpoint on the migration export path, R-006) via a new `.migration` PrivacyOperation case; deferred-items.json updated accordingly. Both decisions recorded in phase3f-execution-plan.md §3F.10 Files.\n(2026-08-12 in_progress) 3F.10 started.",
+          "status_transitions": {
+            "in_progress_at": "2026-08-12T07:15:00Z"
+          },
           "pr": null
         },
         {
