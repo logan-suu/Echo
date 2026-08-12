@@ -113,8 +113,8 @@ final class CreationUITests: XCTestCase {
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.tap()
 
-        // 编辑器关闭，回到创作页
-        XCTAssertFalse(editor.exists)
-        XCTAssertTrue(app.buttons["creation-generate"].exists)
+        // 确认后编辑器关闭（waitForNonExistence 加固，DEF-55-004）
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 5), "Prompt editor should dismiss after confirm")
+        XCTAssertTrue(app.buttons["creation-generate"].waitForExistence(timeout: 5), "Creation page should be visible after confirm")
     }
 }

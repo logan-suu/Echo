@@ -159,7 +159,18 @@ def validate_target_set(targets):
     return errors
 
 
-def scan_source(root, target, source_dir, findings):
+def declared_reason_apis(config_dir):
+    """Return the set of NSPrivacyAccessedAPIType values declared in the
+    target's PrivacyInfo.xcprivacy (empty when missing or unreadable)."""
+    privacy = config_dir / "PrivacyInfo.xcprivacy"
+    p = read_plist(privacy) or {}
+    return {
+        item.get("NSPrivacyAccessedAPIType")
+        for item in (p.get("NSPrivacyAccessedAPITypes") or [])
+    }
+
+
+def scan_source(root, target, source_dir, declared_reasons, findings):
     for swift in sorted(source_dir.rglob("*.swift")):
         rel = str(swift.relative_to(root))
         raw = swift.read_text(encoding="utf-8", errors="replace")
@@ -180,6 +191,8 @@ def scan_source(root, target, source_dir, findings):
                 }
             )
         for api, markers in REQUIRED_REASON_MARKERS.items():
+            if api in declared_reasons:
+                continue
             for marker in markers:
                 if re.search(marker, text):
                     findings.append(
@@ -197,7 +210,8 @@ def used_reason_apis(source_dir):
     """Return the set of required-reason API categories actually used in source."""
     used = set()
     for swift in source_dir.rglob("*.swift"):
-        text = swift.read_text(encoding="utf-8", errors="replace")
+        raw = swift.read_text(encoding="utf-8", errors="replace")
+        text = strip_comments_and_strings(raw)
         for api, markers in REQUIRED_REASON_MARKERS.items():
             if any(re.search(marker, text) for marker in markers):
                 used.add(api)
@@ -226,11 +240,7 @@ def scan_config(root, target, config_dir, used, findings):
             }
         )
     else:
-        p = read_plist(privacy) or {}
-        declared = {
-            item.get("NSPrivacyAccessedAPIType")
-            for item in (p.get("NSPrivacyAccessedAPITypes") or [])
-        }
+        declared = declared_reason_apis(config_dir)
         for api in sorted(used - declared):
             findings.append(
                 {
@@ -266,7 +276,8 @@ def scan_config(root, target, config_dir, used, findings):
 def scan_target(root, target, source_dir, config_dir):
     """Return per-target findings list. source_dir defaults to the target dir."""
     findings = []
-    scan_source(root, target, source_dir, findings)
+    declared = declared_reason_apis(config_dir)
+    scan_source(root, target, source_dir, declared, findings)
     scan_config(root, target, config_dir, used_reason_apis(source_dir), findings)
     return findings
 

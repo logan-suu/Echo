@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.1",
-  "_last_updated": "2026-08-12T12:00:00Z",
+  "_last_updated": "2026-08-12",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -136,7 +136,7 @@
     "check_deferred": "逐条检查 deferred_to_phase_* 数组中的每个条目——dependencies 是否已 done？是否被顺带覆盖？blocker 是否已消除？",
     "if_resolvable": "创建/扩展 task-status.json 任务 → 移至 resolved_deferred 数组",
     "if_still_blocked": "保持原条目不变，更新 last_checked_at 时间戳",
-    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash; DEF-58-001 (RET-005 AC-3 LLM rewrite) defer_to=on-device generative model; DEF-58-002 (RET-005 AC-1 FIFO history + AC-2 memoryIds injection) defer_to=3F.7 search wiring or Phase 4; DEF-58-003 (feedback generation binds active route not result generation) defer_to=3F.7; DEF-58-004 (SubjectiveScorer ignores queryText) defer_to=3F.7 real CLIP scorer; DEF-58-005 (SearchResultItem subjectiveMatch field) defer_to=3F.7/3F.10; DEF-58-006 (parse async throws unused) & DEF-58-007 (regex hoist) defer_to=Phase 4 simplification window; DEF-59-001/002/003 (migration import TaskQueueActor enqueue / AC-5 补导 / vector-FTS row-level integrity) defer_to=US-SRC-007 migration import surface wiring; DEF-59-004 (exportPackage PrivacyCheckpoint, PrivacyActor Files-外) defer_to=PrivacyActor-owning task; DEF-59-005 (staging atomic publication) defer_to=migration import surface; DEF-59-006 (canonical repo composition singleton, AppDelegate Files-外) defer_to=dependency-graph convergence; DEF-59-007 (streaming decrypt) defer_to=large-package support DEF-60-001/002 (PR #60: i18n 文案 → 3F.10; bare VectorStoreActor → Phase 4)"
+    "check_pr_review_deferred": "Scan deferred_from_pr_review at every Phase integration test; DEF-52-001 (LanguageAligner fallback strings) defer_to=3F.10; DEF-53-001 (evidence-index markdownlint MD024/MD058) defer_to=markdownlint-gate introduction; DEF-54-001 (SigLIP2 model-dependent tests skip in CI) defer_to=model-approved-for-release; DEF-55-001/002/003 (Whisper bridge per-transcribe checksum/init perf, hash duplication) defer_to=3F.5 production ingestion + single-source hash; DEF-58-001 (RET-005 AC-3 LLM rewrite) defer_to=on-device generative model; DEF-58-002 (RET-005 AC-1 FIFO history + AC-2 memoryIds injection) defer_to=3F.7 search wiring or Phase 4; DEF-58-003 (feedback generation binds active route not result generation) defer_to=3F.7; DEF-58-004 (SubjectiveScorer ignores queryText) defer_to=3F.7 real CLIP scorer; DEF-58-005 (SearchResultItem subjectiveMatch field) defer_to=3F.7/3F.10; DEF-58-006 (parse async throws unused) & DEF-58-007 (regex hoist) defer_to=Phase 4 simplification window; DEF-59-001/002/003 (migration import TaskQueueActor enqueue / AC-5 补导 / vector-FTS row-level integrity) defer_to=US-SRC-007 migration import surface wiring; DEF-59-004 (exportPackage PrivacyCheckpoint, PrivacyActor Files-外) defer_to=PrivacyActor-owning task; DEF-59-005 (staging atomic publication) defer_to=migration import surface; DEF-59-006 (canonical repo composition singleton, AppDelegate Files-外) defer_to=dependency-graph convergence; DEF-59-007 (streaming decrypt) defer_to=large-package support DEF-60-001/002 (PR #60: i18n 文案 → 3F.10; bare VectorStoreActor → Phase 4); DEF-63-001/002 RESOLVED (2026-08-12, PR #63 review-fix: validator per-file required-reason 噪声已抑制、used_reason_apis 已剥离注释); DEF-55-004 RESOLVED (2026-08-12, PR #63 review-fix: test_promptEditorConfirm waitForNonExistence 加固)"
   },
   "deferred_from_pr_review": [
     {
@@ -864,9 +864,13 @@
       "title": "CreationUITests.test_promptEditorConfirm 间歇性 UI 时序失败（CI 环境）",
       "severity": "🟡",
       "location": "EchoUITests/CreationUITests.swift:115 (XCTAssertFalse(editor.exists))",
-      "reason": "3F.3b CI 连续两次 Build, Lint & Test 均因此测试失败；本机重跑通过（17.1s）、dev-1.0 基线 CI（run 31274921544）33/33 通过。3F.3b 未触碰任何 UI/ViewModel/AppDelegate 代码（git diff 为空），app 体积仅 +38MB（GGUF 30.7MB + framework 7.2MB）不足以解释 5s 时序超时。判定为 XCUITest 间歇性 flaky（confirm tap 后编辑器关闭动画在 CI 慢环境延迟），非 3F.3b 引入缺陷。 | 补充证据（2026-08-09）：dev-1.0 基线手动 CI（run 31301787630）同样失败，但失败于 MemoryDetailMediaUITests.test_voiceMediaPreview（XCTAssertEqual Play→Pause 时序断言），CreationUITests 通过；dev-1.0 8-05 run 31031217183 亦失败于同一 MemoryDetail 测试。证明 Echo 存在多个间歇性 UI 时序 flaky（Creation/Media 交替），与 3F.3b 无关（3F.3b 零 UI 改动、本机 3/3 通过）。 | 最终证据（2026-08-09, run 31302553299）：3F.3b 分支第 5 次 CI 失败点漂移至 MemoryDetailMediaUITests.test_voiceMediaPreview（与 dev-1.0 基线失败完全同一测试/同一断言类），而 CreationUITests 本次通过。失败点在两个既有 UI flaky 间漂移，证明非 3F.3b 相关（3F.3b 零 UI 改动；本机 CreationUITests 3/3、MemoryDetail 相关单元测试全过；854 单元测试 CI 全过）。",
-      "defer_to": "3F.7 UI→Core 全域接线时统一加固：waitForNonExistence 替代裸 exists/XCTWaiter 时序断言；或 CI 层引入 flaky 重试机制",
-      "deferred_at": "2026-08-09"
+      "reason": "3F.3b CI 连续两次 Build, Lint & Test 均因此测试失败；本机重跑通过（17.1s）、dev-1.0 基线 CI（run 31274921544）33/33 通过。3F.3b 未触碰任何 UI/ViewModel/AppDelegate 代码（git diff 为空），app 体积仅 +38MB（GGUF 30.7MB + framework 7.2MB）不足以解释 5s 时序超时。判定为 XCUITest 间歇性 flaky（confirm tap 后编辑器关闭动画在 CI 慢环境延迟），非 3F.3b 引入缺陷。 | 补充证据（2026-08-09）：dev-1.0 基线手动 CI（run 31301787630）同样失败，但失败于 MemoryDetailMediaUITests.test_voiceMediaPreview（XCTAssertEqual Play→Pause 时序断言），CreationUITests 通过；dev-1.0 8-05 run 31031217183 亦失败于同一 MemoryDetail 测试。证明 Echo 存在多个间歇性 UI 时序 flaky（Creation/Media 交替），与 3F.3b 无关（3F.3b 零 UI 改动、本机 3/3 通过）。 | 最终证据（2026-08-09, run 31302553299）：3F.3b 分支第 5 次 CI 失败点漂移至 MemoryDetailMediaUITests.test_voiceMediaPreview（与 dev-1.0 基线失败完全同一测试/同一断言类），而 CreationUITests 本次通过。失败点在两个既有 UI flaky 间漂移，证明非 3F.3b 相关（3F.3b 零 UI 改动；本机 CreationUITests 3/3、MemoryDetail 相关单元测试全过；854 单元测试 CI 全过）。 | 复现（2026-08-12, PR #63 3F.11 run 31605888408）：Build, Lint & Test 再次失败于此测试（CreationUITests.swift:117 XCTAssertFalse(editor.exists)）。该文件未被 3F.11 改动（git diff 为空）；3F.11 新增全部门禁（validator 9/9、覆盖率 77%≥65%、Phase3F 集成 17/17、E2E 通过）均通过。证明仍为既存 flaky，非 3F.11 引入。 | CLOSED by PR #63 review-fix (2026-08-12): PR #63 review-fix (2026-08-12): CreationUITests.test_promptEditorConfirm hardened — XCTAssertFalse(editor.exists) replaced with editor.waitForNonExistence(timeout:5) and creation-generate waitForExistence(timeout:5). Evidence: single-test run on iPhone 17 Pro PASSED (1/1, 22.686s, -parallel-testing-enabled NO).",
+      "defer_to": "下一 Phase 集成扫描（Phase 4）：统一 waitForNonExistence 加固该断言；或 CI flaky 重试机制",
+      "deferred_at": "2026-08-09",
+      "last_checked_at": "2026-08-12",
+      "tracking_status": "resolved",
+      "resolved_at": "2026-08-12",
+      "resolved_by": "PR #63 review-fix (DEF-63-001/002 + DEF-55-004)"
     },
     {
       "id": "DEF-56-004",
@@ -1338,6 +1342,54 @@
       ],
       "tracking_status": "open",
       "recheck_trigger": "Phase 4 集成扫描"
+    },
+    {
+      "id": "DEF-63-001",
+      "pr": 63,
+      "title": "validate_release_compliance.py required-reason 按文件告警在 manifest 已声明时仍输出误导性 warning",
+      "severity": "🟡",
+      "location": "Scripts/validate_release_compliance.py:182-193 (scan_source required-reason 分支)",
+      "reason": "scan_source 对每个命中 required-reason marker 的源文件追加 blocking:False 的 warning（如 Echo 多文件命中 UserDefaults 输出 5 条 'requires reason declaration'），即使 PrivacyInfo.xcprivacy 已声明该 API（CA92.1）。权威检查在 scan_config 的 used-declared（blocking），此按文件告警为噪声，会误导审查者认为 manifest 缺失。不阻断门禁（CI 已 exit 0）。 | CLOSED by PR #63 review-fix (2026-08-12): PR #63 review-fix (2026-08-12): scan_source now takes declared_reasons set; per-file required-reason warning skipped when API declared in PrivacyInfo.xcprivacy (declared_reason_apis helper, reused by scan_config). Evidence: Scripts/validate_release_compliance_tests.py test_no_required_reason_warning_when_api_declared; real-repo validator exit 0 with zero required-reason noise.",
+      "defer_to": "下一 Phase 集成扫描或 validator 维护窗口：scan_source 仅在 API 未在 manifest 声明时输出 required-reason warning，或改为 informational 前缀",
+      "deferred_at": "2026-08-12",
+      "owners": [
+        "AI",
+        "Release Quality Lead"
+      ],
+      "target_tasks": [
+        "Phase 4"
+      ],
+      "acceptance_evidence": [
+        "CI 无已声明 API 的按文件 required-reason warning 噪声"
+      ],
+      "tracking_status": "resolved",
+      "recheck_trigger": "Phase 4 集成扫描",
+      "resolved_at": "2026-08-12",
+      "resolved_by": "PR #63 review-fix (DEF-63-001/002 + DEF-55-004)"
+    },
+    {
+      "id": "DEF-63-002",
+      "pr": 63,
+      "title": "used_reason_apis 扫描原始源码（未剥离注释/字符串）存在误报风险",
+      "severity": "🟡",
+      "location": "Scripts/validate_release_compliance.py:196-204 (used_reason_apis)",
+      "reason": "used_reason_apis 读取原始文本（未调 strip_comments_and_strings），注释或字符串字面量中提及的 API 名称会被计为 'used'，可能产生误报 blocking finding。当前 Echo 无此触发（UserDefaults 已声明），但属于 validator 潜在缺陷。 | CLOSED by PR #63 review-fix (2026-08-12): PR #63 review-fix (2026-08-12): used_reason_apis now applies strip_comments_and_strings before marker matching, consistent with scan_source. Evidence: Scripts/validate_release_compliance_tests.py test_used_reason_apis_ignores_comments_and_strings; all 11 validator tests pass.",
+      "defer_to": "下一 Phase 集成扫描或 validator 维护窗口：对 raw 文本先 strip_comments_and_strings 再匹配",
+      "deferred_at": "2026-08-12",
+      "owners": [
+        "AI",
+        "Release Quality Lead"
+      ],
+      "target_tasks": [
+        "Phase 4"
+      ],
+      "acceptance_evidence": [
+        "used_reason_apis 与 scan_source 使用一致的去注释化文本"
+      ],
+      "tracking_status": "resolved",
+      "recheck_trigger": "Phase 4 集成扫描",
+      "resolved_at": "2026-08-12",
+      "resolved_by": "PR #63 review-fix (DEF-63-001/002 + DEF-55-004)"
     }
   ]
 }

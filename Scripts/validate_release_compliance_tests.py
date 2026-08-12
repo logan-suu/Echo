@@ -157,6 +157,37 @@ class PerTargetScanTest(unittest.TestCase):
         blocking = [f for f in findings if f.get("blocking", False)]
         self.assertEqual(blocking, [])
 
+    def test_no_required_reason_warning_when_api_declared(self):
+        # Regression for DEF-63-001.
+        (self.source_dir / "Store.swift").write_text(
+            "import Foundation\nlet d = UserDefaults.standard\n",
+            encoding="utf-8",
+        )
+        (self.config_dir / "PrivacyInfo.xcprivacy").write_bytes(
+            plistlib.dumps(
+                {
+                    "NSPrivacyCollectedDataTypes": [],
+                    "NSPrivacyAccessedAPITypes": [
+                        {
+                            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+                            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"],
+                        }
+                    ],
+                }
+            )
+        )
+        findings = vrc.scan_target(self.root, self.target, self.source_dir, self.config_dir)
+        reason = [f for f in findings if f["category"] == "required-reason"]
+        self.assertEqual(reason, [])
+
+    def test_used_reason_apis_ignores_comments_and_strings(self):
+        # Regression for DEF-63-002.
+        (self.source_dir / "Comment.swift").write_text(
+            '// TODO: consider UserDefaults for caching\nlet key = "UserDefaults.notUsed"\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(vrc.used_reason_apis(self.source_dir), set())
+
     def test_seeded_violation_never_leaks_to_sibling_target(self):
         (self.root / "EchoShareExtension").mkdir(parents=True, exist_ok=True)
         make_info_plist(self.config_dir / "Echo-Info.plist")
