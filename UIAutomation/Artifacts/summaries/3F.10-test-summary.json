@@ -1,0 +1,13 @@
+{
+  "task": "3F.10",
+  "generated": "2026-08-12",
+  "focused": {"suite": "EchoTests/LocalizationAccessibilityErrorTests", "count": 34, "suites": 10, "failures": 0},
+  "cumulative": {"count": 1082, "suites": 139, "failures": 0},
+  "uiTests": {"count": 42, "failures": 0},
+  "releaseSimulator": "BUILD SUCCEEDED (exit 0)",
+  "releaseDeviceCompile": "BUILD SUCCEEDED (exit 0, CODE_SIGNING_ALLOWED=NO)",
+  "swiftlint": "0 errors, exit 0 (36 pre-existing warnings in test files, none in 3F.10 files)",
+  "localizationValidator": "OK 336 keys parity 100%",
+  "staticBansValidator": "OK",
+  "accessibilityContractsValidator": "OK 150 contracts"
+}

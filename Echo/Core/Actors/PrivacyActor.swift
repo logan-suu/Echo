@@ -28,6 +28,8 @@ public enum PrivacyOperation: String, Sendable, Codable {
     case delete
     case awakening
     case feedback
+    /// 设备迁移导出/导入 (DEF-59-004, R-006; added by 3F.10 DECISION-2)
+    case migration
 }
 
 // MARK: - Privacy Decision
@@ -337,6 +339,7 @@ public actor PrivacyActor {
         case .delete:    .memoryDeleted
         case .awakening: .scheduledScanCompleted
         case .feedback:  .feedbackReceived
+        case .migration: .deviceMigrationCompleted
         }
         try? await writeAuditLog(
             eventType: event,

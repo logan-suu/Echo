@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "actionId": "banner.retryModelLoad",
+  "description": "User taps Retry on the model-degradation banner. Manual only; no automatic retry (US-RES-004 AC-3).",
+  "impact": {
+    "state": "loading",
+    "onSuccess": "banner dismissed",
+    "onFailure": "state stays modelDegraded"
+  }
+}

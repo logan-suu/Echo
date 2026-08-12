@@ -1,0 +1,53 @@
+{
+  "contractVersion": "1.0.0",
+  "journeyId": "degradation-lifecycle",
+  "surfaceId": "degradation-banner",
+  "steps": [
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "normal",
+      "actionId": null
+    },
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "lowPower",
+      "actionId": "banner.toggleBackgroundTasks"
+    },
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "thermal",
+      "actionId": null
+    },
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "modelDegraded",
+      "actionId": "banner.retryModelLoad"
+    },
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "normal",
+      "actionId": "banner.dismiss"
+    }
+  ],
+  "preconditionFixtures": [
+    "degradation-normal"
+  ],
+  "assertions": [
+    {
+      "after": "lowPower",
+      "observable": "Banner shows low-power message; toggle defaults ON"
+    },
+    {
+      "after": "thermal",
+      "observable": "Banner shows thermal message; toggle hidden"
+    },
+    {
+      "after": "modelDegraded",
+      "observable": "Banner shows model error + Retry button"
+    },
+    {
+      "after": "normal",
+      "observable": "Banner hidden after recovery/dismissal"
+    }
+  ]
+}

@@ -68,3 +68,5 @@ UI bootstrap 命令流水线（`/init-session-echo`、`/next-task-echo`、`/ui-b
 3. `UIAutomation/Contracts` 与 `UIAutomation/Policies`（UI 机器契约）
 4. 本目录下的拆分设计文档
 5. 原始 bootstrap 规范（仅首次初始化输入，物化后不再是运行权威）
+
+**3F.10 交付（2026-08-12）**：i18n/accessibility/errors 任务完成——`Localizable.xcstrings` 双语目录（336 keys）、`LanguageCenter` 统一语言、L1~L4 错误分级本地化、`SystemMonitor` 低电量/热降级运行时接线、双设备 Live Sim Review 通过（`UIAutomation/Artifacts/manifests/3F.10-i18n-accessibility-run-manifest.json`，`visualMediaCaptured: false`）。

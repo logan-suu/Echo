@@ -106,12 +106,37 @@ final class SettingsViewModel {
     /// 数据概览服务（US-SRC-009 live 值，3F.7 接线）— nil 时回退 fixture 占位
     private let dataOverviewService: DataOverviewService?
 
+    /// Unified app language (US-DIS-001 / US-SET-001, 3F.10)
+    let languageCenter: LanguageCenter
+
     init(fixtureLoader: SettingsFixtureLoader = .shared,
          composition: AppComposition? = nil,
-         dataOverviewService: DataOverviewService? = nil) {
+         dataOverviewService: DataOverviewService? = nil,
+         languageCenter: LanguageCenter = .shared) {
         self.fixtureLoader = fixtureLoader
         self.composition = composition
         self.dataOverviewService = dataOverviewService
+        self.languageCenter = languageCenter
+    }
+
+    // MARK: - Unified Language (US-DIS-001 / US-SET-001)
+
+    var languageSelection: LanguageCenter.AppLanguageSelection {
+        languageCenter.selection
+    }
+
+    func setLanguage(_ selection: LanguageCenter.AppLanguageSelection) async {
+        state = .loading
+        do {
+            try await languageCenter.apply(
+                selection,
+                systemLanguage: LanguageCenter.systemLanguageIdentifier(),
+                privacyActor: composition?.privacyActor ?? .shared
+            )
+            await loadSettings()
+        } catch {
+            state = .error(.l2Recoverable("This action could not be completed. You can retry it when ready."))
+        }
     }
 
     func loadSettings() async {
@@ -156,7 +181,19 @@ final class SettingsViewModel {
                 state = .completed(sections)
             }
         } catch {
-            state = .error(.l2Recoverable(error.localizedDescription))
+            // DEF-39-1 (3F.10): classify into all four levels, message from catalog key
+            let severity = ErrorClassifier.classify(error)
+            let messageKey = severity.userFacingMessageKey
+            switch severity {
+            case .l1Transient:
+                state = .error(.l1Transient)
+            case .l2Recoverable:
+                state = .error(.l2Recoverable(messageKey))
+            case .l3Blocking:
+                state = .error(.l3Blocking(messageKey))
+            case .l4Conflict:
+                state = .error(.l4Conflict(messageKey))
+            }
         }
     }
 

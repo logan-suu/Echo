@@ -194,6 +194,19 @@ jobs:
           echo "✅ No network request code found"
           echo "::endgroup::"
 
+      # ── Static Analysis: 3F.10 i18n / AX / static-ban gates ──
+      - name: Static Analysis (3F.10 localization / AX contracts / static bans)
+        run: |
+          echo "::group::Localization gate (US-DIS-001/003, AGENTS.md §1.3)"
+          python3 Scripts/validate_localization.py || exit 1
+          echo "::endgroup::"
+          echo "::group::Static ban gate (R-007 / R-001 / §11.4)"
+          python3 Scripts/validate_static_bans.py || exit 1
+          echo "::endgroup::"
+          echo "::group::Accessibility contracts gate (US-DIS-004, §4.6.10)"
+          python3 Scripts/validate_accessibility_contracts.py || exit 1
+          echo "::endgroup::"
+
       # ── Resolve SPM dependencies ──
       - name: Resolve package dependencies
         run: |

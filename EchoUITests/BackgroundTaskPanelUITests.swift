@@ -21,7 +21,7 @@ final class BackgroundTaskPanelUITests: XCTestCase {
     @MainActor
     func test_loadedJourney() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
         app.launch()
 
         // 面板已通过 launch argument 自动打开
@@ -47,7 +47,7 @@ final class BackgroundTaskPanelUITests: XCTestCase {
     @MainActor
     func test_pauseInteraction() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
         app.launch()
 
         let pauseButton = app.buttons["background-task-pause-task-sync-001"]
@@ -63,7 +63,7 @@ final class BackgroundTaskPanelUITests: XCTestCase {
     @MainActor
     func test_pauseAllTasksKeepsPanelOpen() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
         app.launch()
 
         let panel = app.otherElements["background-tasks-panel"]
@@ -94,7 +94,7 @@ final class BackgroundTaskPanelUITests: XCTestCase {
     @MainActor
     func test_cancelInteraction() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
         app.launch()
 
         let cancelButton = app.buttons["background-task-cancel-task-sync-001"]
@@ -118,7 +118,7 @@ final class BackgroundTaskPanelUITests: XCTestCase {
     @MainActor
     func test_cancelAllTasksShowsEmptyAndAutoHides() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
         app.launch()
 
         let panel = app.otherElements["background-tasks-panel"]
@@ -150,7 +150,7 @@ final class BackgroundTaskPanelUITests: XCTestCase {
     @MainActor
     func test_doneDismissesPanel() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "background-tasks-loaded"]
         app.launch()
 
         let panel = app.otherElements["background-tasks-panel"]

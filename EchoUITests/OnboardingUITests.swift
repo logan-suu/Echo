@@ -22,7 +22,7 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     func test_happyPathCompletesOnboarding() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-fixture", "onboarding-welcome"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-fixture", "onboarding-welcome"]
         app.launch()
 
         // Step 1 欢迎页
@@ -68,7 +68,7 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     func test_privacyDeclinedBranch() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-fixture", "onboarding-welcome"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-fixture", "onboarding-welcome"]
         app.launch()
 
         app.buttons["onboarding-start"].tap()
@@ -90,7 +90,7 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     func test_permissionDeniedBranch() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-fixture", "onboarding-welcome"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-fixture", "onboarding-welcome"]
         app.launch()
 
         app.buttons["onboarding-start"].tap()
@@ -117,7 +117,7 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     func test_languageSelectionBranch() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-fixture", "onboarding-welcome"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-fixture", "onboarding-welcome"]
         app.launch()
 
         app.buttons["onboarding-start"].tap()

@@ -839,49 +839,101 @@ Production awakening system adapters per ADR-012: real `CoreLocationProvider` (C
 ## Entry: 3F.10 — i18n、accessibility 与 production errors
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: 3F.10 — `feature/phase3f-i18n-accessibility-3F.10` (PR pending delivery, base dev-1.0)
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: `in_progress` at 2026-08-12T07:15:00Z (task-status.json status_transitions.in_progress_at), recorded by docs commit eed2e2e (docs(planning): record 3F.10 scope expansion decisions and mark in_progress); delivery transitions to `review` via §6.2.2 ledger commit
+- Quoted AC and architecture constraints: US-DIS-001 AC-1 (single App Language option zh-Hans/en-US), AC-2 (toggle updates UI strings AND AI preferredLanguage), AC-3 (follow-system; non-zh/en system → zh-Hans), AC-4 (immediate effect, no restart), AC-5 (audit .languageUnified incl. newLanguage); US-DIS-003 AC-1 (all status copy in String Catalog), AC-2 (error codes → user-friendly localized messages), AC-4 (network/permission/timeout localized copy); US-DIS-004 AC-1 (interactive elements have accessibilityLabel), AC-2 (dynamic changes trigger accessibilityAnnouncement); US-RES-001 AC-3 (offline mode indicator); US-RES-002 AC-1 (isLowPowerModeEnabled → lightweight mode), AC-2 (banner "省电模式已启用，记忆检索精度可能降低"), AC-3 (auto-pause toggle default on + note), AC-4 (auto-dismiss on recovery), AC-5 (audit batteryLevel/modelVersion/degradationWarningShown/backgroundTasksPaused); US-RES-003 AC-1 (ThermalState .serious+ → degradation), AC-2 (banner "设备温度较高，部分功能已临时简化"), AC-3 (auto-dismiss on recovery), AC-5 (audit deviceThermalState/degradationActive/warningShown); US-RES-004 AC-3 (manual retry only, no auto-retry), AC-7 (功能受限 UI + repair/retry entry); US-SYS-001 AC-7 (audit .backgroundTaskUIAccessed/.backgroundTaskInterrupted action/resumePoint/userChoiceOnRestart); AGENTS.md §1.3 (zh-Hans/en-US only), §4.4 (L1~L4), §5.4 (hash-only audit), R-006 (PrivacyCheckpoint), R-007 (no Combine/@unchecked Sendable/nonisolated(unsafe)), §9.4 (serial tests, iPhone 17 Pro destination)
+- RED test command and observed failure: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/LocalizationAccessibilityErrorTests` — 3F.10 tests written first (RED phase); suites failed until String Catalog, LanguageCenter, SystemMonitor, degradation runtime wiring, audit events and DEF-59-004 checkpoint landed (see EchoTests/Phase3F/3F.10_LocalizationAccessibilityErrorTests.swift)
+- Focused test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/LocalizationAccessibilityErrorTests` — exit 0, 34 tests / 10 suites / 0 failures
+- Cumulative test command / exit / passed count: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests` — exit 0, 1082 tests / 139 suites / 0 failures (Phase 1+2+3+3F unit + integration)
+- UI test command / exit / passed count: `xcodebuild test ... -only-testing:EchoUITests` — exit 0, 42 tests / 0 failures (incl. new LocalizationAccessibilityUITests 3 + DegradationUITests 4 with zh-Hans + en-US journeys)
+- Release simulator and device commands / exits: Release simulator `xcodebuild build -scheme Echo -configuration Release -destination 'generic/platform=iOS Simulator'` — exit 0 (BUILD SUCCEEDED); Release device compile `xcodebuild build -scheme Echo -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO` — exit 0 (BUILD SUCCEEDED). Fixed pre-existing non-DEBUG-gated `simulateError` Preview failure by making the 3 Preview helpers available in Release (SearchViewModel/CreationViewModel/MemoryDetailViewModel)
+- Static/privacy/model/compliance commands / exits: SwiftLint `swiftlint lint --reporter github-actions-logging --quiet` — exit 0, 0 errors (36 pre-existing warnings in test files; 0 in new 3F.10 files); `python3 Scripts/validate_localization.py` — OK 336 keys parity 100%, 0 hardcoded view strings; `python3 Scripts/validate_static_bans.py` — OK no banned constructs; `python3 Scripts/validate_accessibility_contracts.py` — OK 150 contracts, degradation-banner surface resolves deterministically; Combine scan / R-006 PrivacyCheckpoint Pipeline scan / network scan — OK
+- Production path exercised: unified App Language via Settings picker → LanguageCenter.apply → UserPolicy.preferredLanguage + .languageUnified audit; SystemMonitor (ProcessInfo low-power + ThermalState) wired into HomeView degradation banner → real runtime degradation banners + .degradationWarning audit + auto-pause via TaskQueueActor; manual-only model retry via ModelLoaderActor.retryAllFailedModels + .modelLoadRetrySuccess; background task panel .backgroundTaskUIAccessed/.backgroundTaskInterrupted audits; migration export/import PrivacyCheckpoint (DEF-59-004)
+- Files and documentation changed: see PR diff — 24 UI/Core files modified + SystemMonitor.swift + Localizable.xcstrings (336 keys) + 3 validate scripts + 3F.10 test suite + 2 new UI test suites + UIAutomation degradation-banner contracts/fixtures + planning/docs (task-status.json, deferred-items.json, phase3f-execution-plan.md, evidence-index, README.md, AGENTS.md, spec, 双语言 doc, 避坑 doc, ADR-011, docs/ui)
+- Deferred items closed or created, with evidence links: RESOLVED — DEF-41-1, DEF-41-2, DEF-42-002, DEF-43-001, DEF-44-001, DEF-45-001, DEF-46-001, DEF-52-001, DEF-60-001, DEF-39-1, DEF-59-004 (deferred-items.json tracking_status=resolved, resolved_at=2026-08-12)
+- Known risks that do not weaken an in-scope gate: (1) scope clarification — `.degradationWarning` audit case added to AuditEvent.swift beyond DECISION-1's two named cases because US-RES-002 AC-5 / US-RES-003 AC-5 require degradation audit events (hash-only content); (2) scope clarification — LanguageAligner.swift + AwakeningPipeline.swift modified minimally for DEF-52-001/DEF-60-001 catalog migration (task's MUST-resolve list); (3) `swiftlint lint` config `included: App/Core/UI` resolves to non-existent root dirs (code lives under Echo/) so CI lint covers EchoTests/EchoUITests only — pre-existing quirk, R-007 enforcement delegated to validate_static_bans.py + CI grep scans; (4) existing UI tests made deterministic via `-ui-language en-US` launch arg (language state persists in app sandbox from unit tests)
 
 <!-- PR-BODY:3F.10:START -->
 ## Overview
-<fill with the completed task overview>
+Echo 3F.10 delivers i18n, accessibility and production error behavior. A unified App Language setting (zh-Hans/en-US) now drives both UI strings and the AI preferredLanguage via LanguageCenter, with immediate effect, follow-system mapping (non-zh/en systems default to zh-Hans), a one-time Traditional-Chinese mapping notice and a `.languageUnified` audit. The full Localizable.xcstrings String Catalog (336 keys, 100% parity) replaces hardcoded copy across every UI surface (Home/Search/Detail/Settings/Onboarding/Awakening/BackgroundTask/Creation/Degradation/ResumeProgress/Translation/AppShell), including error-code to localized user-facing messages (L1 transient / L2 recoverable / L3 blocking / L4 conflict per AGENTS.md §4.4), degradation banner copy, notification bodies and accessibility labels. SystemMonitor now wires real `ProcessInfo` low-power and ThermalState sources into the production degradation banner (US-RES-002/003 runtime behavior, `.degradationWarning` hash-only audit, auto-pause via TaskQueueActor, manual-only model retry per US-RES-004 AC-3). Accessibility covers catalog-driven labels, VoiceOver announcements on dynamic degradation changes, Dynamic Type-safe banner layout and dual-device Live Sim Review AX-tree verification. Background task panel audits `.backgroundTaskUIAccessed`/`.backgroundTaskInterrupted` (action/resumePoint), and DEF-59-004 adds the migration export/import PrivacyCheckpoint (`.migration`). 11 deferred items are resolved.
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task: 3F.10 — i18n, accessibility and production errors
+- Stories: US-DIS-001, US-DIS-003, US-DIS-004, US-SET-001, US-RES-001, US-RES-002, US-RES-003, US-RES-004, US-SYS-001, US-SRC-009
+- Spec: docs/01-spec/用户故事与验收标准规格书.md (US sections quoted in evidence above)
+- Architecture: AGENTS.md §1.3, §4.4, §5.4, §7.3, R-006, R-007, R-008, §9.4, §17.9; docs/03-implementation/双语言实现说明文档.md; docs/02-architecture/架构设计文档.md; docs/03-implementation/开发避坑与关键注意点手册.md; docs/decisions/ADR-011-task-progress-boundary.md
+- Plan: docs/05-planning/phase3f-execution-plan.md §3F.10, §4.6.10, §6.1, §6.2.2
+- Human decisions (2026-08-12): DECISION-1 (AuditEvent.swift audit cases), DECISION-2 (DeviceMigrationActor.swift + PrivacyActor.swift for DEF-59-004)
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| US-DIS-001 AC-1 | Single App Language setting (zh-Hans/en-US) | EchoTests/Phase3F/3F.10_LocalizationAccessibilityErrorTests.swift (UnifiedLanguageTests) | Echo/UI/AppShell/AppViewModel.swift LanguageCenter + Echo/UI/Settings/SettingsView.swift picker (settings-app-language) | ✅ |
+| US-DIS-001 AC-2 | Toggle updates UI strings AND AI preferredLanguage | UnifiedLanguageTests.test_AC2_switchUpdatesPolicyAndUILocale | LanguageCenter.apply → UserPolicy.updatePolicy + catalog re-resolution | ✅ |
+| US-DIS-001 AC-3 | Follow-system; non-zh/en → zh-Hans; Traditional maps to zh-Hans with one-time notice | test_AC3_followSystemMapping + test_AC3_traditionalChineseMapsToZhHansWithNotice | LanguageCenter.resolve + requiresMappingNotice + noticeStore persistence | ✅ |
+| US-DIS-001 AC-4 | Immediate effect, no restart | test_AC4_immediateEffect | LanguageCenter in-memory resolvedLanguage + @State re-render | ✅ |
+| US-DIS-001 AC-5 | Audit .languageUnified incl. newLanguage | test_AC5_auditLanguageUnified | PrivacyActor.writeAuditLog(.languageUnified, sourceLanguage=newLanguage) | ✅ |
+| US-SET-001 | Same ACs as US-DIS-001 (unified language setting) | UnifiedLanguageTests | LanguageCenter + SettingsView (same implementation) | ✅ |
+| US-DIS-003 AC-1 | All status copy in String Catalog | LocalizationCatalogParityTests + validate_localization.py | Echo/Resources/Localizable.xcstrings (336 keys) + EchoStrings.tr migration | ✅ |
+| US-DIS-003 AC-2 | Error codes → user-friendly localized messages | ErrorLocalizationTests.test_AC2_errorFriendlyMessages | ErrorSeverity.userFacingMessage(locale:) + UserFacingError | ✅ |
+| US-DIS-003 AC-4 | Network/permission/timeout errors localized | test_AC4_levelMessagesLocalized | ErrorClassifier L1~L4 localized messages | ✅ |
+| US-DIS-004 AC-1 | Interactive elements have accessibilityLabel | DegradationUITests + AX trees (run manifest) | Catalog-driven accessibilityLabel across banner/task/translation views | ✅ |
+| US-DIS-004 AC-2 | Dynamic changes trigger accessibilityAnnouncement | DegradationRuntimeTests.test_AX_announcementOnActivation | DegradationBannerView.onChange → AccessibilityNotification.Announcement | ✅ |
+| US-RES-001 AC-3 | Offline mode indicator | OfflineIndicatorTests.test_AC3_offlineIndicator | HomeViewModel.isOffline + offlineIndicatorAccessibilityLabel | ✅ |
+| US-RES-002 AC-1 | isLowPowerModeEnabled → lightweight mode | SystemMonitorTests.test_lowPowerChange | Echo/Core/Utils/SystemMonitor.swift ProcessInfoConditionSource | ✅ |
+| US-RES-002 AC-2 | Banner copy (low power) | DegradationRuntimeTests.test_AC1_AC2 + DegradationUITests | DegradationBannerViewModel.lowPower + catalog copy | ✅ |
+| US-RES-002 AC-3 | Auto-pause toggle default on + note | test_AC3_autoPauseDefaultOn + LocalizationAccessibilityUITests | SettingsView low-power toggle + DegradationBannerViewModel.isAutoPauseOnLowPowerEnabled | ✅ |
+| US-RES-002 AC-4 | Auto-dismiss on recovery | test_AC4_exitLowPowerDismisses | SystemMonitor conditionChanges → applyCurrentConditions deactivate | ✅ |
+| US-RES-002 AC-5 | Audit batteryLevel/modelVersion/degradationWarningShown/backgroundTasksPaused | test_AC5_auditWritten | writeDegradationAudit (.degradationWarning hash-only content) | ✅ |
+| US-RES-003 AC-1 | ThermalState .serious+ → degradation | SystemMonitorTests.test_thermalChange | SystemMonitor.isThermalDegraded (.serious/.critical) | ✅ |
+| US-RES-003 AC-2 | Banner copy (thermal) | DegradationUITests.test_thermalBannerAppears | DegradationBannerViewModel.thermal + catalog copy | ✅ |
+| US-RES-003 AC-3 | Auto-dismiss on thermal recovery | test_US_RES_003_thermalLifecycle | applyCurrentConditions recovery path | ✅ |
+| US-RES-003 AC-5 | Audit deviceThermalState/degradationActive/warningShown | DegradationRuntimeTests (audit coverage) | writeDegradationAudit content fields | ✅ |
+| US-RES-004 AC-3 | Manual retry only, no auto-retry | test_US_RES_004_manualRetryOnly | DegradationBannerViewModel.hasAutomaticRetryTimer=false + retryModelLoad manual path | ✅ |
+| US-RES-004 AC-7 | 功能受限 UI + repair/retry entry | DegradationUITests.test_modelDegradedBannerShowsRetryAndRepair | modelDegraded banner + Retry model load + Open settings buttons | ✅ |
+| US-RES-004 AC-8 | Audit .modelLoadFailed + .modelLoadRetrySuccess | manualRetry path (existing ModelLoader tests) | retryModelLoad → writeAuditLog(.modelLoadRetrySuccess) | ✅ |
+| US-SYS-001 AC-7 | Audit .backgroundTaskUIAccessed + .backgroundTaskInterrupted | BackgroundTaskAuditTests | BackgroundTaskViewModel.writeAudit (action/resumePoint/userChoiceOnRestart) | ✅ |
+| DEF-39-1 | L1/L2/L3/L4 all mapped | ErrorLocalizationTests.test_DEF39_1_allFourLevelsClassified | ErrorClassifier (DatabaseError/ModelLoadError/SyncConflictError/CancellationError) | ✅ |
+| DEF-59-004 | exportPackage PrivacyCheckpoint | MigrationCheckpointTests | PrivacyActor .migration + DeviceMigrationActor.exportPackage/importPackage validate() | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- Focused: `xcodebuild test -project Echo.xcodeproj -scheme Echo -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -parallel-testing-enabled NO -only-testing:EchoTests/LocalizationAccessibilityErrorTests` → exit 0, 34 tests / 10 suites, 0 failures
+- Cumulative: `xcodebuild test ... -only-testing:EchoTests` → exit 0, 1082 tests / 139 suites, 0 failures (Phase 1+2+3+3F unit + integration)
+- UI: `xcodebuild test ... -only-testing:EchoUITests` → exit 0, 42 tests, 0 failures (new LocalizationAccessibilityUITests 3 + DegradationUITests 4 incl. zh-Hans journey; existing suites made deterministic with `-ui-language en-US`)
+- Release: simulator build exit 0 (BUILD SUCCEEDED); device compile exit 0 (CODE_SIGNING_ALLOWED=NO)
+- Static: SwiftLint exit 0 (0 errors); validate_localization.py OK (336 keys, parity 100%, 0 hardcoded view strings); validate_static_bans.py OK; validate_accessibility_contracts.py OK (150 contracts, degradation-banner resolves deterministically); Combine/R-006/network scans OK
+- Dual-device Live Sim Review: iPhone 17 Pro (iOS 26.5) + iPhone 16 Pro (iOS 18.2) — language switch immediate effect, zh-Hans banner copy verbatim per spec, AX labels verified; run manifest UIAutomation/Artifacts/manifests/3F.10-i18n-accessibility-run-manifest.json (visualMediaCaptured: false); AX trees UIAutomation/Artifacts/accessibility/3F.10-*.json
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- docs/05-planning/task-status.json — 3F.10 in_progress (review on delivery), scope decisions recorded
+- docs/05-planning/deferred-items.json — 11 items resolved (DEF-41-1, DEF-41-2, DEF-42-002, DEF-43-001, DEF-44-001, DEF-45-001, DEF-46-001, DEF-52-001, DEF-60-001, DEF-39-1, DEF-59-004)
+- docs/05-planning/phase3f-execution-plan.md — §3F.10 Files annotations (human decisions + scope clarifications)
+- docs/05-planning/phase3f-evidence-index.md — this entry + PR-BODY marker
+- README.md / AGENTS.md / docs/01-spec/用户故事与验收标准规格书.md / docs/03-implementation/双语言实现说明文档.md / docs/03-implementation/开发避坑与关键注意点手册.md / docs/decisions/ADR-011-task-progress-boundary.md / docs/ui/ files — updated for 3F.10 delivery
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- `.degradationWarning` audit case added to AuditEvent.swift beyond DECISION-1's two named cases — required by locked US-RES-002 AC-5 / US-RES-003 AC-5; recorded as scope clarification
+- LanguageAligner.swift + AwakeningPipeline.swift (protected Core, outside the base Files list) modified minimally for DEF-52-001/DEF-60-001 — task MUST-resolve list; recorded as scope clarification
+- SwiftLint config `included` resolves to non-existent root dirs (code under Echo/), so CI lint covers EchoTests/EchoUITests only — pre-existing quirk; R-007 enforced by validate_static_bans.py + CI grep scans
+- UI tests now pass `-ui-language en-US` because LanguageCenter persists language in the app sandbox and unit tests may leave zh-Hans; no gate weakened (assertions unchanged)
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+Resolved in this PR (deferred-items.json tracking_status=resolved, resolved_at=2026-08-12): DEF-41-1, DEF-41-2, DEF-42-002, DEF-43-001, DEF-44-001, DEF-45-001, DEF-46-001, DEF-52-001, DEF-60-001 (i18n/AX), DEF-39-1 (L1~L4 error injection), DEF-59-004 (migration export PrivacyCheckpoint). No new deferred items created. Remaining open items (DEF-38-003 coverage threshold, DEF-50-001, DEF-55-*, DEF-56-007/008/009, DEF-57-002/003, DEF-58-*, DEF-59-001/002/003/005/006/007, DEF-60-002) are out of 3F.10 scope and tracked for 3F.11/Phase 4.
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- R-006: new Actor methods start with PrivacyCheckpoint — DeviceMigrationActor.exportPackage/importPackage validate(.migration); Pipelines scan clean
+- R-007: no Combine / @unchecked Sendable / nonisolated(unsafe) — validate_static_bans.py + CI scans clean; Preview simulateError helpers now Release-compilable without banned constructs
+- R-008: all cross-Actor calls awaited
+- No hardcoded language strings: validate_localization.py 336 keys, 0 view violations
+- Audit logs hash-only (contentHash) per AGENTS.md §5.4
+- Branch/commit/PR: English per AGENTS.md §3.1/§3.2/§3.5; no `gh pr merge`, no `--delete-branch`
+- No media artifacts persisted; run manifest visualMediaCaptured=false
+- No fixture/Preview state presented as production-completion evidence (Live Sim Review used real app + fixture-driven banner states per established 3F pattern)
 <!-- PR-BODY:3F.10:END -->
 
+---
 ---
 
 ## Entry: 3F.11 — Production E2E 与 Phase 4 准入门禁

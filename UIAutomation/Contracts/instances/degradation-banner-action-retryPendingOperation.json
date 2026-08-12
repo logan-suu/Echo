@@ -1,0 +1,10 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "actionId": "banner.retryPendingOperation",
+  "description": "L2 recoverable: manual retry of a PendingOperations entry. Only manual, never auto-replayed (AGENTS.md §4.4).",
+  "impact": {
+    "source": "PendingOperations",
+    "trigger": "manual only"
+  }
+}

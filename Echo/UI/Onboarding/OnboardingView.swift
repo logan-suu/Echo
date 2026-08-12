@@ -231,9 +231,9 @@ struct OnboardingView: View {
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(permission.title)
+                        Text(EchoStrings.tr(permission.title))
                             .font(.headline)
-                        Text(permission.purpose)
+                        Text(EchoStrings.tr(permission.purpose))
                             .font(.callout)
                             .foregroundStyle(Color.secondary)
                     }
@@ -257,7 +257,7 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("onboarding-permission-allow")
-                .accessibilityHint("Allow \(permission.title) access")
+                .accessibilityHint(String(format: EchoStrings.tr("Allow %@ access"), EchoStrings.tr(permission.title)))
 
                 Button(action: { viewModel.denyPermission() }) {
                     Text("Not Now")
@@ -267,7 +267,7 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("onboarding-permission-deny")
-                .accessibilityHint("Decline \(permission.title) access for now")
+                .accessibilityHint(String(format: EchoStrings.tr("Decline %@ access for now"), EchoStrings.tr(permission.title)))
 
                 Spacer().frame(height: 8)
             }
@@ -287,7 +287,7 @@ struct OnboardingView: View {
                     .foregroundStyle(Color.accentColor)
             }
 
-            Text(hint)
+            Text(EchoStrings.tr(hint))
                 .font(.callout)
                 .foregroundStyle(Color.secondary)
 
@@ -296,7 +296,7 @@ struct OnboardingView: View {
                     viewModel.openSettings()
                     openSystemSettings()
                 }) {
-                    Text(label)
+                    Text(EchoStrings.tr(label))
                         .font(.callout)
                         .fontWeight(.medium)
                 }
@@ -333,7 +333,7 @@ struct OnboardingView: View {
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(permission.title)
+                        Text(EchoStrings.tr(permission.title))
                             .font(.headline)
                         Text(viewModel.deniedMessage)
                             .font(.callout)
@@ -466,7 +466,7 @@ struct OnboardingView: View {
                     .padding(.horizontal, 40)
                     .accessibilityIdentifier("onboarding-model-progress")
 
-                Text("\(Int(progress * 100))%")
+                Text(OnboardingViewModel.progressPercentText(progress))
                     .font(.caption)
                     .foregroundStyle(Color.secondary)
 

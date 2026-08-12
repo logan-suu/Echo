@@ -1,0 +1,15 @@
+{
+  "runId": "3F.10-live-sim-review",
+  "device": "iPhone 16 Pro (iOS 18.2)",
+  "screen": "Home with thermal degradation banner (US-RES-003 AC-2, en-US)",
+  "captured": "2026-08-12",
+  "axTree": [
+    {"role": "Group", "label": "Degradation banner: thermal"},
+    {"role": "StaticText", "label": "Device temperature is high. Some features have been temporarily simplified."},
+    {"role": "Button", "label": "Dismiss banner"},
+    {"role": "Button", "label": "Background Tasks"},
+    {"role": "Button", "label": "Home"},
+    {"role": "Button", "label": "Search"},
+    {"role": "Button", "label": "Settings"}
+  ]
+}

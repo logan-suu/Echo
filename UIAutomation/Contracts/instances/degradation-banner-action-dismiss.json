@@ -1,0 +1,9 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "actionId": "banner.dismiss",
+  "description": "User dismisses the degradation banner (all degradation types).",
+  "impact": {
+    "isBannerVisible": false
+  }
+}

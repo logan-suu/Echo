@@ -22,7 +22,7 @@ final class CreationUITests: XCTestCase {
     @MainActor
     func test_generateFlowFromMemoryDetail() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "memory-detail-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "memory-detail-loaded"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -58,7 +58,7 @@ final class CreationUITests: XCTestCase {
     @MainActor
     func test_saveToNotesShowsShareSheet() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "memory-detail-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "memory-detail-loaded"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -88,7 +88,7 @@ final class CreationUITests: XCTestCase {
     @MainActor
     func test_promptEditorConfirm() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "memory-detail-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "memory-detail-loaded"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()

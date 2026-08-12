@@ -555,7 +555,10 @@ let checkpoint = await PrivacyActor.shared.validate(
 | `.feedbackRevoked`                | 撤销单条反馈             | feedbackId                                                |
 | `.modelLoadFailed`                | 模型加载失败             | modelName, error, recoveryMethod                          |
 | `.modelLoadRetrySuccess`          | 手动重试成功             | modelName                                                 |
+| `.backgroundTaskUIAccessed`       | 后台任务面板被访问（US-SYS-001 AC-7，3F.10） | -                                                         |
 | `.backgroundTaskInterrupted`      | 后台任务中断             | action, resumePoint, userChoiceOnRestart                  |
+| `.languageUnified`                | 统一语言切换（US-DIS-001 AC-5，3F.10） | newLanguage（记录于 sourceLanguage 列）                   |
+| `.degradationWarning`             | 降级警告（US-RES-002/003 AC-5，3F.10） | batteryLevel、modelVersion、degradationWarningShown、backgroundTasksPaused、deviceThermalState（hash-only content） |
 | `.retryPending`                   | L2 手动重试待处理        | pendingId, retryCount                                     |
 | `.syncConflict`                   | 数据冲突                 | memoryId, conflictType, resolution                        |
 | `.reauthorized`                   | 重新授权数据源           | sourceType, excludedBatchRestored                         |
@@ -1492,3 +1495,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.24 | 2026-08-02 | 翻译质量兜底信号修订（ADR-005）：US-DIS-002 AC-3「置信度 <0.7 保留原文」因 Apple Translation 不返回译文质量分数而不可落地，改为「源语言检测不确定（NLTagger 置信度 < 0.9，标记 .uncertain）时保留原文 + 语言标签，不提供译文」。同步修订双语言文档 §6.4/§8.1。本规约正文无直接引用 0.7 翻译置信度，无需改动 §6 契约。 | AI 架构师 |
 | v5.25 | 2026-08-03 | UI 层功能域重构：§10.1 目录结构 `UI/ViewModels/` + `UI/Views/`（按层平铺）改为 12 个功能域目录（AppShell/Home/Search/Detail/Settings/Onboarding/Awakening/BackgroundTask/Creation/Degradation/ResumeProgress/Translation），每域内 View + ViewModel + FixtureLoader 高内聚。§3.2 scope 表 `viewmodel`/`view` 描述同步。同步更新 `Scripts/coverage_gate.py`（排除规则由目录前缀 `Echo/UI/Views/` 改为文件名后缀 `*View.swift`/`*FixtureLoader.swift`，行为等价）与 ci.yml 注释。Swift 同 module 内无路径 import，Xcode PBXFileSystemSynchronizedRootGroup 自动同步文件系统，纯 git mv 无编译影响。 | AI 架构师 |
 | v5.26 | 2026-08-04 | Phase 3F bootstrap（3F.0，docs-only）：新增 §17.9 Phase 3F 持续授权条款（两段式授权模型：bootstrap 显式授权 + 合并后 standing authority；人类专属 merge/close/delete；no-overwrite/no-media/门禁保留；Phase 4 entry_gate 锁定）。同步修订 `docs/ui/`、`UIAutomation/Policies/`、`.opencode/commands/`（16 个命令 exact-string 任务/phase 查找、3F-safe 路径、UI exact-3 匹配）与 `.ui-automation/state.schema.json`。新增 `docs/05-planning/phase3f-execution-plan.md`、`phase3f-story-matrix.md`、`phase3f-evidence-index.md` 及 ADR-006~014。 | AI 架构师 |
+| v5.27 | 2026-08-12 | 3F.10 i18n/accessibility/errors 交付：新增统一语言中心（LanguageCenter，US-DIS-001 一键 UI+AI 语言）与 Localizable.xcstrings 双语目录（336 keys）；§7.3 新增 `.languageUnified`/`.backgroundTaskUIAccessed`/`.degradationWarning` 审计事件（DECISION-1）；新增 `.migration` PrivacyOperation（DEF-59-004）；SystemMonitor 低电量/热降级运行时接线。同步修订规格书、双语言/避坑文档、ADR-011 与 README。 | AI 架构师 |

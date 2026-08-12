@@ -21,7 +21,7 @@ final class MemoryDetailMediaUITests: XCTestCase {
     @MainActor
     func test_photoMediaPreview() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "memory-detail-photo-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "memory-detail-photo-loaded"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -38,7 +38,7 @@ final class MemoryDetailMediaUITests: XCTestCase {
     @MainActor
     func test_videoMediaPreview() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "memory-detail-video-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "memory-detail-video-loaded"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -52,7 +52,7 @@ final class MemoryDetailMediaUITests: XCTestCase {
     @MainActor
     func test_voiceMediaPreview() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "memory-detail-voice-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "memory-detail-voice-loaded"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()

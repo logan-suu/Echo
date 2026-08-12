@@ -218,7 +218,7 @@ struct MemoryDetailView: View {
             Spacer().frame(height: 80)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityLabel("Loading memory")
+        .accessibilityLabel("Loading memory…")
     }
 
     // MARK: - Empty State (Focus §10.1.2)
@@ -431,7 +431,7 @@ struct MemoryDetailView: View {
                                     .foregroundStyle(Color.secondary)
                             }
                             .accessibilityElement(children: .contain)
-                            .accessibilityLabel("Translated: \(translated)")
+                            .accessibilityLabel(String(format: EchoStrings.tr("Translated: %@"), translated))
                         }
                     }
 
@@ -439,7 +439,7 @@ struct MemoryDetailView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(Color.secondary)
-                        Text(message)
+                        Text(EchoStrings.tr(message))
                             .font(.subheadline)
                             .foregroundStyle(Color.secondary)
                         Button("Retry") {
@@ -449,7 +449,7 @@ struct MemoryDetailView: View {
                         .accessibilityIdentifier("memory-detail-translation-retry")
                     }
                     .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Translation failed. \(message)")
+                    .accessibilityLabel(String(format: EchoStrings.tr("Translation failed. %@"), EchoStrings.tr(message)))
                 }
             } else {
                 Text(memory.originalText)
@@ -559,7 +559,7 @@ struct MemoryDetailView: View {
         Button(role: .destructive) {
             viewModel.presentDeleteConfirmation()
         } label: {
-            Label("Remove this memory", systemImage: "trash")
+            Label("Remove Memory…", systemImage: "trash")
                 .font(.callout)
                 .frame(maxWidth: .infinity)
         }
@@ -661,11 +661,11 @@ struct MemoryDetailView: View {
                 .symbolRenderingMode(.hierarchical)
                 .accessibilityHidden(true)
 
-            Text(errorTitle(for: level))
+            Text(EchoStrings.tr(errorTitle(for: level)))
                 .font(.headline)
                 .foregroundStyle(Color.primary)
 
-            Text(errorMessage(for: level))
+            Text(EchoStrings.tr(errorMessage(for: level)))
                 .font(.body)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)

@@ -1,0 +1,15 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "l3Blocking",
+  "properties": {
+    "isBannerVisible": true,
+    "bannerIcon": "xmark.octagon",
+    "bannerMessage": "This feature is unavailable until the issue is fixed. Open Settings for repair options.",
+    "showBackgroundTaskToggle": false,
+    "backgroundTasksPaused": false,
+    "showBlockingRecovery": true,
+    "showSettingsButton": true,
+    "bannerTint": "red"
+  }
+}

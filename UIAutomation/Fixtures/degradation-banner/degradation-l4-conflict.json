@@ -1,0 +1,17 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-l4-conflict",
+  "surfaceId": "degradation-banner",
+  "stateId": "l4Conflict",
+  "degradation": {
+    "type": "l4Conflict",
+    "level": "L4",
+    "message": "Two versions of this memory conflict. Choose which one to keep.",
+    "icon": "arrow.triangle.2.circlepath",
+    "tint": "orange",
+    "backgroundTasksPaused": false,
+    "showToggle": false
+  },
+  "activeDegradations": [],
+  "canDismiss": false
+}
