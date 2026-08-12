@@ -68,12 +68,12 @@ def main():
             continue
         name = path.name
         surface = data.get("surfaceId")
-        if surface in GATED_SURFACES or name.endswith("-surface.json"):
+        if name.endswith("-surface.json"):
             if surface is None:
                 surface = name[: -len("-surface.json")]
             if surface in GATED_SURFACES:
                 surfaces[surface] = (path, data)
-        elif "-journey-" in name and data.get("surfaceId") in GATED_SURFACES:
+        elif "-journey-" in name and surface in GATED_SURFACES:
             journeys.append((path, data))
 
     for surface, (path, data) in surfaces.items():

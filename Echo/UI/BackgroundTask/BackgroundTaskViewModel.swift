@@ -55,6 +55,7 @@ struct BackgroundTaskModel: Identifiable, Sendable, Equatable {
         }
     }
 
+    @MainActor
     var localizedDisplayName: String {
         EchoStrings.tr(displayName)
     }
@@ -88,10 +89,12 @@ struct BackgroundTaskModel: Identifiable, Sendable, Equatable {
         }
     }
 
+    @MainActor
     var localizedStatusLabel: String {
         EchoStrings.tr(statusLabel)
     }
 
+    @MainActor
     var accessibilityLabel: String {
         let template = EchoStrings.tr("%lld of %lld processed, %@")
         return String(format: template, processedCount, totalCount, "\(localizedDisplayName), \(localizedStatusLabel)")

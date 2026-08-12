@@ -106,12 +106,14 @@ struct AwakeningCardModel: Identifiable, Sendable, Equatable {
         }
     }
 
+    @MainActor
     var localizedTitle: String {
         let template = EchoStrings.tr(titleKey)
         guard !titleArgs.isEmpty else { return template }
         return String(format: template, arguments: titleArgs.map { $0 as CVarArg })
     }
 
+    @MainActor
     var localizedSubtitle: String {
         EchoStrings.tr(subtitleKey)
     }
@@ -125,6 +127,7 @@ struct AwakeningCardModel: Identifiable, Sendable, Equatable {
         return "\(Int(interval / 86400))d ago"
     }
 
+    @MainActor
     var localizedRelativeTime: String {
         let interval = Date().timeIntervalSince(createdAt)
         if interval < 60 { return EchoStrings.tr("Just now") }
