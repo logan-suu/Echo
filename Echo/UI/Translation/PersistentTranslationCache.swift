@@ -64,12 +64,21 @@ actor PersistentTranslationCache: TranslationCaching {
         return try? decoder.decode([String: Entry].self, from: data)
     }
 
-    /// 写回磁盘 — store 后原子写入。
+    /// 写回磁盘 — store 后原子写入，并施加 NSFileProtectionComplete（译文含记忆内容，§5.4 隐私精神）。
     private func persistToDisk() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .secondsSince1970
         guard let data = try? encoder.encode(storage) else { return }
-        try? data.write(to: cacheFileURL, options: .atomic)
+        do {
+            try data.write(to: cacheFileURL, options: .atomic)
+            // 文件保护: 设备锁定时阻止未授权读取（Application Support 属 app 容器，可设置）
+            try? FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.complete],
+                ofItemAtPath: cacheFileURL.path
+            )
+        } catch {
+            // 持久化失败保持内存缓存（不阻断翻译主流程）
+        }
     }
 
     /// 幂等惰性加载磁盘缓存 — 首次访问时执行；文件缺失/损坏保持空缓存。

@@ -101,13 +101,18 @@ public enum LiveAppAdapters {
     ///
     /// 离线 LLM 运行时落地时返回 CreativePipeline；运行时未获批/未落地返回 nil
     /// （调用方走 fixture 确定性路径或 L2 错误，ADR-009 决策 4 fail-closed）。
+    /// preferredLanguage 读取 UserPolicy (R-004: AI 输出语言匹配用户策略)。
     static func makeCreativePipeline(
         composition: AppComposition = .shared
-    ) -> CreativePipeline? {
+    ) async -> CreativePipeline? {
         guard let llmProvider = LiveAppAdapters.resolveLLMProvider() else { return nil }
+        let policy = await composition.privacyActor.getPolicy()
         return CreativePipeline(
             llmProvider: llmProvider,
-            aligner: LanguageAligner(llmProvider: llmProvider, preferredLanguage: "en-US"),
+            aligner: LanguageAligner(
+                llmProvider: llmProvider,
+                preferredLanguage: policy.preferredLanguage
+            ),
             privacyActor: composition.privacyActor
         )
     }

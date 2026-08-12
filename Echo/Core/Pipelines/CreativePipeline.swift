@@ -123,7 +123,7 @@ public struct CreativeOutput: Sendable, Equatable {
 
 /// 创作管线错误 — 映射统一错误矩阵 (AGENTS.md §4.4)。
 public enum CreativeError: Error, LocalizedError, Sendable, Equatable {
-    /// 离线 LLM 运行时不可用 (L3 阻断)
+    /// 离线 LLM 运行时不可用 (L2 可恢复 — ViewModel 映射 .l2Recoverable, US-SYN-008 重试按钮)
     case runtimeUnavailable
     /// 隐私校验拒绝 (R-006)
     case privacyDenied(sourceTypes: [String])
@@ -212,8 +212,8 @@ public actor CreativePipeline {
             throw CreativeError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
         }
 
-        // 无 LLM 运行时 → L3 fail-closed (ADR-009 决策 4: 未获批运行时无生成)
-        guard let provider = llmProvider else {
+        // 无 LLM 运行时 → L2 fail-closed (ADR-009 决策 4: 未获批运行时无生成; US-SYN-008 L2 重试)
+        guard llmProvider != nil else {
             try? await privacyActor.writeAuditLog(
                 eventType: .synthesisFallback,
                 traceID: traceID,
