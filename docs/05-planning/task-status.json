@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-12T06:49:34Z",
+  "last_updated": "2026-08-12T13:02:27Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -1797,7 +1797,7 @@
             "US-SYS-001",
             "US-SRC-009"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "Localization and Accessibility Lead",
             "approver": "Release Quality Lead"
@@ -1860,16 +1860,18 @@
             "US-SRC-009 merged-into-US-SYS-001 localized and accessible task/resume/error trace",
             "ADR-011 与架构、数据流、避坑的 degradation 合同一致性"
           ],
-          "last_updated": "2026-08-12T11:35:39Z",
+          "last_updated": "2026-08-12T13:02:27Z",
           "notes": "Owns complete declared degradation and L1-L4 UIAutomation coverage.\n(2026-08-12 human scope decisions, init-session consistency check) DECISION-1: added Echo/Core/Models/AuditEvent.swift to 3F.10 Files list — STRICT scope: add only `.languageUnified` (US-DIS-001 AC-5) and `.backgroundTaskUIAccessed` (US-SYS-001 AC-7); `.backgroundTaskInterrupted` already exists (AGENTS.md §7.3 cross-check), nothing more. DECISION-2: added Echo/Core/Actors/DeviceMigrationActor.swift + Echo/Core/Actors/PrivacyActor.swift to 3F.10 Files list — SOLE purpose: resolve DEF-59-004 (missing PrivacyCheckpoint on the migration export path, R-006) via a new `.migration` PrivacyOperation case; deferred-items.json updated accordingly. Both decisions recorded in phase3f-execution-plan.md §3F.10 Files.\n(2026-08-12 in_progress) 3F.10 started.\n(2026-08-12 3F.10 delivered) Gates: focused 34/34, cumulative 1082/139 0 failures, EchoUITests 42/42, Release sim+device BUILD SUCCEEDED, SwiftLint 0 errors, validate_localization.py 336 keys parity 100%, validate_static_bans.py OK, validate_accessibility_contracts.py OK (150 contracts). Scope clarifications recorded: `.degradationWarning` audit case (US-RES-002/003 AC-5 requirement); LanguageAligner.swift (DEF-52-001) + AwakeningPipeline.swift (DEF-60-001 notification bodies) minimal catalog migration. DEF-39-1/DEF-41-1/DEF-41-2/DEF-42-002/DEF-43-001/DEF-44-001/DEF-45-001/DEF-46-001/DEF-52-001/DEF-60-001/DEF-59-004 resolved in deferred-items.json. Dual-device Live Sim Review passed (17 Pro iOS 26.5 + 16 Pro iOS 18.2), run manifest UIAutomation/Artifacts/manifests/3F.10-i18n-accessibility-run-manifest.json (visualMediaCaptured: false).\nPR review (2026-08-12): CI Build failure on Xcode 16.4/Swift 6.1.2 fixed at 799b069 — localized accessors on Sendable UI models marked @MainActor; CodeRabbit finding (journey dead code in validate_accessibility_contracts.py) fixed and adopted.",
           "status_transitions": {
-            "in_progress_at": "2026-08-12T07:15:00Z"
+            "in_progress_at": "2026-08-12T07:15:00Z",
+            "merged_at": "2026-08-12T13:00:27Z"
           },
           "pr": {
             "number": 62,
             "url": "https://github.com/logan-suu/Echo/pull/62",
             "head": "feature/phase3f-i18n-accessibility-3F.10",
-            "base": "dev-1.0"
+            "base": "dev-1.0",
+            "merged_at": "2026-08-12T13:00:27Z"
           }
         },
         {
@@ -1879,7 +1881,7 @@
             "3F.11",
             "US-SRC-010"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "Release Quality Lead",
             "approver": "Release Manager and Privacy Engineering Lead"
@@ -1930,7 +1932,7 @@
             "P0=0、P1=0 与 Release Manager/Privacy gate approver 签字",
             "不包含 merge SHA 或 Phase 4 已解锁声明的 pre-merge evidence index"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
+          "last_updated": "2026-08-12T13:02:27Z",
           "notes": "Finalizes pre-merge evidence only; a human-triggered finalizer records merge SHA and unlocks Phase 4.",
           "pr": null
         }
