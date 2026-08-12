@@ -1,0 +1,66 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/state/v1",
+  "runId": "3F.10-live-sim-review",
+  "actor": "opencode-agent",
+  "task_id": "3F.10",
+  "surfaceId": "degradation-banner",
+  "stateIds": ["normal", "lowPower", "thermal", "modelDegraded", "l1Transient", "l2Recoverable", "l3Blocking", "l4Conflict"],
+  "journeyIds": ["degradation-lifecycle", "degradation-l1-l4"],
+  "fixtureIds": ["degradation-normal", "degradation-low-power", "degradation-thermal", "degradation-model-degraded", "degradation-l1-transient", "degradation-l2-recoverable", "degradation-l3-blocking", "degradation-l4-conflict"],
+  "commitSha": "eed2e2e",
+  "sourceDirty": true,
+  "xcode": { "version": "26.5", "sdk": "iOS Simulator" },
+  "simulatorOwner": "cli_xctest",
+  "dualDeviceReview": [
+    {
+      "device": "iPhone 17 Pro",
+      "udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+      "locale": "en-US (launch arg), switched to zh-Hans at runtime",
+      "verified": [
+        "US-DIS-001 AC-1: single App Language picker (settings-app-language) with Follow System / Simplified Chinese / English",
+        "US-DIS-001 AC-2/AC-4: switching to Simplified Chinese updates all UI copy immediately without restart (Settings title '设置', tabs '首页/搜索/设置', picker 'App 语言、简体中文')",
+        "US-RES-002 AC-2: low-power banner copy '省电模式已启用，记忆检索精度可能降低。'",
+        "US-RES-002 AC-3: auto-pause toggle '低电量时暂停后台任务' defaults ON (value=1); note '关闭后，低电量模式下后台任务仍会运行，可能增加耗电。'",
+        "US-RES-003 AC-2: thermal banner copy in en-US",
+        "US-RES-004 AC-7: model-degraded banner with 'Retry model load' + 'Open settings for model recovery'",
+        "US-DIS-004 AC-1: banner accessibility labels ('Degradation banner: lowPower/thermal/modelDegraded', 'Dismiss banner')"
+      ]
+    },
+    {
+      "device": "iPhone 16 Pro",
+      "udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-18-2",
+      "locale": "en-US (launch arg)",
+      "verified": [
+        "US-RES-003 AC-2: thermal banner copy 'Device temperature is high. Some features have been temporarily simplified.'",
+        "US-DIS-004 AC-1: banner accessibility label 'Degradation banner: thermal', 'Dismiss banner'",
+        "Tab bar labels Home/Search/Settings render on iOS 18"
+      ]
+    }
+  ],
+  "build": { "result": "SUCCEEDED", "configuration": "Debug", "destination": "platform=iOS Simulator,name=iPhone 17 Pro" },
+  "testResults": {
+    "focused": { "suite": "EchoTests/LocalizationAccessibilityErrorTests", "count": 34, "suites": 10, "failures": 0, "status": "passed" },
+    "cumulative": { "count": 1082, "suites": 139, "failures": 0, "status": "passed" },
+    "uiTests": { "count": 42, "failures": 0, "status": "passed" },
+    "releaseSimulator": "SUCCEEDED",
+    "releaseDeviceCompile": "SUCCEEDED",
+    "swiftlint": "0 errors (CI command exit 0)",
+    "localizationValidator": "passed (336 keys, 100% parity, 0 hardcoded view strings)",
+    "staticBansValidator": "passed",
+    "accessibilityContractsValidator": "passed (150 contracts, degradation-banner resolves deterministically)"
+  },
+  "accessibilityAudit": {
+    "homeTab": "tab bar labels Home/Search/Settings → 首页/搜索/设置 after zh-Hans switch",
+    "settingsLanguagePicker": "settings-app-language",
+    "settingsLowPowerToggle": "settings-low-power-auto-pause (value=1 default)",
+    "degradationBanner": "Degradation banner: <type> + localized message + Dismiss/Retry/Open settings buttons"
+  },
+  "visualMediaCaptured": false,
+  "artifacts": {
+    "accessibilityTree17Pro": "UIAutomation/Artifacts/accessibility/3F.10-17pro-zhhans-settings-axtree.json",
+    "accessibilityTree16Pro": "UIAutomation/Artifacts/accessibility/3F.10-16pro-thermal-axtree.json",
+    "testSummary": "UIAutomation/Artifacts/summaries/3F.10-test-summary.json"
+  }
+}

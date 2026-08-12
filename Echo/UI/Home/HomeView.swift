@@ -54,8 +54,15 @@ struct HomeView: View {
     /// 后台任务面板展示开关
     @State private var isTaskPanelPresented = false
 
-    /// 降级横幅 ViewModel — Live Sim Review fixture 注入 (Task 3.6)
-    @State private var degradationViewModel = DegradationBannerViewModel()
+    /// 降级横幅 ViewModel — production wiring (3F.10): SystemMonitor low-power/thermal sources
+    /// drive real runtime behavior (US-RES-002 AC-1/AC-3/AC-5, US-RES-003 AC-1/AC-3/AC-5); model
+    /// retry is manual-only against the composition loader (US-RES-004 AC-3); audits via PrivacyActor.
+    /// Live Sim Review fixture 注入 (Task 3.6) 仍经 handleLaunchArguments 覆盖同一 VM。
+    @State private var degradationViewModel = DegradationBannerViewModel(
+        systemMonitor: SystemMonitor(),
+        auditWriter: PrivacyActor.shared,
+        modelLoader: AppComposition.shared.modelLoader
+    )
 
     /// 断点续传恢复提示 ViewModel — Live Sim Review fixture 注入 (Task 3.7)
     @State private var resumeProgressViewModel = ResumeProgressViewModel()
@@ -74,6 +81,7 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 // Degradation banner (Task 3.6 — Live Sim Review fixture)
                 DegradationBannerView(viewModel: degradationViewModel)
+                    .task { await degradationViewModel.startMonitoring() }
 
                 // Resume progress prompt (Task 3.7 — confirmationDialog host + inline L2 error, real layout slot)
                 ResumeProgressPromptView(viewModel: resumeProgressViewModel)
@@ -359,11 +367,11 @@ struct HomeView: View {
                 .symbolRenderingMode(.hierarchical)
                 .accessibilityHidden(true)
 
-            Text(errorTitle(for: level))
+            Text(EchoStrings.tr(errorTitle(for: level)))
                 .font(.headline)
                 .foregroundStyle(Color.primary)
 
-            Text(errorMessage(for: level))
+            Text(EchoStrings.tr(errorMessage(for: level)))
                 .font(.body)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -467,7 +475,7 @@ struct AwakeningCardView: View {
             Spacer(minLength: 8)
 
             // Relative time
-            Text(card.relativeTimeDescription)
+            Text(card.localizedRelativeTime)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
@@ -503,12 +511,12 @@ struct AwakeningCardView: View {
 
     private var textContent: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(card.title)
+            Text(card.localizedTitle)
                 .font(.headline)
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
 
-            Text(card.subtitle)
+            Text(card.localizedSubtitle)
                 .font(.subheadline)
                 .foregroundStyle(Color.secondary)
                 .lineLimit(2)
@@ -518,7 +526,7 @@ struct AwakeningCardView: View {
     // MARK: - Accessibility
 
     private var cardAccessibilityLabel: String {
-        "\(card.title), \(card.subtitle), \(card.relativeTimeDescription)"
+        "\(card.localizedTitle), \(card.localizedSubtitle), \(card.localizedRelativeTime)"
     }
 }
 

@@ -430,13 +430,11 @@ final class SearchViewModel {
         viewState = .idle
     }
 
-    #if DEBUG
     /// 仅 Preview/调试使用 — 直接构造错误状态，不触发任何副作用。
     /// 生产路径的错误由 submitQuery 的 catch 自然产生，不调用此方法。
     func simulateError(_ level: ErrorLevel) {
         viewState = .error(level)
     }
-    #endif
 
     // MARK: - Lifecycle
 

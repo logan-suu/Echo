@@ -100,7 +100,7 @@ struct ResumeProgressPromptView: View {
                 .foregroundStyle(Color.yellow)
                 .accessibilityHidden(true)
 
-            Text(errorMessage(for: level))
+            Text(EchoStrings.tr(errorMessage(for: level)))
                 .font(.footnote)
                 .foregroundStyle(Color.primary)
                 .lineLimit(2)
@@ -133,15 +133,16 @@ struct ResumeProgressPromptView: View {
 
     /// 恢复提示标题。
     private var dialogTitle: String {
-        "Resume interrupted task"
+        EchoStrings.tr("Resume interrupted task")
     }
 
-    /// 恢复提示正文 — 展示已完成进度 X / Y（统一英文, 2026-08-02 W-3）。
+    /// 恢复提示正文 — 展示已完成进度 X / Y（3F.10: localized format, DEF-42-002）。
     private var dialogMessage: String {
         guard case .prompt(let progress) = viewModel.viewState else {
             return ""
         }
-        return "An interrupted task was found with \(progress.lastProcessedIndex) of \(progress.totalCount) items completed. Continue where you left off?"
+        let template = EchoStrings.tr("An interrupted task was found with %lld of %lld items completed. Continue where you left off?")
+        return String(format: template, progress.lastProcessedIndex, progress.totalCount)
     }
 }
 

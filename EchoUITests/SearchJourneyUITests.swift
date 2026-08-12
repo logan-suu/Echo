@@ -22,7 +22,7 @@ final class SearchJourneyUITests: XCTestCase {
     @MainActor
     func test_searchLoadedJourney() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "search-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "search-loaded"]
         app.launch()
 
         // 点击 Tab Bar 的 Search 按钮
@@ -48,7 +48,7 @@ final class SearchJourneyUITests: XCTestCase {
     @MainActor
     func test_searchFeedbackInteraction() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "search-loaded"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "search-loaded"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -65,7 +65,7 @@ final class SearchJourneyUITests: XCTestCase {
     @MainActor
     func test_searchEmptyJourney() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "search-empty"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "search-empty"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -79,7 +79,7 @@ final class SearchJourneyUITests: XCTestCase {
     @MainActor
     func test_searchToDetailNavigationJourney() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "search-multitype"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "search-multitype"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -104,7 +104,7 @@ final class SearchJourneyUITests: XCTestCase {
     @MainActor
     func test_searchResultsPersistAfterDetailReturn() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "search-multitype"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "search-multitype"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()
@@ -130,7 +130,7 @@ final class SearchJourneyUITests: XCTestCase {
     @MainActor
     func test_detailPreservedAfterTabSwitch() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "search-multitype"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "search-multitype"]
         app.launch()
 
         app.tabBars.buttons["Search"].tap()

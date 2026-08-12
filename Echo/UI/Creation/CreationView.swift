@@ -66,7 +66,7 @@ struct CreationView: View {
                 Button {
                     viewModel.presentPromptEditor()
                 } label: {
-                    Label("Personal prompt", systemImage: "person.text.rectangle")
+                    Label("Personal Prompt", systemImage: "person.text.rectangle")
                 }
                 .accessibilityIdentifier("creation-edit-prompt")
             }
@@ -301,7 +301,7 @@ struct CreationView: View {
             Spacer().frame(height: 80)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityLabel("Saving to Notes")
+        .accessibilityLabel("Saving to Notes…")
     }
 
     // MARK: - Generated Content
@@ -320,7 +320,7 @@ struct CreationView: View {
                 }
 
                 // 来源计数 metadata
-                Label("\(creation.sourceMemoryCount) source memories", systemImage: "link")
+                Label(String(format: EchoStrings.tr("%lld source memories"), creation.sourceMemoryCount), systemImage: "link")
                     .font(.caption)
                     .foregroundStyle(Color.secondary)
 
@@ -432,7 +432,7 @@ struct CreationView: View {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Color.green)
 
-            Text(viewModel.saveToastMessage ?? "Saved")
+            Text(EchoStrings.tr(viewModel.saveToastMessage ?? "Saved"))
                 .font(.subheadline)
                 .foregroundStyle(Color.primary)
 
@@ -500,7 +500,7 @@ struct CreationView: View {
                 .font(.headline)
                 .foregroundStyle(Color.primary)
 
-            Text(errorMessage(for: level))
+            Text(EchoStrings.tr(errorMessage(for: level)))
                 .font(.body)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)

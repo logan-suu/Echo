@@ -1,0 +1,17 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-l3-blocking",
+  "surfaceId": "degradation-banner",
+  "stateId": "l3Blocking",
+  "degradation": {
+    "type": "l3Blocking",
+    "level": "L3",
+    "message": "This feature is unavailable until the issue is fixed. Open Settings for repair options.",
+    "icon": "xmark.octagon",
+    "tint": "red",
+    "backgroundTasksPaused": false,
+    "showToggle": false
+  },
+  "activeDegradations": [],
+  "canDismiss": false
+}

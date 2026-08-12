@@ -111,6 +111,13 @@ public actor DeviceMigrationActor {
     /// - Parameter traceID: 审计追溯 ID
     /// - Returns: 包字节 + 一次性传输密钥（调用方以 base64url/QR 单独展示，绝不嵌入包内）
     public func exportPackage(traceID: String = UUID().uuidString) async throws -> (package: Data, transferKey: SymmetricKey) {
+        // R-006 PrivacyCheckpoint at entry (DEF-59-004, 3F.10 DECISION-2): deny-by-default
+        // consent gate + audit before reading canonical/ExcludedAssets. Fail-closed on denial.
+        let checkpoint = await privacyActor.validate(operation: .migration, traceID: traceID, sourceTypes: [])
+        guard checkpoint.isAllowed else {
+            throw DeviceMigrationError.publicationFailed("privacy checkpoint denied")
+        }
+
         // 读取全部 canonical 记忆的最小字段（不含原始文件，AC-6）
         let memories = try await loadAllMemories()
         var records: [DeviceMigrationRecord] = []
@@ -205,6 +212,12 @@ public actor DeviceMigrationActor {
         method: String = "airdrop",
         traceID: String = UUID().uuidString
     ) async throws -> DeviceMigrationResult {
+        // R-006 PrivacyCheckpoint at entry (DEF-59-004 acceptance evidence, 3F.10 DECISION-2).
+        let checkpoint = await privacyActor.validate(operation: .migration, traceID: traceID, sourceTypes: [])
+        guard checkpoint.isAllowed else {
+            throw DeviceMigrationError.publicationFailed("privacy checkpoint denied")
+        }
+
         let started = Date()
         // (1) 全量校验（§4.6.7 validation order）— 失败时活动库/路由保持不变。
         //     importPackage 返回解析好的 manifest，避免重复解析包（CR-3）。

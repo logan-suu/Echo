@@ -1,0 +1,15 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "l2Recoverable",
+  "properties": {
+    "isBannerVisible": true,
+    "bannerIcon": "exclamationmark.circle",
+    "bannerMessage": "This action could not be completed. You can retry it when ready.",
+    "showBackgroundTaskToggle": false,
+    "backgroundTasksPaused": false,
+    "showRetryButton": true,
+    "showPendingOpsEntry": true,
+    "bannerTint": "yellow"
+  }
+}

@@ -128,11 +128,13 @@ public actor LanguageAligner {
         "You MUST respond in \(preferredLanguage).\n\(base)"
     }
 
-    /// 降级模板（跟随 preferredLanguage）。
+    /// 降级模板（跟随 preferredLanguage）— String Catalog backed (DEF-52-001, 3F.10):
+    /// AGENTS.md §6.4 requires degradation prompts to resolve from the catalog.
     nonisolated static func fallbackTemplate(preferredLanguage: String) -> String {
-        preferredLanguage == zhHans
-            ? "暂时无法生成符合您语言的回应，请稍后重试。"
-            : "Unable to generate a response in your language. Please try again later."
+        EchoLocalization.localized(
+            "Unable to generate a response in your language. Please try again later.",
+            locale: Locale(identifier: preferredLanguage)
+        )
     }
 }
 

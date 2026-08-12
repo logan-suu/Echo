@@ -1,0 +1,48 @@
+{
+  "contractVersion": "1.0.0",
+  "journeyId": "degradation-l1-l4",
+  "surfaceId": "degradation-banner",
+  "steps": [
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "l1Transient",
+      "actionId": "banner.retryL1"
+    },
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "l2Recoverable",
+      "actionId": "banner.retryPendingOperation"
+    },
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "l3Blocking",
+      "actionId": "banner.openBlockingRecovery"
+    },
+    {
+      "surfaceId": "degradation-banner",
+      "stateId": "l4Conflict",
+      "actionId": "banner.resolveConflict"
+    }
+  ],
+  "preconditionFixtures": [
+    "degradation-l1-transient"
+  ],
+  "assertions": [
+    {
+      "after": "banner.retryL1",
+      "observable": "Auto-retry runs 3x backoff then L2 escalation"
+    },
+    {
+      "after": "banner.retryPendingOperation",
+      "observable": "L2 manual retry from PendingOperations"
+    },
+    {
+      "after": "banner.openBlockingRecovery",
+      "observable": "L3 guides to system settings repair"
+    },
+    {
+      "after": "banner.resolveConflict",
+      "observable": "L4 exposes manual conflict merge UI"
+    }
+  ]
+}

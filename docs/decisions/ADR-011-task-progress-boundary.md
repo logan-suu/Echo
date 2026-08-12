@@ -3,6 +3,7 @@
 **状态**: 已接受
 **日期**: 2026-08-04
 **决策人**: Architecture Lead（审批）+ Ingestion Lead（实现）
+**实现验证（3F.10，2026-08-12）**: 决策 3/4 落地——`ErrorClassifier`（DatabaseError/ModelLoadError/SyncConflictError/CancellationError → L1~L4）+ `ErrorSeverity.userFacingMessage(locale:)` 本地化文案（DEF-39-1 resolved）；`SystemMonitor`（ProcessInfo low-power + ThermalState `.serious/.critical`）生产接线 HomeView 降级横幅，`DegradationBannerViewModel` 真实驱动横幅/自动暂停后台任务/恢复（US-RES-002/003），`.degradationWarning` hash-only 审计。证据：`EchoTests/Phase3F/3F.10_LocalizationAccessibilityErrorTests.swift`（SystemMonitorTests/DegradationRuntimeTests/ErrorLocalizationTests）+ `Echo/Core/Utils/SystemMonitor.swift`。
 
 ## 背景
 

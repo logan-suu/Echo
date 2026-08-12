@@ -38,12 +38,18 @@ struct AwakeningCardModel: Identifiable, Sendable, Equatable {
     let sourceLabel: String
     /// 卡片生成时间
     let createdAt: Date
-    /// 卡片标题文案
+    /// 卡片标题文案（English catalog key source; Phase 3 test contract）
     let title: String
-    /// 卡片副标题/摘要文案
+    /// 卡片副标题/摘要文案（English catalog key source; Phase 3 test contract）
     let subtitle: String
     /// 对应的 SF Symbol 图标名
     let symbolName: String
+    /// String Catalog key for the localized title (3F.10 i18n)
+    let titleKey: String
+    /// Format arguments for the localized title
+    let titleArgs: [String]
+    /// String Catalog key for the localized subtitle (3F.10 i18n)
+    let subtitleKey: String
 
     // MARK: - Init from Core Model
 
@@ -57,33 +63,59 @@ struct AwakeningCardModel: Identifiable, Sendable, Equatable {
         self.sourceLabel = card.regionId
         self.createdAt = card.createdAt
 
-        // 🔮 Phase 3.12+: Localize via UserPolicy.preferredLanguage (§6.2)
         switch card.triggerType {
         case "geofenceOnly":
             self.title = "Arrived at \(card.regionId)"
             self.subtitle = "A memory from this place"
             self.symbolName = "mappin.circle.fill"
+            self.titleKey = "Arrived at %@"
+            self.titleArgs = [card.regionId]
+            self.subtitleKey = "A memory from this place"
 
         case "emotionNegative":
             self.title = "A bright moment for you"
             self.subtitle = "Joyful memories from the past"
             self.symbolName = "sparkles"
+            self.titleKey = "A bright moment for you"
+            self.titleArgs = []
+            self.subtitleKey = "Joyful memories from the past"
 
         case "emotionNeutral":
             self.title = "A moment to reflect"
             self.subtitle = "Thoughtful memories"
             self.symbolName = "leaf.circle.fill"
+            self.titleKey = "A moment to reflect"
+            self.titleArgs = []
+            self.subtitleKey = "Thoughtful memories"
 
         case "anniversary":
             self.title = "On this day"
             self.subtitle = "Memories from years past"
             self.symbolName = "clock.arrow.circlepath"
+            self.titleKey = "On this day"
+            self.titleArgs = []
+            self.subtitleKey = "Memories from years past"
 
         default:
             self.title = "Awakening"
             self.subtitle = "A memory surfaced for you"
             self.symbolName = "bell.circle.fill"
+            self.titleKey = "Awakening"
+            self.titleArgs = []
+            self.subtitleKey = "A memory surfaced for you"
         }
+    }
+
+    @MainActor
+    var localizedTitle: String {
+        let template = EchoStrings.tr(titleKey)
+        guard !titleArgs.isEmpty else { return template }
+        return String(format: template, arguments: titleArgs.map { $0 as CVarArg })
+    }
+
+    @MainActor
+    var localizedSubtitle: String {
+        EchoStrings.tr(subtitleKey)
     }
 
     /// 相对时间描述
@@ -93,6 +125,15 @@ struct AwakeningCardModel: Identifiable, Sendable, Equatable {
         if interval < 3600 { return "\(Int(interval / 60))m ago" }
         if interval < 86400 { return "\(Int(interval / 3600))h ago" }
         return "\(Int(interval / 86400))d ago"
+    }
+
+    @MainActor
+    var localizedRelativeTime: String {
+        let interval = Date().timeIntervalSince(createdAt)
+        if interval < 60 { return EchoStrings.tr("Just now") }
+        if interval < 3600 { return String(format: EchoStrings.tr("%lldm ago"), Int(interval / 60)) }
+        if interval < 86400 { return String(format: EchoStrings.tr("%lldh ago"), Int(interval / 3600)) }
+        return String(format: EchoStrings.tr("%lldd ago"), Int(interval / 86400))
     }
 }
 
@@ -256,6 +297,10 @@ final class HomeViewModel {
     /// - Parameter offline: 是否离线
     func setOffline(_ offline: Bool) {
         isOffline = offline
+    }
+
+    func offlineIndicatorAccessibilityLabel(locale: Locale) -> String {
+        EchoLocalization.localized("Offline mode", locale: locale)
     }
 
     /// 消除错误状态，返回 idle。

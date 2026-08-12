@@ -1,0 +1,17 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-l1-transient",
+  "surfaceId": "degradation-banner",
+  "stateId": "l1Transient",
+  "degradation": {
+    "type": "l1Transient",
+    "level": "L1",
+    "message": "Something went wrong briefly. Echo is retrying automatically.",
+    "icon": "arrow.clockwise",
+    "tint": "blue",
+    "backgroundTasksPaused": false,
+    "showToggle": false
+  },
+  "activeDegradations": [],
+  "canDismiss": true
+}

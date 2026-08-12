@@ -34,6 +34,10 @@ struct AppRootView: View {
     /// App 级 ViewModel（DI 容器），由 EchoApp 注入
     @State private var viewModel = AppViewModel()
 
+    /// Unified app language (US-DIS-001, 3F.10): drives .environment(\.locale) so every
+    /// Text(LocalizedStringKey) re-resolves immediately on switch (AC-4, no restart).
+    @State private var languageCenter = LanguageCenter.shared
+
     /// 应用自有 composition root (3F.1)
     @State private var composition = AppComposition.shared
 
@@ -56,8 +60,8 @@ struct AppRootView: View {
         Group {
             if consentPersistError {
                 // Consent write failed on onboarding completion: surface instead of silently proceeding
-                unavailableGate(title: "Consent Not Saved",
-                                message: "Your consent could not be saved. Restart Echo to try again.")
+                unavailableGate(title: EchoStrings.tr("Consent Not Saved"),
+                                message: EchoStrings.tr("Your consent could not be saved. Restart Echo to try again."))
             } else {
                 switch composition.startupState {
                 case .requiresConsent:
@@ -66,28 +70,28 @@ struct AppRootView: View {
                 case .consentDeclined:
                     // Declined consent is terminal: show a denial placeholder instead of
                     // re-presenting the onboarding cover (avoids the Close dead-loop)
-                    unavailableGate(title: "Consent Declined",
-                                    message: "Echo cannot process your memories without consent. Reopen Echo to review the privacy policy.")
+                    unavailableGate(title: EchoStrings.tr("Consent Declined"),
+                                    message: EchoStrings.tr("Echo cannot process your memories without consent. Reopen Echo to review the privacy policy."))
 
                 case .modelUnavailable:
-                    unavailableGate(title: "Models Unavailable",
-                                    message: "Required models could not be loaded. Reinstall Echo to restore them.")
+                    unavailableGate(title: EchoStrings.tr("Models Unavailable"),
+                                    message: EchoStrings.tr("Required models could not be loaded. Reinstall Echo to restore them."))
 
                 case .routeUnavailable:
-                    unavailableGate(title: "Search Unavailable",
-                                    message: "The active index route is unavailable.")
+                    unavailableGate(title: EchoStrings.tr("Search Unavailable"),
+                                    message: EchoStrings.tr("The active index route is unavailable."))
 
                 case .indexUnavailable:
-                    unavailableGate(title: "Index Unavailable",
-                                    message: "Memory index is not ready yet.")
+                    unavailableGate(title: EchoStrings.tr("Index Unavailable"),
+                                    message: EchoStrings.tr("Memory index is not ready yet."))
 
                 case .purgeBlocked:
-                    unavailableGate(title: "Action Blocked",
-                                    message: "The previous cleanup did not complete. Try again.")
+                    unavailableGate(title: EchoStrings.tr("Action Blocked"),
+                                    message: EchoStrings.tr("The previous cleanup did not complete. Try again."))
 
                 case .bootstrapFailed:
-                    unavailableGate(title: "Startup Failed",
-                                    message: "Echo could not initialize its local storage. Reinstall Echo or restart the device.")
+                    unavailableGate(title: EchoStrings.tr("Startup Failed"),
+                                    message: EchoStrings.tr("Echo could not initialize its local storage. Reinstall Echo or restart the device."))
 
                 default:
                     mainTabs
@@ -95,6 +99,7 @@ struct AppRootView: View {
             }
         }
         .tint(Color.accentColor)
+        .environment(\.locale, languageCenter.locale)
         // iOS 18.x 无 TranslationSession 公开构造器 — 隐藏 host view 常驻获取 session (PR #61 review B-1)
         .background {
             TranslationSessionHostView()
@@ -210,7 +215,7 @@ struct AppRootView: View {
             HomeView()
         }
         .tabItem {
-            Label(AppTab.home.titleKey, systemImage: AppTab.home.systemImage)
+            Label(EchoStrings.tr(AppTab.home.titleKey), systemImage: AppTab.home.systemImage)
         }
     }
 
@@ -221,7 +226,7 @@ struct AppRootView: View {
             SearchView()
         }
         .tabItem {
-            Label(AppTab.search.titleKey, systemImage: AppTab.search.systemImage)
+            Label(EchoStrings.tr(AppTab.search.titleKey), systemImage: AppTab.search.systemImage)
         }
     }
 
@@ -232,7 +237,7 @@ struct AppRootView: View {
             SettingsView()
         }
         .tabItem {
-            Label(AppTab.settings.titleKey, systemImage: AppTab.settings.systemImage)
+            Label(EchoStrings.tr(AppTab.settings.titleKey), systemImage: AppTab.settings.systemImage)
         }
     }
 }

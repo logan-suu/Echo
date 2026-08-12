@@ -41,6 +41,11 @@ import Foundation
 @MainActor
 @Observable
 final class OnboardingViewModel {
+
+    nonisolated static func progressPercentText(_ progress: Double) -> String {
+        "\(Int(progress * 100))%"
+    }
+
     // MARK: - State Enum
 
     /// 引导流程统一状态 (AGENTS.md §8.1)

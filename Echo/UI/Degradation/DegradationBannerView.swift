@@ -1,6 +1,6 @@
 // ==========================================
 // 文件: DegradationBannerView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// i18n: Strings resolved via Localizable.xcstrings (zh-Hans + en-US) — migrated by 3F.10 (DEF-41-1).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-RES-002 (低电量模式降级),
 //            US-RES-003 (设备过热降级), US-RES-004 (模型加载失败),
 //            docs/ui/echo-memory-canvas-style.md §11.4 (降级横幅 — Task surface family),
@@ -43,6 +43,12 @@ struct DegradationBannerView: View {
                 hasHandledLaunchArguments = true
             }
         }
+        .onChange(of: viewModel.pendingAccessibilityAnnouncement) { _, newValue in
+            // US-DIS-004 AC-2: dynamic content change triggers a VoiceOver announcement
+            guard let newValue, !newValue.isEmpty else { return }
+            AccessibilityNotification.Announcement(EchoStrings.tr(newValue)).post()
+            _ = viewModel.consumeAccessibilityAnnouncement()
+        }
     }
 
     @ViewBuilder
@@ -53,7 +59,7 @@ struct DegradationBannerView: View {
                 .foregroundStyle(degradation.tint)
                 .accessibilityHidden(true)
 
-            Text(degradation.message)
+            Text(EchoStrings.tr(degradation.message))
                 .font(.caption)
                 .foregroundStyle(.primary)
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)

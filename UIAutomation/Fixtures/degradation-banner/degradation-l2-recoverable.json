@@ -1,0 +1,17 @@
+{
+  "fixtureVersion": "1.0.0",
+  "fixtureId": "degradation-l2-recoverable",
+  "surfaceId": "degradation-banner",
+  "stateId": "l2Recoverable",
+  "degradation": {
+    "type": "l2Recoverable",
+    "level": "L2",
+    "message": "This action could not be completed. You can retry it when ready.",
+    "icon": "exclamationmark.circle",
+    "tint": "yellow",
+    "backgroundTasksPaused": false,
+    "showToggle": false
+  },
+  "activeDegradations": [],
+  "canDismiss": true
+}

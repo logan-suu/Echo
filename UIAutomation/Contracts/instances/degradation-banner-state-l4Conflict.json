@@ -1,0 +1,14 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "l4Conflict",
+  "properties": {
+    "isBannerVisible": true,
+    "bannerIcon": "arrow.triangle.2.circlepath",
+    "bannerMessage": "Two versions of this memory conflict. Choose which one to keep.",
+    "showBackgroundTaskToggle": false,
+    "backgroundTasksPaused": false,
+    "showResolveConflict": true,
+    "bannerTint": "orange"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "actionId": "banner.openSettings",
+  "description": "User taps settings entry; navigates to the relevant repair/settings section.",
+  "impact": {
+    "navigation": "settings"
+  }
+}

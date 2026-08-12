@@ -70,7 +70,7 @@ struct AwakeningSettingsView: View {
                 .foregroundStyle(Color.accentColor)
             Text("Failed to load settings")
                 .font(.headline)
-            Text(levelDescription(level))
+            Text(EchoStrings.tr(levelDescription(level)))
                 .font(.subheadline)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
@@ -147,7 +147,7 @@ struct AwakeningSettingsView: View {
                     requestNotificationButton
                 }
             }
-            Text(data.notificationPermission.description)
+            Text(EchoStrings.tr(data.notificationPermission.description))
                 .font(.caption)
                 .foregroundStyle(Color.secondary)
         } header: {
@@ -199,8 +199,8 @@ struct AwakeningSettingsView: View {
         HStack {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(perm.displayName)
-                    Text(perm.description)
+                    Text(EchoStrings.tr(perm.displayName))
+                    Text(EchoStrings.tr(perm.description))
                         .font(.caption)
                         .foregroundStyle(Color.secondary)
                         .lineLimit(2)
@@ -339,11 +339,11 @@ struct AwakeningSettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(geofence.displayName)
                     .font(.body)
-                Text("\(geofence.memoryCount) memories · \(Int(geofence.radiusMeters))m radius")
+                Text(String(format: EchoStrings.tr("%lld memories · %lldm radius"), geofence.memoryCount, Int(geofence.radiusMeters)))
                     .font(.caption)
                     .foregroundStyle(Color.secondary)
                 if let lastTriggered = geofence.lastTriggeredAt {
-                    Text("Last delivery: \(lastTriggered.formatted(date: .abbreviated, time: .shortened))")
+                    Text(String(format: EchoStrings.tr("Last delivery: %@"), lastTriggered.formatted(date: .abbreviated, time: .shortened)))
                         .font(.caption2)
                         .foregroundStyle(Color.secondary)
                 }
@@ -361,7 +361,7 @@ struct AwakeningSettingsView: View {
                 Section {
                     LabeledContent("Name", value: geofence.displayName)
                     LabeledContent("Status") {
-                        Text(geofence.isActive ? "Active" : "Inactive")
+                        Text(EchoStrings.tr(geofence.isActive ? "Active" : "Inactive"))
                             .foregroundStyle(geofence.isActive ? Color.accentColor : Color.secondary)
                     }
                     LabeledContent("Radius", value: "\(Int(geofence.radiusMeters))m")
@@ -415,7 +415,7 @@ struct AwakeningSettingsView: View {
         } header: {
             Text("Status")
         } footer: {
-            Text("Geofence push resets on exit+re-enter. Anniversary check runs daily at 9:00 AM. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log).")
+            Text(EchoStrings.tr("Geofence push resets on exit+re-enter. Anniversary check runs daily at 9:00 AM. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log)."))
         }
     }
 }

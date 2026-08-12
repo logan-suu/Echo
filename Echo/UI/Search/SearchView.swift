@@ -377,11 +377,11 @@ struct SearchView: View {
                 .symbolRenderingMode(.hierarchical)
                 .accessibilityHidden(true)
 
-            Text(errorTitle(for: level))
+            Text(EchoStrings.tr(errorTitle(for: level)))
                 .font(.headline)
                 .foregroundStyle(Color.primary)
 
-            Text(errorMessage(for: level))
+            Text(EchoStrings.tr(errorMessage(for: level)))
                 .font(.body)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)

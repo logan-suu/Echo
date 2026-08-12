@@ -1,0 +1,9 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "actionId": "banner.resolveConflict",
+  "description": "L4 conflict: opens manual merge/conflict-resolution UI (AGENTS.md §4.4).",
+  "impact": {
+    "resolution": "manual merge UI"
+  }
+}

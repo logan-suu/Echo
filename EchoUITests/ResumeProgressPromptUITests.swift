@@ -21,7 +21,7 @@ final class ResumeProgressPromptUITests: XCTestCase {
     @MainActor
     func test_pendingJourneyContinue() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "resume-progress-pending"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "resume-progress-pending"]
         app.launch()
 
         // confirmationDialog 出现（等待 checkForPendingProgress 异步完成）。
@@ -43,7 +43,7 @@ final class ResumeProgressPromptUITests: XCTestCase {
     @MainActor
     func test_pendingJourneyRestart() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "resume-progress-pending"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "resume-progress-pending"]
         app.launch()
 
         let restartButton = app.buttons["Restart"]
@@ -57,7 +57,7 @@ final class ResumeProgressPromptUITests: XCTestCase {
     @MainActor
     func test_errorFixtureShowsRetry() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "resume-progress-error"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "resume-progress-error"]
         app.launch()
 
         let retryButton = app.buttons["resume-prompt-retry"]
@@ -71,7 +71,7 @@ final class ResumeProgressPromptUITests: XCTestCase {
     @MainActor
     func test_noneFixtureNoPrompt() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-skip-consent", "-ui-fixture", "resume-progress-none"]
+        app.launchArguments = ["-ui-language", "en-US", "-ui-skip-consent", "-ui-fixture", "resume-progress-none"]
         app.launch()
 
         // 短暂等待后确认无恢复提示按钮出现

@@ -83,6 +83,14 @@ public enum AuditEvent: String, Sendable, Codable {
     case followUpQuery
     /// 数据概览被访问 (US-SRC-009 AC-5, 3F.7)
     case dataOverviewAccessed
+    // 3F.10 新增 (DECISION-1 human-approved 2026-08-12 — audit cases the locked ACs require):
+    /// 统一语言切换 (US-DIS-001 AC-5 / US-SET-001: 含 newLanguage，记录于 sourceLanguage 列)
+    case languageUnified
+    /// 后台任务面板被访问 (US-SYS-001 AC-7)
+    case backgroundTaskUIAccessed
+    /// 降级警告 (US-RES-002 AC-5: batteryLevel/modelVersion/degradationWarningShown/backgroundTasksPaused;
+    /// US-RES-003 AC-5: deviceThermalState/degradationActive/warningShown — carried hash-only in content)
+    case degradationWarning
     /// grounded 合成 (US-SYN-002 AC-5: 含 citationCount, noSourceCount)
     case synthesis
     /// 创作生成 (US-SYN-003 AC-6: 含 templateType, sourceMemoryCount, exportFormat, savedToNotes)

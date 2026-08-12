@@ -642,21 +642,24 @@ public actor AwakeningPipeline {
     /// 通知内容最小化（决策-7）：标题 + 温和正文 + memoryId（路由用），不含原文。
     public func scheduleCardNotification(_ card: AwakeningCard) async {
         guard let notificationScheduler else { return }
+        // DEF-60-001 (3F.10): notification bodies resolve from the String Catalog for the
+        // user's preferred language (AGENTS.md §6.4 degradation/prompt copy contract).
+        let locale = Locale(identifier: (await privacyActor.getPolicy()).preferredLanguage)
         let body: String
         switch card.triggerType {
         case "geofenceOnly":
-            body = "A memory from \(card.regionId)"
+            body = String(format: EchoLocalization.localized("A memory from %@", locale: locale), card.regionId)
         case "emotionNegative":
-            body = "A bright moment from the past"
+            body = EchoLocalization.localized("A bright moment from the past", locale: locale)
         case "emotionNeutral":
-            body = "A quiet moment to reflect"
+            body = EchoLocalization.localized("A quiet moment to reflect", locale: locale)
         case "anniversary":
-            body = "Memories from years past on this day"
+            body = EchoLocalization.localized("Memories from years past on this day", locale: locale)
         default:
-            body = "A memory surfaced for you"
+            body = EchoLocalization.localized("A memory surfaced for you", locale: locale)
         }
         let content = EchoNotificationContent(
-            title: "Echo Memory",
+            title: EchoLocalization.localized("Echo Memory", locale: locale),
             body: body,
             memoryId: card.memoryIds.first,
             triggerType: card.triggerType

@@ -150,6 +150,8 @@ struct SettingsView: View {
 
     private func settingsForm(_ sections: SettingsSections) -> some View {
         Form {
+            languageSection
+            lowPowerSection
             dataSourcesSection(sections)
             awakeningSection
             storageSection(sections)
@@ -162,6 +164,46 @@ struct SettingsView: View {
             aboutSection
         }
         .background(Color(.systemGroupedBackground))
+    }
+
+    // MARK: - Language Section (US-DIS-001 / US-SET-001: single unified App Language)
+
+    private var languageSection: some View {
+        Section {
+            Picker(selection: Binding(
+                get: { viewModel.languageSelection },
+                set: { newValue in
+                    Task { await viewModel.setLanguage(newValue) }
+                }
+            )) {
+                Text("Follow System").tag(LanguageCenter.AppLanguageSelection.followSystem)
+                Text("Simplified Chinese").tag(LanguageCenter.AppLanguageSelection.zhHans)
+                Text("English").tag(LanguageCenter.AppLanguageSelection.enUS)
+            } label: {
+                Text("App Language")
+            }
+            .accessibilityIdentifier("settings-app-language")
+        } header: {
+            Text("App Language")
+        } footer: {
+            Text("Select the language Echo uses to display and respond.")
+        }
+    }
+
+    // MARK: - Low Power Section (US-RES-002 AC-3: default-on auto-pause toggle)
+
+    private var lowPowerSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { DegradationBannerViewModel.isAutoPauseOnLowPowerEnabled },
+                set: { DegradationBannerViewModel.isAutoPauseOnLowPowerEnabled = $0 }
+            )) {
+                Text("Pause background tasks during low power")
+            }
+            .accessibilityIdentifier("settings-low-power-auto-pause")
+        } footer: {
+            Text("When off, background tasks keep running in Low Power Mode and may use more battery.")
+        }
     }
 
     // MARK: - Data Sources Section (US-SRC-004)
@@ -274,7 +316,7 @@ struct SettingsView: View {
                     .font(.body)
                     .foregroundStyle(Color.secondary)
             }
-            .accessibilityLabel("\(sections.storage.indexCount) indexed items")
+            .accessibilityLabel(String(format: EchoStrings.tr("%lld indexed items"), sections.storage.indexCount))
 
             HStack {
                 Label {
@@ -354,7 +396,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.secondary)
                 }
             }
-            .accessibilityLabel("Excluded Items, \(sections.excludedCount) items")
+            .accessibilityLabel(String(format: EchoStrings.tr("Excluded Items, %lld items"), sections.excludedCount))
         } header: {
             Text("Data Management")
         } footer: {
@@ -400,7 +442,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.secondary)
                 }
             }
-            .accessibilityLabel("Feedback Records, \(sections.feedbackCount) entries")
+            .accessibilityLabel(String(format: EchoStrings.tr("Feedback Records, %lld entries"), sections.feedbackCount))
 
             Button(role: .destructive, action: { viewModel.resetAllFeedback() }) {
                 Label("Reset All Feedback Learning Data", systemImage: "arrow.counterclockwise")
@@ -500,12 +542,12 @@ struct SettingsView: View {
                             .foregroundStyle(Color.yellow)
                     }
 
-                    Text("\(sections.modelStatus.loadedCount)/\(sections.modelStatus.totalModels) loaded")
+                    Text(String(format: EchoStrings.tr("%lld/%lld loaded"), sections.modelStatus.loadedCount, sections.modelStatus.totalModels))
                         .font(.caption)
                         .foregroundStyle(sections.modelStatus.isDegraded ? Color.yellow : Color.secondary)
                 }
             }
-            .accessibilityLabel("Model Status, \(sections.modelStatus.loadedCount) of \(sections.modelStatus.totalModels) loaded")
+            .accessibilityLabel(String(format: EchoStrings.tr("Model Status, %lld of %lld loaded"), sections.modelStatus.loadedCount, sections.modelStatus.totalModels))
         } header: {
             Text("AI Models")
         } footer: {

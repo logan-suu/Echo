@@ -176,7 +176,7 @@ struct BackgroundTaskPanelView: View {
                     taskRow(task)
                 }
             } header: {
-                Text("\(viewModel.tasks.count) active task\(viewModel.tasks.count == 1 ? "" : "s")")
+                Text(String(format: EchoStrings.tr(viewModel.tasks.count == 1 ? "%lld active task" : "%lld active tasks"), viewModel.tasks.count))
                     .font(.footnote)
             }
         }
@@ -198,12 +198,12 @@ struct BackgroundTaskPanelView: View {
             // 任务信息 + 进度
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Text(task.displayName)
+                    Text(EchoStrings.tr(task.displayName))
                         .font(.body)
                         .foregroundStyle(Color.primary)
                         .lineLimit(1)
 
-                    Text(task.statusLabel)
+                    Text(EchoStrings.tr(task.statusLabel))
                         .font(.caption)
                         .foregroundStyle(task.status == .paused ? Color.orange : Color.secondary)
                 }
@@ -232,7 +232,9 @@ struct BackgroundTaskPanelView: View {
                     .foregroundStyle(Color.accentColor)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(task.status == .paused ? "Resume \(task.displayName)" : "Pause \(task.displayName)")
+            .accessibilityLabel(task.status == .paused
+                                ? String(format: EchoStrings.tr("Resume %@"), task.localizedDisplayName)
+                                : String(format: EchoStrings.tr("Pause %@"), task.localizedDisplayName))
             .accessibilityIdentifier("background-task-pause-\(task.taskId)")
 
             // 取消按钮
@@ -244,8 +246,8 @@ struct BackgroundTaskPanelView: View {
                     .foregroundStyle(Color.secondary)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel("Cancel \(task.displayName)")
-            .accessibilityHint("Terminates the task and saves progress")
+            .accessibilityLabel(String(format: EchoStrings.tr("Cancel %@"), task.localizedDisplayName))
+            .accessibilityHint(EchoStrings.tr("Terminates the task and saves progress"))
             .accessibilityIdentifier("background-task-cancel-\(task.taskId)")
         }
         .padding(.vertical, 4)
@@ -263,7 +265,7 @@ struct BackgroundTaskPanelView: View {
                 .foregroundStyle(Color.yellow)
                 .accessibilityHidden(true)
 
-            Text(errorMessage(for: level))
+            Text(EchoStrings.tr(errorMessage(for: level)))
                 .font(.body)
                 .foregroundStyle(Color.primary)
                 .multilineTextAlignment(.center)

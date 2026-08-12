@@ -23,6 +23,26 @@
       "stateId": "modelDegraded",
       "description": "Core ML model failed to load. Banner shows model error + retry button.",
       "fixtureId": "degradation-model-degraded"
+    },
+    {
+      "stateId": "l1Transient",
+      "description": "L1 transient error: automatic exponential-backoff retry in progress (AGENTS.md §4.4).",
+      "fixtureId": "degradation-l1-transient"
+    },
+    {
+      "stateId": "l2Recoverable",
+      "description": "L2 recoverable error: manual retry via PendingOperations.",
+      "fixtureId": "degradation-l2-recoverable"
+    },
+    {
+      "stateId": "l3Blocking",
+      "description": "L3 blocking error: feature stopped; guides to system settings repair.",
+      "fixtureId": "degradation-l3-blocking"
+    },
+    {
+      "stateId": "l4Conflict",
+      "description": "L4 data conflict: manual merge UI required.",
+      "fixtureId": "degradation-l4-conflict"
     }
   ],
   "actions": [
@@ -41,18 +61,56 @@
     {
       "actionId": "banner.openSettings",
       "description": "User taps settings button to navigate to relevant settings section"
+    },
+    {
+      "actionId": "banner.retryL1",
+      "description": "L1 auto-retry sequence (3 attempts, 1s/2s/4s backoff)"
+    },
+    {
+      "actionId": "banner.retryPendingOperation",
+      "description": "L2 manual retry of a pending operation"
+    },
+    {
+      "actionId": "banner.openBlockingRecovery",
+      "description": "L3 navigate to system settings repair"
+    },
+    {
+      "actionId": "banner.resolveConflict",
+      "description": "L4 open conflict merge UI"
     }
   ],
   "journeys": [
     {
       "journeyId": "degradation-lifecycle",
       "description": "Full lifecycle: normal → lowPower → thermal → modelDegraded → normal recovery",
-      "steps": ["normal", "lowPower", "thermal", "modelDegraded", "normal"]
+      "steps": [
+        "normal",
+        "lowPower",
+        "thermal",
+        "modelDegraded",
+        "normal"
+      ]
+    },
+    {
+      "journeyId": "degradation-l1-l4",
+      "description": "Error escalation: L1 transient → L2 recoverable → L3 blocking → L4 conflict resolution",
+      "steps": [
+        "l1Transient",
+        "l2Recoverable",
+        "l3Blocking",
+        "l4Conflict"
+      ]
     }
   ],
   "accessibility": {
-    "roles": ["banner", "alert"],
-    "traits": ["updatesFrequently", "startsMediaSession"],
+    "roles": [
+      "banner",
+      "alert"
+    ],
+    "traits": [
+      "updatesFrequently",
+      "startsMediaSession"
+    ],
     "dynamicType": "supported"
   }
 }

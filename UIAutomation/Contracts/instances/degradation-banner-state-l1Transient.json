@@ -1,0 +1,15 @@
+{
+  "contractVersion": "1.0.0",
+  "surfaceId": "degradation-banner",
+  "stateId": "l1Transient",
+  "properties": {
+    "isBannerVisible": true,
+    "bannerIcon": "arrow.clockwise",
+    "bannerMessage": "Something went wrong briefly. Echo is retrying automatically.",
+    "showBackgroundTaskToggle": false,
+    "backgroundTasksPaused": false,
+    "showRetryButton": false,
+    "showToast": true,
+    "bannerTint": "blue"
+  }
+}
