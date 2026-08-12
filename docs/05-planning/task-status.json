@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-11T16:00:00Z",
+  "last_updated": "2026-08-12T06:49:34Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -1688,7 +1688,7 @@
             "US-SYN-007",
             "US-SYN-008"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "Language and Creation Lead",
             "approver": "Model Legal and Privacy Approver"
@@ -1770,14 +1770,16 @@
             "Apple Translation availability、uncertain fallback、七天 cache 与重启证据",
             "grounded anchors、Markdown/PDF/share 与模型分发批准"
           ],
-          "last_updated": "2026-08-12",
-          "notes": "PR #61 review-fix (2026-08-12): B-1 resolved (iOS 26-only TranslationSession(installedSource:) replaced with hidden host view + TranslationSessionBridge via .translationTask; @preconcurrency import for non-Sendable session). W-1 unused binding, W-2 L2 grading comment, W-3 UserPolicy preferredLanguage (R-004), W-4 NSFileProtectionComplete all fixed. Verified: build OK, 139 suites 0 failures, SwiftLint clean.",
+          "last_updated": "2026-08-12T06:49:34Z",
+          "notes": "PR #61 review-fix (2026-08-12): B-1 resolved (iOS 26-only TranslationSession(installedSource:) replaced with hidden host view + TranslationSessionBridge via .translationTask; @preconcurrency import for non-Sendable session). W-1 unused binding, W-2 L2 grading comment, W-3 UserPolicy preferredLanguage (R-004), W-4 NSFileProtectionComplete all fixed. Verified: build OK, 139 suites 0 failures, SwiftLint clean.\n(2026-08-12 pr-merge) PR #61 merged by human at 2026-08-12T06:47:05Z (merge commit 50f6b5e). Status review -> done. No deferred-from-pr-review items pending for PR #61. DEF-43-002/DEF-43-003 already closed; DEF-44-001 remains partial (i18n part deferred to 3F.10). Cascade scan: 3F.10 deps all done -> ready. Phase 4 remains locked (entry_gate 3F.11 not merged).",
           "pr": {
             "base": "dev-1.0",
             "head": "feature/phase3f-translation-creation-3F.9",
             "created_at": "2026-08-11T16:00:00Z",
             "number": 61,
-            "url": "https://github.com/logan-suu/Echo/pull/61"
+            "url": "https://github.com/logan-suu/Echo/pull/61",
+            "merged_at": "2026-08-12T06:47:05Z",
+            "merge_commit": "50f6b5ecd8b63104c9f52ad0d9a4efc2230d5653"
           }
         },
         {
@@ -1795,7 +1797,7 @@
             "US-SYS-001",
             "US-SRC-009"
           ],
-          "status": "backlog",
+          "status": "ready",
           "owner": {
             "implementation": "Localization and Accessibility Lead",
             "approver": "Release Quality Lead"
@@ -1858,7 +1860,7 @@
             "US-SRC-009 merged-into-US-SYS-001 localized and accessible task/resume/error trace",
             "ADR-011 与架构、数据流、避坑的 degradation 合同一致性"
           ],
-          "last_updated": "2026-08-04T13:52:40Z",
+          "last_updated": "2026-08-12T06:49:34Z",
           "notes": "Owns complete declared degradation and L1-L4 UIAutomation coverage.",
           "pr": null
         },
