@@ -96,7 +96,7 @@ public struct UserPolicy: Sendable, Codable {
 
     public nonisolated init(
         preferredLanguage: String = "zh-Hans",
-        authorizedSourceTypes: Set<String> = ["photo", "note", "voice", "video"],
+        authorizedSourceTypes: Set<String> = ["photo", "note", "voice", "video", "thirdParty", "search"],
         policyVersion: Int = 1
     ) {
         self.preferredLanguage = preferredLanguage

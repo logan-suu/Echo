@@ -36,7 +36,8 @@ public enum LiveAppAdapters {
             embedder: composition.textEmbedder,
             privacyActor: composition.privacyActor,
             vectorStore: activeStore,
-            feedbackActor: .shared
+            feedbackActor: .shared,
+            canonicalRepository: makeCanonicalRepository(composition: composition)
         )
     }
 

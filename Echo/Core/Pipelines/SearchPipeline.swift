@@ -257,6 +257,9 @@ public actor SearchPipeline {
     private let privacyActor: PrivacyActor
     private let vectorStore: VectorStoreActor
     private let feedbackActor: FeedbackActor
+    /// 3F.11 fix: canonical 仓库 — legacy MemoryEntry 元数据解码失败时按 ID 回填
+    /// （canonical 分代 store 不写 legacy 元数据，sourceType 变 "unknown" 会被授权过滤剔除）
+    private let canonicalRepository: CanonicalMemoryRepositoryActor?
 
     // MARK: - Session State (US-RET-005 AC-4)
 
@@ -295,12 +298,14 @@ public actor SearchPipeline {
         embedder: any EmbedderProtocol,
         privacyActor: PrivacyActor = .shared,
         vectorStore: VectorStoreActor,
-        feedbackActor: FeedbackActor = .shared
+        feedbackActor: FeedbackActor = .shared,
+        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
         self.vectorStore = vectorStore
         self.feedbackActor = feedbackActor
+        self.canonicalRepository = canonicalRepository
     }
 
     // MARK: - Search
@@ -368,13 +373,11 @@ public actor SearchPipeline {
             throw SearchError.embeddingFailed(underlying: error)
         }
 
-        // Zero-pad 384d → 512d for unified VectorStore (Strategy A)
-        let queryVector: [Float]
-        if rawEmbedding.count < 512 {
-            queryVector = rawEmbedding + Array(repeating: 0.0, count: 512 - rawEmbedding.count)
-        } else {
-            queryVector = rawEmbedding
-        }
+        // 3F.11 fix: 查询向量对齐到目标 store 的原生维度（不再固定零填充到 512）。
+        // 生产分代 store 为原生维度（text_dense=E5 384d，ADR-006「不补零」）——
+        // 固定填充 512 导致 384d store 维度不匹配、搜索永远返回空。
+        let storeDimension = await vectorStore.dimension
+        let queryVector = Self.alignVector(rawEmbedding, to: storeDimension)
 
         // Step 4: ANN search with timeout (US-RET-008)
         let searchK = max(k, min(annCandidateCount, 100))
@@ -387,6 +390,23 @@ public actor SearchPipeline {
         for result in annResults {
             let metadata = try? MemoryEntry.decodeMetadata(from: result.metadata ?? Data())
             let sourceLang = detectLanguage(from: metadata?.originalText)
+            if case nil = metadata, let canonicalRepository {
+                // 3F.11 fix: canonical 回填 — 分代 store 不写 legacy MemoryEntry 元数据，
+                // 按记忆 ID 从 canonical Memory 表读取（assetId/sourceType/文本/时间戳）
+                if let memory = try? await canonicalRepository.loadMemory(memoryId: result.id) {
+                    items.append(SearchResultItem(
+                        id: result.id,
+                        assetId: memory.sourceLocator,
+                        sourceType: memory.sourceType,
+                        timestamp: memory.createdAt.timeIntervalSince1970,
+                        originalText: memory.canonicalText,
+                        sourceLanguage: detectLanguage(from: memory.canonicalText),
+                        crossLanguageMatch: false, // set in step 6
+                        cosineSimilarity: 1.0 - Float(result.distance)
+                    ))
+                    continue
+                }
+            }
             items.append(SearchResultItem(
                 id: result.id,
                 assetId: metadata?.assetId ?? "",
@@ -554,6 +574,19 @@ public actor SearchPipeline {
     }
 
     // MARK: - Private Helpers
+
+    /// 将查询向量对齐到目标 store 维度（不足补零、超出截断）。
+    ///
+    /// 3F.11 fix: 生产分代 store 为原生维度（text_dense=384d / vision_dense=768d），
+    /// 查询向量必须与 store 维度一致，否则 HNSW 维度不匹配、搜索返回空。
+    /// Phase 2 legacy 512d store 经补零保持兼容。
+    nonisolated static func alignVector(_ vector: [Float], to dimension: Int) -> [Float] {
+        guard vector.count != dimension else { return vector }
+        if vector.count < dimension {
+            return vector + Array(repeating: 0.0, count: dimension - vector.count)
+        }
+        return Array(vector.prefix(dimension))
+    }
 
     /// 检测文本语言（US-RET-003 AC-1）。
     ///
