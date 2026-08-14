@@ -64,6 +64,18 @@ public final class AppComposition {
     /// ASR 引擎（Whisper）— 语音转写生产路径（CR-10）
     public let asrEngine: (any ASREngineProtocol)?
 
+    // MARK: - Production Wiring (3F.11 fix: 权限入口接线)
+
+    /// 生产同步管线（AppDelegate 装配后注入）— 照片授权授予后的首次全量导入入口
+    public private(set) var productionSyncPipeline: SyncPipeline?
+
+    /// 生产位置提供器（3F.8 AppDelegate 装配）— Awakening 设置页真实权限状态
+    public private(set) var productionLocationProvider: (any LocationProviding)?
+    /// 生产 HealthKit 存储（3F.8 AppDelegate 装配）
+    public private(set) var productionHealthStore: (any HealthStoreServing)?
+    /// 生产通知调度器（3F.8 AppDelegate 装配）
+    public private(set) var productionNotificationScheduler: (any NotificationScheduling)?
+
     // MARK: - Startup State
 
     public private(set) var startupState: AppStartupState = .idle
@@ -174,5 +186,23 @@ public final class AppComposition {
 
     public func markIndexUnavailable() {
         startupState = .indexUnavailable
+    }
+
+    // MARK: - Production Wiring Attach (3F.11 fix)
+
+    /// 注入生产同步管线（AppDelegate.configureSources 装配完成后调用）。
+    public func attachProductionSyncPipeline(_ pipeline: SyncPipeline) {
+        productionSyncPipeline = pipeline
+    }
+
+    /// 注入生产唤醒系统适配器（AppDelegate.configureSources 装配完成后调用，ADR-012 决策-2/3）。
+    public func attachAwakeningAdapters(
+        locationProvider: (any LocationProviding)?,
+        healthStore: (any HealthStoreServing)?,
+        notificationScheduler: (any NotificationScheduling)?
+    ) {
+        productionLocationProvider = locationProvider
+        productionHealthStore = healthStore
+        productionNotificationScheduler = notificationScheduler
     }
 }

@@ -187,8 +187,17 @@ public actor GenerationRegistryActor {
     }
 
     /// 获取指定分代的 VectorStoreActor 实例。
-    public func vectorStore(for generationId: String) -> VectorStoreActor? {
-        storeInstances[generationId]
+    ///
+    /// 3F.11 fix: 内存未物化时从磁盘 `.pxkt` 恢复（新进程重启后路由在 DB 而 store 仅存磁盘
+    /// ——否则摄入 commit 抛 `generationMissing`）。恢复失败返回 nil（调用方降级）。
+    public func vectorStore(for generationId: String) async -> VectorStoreActor? {
+        if storeInstances[generationId] != nil {
+            return storeInstances[generationId]
+        }
+        guard (try? await restoreStoreIfNeeded(generationId)) == true else {
+            return nil
+        }
+        return storeInstances[generationId]
     }
 
     /// 删除一个分代及其构建项（级联）。
@@ -490,6 +499,44 @@ public actor GenerationRegistryActor {
             storeInstances[generationId] = VectorStoreActor(dimension: generation.dimension)
         }
         return true
+    }
+
+    /// 生产初始 generation 引导（3F.11 fix：照片/文本摄入与检索依赖活跃路由，ADR-010）。
+    ///
+    /// 幂等：已有活跃路由时直接返回。创建 text_dense（E5 384d）+ vision_dense（SigLIP2 768d）
+    /// 两代并发布含 vision 的活跃路由（与 3F.5 测试 seed 一致）。生产路径此前从未引导初始
+    /// 代——`loadActiveRoute()` 返回 nil 导致所有生产摄入抛 `productionRouteUnavailable`。
+    public func ensureInitialGenerations() async throws {
+        // 模式匹配避开 MainActor 隔离的 Equatable（ActiveRouteSet/IndexGeneration）
+        guard case nil = try await loadActiveRoute() else { return }
+
+        let textId = "text_dense/e5-v1"
+        let visionId = "vision_dense/siglip2-v1"
+
+        if case nil = try await loadGeneration(textId) {
+            try await registerGeneration(
+                IndexGeneration(generationId: textId, indexType: "text_dense", dimension: 384)
+            )
+        }
+        if let gen = try await loadGeneration(textId), gen.state == .building {
+            _ = try await finishShadowBuild(textId, counts: 0, validationDigest: nil)
+        }
+
+        if case nil = try await loadGeneration(visionId) {
+            try await registerGeneration(
+                IndexGeneration(generationId: visionId, indexType: "vision_dense", dimension: 768)
+            )
+        }
+        if let gen = try await loadGeneration(visionId), gen.state == .building {
+            _ = try await finishShadowBuild(visionId, counts: 0, validationDigest: nil)
+        }
+
+        let route = try await activateGeneration(textId)
+        try await publishRoute(ActiveRouteSet(
+            textGeneration: textId,
+            visionGeneration: visionId,
+            version: route.version
+        ))
     }
 
     /// 加载当前活跃路由。
