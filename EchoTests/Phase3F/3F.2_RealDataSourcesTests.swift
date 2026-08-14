@@ -560,8 +560,8 @@ struct RealDataSourcesTests {
         }
     }
 
-    @Test("ingestShared enforces per-source privacy (denied thirdParty)")
-    func test_ingestShared_privacyDeniedWhenSourceDenied() async throws {
+    @Test("ingestShared accepts thirdParty with default policy; denies when revoked (US-SRC-003)")
+    func test_ingestShared_thirdPartyPolicy() async throws {
         let privacy = makePrivacy()
         let pipeline = IngestPipeline(
             embedder: StubEmbedder(),
@@ -569,10 +569,19 @@ struct RealDataSourcesTests {
             vectorStore: VectorStoreActor(dimension: 512),
             excludedAssets: makeExcluded()
         )
-        // thirdParty 不在默认授权集合 → 拒绝
+        // 3F.11 fix: 默认策略授权 thirdParty（US-SRC-003 第三方分享不再被隐私门禁拒绝）
         let env = try makeEnvelope(kind: .text, source: .thirdParty, payload: "第三方内容")
+        let entry = try await pipeline.ingestShared(env)
+        #expect(entry != nil)
+
+        // 撤销 thirdParty 授权 → 拒绝（per-source 校验仍生效）
+        try await privacy.updatePolicy(
+            UserPolicy(authorizedSourceTypes: ["photo", "note", "voice", "video"], policyVersion: 2)
+        )
         await #expect(throws: IngestError.self) {
-            _ = try await pipeline.ingestShared(env)
+            _ = try await pipeline.ingestShared(
+                try makeEnvelope(kind: .text, source: .thirdParty, payload: "第三方内容2")
+            )
         }
     }
 
