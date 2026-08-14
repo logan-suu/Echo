@@ -88,12 +88,24 @@ final class SettingsViewModel {
         case l4Conflict(String)
     }
 
+    /// 照片授权/导入状态（3F.11 fix：生产照片权限请求 + 首次全量导入入口）
+    enum PhotoImportState: Equatable, Sendable {
+        case idle
+        case requesting
+        case importing
+        case completed(Int)
+        case error(ErrorLevel)
+    }
+
     var state: State = .idle
     var showClearCacheConfirmation = false
     var showResetFeedbackConfirmation = false
     var showDeleteDataConfirmation = false
     var showRevokeConsentConfirmation = false
     var showExportInProgress = false
+
+    /// 照片授权/导入状态（US-SRC-001 AC-3/AC-5）
+    private(set) var photoImportState: PhotoImportState = .idle
 
     var isSyncingEnabled = true
     var isPeriodicScanEnabled = false
@@ -106,16 +118,21 @@ final class SettingsViewModel {
     /// 数据概览服务（US-SRC-009 live 值，3F.7 接线）— nil 时回退 fixture 占位
     private let dataOverviewService: DataOverviewService?
 
+    /// 照片来源适配器（3F.11 fix：可注入 Fake 供测试；nil 时生产默认 RealPhotoLibrary）
+    private let photoSourceAdapter: PhotoKitSourceAdapter?
+
     /// Unified app language (US-DIS-001 / US-SET-001, 3F.10)
     let languageCenter: LanguageCenter
 
     init(fixtureLoader: SettingsFixtureLoader = .shared,
          composition: AppComposition? = nil,
          dataOverviewService: DataOverviewService? = nil,
+         photoSourceAdapter: PhotoKitSourceAdapter? = nil,
          languageCenter: LanguageCenter = .shared) {
         self.fixtureLoader = fixtureLoader
         self.composition = composition
         self.dataOverviewService = dataOverviewService
+        self.photoSourceAdapter = photoSourceAdapter
         self.languageCenter = languageCenter
     }
 
@@ -195,6 +212,82 @@ final class SettingsViewModel {
                 state = .error(.l4Conflict(messageKey))
             }
         }
+    }
+
+    /// 请求照片授权并触发首次全量导入（US-SRC-001 AC-3/AC-5, US-SRC-012）。
+    ///
+    /// - 未授权 → 请求系统授权（首次弹窗）
+    /// - 授权/limited → 经 composition.productionSyncPipeline 首次全量导入（3F.11 fix）
+    /// - 错误映射 L1~L4（ErrorClassifier）
+    func requestPhotoLibraryAccess() async {
+        guard let composition else { return }
+        let adapter = photoSourceAdapter ?? PhotoKitSourceAdapter(
+            library: RealPhotoLibrary(),
+            privacyActor: composition.privacyActor,
+            configuration: .production
+        )
+
+        photoImportState = .requesting
+        let access = await adapter.requestAccess()
+        // AGENTS.md §7.3 .permissionChanged 审计（权限变更可观测性 + 导入诊断）
+        await writePhotoPermissionAudit(access: access)
+        guard access == .authorized || access == .limited else {
+            photoImportState = .error(.l2Recoverable(
+                EchoStrings.tr("settings.photo.access.denied")
+            ))
+            await loadSettings()
+            return
+        }
+
+        // 等待 AppDelegate.configureSources 装配完成（时序竞态防护，最长 5s）
+        var syncPipeline = composition.productionSyncPipeline
+        if syncPipeline == nil {
+            let deadline = Date().addingTimeInterval(5)
+            while syncPipeline == nil && Date() < deadline {
+                try? await Task.sleep(for: .milliseconds(100))
+                syncPipeline = composition.productionSyncPipeline
+            }
+        }
+        guard let syncPipeline else {
+            photoImportState = .error(.l3Blocking(
+                EchoStrings.tr("settings.photo.import.unavailable")
+            ))
+            await loadSettings()
+            return
+        }
+
+        photoImportState = .importing
+        do {
+            let result = try await syncPipeline.importPhotoLibrary(adapter: adapter)
+            photoImportState = .completed(result.replacedCount)
+        } catch {
+            let severity = ErrorClassifier.classify(error)
+            switch severity {
+            case .l1Transient:
+                photoImportState = .error(.l1Transient)
+            case .l2Recoverable:
+                photoImportState = .error(.l2Recoverable(EchoStrings.tr(severity.userFacingMessageKey)))
+            case .l3Blocking:
+                photoImportState = .error(.l3Blocking(EchoStrings.tr(severity.userFacingMessageKey)))
+            case .l4Conflict:
+                photoImportState = .error(.l4Conflict(EchoStrings.tr(severity.userFacingMessageKey)))
+            }
+        }
+        await loadSettings()
+    }
+
+    /// 写照片权限变更审计（AGENTS.md §7.3 .permissionChanged，hash-only）。
+    private func writePhotoPermissionAudit(access: PhotoAccess) async {
+        guard let composition else { return }
+        let policy = await composition.privacyActor.getPolicy()
+        try? await composition.privacyActor.writeAuditLog(
+            eventType: .permissionChanged,
+            traceID: UUID().uuidString,
+            policyVersion: policy.policyVersion,
+            success: (access == .authorized || access == .limited),
+            sourceType: "photo",
+            content: "newScope=\(access.rawValue)"
+        )
     }
 
     private func byteCount(_ bytes: Int64) -> String {

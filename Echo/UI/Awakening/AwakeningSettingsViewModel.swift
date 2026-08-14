@@ -265,13 +265,16 @@ final class AwakeningSettingsViewModel {
 
     func requestNotificationPermission() async {
         notificationAuthStep = .requesting
-        do {
-            try await Task.sleep(nanoseconds: 500_000_000)
+        if let notificationScheduler {
+            // 3F.11 fix: 真实通知授权（ADR-012 决策-2/3）
+            let auth = await notificationScheduler.requestAuthorization()
+            notificationAuthStep = (auth == .authorized) ? .granted : .denied
+        } else {
+            // fixture/preview 回退（无 live 适配器时保持确定性行为）
+            try? await Task.sleep(nanoseconds: 500_000_000)
             notificationAuthStep = .granted
-            // 🔮 Phase 3.9: Core UNUserNotificationCenter.requestAuthorization()
-        } catch {
-            notificationAuthStep = .denied
         }
+        await loadSettings()
     }
 
     func openSystemSettings() {
