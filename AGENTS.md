@@ -1,6 +1,6 @@
 # Echo · 回响：OpenCode 协作开发规约
 
-**版本**：v5.26
+**版本**：v5.29
 **生效日期**：2026-08-02  
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -33,6 +33,7 @@
 | **开发计划**           | `docs/05-planning/开发计划安排文档.md`                 | 里程碑、时间线及资源安排                   |
 | **任务状态**           | `docs/05-planning/task-status.json`                    | 每个任务的执行状态、依赖关系、测试文件映射 |
 | **延期任务**           | `docs/05-planning/deferred-items.json`                 | 延期到后续 Phase 的未解决任务追踪          |
+| **疑难杂症问题**       | `docs/06-troubleshooting/`                             | 架构性限制/难解问题的定位与根因分析        |
 
 ### 0.2 任务类型 → 文档快速索引（Agent 必读）
 
@@ -54,6 +55,7 @@
 | **实现反馈学习**          | `docs/01-spec/用户故事与验收标准规格书.md`             | US-FBK-001~003                                     |
 |                           | `docs/02-architecture/数据流全链路技术说明文档.md`     | §6 反馈学习数据流                                  |
 | **调试/避坑**             | `docs/03-implementation/开发避坑与关键注意点手册.md`   | 按问题类型查找（Actor / Pipeline / 跨语言 / 存储） |
+| **疑难杂症/架构限制定位** | `docs/06-troubleshooting/`                             | 架构性限制（如跨模态对齐缺失）的根因与追踪          |
 | **技术选型决策**          | `docs/02-architecture/技术选型文档.md`                 | 对应章节                                           |
 | **了解 AI Native 理念**   | `docs/04-ai-native/AI Native开发理念与实战技巧手册.md` | 相关章节                                           |
 | **创新工具集成**          | `docs/04-ai-native/产品创新工具全景指南.md`            | 对应工具章节                                       |
@@ -1497,3 +1499,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.26 | 2026-08-04 | Phase 3F bootstrap（3F.0，docs-only）：新增 §17.9 Phase 3F 持续授权条款（两段式授权模型：bootstrap 显式授权 + 合并后 standing authority；人类专属 merge/close/delete；no-overwrite/no-media/门禁保留；Phase 4 entry_gate 锁定）。同步修订 `docs/ui/`、`UIAutomation/Policies/`、`.opencode/commands/`（16 个命令 exact-string 任务/phase 查找、3F-safe 路径、UI exact-3 匹配）与 `.ui-automation/state.schema.json`。新增 `docs/05-planning/phase3f-execution-plan.md`、`phase3f-story-matrix.md`、`phase3f-evidence-index.md` 及 ADR-006~014。 | AI 架构师 |
 | v5.27 | 2026-08-12 | 3F.10 i18n/accessibility/errors 交付：新增统一语言中心（LanguageCenter，US-DIS-001 一键 UI+AI 语言）与 Localizable.xcstrings 双语目录（336 keys）；§7.3 新增 `.languageUnified`/`.backgroundTaskUIAccessed`/`.degradationWarning` 审计事件（DECISION-1）；新增 `.migration` PrivacyOperation（DEF-59-004）；SystemMonitor 低电量/热降级运行时接线。同步修订规格书、双语言/避坑文档、ADR-011 与 README。 | AI 架构师 |
 | v5.28 | 2026-08-12 | 3F.11 发布门禁交付：每目标发布合规校验器（`Scripts/validate_release_compliance.py`，ADR-014 §决策-3：可执行 app/extension target 全发现，Echo + EchoShareExtension 逐 target 网络/SDK/secret/entitlement/privacy-manifest/required-reason API/purpose-string 报告）；`PrivacyInfo.xcprivacy` ×2 + `NSHealthUpdateUsageDescription`；`Release.xcconfig`（pbxproj baseConfigurationReference）；`coverage_gate.py` 修复 xccov `--files` 选项移除；no-fixture 生产 E2E 与 Phase 3F 集成测试；CHANGELOG、App Store 隐私披露与 release checklist。本版本不记录 merge SHA、不解锁 Phase 4（`3F.finalize` 由人类合并后触发）。 | AI 架构师 |
+| v5.29 | 2026-08-15 | 新增 `docs/06-troubleshooting/` 疑难杂症问题文件夹（架构性限制/难解问题定位与根因分析），首个文档记录照片文本搜索跨模态对齐缺失（US-RET-003/US-ING-004 Impossible 的 v1 限制）。同步：§0.1 文档目录新增疑难杂症行；§0.2 任务映射表新增「疑难杂症/架构限制定位」行；docs/INDEX.md 注册新文件夹。 | AI 架构师 |

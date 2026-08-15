@@ -182,6 +182,7 @@ Echo/
 | **开发计划**           | `docs/05-planning/开发计划安排文档.md`                 | 里程碑、时间线、资源安排        |
 | **任务状态**           | `docs/05-planning/task-status.json`                    | 任务执行状态追踪                |
 | **延期任务**           | `docs/05-planning/deferred-items.json`                 | 延期到后续 Phase 的任务追踪      |
+| **疑难杂症问题**       | `docs/06-troubleshooting/`                             | 架构性限制/难解问题的定位与根因分析 |
 | **UI 文档路由**        | `docs/ui/README.md`                                    | Phase 3 UI 设计、架构、自动化、测试 |
 | **Agent 规约**         | `AGENTS.md`                                            | OpenCode/Codex 协作规约         |
 
