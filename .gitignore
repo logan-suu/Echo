@@ -1,5 +1,7 @@
 # OpenCode agent runtime data
 .omo/
+# Personal model/provider routing (user-specific, not shared)
+.opencode/oh-my-openagent.json
 
 # Legacy tool artifacts (not used)
 .codex/
