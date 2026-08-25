@@ -613,3 +613,54 @@ struct PhotoTextSearchIdentityTests {
         try await db.deleteDeletionJournal(operationID: "op-roundtrip")
         #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
     }
+
+    // MARK: - WP3 Steps 3k/3m-3t2: 阶段机故障注入与幂等重放恢复
+
+    @Test(
+        "Deletion stage machine recovers from injected stage failure (WP3 steps 3k/3m/3o/3q/3s)",
+        arguments: [
+            (CanonicalMemoryRepositoryActor.FaultPoint.cacheInvalidation, MemoryDeletionPhase.planned),
+            (CanonicalMemoryRepositoryActor.FaultPoint.vectorDeletePersist, MemoryDeletionPhase.cacheInvalidated),
+            (CanonicalMemoryRepositoryActor.FaultPoint.auditPurge, MemoryDeletionPhase.vectorsDeleted),
+            (CanonicalMemoryRepositoryActor.FaultPoint.canonicalTransaction, MemoryDeletionPhase.auditPurged),
+        ]
+    )
+    func testStageMachineRecoversFromStageFailure(
+        faultPoint: CanonicalMemoryRepositoryActor.FaultPoint,
+        stuckPhase: MemoryDeletionPhase
+    ) async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        await repo.configureDeletionCollaborators(cache: SearchResultCacheActor())
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-stage", sourceType: "photo")
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-stage", canonicalText: nil, sourceType: "photo"),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-stage"
+        )
+
+        // 故障注入：管线停在对应阶段，journal 保留上一完成相位
+        await repo.setFault(faultPoint)
+        do {
+            _ = try await repo.deleteMemory(memoryId: memoryId, writeExcluded: false, traceID: "t-wp3-stage")
+            Issue.record("expected stage fault at \(faultPoint)")
+        } catch {}
+        var journals = try await db.loadDeletionJournals(memoryId: memoryId)
+        #expect(journals.first?.phase == stuckPhase)
+
+        // 清除故障后幂等重放：各阶段天然幂等 ⇒ 直达 completed 并自移除 journal
+        await repo.setFault(nil)
+        _ = try await repo.deleteMemory(memoryId: memoryId, writeExcluded: false, traceID: "t-wp3-stage")
+        journals = try await db.loadDeletionJournals(memoryId: memoryId)
+        #expect(journals.isEmpty)
+
+        // 零残留抽查：canonical 行已清除
+        let rows = try await db.executeQuery(
+            sql: "SELECT COUNT(*) AS c FROM Memory WHERE memoryId = ?",
+            bindings: [.text(memoryId.uuidString)]
+        )
+        #expect(rows.first?["c"]?.intValue == 0)
+    }

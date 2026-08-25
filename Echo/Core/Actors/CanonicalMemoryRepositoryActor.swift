@@ -113,6 +113,18 @@ public actor CanonicalMemoryRepositoryActor {
         case afterCanonicalWrite
         /// 在 deleteMemory 向量清理前注入失败（模拟 DB 删除故障，3F.5 W-03）
         case deleteFail
+        /// WP3 steps 3k-3t2: 删除管线阶段注入点
+        case cacheInvalidation
+        case vectorDeletePersist
+        case auditPurge
+        case canonicalTransaction
+    }
+
+    /// WP3 steps 3k-3t2：删除管线协作方（组合根 setter 注入，避免 init 连锁）。
+    private var deletionCacheActor: SearchResultCacheActor?
+
+    public func configureDeletionCollaborators(cache: SearchResultCacheActor) {
+        deletionCacheActor = cache
     }
 
     public func setFault(_ fault: FaultPoint?) {
@@ -290,18 +302,32 @@ public actor CanonicalMemoryRepositoryActor {
         let memory = try await loadMemory(memoryId: memoryId)
         guard memory != nil else { return false }
 
-        // WP3 steps 3i/3j (D-005): deletion journal 先于一切副作用持久化。
-        // 起步版每代登记 canonical 主向量 [memoryId]；帧/音频枚举随步骤 3m 完善。
-        let operationID = "del-\(memoryId.uuidString)-\(Int(Date().timeIntervalSince1970 * 1000))"
-        let planned = MemoryDeletionJournal(
-            operationID: operationID,
-            memoryID: memoryId,
-            auditSubjectHash: AuditSubject.memory(memoryId).subjectHash,
-            traceID: traceID,
-            phase: .planned,
-            vectorIDsByGeneration: []
+        // D-005 (WP3 steps 3i-3t2): journal 驱动的可恢复删除阶段机。
+        // 固定 operationID ⇒ 故障重放幂等更新同一 journal 行。
+        let operationID = "del-\(memoryId.uuidString.lowercased())"
+        let subject = AuditSubject.memory(memoryId)
+
+        func advance(_ phase: MemoryDeletionPhase,
+                     vectors: [GenerationVectorIDs] = []) async throws {
+            let j = MemoryDeletionJournal(
+                operationID: operationID,
+                memoryID: memoryId,
+                auditSubjectHash: subject.subjectHash,
+                traceID: traceID,
+                phase: phase,
+                vectorIDsByGeneration: vectors
+            )
+            try await db.upsertDeletionJournal(j)
+        }
+
+        // Phase: planned —— 先于一切副作用持久化
+        let generations = try await generationRegistry.loadGenerations()
+        try await advance(
+            .planned,
+            vectors: generations.map {
+                GenerationVectorIDs(generationID: $0.generationId, vectorIDs: [memoryId])
+            }
         )
-        try await db.upsertDeletionJournal(planned)
 
         #if DEBUG
         if fault == .deleteFail {
@@ -309,23 +335,30 @@ public actor CanonicalMemoryRepositoryActor {
         }
         #endif
 
-        // 1) 删除全部 generation 中的向量（内存实例 + 持久化磁盘副本，D-005 跨全 generation）
-        //    F-1: 未在本会话加载的 generation（retired/未恢复）其 .pxkt 磁盘副本同样必须清理，
-        //    否则重启恢复后残留向量。磁盘清理失败记录到审计日志，不阻断 SQLite 删除事务。
+        // Stage 1: cache 失效（协作方经 configureDeletionCollaborators 注入；
+        // 未注入时跳过——单元夹具场景无 cache 可失效）
+        if let cache = deletionCacheActor {
+            _ = try await cache.invalidate(memoryID: memoryId)
+            #if DEBUG
+            if fault == .cacheInvalidation {
+                throw CanonicalRepositoryError.deleteInjected
+            }
+            #endif
+        }
+        try await advance(.cacheInvalidated)
+
+        // Stage 2: 全 generation 向量删除（内存实例 + 磁盘副本 F-1）
         var diskCleanupFailed = false
-        let generations = try await generationRegistry.loadGenerations()
         for gen in generations {
             let generationId = gen.generationId
             if let store = await generationRegistry.vectorStore(for: generationId) {
                 _ = await store.delete(id: memoryId)
-                // 内存删除后持久化，避免磁盘副本仍保留已删向量（F-1）
                 do {
                     try await generationRegistry.persistStore(generationId: generationId)
                 } catch {
                     diskCleanupFailed = true
                 }
             } else {
-                // 未加载的 generation：直接从磁盘副本加载并删除对应向量（F-1）
                 let url = await generationRegistry.storeFileURL(for: generationId)
                 guard FileManager.default.fileExists(atPath: url.path),
                       let diskStore = try? VectorStoreActor.load(from: url) else { continue }
@@ -337,17 +370,36 @@ public actor CanonicalMemoryRepositoryActor {
                 }
             }
         }
+        #if DEBUG
+        if fault == .vectorDeletePersist {
+            throw CanonicalRepositoryError.deleteInjected
+        }
+        #endif
+        try await advance(.vectorsDeleted)
 
-        // 2) SQLite 事务：canonical + FTS + translationCache 原子清除
+        // Stage 3: subject-linked audit purge（精确按 kind+subjectHash）
+        _ = try await privacyActor.purgeAuditRecords(subject: subject, traceID: traceID)
+        #if DEBUG
+        if fault == .auditPurge {
+            throw CanonicalRepositoryError.deleteInjected
+        }
+        #endif
+        try await advance(.auditPurged)
+
+        // Stage 4: canonical transaction（canonical + FTS + translationCache 原子清除）
         try await db.executeTransaction([
             .init(sql: "DELETE FROM MemoryFTS WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
             .init(sql: "DELETE FROM translationCache WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
             .init(sql: "DELETE FROM Memory WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
         ])
+        #if DEBUG
+        if fault == .canonicalTransaction {
+            throw CanonicalRepositoryError.deleteInjected
+        }
+        #endif
+        try await advance(.canonicalDeleted)
 
-        // 3) ExcludedAssets 契约 (US-PRV-004 AC-2 / US-PRV-007 AC-2)
-        //    CR-1 (PR#56 review): 缺省 sourceLocator/sourceType 时回退已加载 memory 的
-        //    定位信息，避免静默跳过排除写入；审计记录真实写入结果。
+        // ExcludedAssets 契约 (US-PRV-004 AC-2 / US-PRV-007 AC-2; CR-1 PR#56)
         let effectiveLocator = sourceLocator ?? memory?.sourceLocator
         let effectiveType = sourceType ?? memory?.sourceType
         var excludedActuallyWritten = false
@@ -356,7 +408,7 @@ public actor CanonicalMemoryRepositoryActor {
             excludedActuallyWritten = true
         }
 
-        // 4) 审计
+        // 完成审计（不含 memory subject 明文；携带向量磁盘清理标记）
         let policy = await privacyActor.getPolicy()
         try? await privacyActor.writeAuditLog(
             eventType: .memoryDeleted,
@@ -367,6 +419,10 @@ public actor CanonicalMemoryRepositoryActor {
             excludedWritten: excludedActuallyWritten,
             content: diskCleanupFailed ? "vectorDiskCleanupFailed=true" : nil
         )
+
+        // Completed：journal 自移除（防 subject 经 journal 重引入）
+        try await advance(.completed)
+        try await db.deleteDeletionJournal(operationID: operationID)
         return true
     }
 
