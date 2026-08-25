@@ -21,6 +21,10 @@ from pathlib import Path
 import numpy as np
 
 
+def repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
 def _cosine(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-12))
 
@@ -33,11 +37,23 @@ def main() -> int:
     parser.add_argument("--text-model", required=True)
     parser.add_argument("--fixture", default="Scripts/tests/fixtures/siglip2_tokenizer_fixture.json")
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--require-coreml", action="store_true", dest="require_coreml",
+        help="release-gate form: fail fast if either Core ML artifact is absent"
+    )
     args = parser.parse_args()
 
     import coremltools.models as ctm
     import torch
     from transformers import Siglip2TextModel, SiglipVisionModel
+
+    if args.require_coreml:
+        missing = [p for p in (args.vision_model, args.text_model)
+                   if not (repo_root() / p).exists()]
+        if missing:
+            print(f"[require-coreml] missing artifacts: {missing}", file=__import__('sys').stderr)
+            return 1
+        print("[require-coreml] both Core ML artifacts present")
 
     repo = Path.cwd()
     local_dir = str(repo / "Echo/Resources/Models/siglip2-base-patch32-256")
