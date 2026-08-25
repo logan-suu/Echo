@@ -186,6 +186,7 @@ extension PhotoTextSearchContractsTests {
     @Test("Nil-metadata vector hit maps through canonical repository (WP1 step 3a)")
     func testNilVectorMetadataMapsThroughCanonicalRepository() async throws {
         let repo = try await CanonicalMappingFixtures.prepare()
+        let generationID = "text_dense/e5-v1"
         let representationID = UUID()
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-nil", sourceType: "photo")
         _ = try await repo.commit(
@@ -202,13 +203,18 @@ extension PhotoTextSearchContractsTests {
             ]],
             traceID: "t-wp1-3a"
         )
-        let result = try await repo.mapVectorID(representationID)
-        #expect(result == .mapped(memoryID: memoryId))
+        let result = try await repo.mapVectorID(representationID, generationID: generationID)
+        guard case .mapped(let binding) = result else {
+            Issue.record("expected .mapped")
+            return
+        }
+        #expect(binding.memoryID == memoryId)
     }
 
     @Test("EXIF-metadata vector hit maps without legacy MemoryEntry decode (WP1 step 3c)")
     func testEXIFMetadataMapsThroughCanonicalRepository() async throws {
         let repo = try await CanonicalMappingFixtures.prepare()
+        let generationID = "text_dense/e5-v1"
         let representationID = UUID()
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-exif", sourceType: "photo")
         let exifPayload = Data("{\"EXIF\":{\"Orientation\":6}}".utf8)
@@ -226,21 +232,27 @@ extension PhotoTextSearchContractsTests {
             ]],
             traceID: "t-wp1-3c"
         )
-        let result = try await repo.mapVectorID(representationID)
-        #expect(result == .mapped(memoryID: memoryId))
+        let result = try await repo.mapVectorID(representationID, generationID: generationID)
+        guard case .mapped(let binding) = result else {
+            Issue.record("expected .mapped")
+            return
+        }
+        #expect(binding.memoryID == memoryId)
     }
 
     @Test("Unknown vector ID returns typed missing mapping (WP1 step 3e)")
     func testMissingCanonicalRowReturnsTypedMissingMapping() async throws {
         let repo = try await CanonicalMappingFixtures.prepare()
+        let generationID = "text_dense/e5-v1"
         let ghost = UUID()
-        let result = try await repo.mapVectorID(ghost)
-        #expect(result == .missing(vectorID: ghost))
+        let result = try await repo.mapVectorID(ghost, generationID: generationID)
+        #expect(result == .missing(vectorID: ghost, generationID: generationID))
     }
 
     @Test("Batch lookup maps vector IDs keyed by input (WP1 step 4a)")
     func testBatchLookupMapsVectorIDsInOneRepositoryCall() async throws {
         let repo = try await CanonicalMappingFixtures.prepare()
+        let generationID = "text_dense/e5-v1"
         let firstID = UUID()
         let secondID = UUID()
         let memoryOne = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-b1", sourceType: "photo")
@@ -258,10 +270,18 @@ extension PhotoTextSearchContractsTests {
             traceID: "t-wp1-4a"
         )
         let ghost = UUID()
-        let results = try await repo.mapVectorIDs([firstID, secondID, ghost])
-        #expect(results[firstID] == .mapped(memoryID: memoryOne))
-        #expect(results[secondID] == .mapped(memoryID: memoryTwo))
-        #expect(results[ghost] == .missing(vectorID: ghost))
+        let results = try await repo.mapVectorIDs([firstID, secondID, ghost], generationID: generationID)
+        guard case .mapped(let b1) = results[firstID] else {
+            Issue.record("expected mapped first")
+            return
+        }
+        guard case .mapped(let b2) = results[secondID] else {
+            Issue.record("expected mapped second")
+            return
+        }
+        #expect(b1.memoryID == memoryOne)
+        #expect(b2.memoryID == memoryTwo)
+        #expect(results[ghost] == .missing(vectorID: ghost, generationID: generationID))
     }
 }
 

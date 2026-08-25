@@ -199,24 +199,33 @@ public actor CanonicalMemoryRepositoryActor {
     ///
     /// 经 Representation 表按 representationId 反查 memoryId；
     /// 查无即返回 `.missing`（是否 fail-closed 排除由调用方决定）。
-    public func mapVectorID(_ vectorID: UUID) async throws -> CanonicalMappingResult {
+    public func mapVectorID(_ vectorID: UUID, generationID: String) async throws -> CanonicalMappingResult {
         let rows = try await db.executeQuery(
-            sql: "SELECT memoryId FROM Representation WHERE representationId = ? LIMIT 1",
+            sql: "SELECT memoryId, modality FROM Representation WHERE representationId = ? LIMIT 1",
             bindings: [.text(vectorID.uuidString)]
         )
         guard let row = rows.first,
               let idString = row["memoryId"]?.stringValue,
-              let memoryID = UUID(uuidString: idString) else {
-            return .missing(vectorID: vectorID)
+              let memoryID = UUID(uuidString: idString),
+              let modalityRaw = row["modality"]?.stringValue,
+              let modality = Modality(rawValue: modalityRaw) else {
+            return .missing(vectorID: vectorID, generationID: generationID)
         }
-        return .mapped(memoryID: memoryID)
+        // ADR-015 D-7: vectorId == representationId，一对一绑定
+        return .mapped(CanonicalVectorBinding(
+            vectorID: vectorID,
+            representationID: vectorID,
+            memoryID: memoryID,
+            modality: modality,
+            generationID: generationID
+        ))
     }
 
     /// WP1 步骤 4：批量映射 —— 调用方单次仓库交互，结果按入参 ID 键控。
-    public func mapVectorIDs(_ vectorIDs: [UUID]) async throws -> [UUID: CanonicalMappingResult] {
+    public func mapVectorIDs(_ vectorIDs: [UUID], generationID: String) async throws -> [UUID: CanonicalMappingResult] {
         var results: [UUID: CanonicalMappingResult] = [:]
         for vectorID in vectorIDs {
-            results[vectorID] = try await mapVectorID(vectorID)
+            results[vectorID] = try await mapVectorID(vectorID, generationID: generationID)
         }
         return results
     }

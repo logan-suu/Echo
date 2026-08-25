@@ -269,8 +269,8 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
         for result in results {
             // WP1 步骤 4d：canonical 路径优先——缺失/歧义映射 fail-closed 跳过（审计计数随 WP3）。
             if let canonicalMapper {
-                guard case .mapped(let memoryID) = try await canonicalMapper.mapVectorID(result.id),
-                      let memory = try await canonicalMapper.loadMemory(memoryId: memoryID) else {
+                guard case .mapped(let binding) = try await canonicalMapper.mapVectorID(result.id, generationID: generationId),
+                      let memory = try await canonicalMapper.loadMemory(memoryId: binding.memoryID) else {
                     continue
                 }
                 guard policy.isAuthorized(sourceType: SearchPipeline.normalizeSourceType(memory.sourceType)) else {

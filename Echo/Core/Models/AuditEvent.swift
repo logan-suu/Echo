@@ -200,3 +200,26 @@ public enum AuditContentHasher {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
+
+// MARK: - AuditSubject（WP3 步骤 3b，交接计划 §7.8）
+
+/// memory 主体的确定性审计身份——同一 memory 的 ingest、search-result selection、
+/// feedback、delete、migration 与 compensation 记录可按 subjectHash 确定性识别。
+/// 不落明文；不与 payload contentHash 混淆。
+public nonisolated struct AuditSubject: Sendable, Codable, Equatable {
+    public nonisolated let kind: String
+    public nonisolated let subjectHash: String
+
+    public nonisolated init(kind: String, subjectHash: String) {
+        self.kind = kind
+        self.subjectHash = subjectHash
+    }
+
+    /// 固定输入 "memory:" + lowercase UUID，经 AuditContentHasher.sha256Hex。
+    public nonisolated static func memory(_ memoryID: UUID) -> AuditSubject {
+        AuditSubject(
+            kind: "memory",
+            subjectHash: AuditContentHasher.sha256Hex("memory:" + memoryID.uuidString.lowercased())
+        )
+    }
+}
