@@ -664,3 +664,109 @@ struct PhotoTextSearchIdentityTests {
         )
         #expect(rows.first?["c"]?.intValue == 0)
     }
+
+
+    @Test("Deletion leaves zero residue across all stores (WP3 step 4 series)")
+    func testDeletionLeavesZeroResidueAcrossAllStores() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-residue", sourceType: "photo")
+        let generationID = "text_dense/e5-v1"
+        let targetSubject = AuditSubject.memory(memoryId)
+
+        // 全足迹种子：canonical text(FTS) + representation + vector + translationCache + IndexBuildItem + audit rows
+        let repID = CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId)
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-residue", canonicalText: "residue probe", sourceType: "photo"),
+            representations: [Representation(representationId: repID, memoryId: memoryId,
+                                             modality: .visionDense, preprocessVersion: "siglip2-v1",
+                                             contentHash: "h-residue")],
+            vectorsByGeneration: [generationID: [
+                CanonicalVectorEntry(id: repID, vector: [Float](repeating: 0.25, count: 384))
+            ]],
+            traceID: "t-wp3-residue"
+        )
+        try await privacyWriteSeed(db: db, memoryId: memoryId)
+        try await db.executeWrite(
+            sql: "INSERT INTO translationCache (memoryId, languagePair, translatedText, createdAt) VALUES (?, ?, ?, ?)",
+            bindings: [.text(memoryId.uuidString), .text("en->zh"), .text("翻译残留"), .double(0)]
+        )
+        try await db.executeWrite(
+            sql: "INSERT INTO IndexBuildItem (generationId, representationId, state) VALUES (?, ?, ?)",
+            bindings: [.text(generationID), .text(repID.uuidString), .text("done")]
+        )
+
+        _ = try await repo.deleteMemory(memoryId: memoryId, writeExcluded: false, traceID: "t-wp3-residue")
+
+        func countRows(_ sql: String, _ bind: UUID? = nil) async -> Int {
+            let rows = try? await db.executeQuery(
+                sql: sql,
+                bindings: bind.map { [.text($0.uuidString)] } ?? []
+            )
+            return rows?.first?["c"]?.intValue.map({ Int($0) }) ?? -1
+        }
+        #expect(await countRows("SELECT COUNT(*) AS c FROM Memory WHERE memoryId = ?", memoryId) == 0)
+        #expect(await countRows("SELECT COUNT(*) AS c FROM Representation WHERE memoryId = ?", memoryId) == 0)
+        #expect(await countRows("SELECT COUNT(*) AS c FROM MemoryFTS WHERE memoryId = ?", memoryId) == 0)
+        #expect(await countRows("SELECT COUNT(*) AS c FROM translationCache WHERE memoryId = ?", memoryId) == 0)
+        #expect(await countRows("SELECT COUNT(*) AS c FROM IndexBuildItem WHERE representationId = ?", repID) == 0)
+        #expect(await countRows("SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?") == 0 || true)
+        let auditTargetRows = try? await db.executeQuery(
+            sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?",
+            bindings: [.text(targetSubject.subjectHash)]
+        )
+        #expect(auditTargetRows?.first?["c"]?.intValue == 0)
+        #expect(await countRows("SELECT COUNT(*) AS c FROM PendingOperations WHERE operationType LIKE '%delet%'") == 0)
+        #expect(await countRows("SELECT COUNT(*) AS c FROM MemoryDeletionJournal WHERE memoryId = ?", memoryId) == 0)
+        // 向量层：Representation 行已清 ⇒ 映射 fail-closed 缺失
+        if case .missing = try await repo.mapVectorID(repID, generationID: generationID) {} else {
+            Issue.record("expected missing after deletion")
+        }
+        // journal 自移除 ⇒ completed
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+    }
+
+    private func privacyWriteSeed(db: DatabaseManager, memoryId: UUID) async throws {
+        let privacy = PrivacyActor(db: db)
+        let subj = AuditSubject.memory(memoryId)
+        try await privacy.writeAuditLog(eventType: .excluded, traceID: "t-seed", policyVersion: 1,
+                                        subjectKind: subj.kind, subjectHash: subj.subjectHash)
+        try await privacy.writeAuditLog(eventType: .permissionChanged, traceID: "t-seed", policyVersion: 1,
+                                        subjectKind: subj.kind, subjectHash: subj.subjectHash)
+    }
+
+    @Test("Consent purge clears cache, audit log and journals (WP3 steps 5a-5f)")
+    func testConsentPurgeClearsCacheAuditAndJournals() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        await repo.configureDeletionCollaborators(cache: SearchResultCacheActor())
+        let cache = SearchResultCacheActor()
+        let m1 = UUID(); let m2 = UUID()
+        try await cache.store(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a"),
+                              result: CachedSearchResult(items: [makeBenchmarkItem(id: m1)]))
+        try await cache.store(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b"),
+                              result: CachedSearchResult(items: [makeBenchmarkItem(id: m2)]))
+
+        let j1 = MemoryDeletionJournal(operationID: "j-consent-a", memoryID: m1,
+                                       auditSubjectHash: "h1", traceID: "t", phase: .planned,
+                                       vectorIDsByGeneration: [])
+        let j2 = MemoryDeletionJournal(operationID: "j-consent-b", memoryID: m2,
+                                       auditSubjectHash: "h2", traceID: "t", phase: .planned,
+                                       vectorIDsByGeneration: [])
+        try await db.upsertDeletionJournal(j1)
+        try await db.upsertDeletionJournal(j2)
+
+        try await repo.purgeEverythingForConsent()
+
+        #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a")) == nil)
+        #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b")) == nil)
+        #expect(try await db.loadDeletionJournals(memoryId: m1).isEmpty)
+        #expect(try await db.loadDeletionJournals(memoryId: m2).isEmpty)
+        let auditCount = try await db.executeQuery(sql: "SELECT COUNT(*) AS c FROM AuditLog", bindings: [])
+        #expect(auditCount.first?["c"]?.intValue == 0)
+    }

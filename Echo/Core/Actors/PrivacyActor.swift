@@ -405,6 +405,13 @@ public actor PrivacyActor {
 
     /// 清理超过保留期的审计日志（AGENTS.md §5.4: 保留期 30 天）
     @discardableResult
+    /// WP3 步骤 5d：consent purge 全量审计清除，返回删除前行数。
+    public func purgeAllAuditRecords() async throws -> Int {
+        let before = try await auditLogCount()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        return before
+    }
+
     /// WP3 步骤 3h：按 subject identity 精确删除目标主体的全部审计行，
     /// 其他主体行保留；返回删除行数。
     public func purgeAuditRecords(subject: AuditSubject, traceID: String) async throws -> Int {

@@ -426,6 +426,16 @@ public actor CanonicalMemoryRepositoryActor {
         return true
     }
 
+    /// WP3 steps 5a-5f：consent revoke 三接通组合入口——
+    /// cache 全量失效 + AuditLog 全量 purge + deletion journal 清理。
+    public func purgeEverythingForConsent() async throws {
+        if let cache = deletionCacheActor {
+            _ = try await cache.invalidateAll()
+        }
+        _ = try await privacyActor.purgeAllAuditRecords()
+        try await db.deleteAllDeletionJournals()
+    }
+
     /// 原始文件级联删除（US-PRV-007）— 不写 ExcludedAssets，清理无效排除记录。
     ///
     /// - Returns: 删除统计（内存删除数 + 是否清理了无效排除记录）
