@@ -56,7 +56,7 @@ def main() -> int:
         print("[require-coreml] both Core ML artifacts present")
 
     repo = Path.cwd()
-    local_dir = str(repo / "Echo/Resources/Models/siglip2-base-patch32-256")
+    local_dir = str(repo / "PinnedModels/siglip2-base-patch32-256")
 
     # ---------- deterministic inputs ----------
     spec = importlib.util.spec_from_file_location("conv", str(repo / "Scripts/convert_siglip2.py"))

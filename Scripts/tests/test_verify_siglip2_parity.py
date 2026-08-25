@@ -83,7 +83,7 @@ def _live_encode(text: str) -> tuple[list[int], list[int]]:
     from transformers import AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(
-        str(REPO_ROOT / "Echo/Resources/Models/siglip2-base-patch32-256")
+        str(REPO_ROOT / "PinnedModels/siglip2-base-patch32-256")
     )
     enc = tok(text, padding="max_length", max_length=64, truncation=True,
               return_attention_mask=True)
@@ -110,7 +110,8 @@ def test_tokenizer_attention_masks_match_pinned_upstream() -> None:
 # WP2 steps 3a-3f: 文本塔导出工件与预检校验
 # ---------------------------------------------------------------------------
 
-TEXT_TOWER_ARTIFACT = REPO_ROOT / "Echo/Resources/Models/SigLIP2TextBasePatch32.mlpackage"
+# PinnedModels 迁移（2026-08-25）：转换源与中间产物已移出同步组覆盖范围
+TEXT_TOWER_ARTIFACT = REPO_ROOT / "PinnedModels/SigLIP2TextBasePatch32.mlpackage"
 PINNED_VOCAB = 256_000
 PINNED_TEXT_PARAMS = 282_303_744
 
@@ -254,7 +255,7 @@ class TestQuantCandidateParity:
 
         from transformers import Siglip2TextModel, SiglipVisionModel
 
-        local_dir = str(REPO_ROOT / "Echo/Resources/Models/siglip2-base-patch32-256")
+        local_dir = str(REPO_ROOT / "PinnedModels/siglip2-base-patch32-256")
         tref = Siglip2TextModel.from_pretrained(local_dir).eval()
         vref = SiglipVisionModel.from_pretrained(local_dir).eval()
         spec = importlib.util.spec_from_file_location("conv_wp2", CONVERTER)
