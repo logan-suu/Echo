@@ -25,13 +25,12 @@ import json
 import os
 import subprocess
 import sys
-from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from safetensors.torch import load_file
+from torch import nn
 
 # ---- Architecture Constants (verified from safetensors) ----
 IMAGE_SIZE = 256
@@ -193,11 +192,11 @@ class SigLIP2VisionEncoder(nn.Module):
         attn = attn.transpose(1, 2).reshape(B, 1, EMBED_DIM)
         probe_out = self.head_attn_out(attn)         # [B, 1, 768]
 
-        # Residual + LayerNorm + MLP (upstream chain)
-        probe_out = probe_out + probe               # residual
-        probe_out = self.head_ln(probe_out)
+        # Official pinned chain (HF SiglipMultiheadAttentionPoolingHead):
+        # h = LN(A); out = A + MLP(h) -- no extra probe residual (WP2 step 1b)
+        h = self.head_ln(probe_out)
         mlp_out = self.head_mlp_fc2(
-            F.gelu(self.head_mlp_fc1(probe_out))
+            F.gelu(self.head_mlp_fc1(h), approximate="tanh")   # checkpoint tanh GELU (WP2 step 1d)
         )
         probe_out = probe_out + mlp_out             # [B, 1, 768]
 
@@ -455,7 +454,7 @@ def main():
         output_dir = os.path.dirname(mlpackage_path) or "."
         result = subprocess.run(
             ["xcrun", "coremlcompiler", "compile", mlpackage_path, output_dir],
-            capture_output=True, text=True,
+            capture_output=True, text=True, check=False,
         )
         if result.returncode != 0:
             print(f"  WARNING: coremlcompiler failed:\n{result.stderr}", file=sys.stderr)
