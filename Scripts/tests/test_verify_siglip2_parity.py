@@ -53,3 +53,54 @@ def test_image_pooling_uses_official_chain() -> None:
         src,
     )
     assert official is not None, "official chain LN->MLP(tanh) ordering not found"
+
+
+# ---------------------------------------------------------------------------
+# WP2 steps 2a-2d: 固定 tokenizer fixture（int32[1,64] 输入契约）
+# ---------------------------------------------------------------------------
+
+import json
+
+FIXTURE = REPO_ROOT / "Scripts" / "tests" / "fixtures" / "siglip2_tokenizer_fixture.json"
+REQUIRED_CASE_KEYS = {"zhHans", "enUS", "punctuation", "truncation", "padding", "empty", "mixed"}
+VOCAB_SIZE_PINNED = 256_000
+
+
+def test_tokenizer_fixture_schema_covers_required_cases() -> None:
+    """WP2 步骤 2a：fixture 必须覆盖七类 case，形状满足固定 int32[1,64] 契约。"""
+    data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    cases = data["cases"]
+    assert set(cases.keys()) == REQUIRED_CASE_KEYS
+    assert data["maxLength"] == 64
+    for name, case in cases.items():
+        assert len(case["inputIds"]) == 64, name
+        assert len(case["attentionMask"]) == 64, name
+        assert all(isinstance(i, int) and 0 <= i < VOCAB_SIZE_PINNED for i in case["inputIds"]), name
+        assert set(case["attentionMask"]) <= {0, 1}, name
+
+
+def _live_encode(text: str) -> tuple[list[int], list[int]]:
+    from transformers import AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(
+        str(REPO_ROOT / "Echo/Resources/Models/siglip2-base-patch32-256")
+    )
+    enc = tok(text, padding="max_length", max_length=64, truncation=True,
+              return_attention_mask=True)
+    return enc["input_ids"], enc["attention_mask"]
+
+
+def test_tokenizer_token_ids_match_pinned_upstream() -> None:
+    """WP2 步骤 2c（GREEN regression）：fixture 与 pinned 分词器 token ID 完全一致。"""
+    data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    for name, case in data["cases"].items():
+        ids, _mask = _live_encode(case["text"])
+        assert ids == case["inputIds"], f"token ID drift in case {name}"
+
+
+def test_tokenizer_attention_masks_match_pinned_upstream() -> None:
+    """WP2 步骤 2d（GREEN regression）：attention mask 与 pinned 分词器完全一致。"""
+    data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    for name, case in data["cases"].items():
+        _ids, mask = _live_encode(case["text"])
+        assert mask == case["attentionMask"], f"attention mask drift in case {name}"
