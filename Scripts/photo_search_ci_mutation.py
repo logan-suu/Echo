@@ -33,6 +33,20 @@ def load_manifest(path: Path) -> dict:
     return manifest
 
 
+def decide_exit(child_returncode: int, child_output: str, expected_reason: str) -> int:
+    """Map a single child-gate run onto the runner exit contract.
+
+    - child gate passed                  -> mutation survived -> EXIT_MUTATION_SURVIVED
+    - failed AND output names the reason -> mutation detected -> EXIT_OK
+    - failed without that reason         -> wrong gate/reason -> EXIT_WRONG_GATE_OR_REASON
+    """
+    if child_returncode == 0:
+        return EXIT_MUTATION_SURVIVED
+    if expected_reason in child_output:
+        return EXIT_OK
+    return EXIT_WRONG_GATE_OR_REASON
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True,
