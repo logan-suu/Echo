@@ -290,6 +290,19 @@ public actor CanonicalMemoryRepositoryActor {
         let memory = try await loadMemory(memoryId: memoryId)
         guard memory != nil else { return false }
 
+        // WP3 steps 3i/3j (D-005): deletion journal 先于一切副作用持久化。
+        // 起步版每代登记 canonical 主向量 [memoryId]；帧/音频枚举随步骤 3m 完善。
+        let operationID = "del-\(memoryId.uuidString)-\(Int(Date().timeIntervalSince1970 * 1000))"
+        let planned = MemoryDeletionJournal(
+            operationID: operationID,
+            memoryID: memoryId,
+            auditSubjectHash: AuditSubject.memory(memoryId).subjectHash,
+            traceID: traceID,
+            phase: .planned,
+            vectorIDsByGeneration: []
+        )
+        try await db.upsertDeletionJournal(planned)
+
         #if DEBUG
         if fault == .deleteFail {
             throw CanonicalRepositoryError.deleteInjected

@@ -551,3 +551,65 @@ struct PhotoTextSearchIdentityTests {
         #expect(remainingTarget.first?["c"]?.intValue == 0)
         #expect(remainingOther.first?["c"]?.intValue == 1)
     }
+
+
+    @Test("Deletion persists planned journal before side effects (WP3 step 3i)")
+    func testDeletionPersistsPlannedJournalBeforeSideEffects() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-3i", sourceType: "photo")
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-3i", canonicalText: nil, sourceType: "photo"),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-3i"
+        )
+
+        await repo.setFault(.deleteFail)
+        // journal(.planned) 先于 fault 注入点持久化 ⇒ 故障抛出后仍可恢复
+        do {
+            _ = try await repo.deleteMemory(memoryId: memoryId, writeExcluded: false, traceID: "t-wp3-3i")
+            Issue.record("expected deleteInjected fault")
+        } catch {}
+        await repo.setFault(nil)
+
+        let journals = try await db.loadDeletionJournals(memoryId: memoryId)
+        #expect(journals.count == 1)
+        #expect(journals.first?.phase == .planned)
+        #expect(journals.first?.auditSubjectHash == AuditSubject.memory(memoryId).subjectHash)
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+    }
+
+    @Test("Deletion journal schema roundtrips full payload (WP3 steps 3j/3j1)")
+    func testDeletionJournalSchemaRoundtrip() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let memoryId = UUID()
+        let genVecs = [
+            GenerationVectorIDs(generationID: "text_dense/e5-v1", vectorIDs: [UUID(), UUID()]),
+            GenerationVectorIDs(generationID: "vision_dense/siglip2-v1", vectorIDs: [UUID()]),
+        ]
+        let journal = MemoryDeletionJournal(
+            operationID: "op-roundtrip",
+            memoryID: memoryId,
+            auditSubjectHash: AuditSubject.memory(memoryId).subjectHash,
+            traceID: "t-wp3-3j",
+            phase: .vectorsDeleted,
+            vectorIDsByGeneration: genVecs
+        )
+        try await db.upsertDeletionJournal(journal)
+
+        let loaded = try await db.loadDeletionJournals(memoryId: memoryId)
+        #expect(loaded.count == 1)
+        let restored = try #require(loaded.first)
+        #expect(restored.operationID == "op-roundtrip")
+        #expect(restored.phase == .vectorsDeleted)
+        #expect(restored.vectorIDsByGeneration.count == 2)
+        #expect(restored.vectorIDsByGeneration[0].vectorIDs.count == 2)
+
+        try await db.deleteDeletionJournal(operationID: "op-roundtrip")
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+    }

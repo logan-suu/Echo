@@ -167,6 +167,18 @@ public actor DatabaseManager {
             try execute(sql: "ALTER TABLE AuditLog ADD COLUMN subjectHash TEXT")
         }
         try execute(sql: "CREATE INDEX IF NOT EXISTS idx_auditlog_subject_hash ON AuditLog(subjectHash)")
+        // WP3 steps 3i-3t2 (photo-text-search): D-005 resumable deletion journal
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS MemoryDeletionJournal (
+                operationID TEXT PRIMARY KEY NOT NULL,
+                memoryId TEXT NOT NULL,
+                auditSubjectHash TEXT NOT NULL,
+                traceID TEXT NOT NULL,
+                phase TEXT NOT NULL,
+                vectorIDsByGenerationJSON TEXT NOT NULL DEFAULT '[]',
+                updatedAt REAL NOT NULL
+            )
+            """)
         // UserPolicy persistence table
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS UserPolicyStore (
@@ -410,6 +422,69 @@ public actor DatabaseManager {
             throw DatabaseError.writeFailed(operation: "step", underlying: NSError(domain: "sqlite3", code: -1, userInfo: [NSLocalizedDescriptionKey: msg]))
         }
         return sqlite3_changes(db)
+    }
+
+    // MARK: - MemoryDeletionJournal CRUD (WP3 steps 3i-3t2, D-005)
+
+    func upsertDeletionJournal(_ journal: MemoryDeletionJournal) async throws {
+        let vecJSONData = try JSONEncoder().encode(journal.vectorIDsByGeneration)
+        let vecJSON = String(data: vecJSONData, encoding: .utf8) ?? "[]"
+        try executeWrite(
+            sql: "INSERT OR REPLACE INTO MemoryDeletionJournal (operationID, memoryId, auditSubjectHash, traceID, phase, vectorIDsByGenerationJSON, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            bindings: [
+                .text(journal.operationID),
+                .text(journal.memoryID.uuidString),
+                .text(journal.auditSubjectHash),
+                .text(journal.traceID),
+                .text(journal.phase.rawValue),
+                .text(vecJSON),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
+    }
+
+    func loadDeletionJournals(memoryId: UUID) async throws -> [MemoryDeletionJournal] {
+        let rows = try executeQuery(
+            sql: "SELECT * FROM MemoryDeletionJournal WHERE memoryId = ? ORDER BY updatedAt",
+            bindings: [.text(memoryId.uuidString)]
+        )
+        return rows.compactMap { Self.rowToDeletionJournal($0) }
+    }
+
+    func deleteDeletionJournal(operationID: String) async throws {
+        try executeWrite(
+            sql: "DELETE FROM MemoryDeletionJournal WHERE operationID = ?",
+            bindings: [.text(operationID)]
+        )
+    }
+
+    func deleteAllDeletionJournals() async throws -> Int {
+        let before = try Int(executeQuery(sql: "SELECT COUNT(*) AS c FROM MemoryDeletionJournal", bindings: []).first?["c"]?.intValue ?? 0)
+        try execute(sql: "DELETE FROM MemoryDeletionJournal")
+        return before
+    }
+
+    private static func rowToDeletionJournal(_ row: [String: DBValue]) -> MemoryDeletionJournal? {
+        guard let opID = row["operationID"]?.stringValue,
+              let memStr = row["memoryId"]?.stringValue,
+              let memoryId = UUID(uuidString: memStr),
+              let subjHash = row["auditSubjectHash"]?.stringValue,
+              let traceID = row["traceID"]?.stringValue,
+              let phaseRaw = row["phase"]?.stringValue,
+              let phase = MemoryDeletionPhase(rawValue: phaseRaw),
+              let vecJSONStr = row["vectorIDsByGenerationJSON"]?.stringValue,
+              let vecData = vecJSONStr.data(using: .utf8) else {
+            return nil
+        }
+        let vectors = (try? JSONDecoder().decode([GenerationVectorIDs].self, from: vecData)) ?? []
+        return MemoryDeletionJournal(
+            operationID: opID,
+            memoryID: memoryId,
+            auditSubjectHash: subjHash,
+            traceID: traceID,
+            phase: phase,
+            vectorIDsByGeneration: vectors
+        )
     }
 
     /// Return the current column names of a table (used for idempotent ALTER migrations).
