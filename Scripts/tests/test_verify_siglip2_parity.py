@@ -157,3 +157,56 @@ def test_pinned_text_parameter_count_is_282303744() -> None:
         pass  # missing keys path also rejected
     # 精确值路径由真实权重在步骤 4 parity 中复核；此处锁定常量本身
     assert mod.PINNED_TEXT_PARAMS == PINNED_TEXT_PARAMS
+
+
+# ---------------------------------------------------------------------------
+# WP2 steps 4a-4j: 正式 parity 报告需求（五件套）
+# ---------------------------------------------------------------------------
+
+PARITY_REPORT = REPO_ROOT / ".omo/evidence/photo-text-search/wp2/intermediate-parity.json"
+
+
+def _parity_report() -> dict:
+    import json
+
+    return json.loads(PARITY_REPORT.read_text(encoding="utf-8"))
+
+
+def test_intermediate_tensor_parity_report_required() -> None:
+    """WP2 步骤 4a：中间张量 parity 报告必须存在且通过。"""
+    r = _parity_report()
+    assert r["intermediateParity"]["passed"] is True
+    assert len(r["intermediateParity"]["stages"]) >= 5
+
+
+def test_raw_pooler_vector_parity_report_required() -> None:
+    """WP2 步骤 4c：raw pooler 向量 parity（双塔）必须存在且通过。"""
+    r = _parity_report()
+    sec = r["rawPoolerParity"]
+    assert sec["passed"] is True
+    assert any(k.startswith("text/") for k in sec["perCase"])
+    assert any(k.startswith("vision/") for k in sec["perCase"])
+
+
+def test_normalized_vector_parity_report_required() -> None:
+    """WP2 步骤 4e：归一化向量 parity 必须存在、单位范数全过。"""
+    r = _parity_report()
+    sec = r["normalizedVectorParity"]
+    assert sec["passed"] is True
+    assert all(v["unitNorm"] for v in sec["perCase"].values())
+
+
+def test_score_matrix_parity_report_required() -> None:
+    """WP2 步骤 4g：跨模态 score matrix parity 必须存在且 maxAbsDiff 达标。"""
+    r = _parity_report()
+    sec = r["scoreMatrixParity"]
+    assert sec["passed"] is True
+    assert sec["shape"] == [6, 7]
+
+
+def test_top_k_parity_report_required() -> None:
+    """WP2 步骤 4i：top-K 排序必须与上游完全一致。"""
+    r = _parity_report()
+    sec = r["topKParity"]
+    assert sec["passed"] is True
+    assert sec["mismatches"] == []
