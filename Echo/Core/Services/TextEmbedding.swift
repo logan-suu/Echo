@@ -20,3 +20,24 @@ public nonisolated enum TextEmbeddingContext: String, Sendable, Codable, Equatab
     case query
     case passage
 }
+
+// MARK: - Contextual Text Embedder Protocol (WP1 步骤 2b)
+
+/// 上下文感知文本嵌入协议 —— 显式携带 query/passage 上下文（交接计划 §7.1）。
+///
+/// 声明为 `nonisolated protocol`：requirements 不绑定 MainActor，
+/// actor 测试替身与生产 actor 均可直接 conform；async witness 保持
+/// actor-isolated，调用方一律 `try await`（R-008）。
+/// E5 摄入传 `.passage`，检索/OCR 查询传 `.query`。
+public nonisolated protocol ContextualTextEmbedder: Sendable {
+    /// 模型清单身份（model-manifest.json 对应条目 ID）
+    nonisolated var modelManifestID: String { get }
+    /// 原生输出维度（E5 = 384）
+    nonisolated var dimension: Int { get }
+
+    func embed(
+        text: String,
+        context: TextEmbeddingContext,
+        traceID: String
+    ) async throws -> [Float]
+}

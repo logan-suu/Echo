@@ -116,6 +116,35 @@ private actor ContextRecordingEmbedder: EmbedderProtocol {
 
 extension PhotoTextSearchContractsTests {
 
+    /// WP1 步骤 2c/2d：TextEmbeddingContext 必须显式 nonisolated。
+    /// 实现于步骤 1（创建即 nonisolated），本测试为回归守卫（GREEN regression）。
+    @Test("TextEmbeddingContext declaration is explicitly nonisolated (WP1 step 2c)")
+    func testTextEmbeddingContextIsNonisolated() throws {
+        let source = try Self.readDoc("Echo/Core/Services/TextEmbedding.swift")
+        #expect(source.contains("public nonisolated enum TextEmbeddingContext"))
+    }
+
+
+// MARK: - WP1 Step 2a: ContextualTextEmbedder conformance
+
+/// Actor 测试替身——验证协议可被 actor 无 MainActor 跳跃地 conform。
+private actor DummyContextualEmbedder: ContextualTextEmbedder {
+    nonisolated let modelManifestID = "test-e5-dummy"
+    nonisolated let dimension = 384
+
+    func embed(text: String, context: TextEmbeddingContext, traceID: String) async throws -> [Float] {
+        [Float](repeating: 1.0 / sqrt(384), count: 384)
+    }
+}
+
+@Test("Contextual embedder conformance without MainActor hop (WP1 step 2a)")
+func testContextualTextEmbedderConformanceWithoutMainActorHop() async throws {
+    let dummy = DummyContextualEmbedder()
+    let vector = try await dummy.embed(text: "red flower", context: .query, traceID: "t-2a")
+    #expect(vector.count == 384)
+    #expect(await dummy.modelManifestID == "test-e5-dummy")
+}
+
 @Test("Production search requests E5 query context (WP1 step 1a)")
 func testSearchUsesE5QueryContext() async throws {
     let spy = ContextRecordingEmbedder()
