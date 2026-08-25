@@ -264,3 +264,65 @@ extension PhotoTextSearchContractsTests {
         #expect(results[ghost] == .missing(vectorID: ghost))
     }
 }
+
+extension PhotoTextSearchContractsTests {
+
+    /// WP1 步骤 4c/4d：canonical 路径 hydration 不经 legacy MemoryEntry.decodeMetadata。
+    /// 行为学证明——向量 metadata 为「legacy 必然解码失败」的载荷，
+    /// 唯有走 canonical 映射才可能命中；旧实现（C6）会静默丢弃该命中。
+    @Test("Canonical generation path hydrates without legacy decode (WP1 step 4c)")
+    func testCanonicalGenerationDoesNotCallMemoryEntryDecodeMetadata() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        for table in ["Representation", "Memory", "IndexGeneration", "ActiveRouteSet"] {
+            try await db.execute(sql: "DELETE FROM \(table)")
+        }
+        let registry = GenerationRegistryActor(db: db)
+        try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+        try await registry.finishShadowBuild("text_dense/e5-v1", counts: 0, validationDigest: nil)
+        try await registry.setGenerationState("text_dense/e5-v1", state: .ready)
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await registry.finishShadowBuild("vision_dense/siglip2-v1", counts: 0, validationDigest: nil)
+        try await registry.setGenerationState("vision_dense/siglip2-v1", state: .ready)
+        let activated = try await registry.activateGeneration("text_dense/e5-v1")
+        try await registry.publishRoute(ActiveRouteSet(
+            textGeneration: "text_dense/e5-v1",
+            visionGeneration: "vision_dense/siglip2-v1",
+            version: activated.version
+        ))
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        let representationID = UUID()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-4c", sourceType: "photo")
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp1-4c", canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(
+                representationId: representationID,
+                memoryId: memoryId,
+                modality: .visionDense,
+                preprocessVersion: "siglip2-v1",
+                contentHash: "hash-4c"
+            )],
+            vectorsByGeneration: [:],
+            traceID: "t-wp1-4c"
+        )
+
+        guard let store = await registry.vectorStore(for: "vision_dense/siglip2-v1") else {
+            Issue.record("active vision generation must expose a vector store")
+            return
+        }
+        let queryVector = [Float](repeating: 0.5, count: 768)
+        try await store.ingest(vector: queryVector, id: representationID, metadata: Data("not-valid-memory-entry{".utf8))
+
+        let adapter = await GenerationRoutedChannelAdapter(
+            generationRegistry: registry,
+            kind: .visionDense,
+            dimension: 768,
+            canonicalMapper: repo
+        )
+        let result = try await adapter.search(queryVector: queryVector, queryText: "", k: 5)
+
+        #expect(result.rankedIds == [representationID])
+        #expect(result.metadataByID[representationID]?.sourceType == "photo")
+    }
+}

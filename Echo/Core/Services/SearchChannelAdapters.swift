@@ -159,6 +159,9 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
     private let dimension: Int
     /// 隐私校验 Actor（R-006，默认应用级 .shared）
     private let privacyActor: PrivacyActor
+    /// canonical 映射仓库（WP1 步骤 4d）——存在时 hydration 走 vectorId→memory
+    /// 正向映射并从 Memory 组装元数据，绝不调用 legacy MemoryEntry.decodeMetadata（C6 修复）。
+    private let canonicalMapper: CanonicalMemoryRepositoryActor?
     /// 单通道检索超时阈值（秒，US-RET-008）
     private nonisolated let searchTimeoutSeconds: Double = 1.5
 
@@ -171,12 +174,14 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
         generationRegistry: GenerationRegistryActor,
         kind: SearchChannelKind,
         dimension: Int,
-        privacyActor: PrivacyActor = .shared
+        privacyActor: PrivacyActor = .shared,
+        canonicalMapper: CanonicalMemoryRepositoryActor? = nil
     ) {
         self.generationRegistry = generationRegistry
         self.channel = kind
         self.dimension = dimension
         self.privacyActor = privacyActor
+        self.canonicalMapper = canonicalMapper
     }
 
     // MARK: - SearchChannelAdapter
@@ -262,6 +267,26 @@ public actor GenerationRoutedChannelAdapter: SearchChannelAdapter {
         var metadataByID: [UUID: SearchChannelMetadata] = [:]
         var rankedIds: [UUID] = []
         for result in results {
+            // WP1 步骤 4d：canonical 路径优先——缺失/歧义映射 fail-closed 跳过（审计计数随 WP3）。
+            if let canonicalMapper {
+                guard case .mapped(let memoryID) = try await canonicalMapper.mapVectorID(result.id),
+                      let memory = try await canonicalMapper.loadMemory(memoryId: memoryID) else {
+                    continue
+                }
+                guard policy.isAuthorized(sourceType: SearchPipeline.normalizeSourceType(memory.sourceType)) else {
+                    continue
+                }
+                metadataByID[result.id] = SearchChannelMetadata(
+                    assetId: memory.sourceLocator,
+                    sourceType: memory.sourceType,
+                    timestamp: memory.createdAt.timeIntervalSince1970,
+                    originalText: memory.canonicalText ?? "",
+                    sourceLanguage: Self.detectLanguage(from: memory.canonicalText ?? ""),
+                    cosineSimilarity: 1.0 - Float(result.distance)
+                )
+                rankedIds.append(result.id)
+                continue
+            }
             guard let metadata = try? MemoryEntry.decodeMetadata(from: result.metadata ?? Data()) else { continue }
             guard policy.isAuthorized(sourceType: SearchPipeline.normalizeSourceType(metadata.sourceType)) else {
                 continue
