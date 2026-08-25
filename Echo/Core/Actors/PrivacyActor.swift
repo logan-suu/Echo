@@ -371,14 +371,16 @@ public actor PrivacyActor {
         frameCount: Int? = nil,
         audioTranscriptLength: Int? = nil,
         hasAudio: Bool? = nil,
-        content: String? = nil
+        content: String? = nil,
+        subjectKind: String? = nil,
+        subjectHash: String? = nil
     ) async throws {
         // hash-only: 内容字段在持久化前哈希 (AGENTS.md §5.4)
         let contentHash = content.map { AuditContentHasher.sha256Hex($0) }
         try await db.executeWrite(
             sql: """
-                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash, subjectKind, subjectHash)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             bindings: [
                 .text(eventType.rawValue),
@@ -395,12 +397,24 @@ public actor PrivacyActor {
                 audioTranscriptLength.map { .int(Int64($0)) } ?? .null,
                 hasAudio.map { .int($0 ? 1 : 0) } ?? .null,
                 contentHash.map { .text($0) } ?? .null,
+                subjectKind.map { .text($0) } ?? .null,
+                subjectHash.map { .text($0) } ?? .null,
             ]
         )
     }
 
     /// 清理超过保留期的审计日志（AGENTS.md §5.4: 保留期 30 天）
     @discardableResult
+    /// WP3 步骤 3h：按 subject identity 精确删除目标主体的全部审计行，
+    /// 其他主体行保留；返回删除行数。
+    public func purgeAuditRecords(subject: AuditSubject, traceID: String) async throws -> Int {
+        let deleted = try await db.executeWrite(
+            sql: "DELETE FROM AuditLog WHERE subjectKind = ? AND subjectHash = ?",
+            bindings: [.text(subject.kind), .text(subject.subjectHash)]
+        )
+        return Int(deleted)
+    }
+
     public func cleanupOldAuditLogs(retentionDays: Int = 30) async throws -> Int {
         let cutoff = Date().timeIntervalSince1970 - Double(retentionDays * 86400)
         let changes = try await db.executeWrite(

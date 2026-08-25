@@ -459,3 +459,95 @@ struct PhotoTextSearchIdentityTests {
         #expect(bumpedDigest != v1Digest)
     }
 }
+
+    // MARK: - WP3 Step 3a-3h: AuditSubject 身份、schema 迁移、cache 失效与精确 purge
+
+    @Test("Audit subject hash is deterministic and plaintext-free (WP3 steps 3a/3a1)")
+    func testAuditSubjectHashIsDeterministic() {
+        let id = UUID()
+        let s1 = AuditSubject.memory(id)
+        let s2 = AuditSubject.memory(id)
+        #expect(s1.kind == "memory")
+        #expect(s1.subjectHash == s2.subjectHash)
+        #expect(s1.subjectHash.count == 64)
+        #expect(!s1.subjectHash.lowercased().contains(id.uuidString.lowercased()))
+        // 不同 UUID ⇒ 不同 hash
+        #expect(AuditSubject.memory(UUID()).subjectHash != s1.subjectHash)
+    }
+
+    @Test("Audit schema gains subject identity columns and index (WP3 step 3c)")
+    func testAuditSchemaAddsSubjectIdentity() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let columns = try await db.columnNames(in: "AuditLog")
+        #expect(columns.contains("subjectKind"))
+        #expect(columns.contains("subjectHash"))
+        let indexes = try await db.executeQuery(
+            sql: "PRAGMA index_list(AuditLog)", bindings: []
+        )
+        #expect(indexes.contains { $0["name"]?.stringValue == "idx_auditlog_subject_hash" })
+    }
+
+    private func makeBenchmarkItem(id: UUID) -> SearchResultItem {
+        SearchResultItem(
+            id: id,
+            assetId: "PHAsset/fixture",
+            sourceType: "photo",
+            timestamp: 0,
+            cosineSimilarity: 0.9
+        )
+    }
+
+    @Test("Cache invalidation removes entries containing memory ID (WP3 step 3e)")
+    func testCacheInvalidationRemovesEntriesContainingMemoryID() async throws {
+        let cache = SearchResultCacheActor()
+        let target = UUID()
+        let other = UUID()
+        let keyA = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "qA")
+        let keyB = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "qB")
+        try await cache.store(key: keyA, result: CachedSearchResult(items: [makeBenchmarkItem(id: target)]))
+        try await cache.store(key: keyB, result: CachedSearchResult(items: [makeBenchmarkItem(id: other)]))
+
+        let removed = try await cache.invalidate(memoryID: target)
+        #expect(removed == 1)
+        #expect(try await cache.lookup(key: keyA) == nil)
+        #expect(try await cache.lookup(key: keyB) != nil)
+
+        // invalidateAll 全量清空
+        let cleared = try await cache.invalidateAll()
+        #expect(cleared == 1)
+        #expect(try await cache.lookup(key: keyB) == nil)
+    }
+
+    @Test("Audit purge deletes only matching subject rows (WP3 step 3g)")
+    func testAuditPurgeDeletesOnlyMatchingSubjectHash() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        let privacy = PrivacyActor(db: db)
+        let targetMemory = UUID()
+        let otherMemory = UUID()
+        let targetSubject = AuditSubject.memory(targetMemory)
+        let otherSubject = AuditSubject.memory(otherMemory)
+
+        try await privacy.writeAuditLog(eventType: .excluded, traceID: "t-wp3-3g", policyVersion: 1,
+                                        subjectKind: targetSubject.kind, subjectHash: targetSubject.subjectHash)
+        try await privacy.writeAuditLog(eventType: .permissionChanged, traceID: "t-wp3-3g", policyVersion: 1,
+                                        subjectKind: targetSubject.kind, subjectHash: targetSubject.subjectHash)
+        try await privacy.writeAuditLog(eventType: .excluded, traceID: "t-wp3-3g", policyVersion: 1,
+                                        subjectKind: otherSubject.kind, subjectHash: otherSubject.subjectHash)
+
+        let deleted = try await privacy.purgeAuditRecords(subject: targetSubject, traceID: "t-wp3-purge")
+        #expect(deleted == 2)
+
+        let remainingTarget = try await db.executeQuery(
+            sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?",
+            bindings: [.text(targetSubject.subjectHash)]
+        )
+        let remainingOther = try await db.executeQuery(
+            sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?",
+            bindings: [.text(otherSubject.subjectHash)]
+        )
+        #expect(remainingTarget.first?["c"]?.intValue == 0)
+        #expect(remainingOther.first?["c"]?.intValue == 1)
+    }

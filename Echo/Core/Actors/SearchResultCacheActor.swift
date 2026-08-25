@@ -147,6 +147,22 @@ public actor SearchResultCacheActor {
     /// 必须全部失效，防止隐私越界结果被复用。
     ///
     /// - Parameter policyVersion: 失效的策略版本（仅移除该版本的条目，其他版本保留）
+    /// WP3 步骤 3e/3f：删除任何包含该 memoryId 的完整 cache entry，返回删除条数。
+    public func invalidate(memoryID: UUID) async throws -> Int {
+        let before = entries.count
+        entries = entries.filter { _, result in
+            !result.items.contains { $0.id == memoryID }
+        }
+        return before - entries.count
+    }
+
+    /// consent purge / route migration 全量失效，返回清除条数。
+    public func invalidateAll() async throws -> Int {
+        let count = entries.count
+        entries.removeAll()
+        return count
+    }
+
     public func invalidate(policyVersion: Int) async throws {
         entries = entries.filter { $0.key.policyVersion != policyVersion }
     }

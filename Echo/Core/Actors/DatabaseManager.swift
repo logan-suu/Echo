@@ -158,9 +158,15 @@ public actor DatabaseManager {
             try execute(sql: "ALTER TABLE AuditLog ADD COLUMN hasAudio INTEGER")
         }
         // v4 schema migration (3F.1): add hash-only content column (AGENTS.md §5.4)
-        if !auditColumns.contains("contentHash") {
-            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN contentHash TEXT")
+
+        // WP3 steps 3c-3c5 (photo-text-search): audit subject identity columns + index
+        if !auditColumns.contains("subjectKind") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN subjectKind TEXT")
         }
+        if !auditColumns.contains("subjectHash") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN subjectHash TEXT")
+        }
+        try execute(sql: "CREATE INDEX IF NOT EXISTS idx_auditlog_subject_hash ON AuditLog(subjectHash)")
         // UserPolicy persistence table
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS UserPolicyStore (
