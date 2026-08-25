@@ -1399,7 +1399,7 @@ public actor IngestPipeline {
     /// 生产路径文本嵌入包装：错误映射为 `IngestError.embeddingFailed`（L3，CR-5）。
     private func productionEmbedText(_ text: String) async throws -> [Float] {
         do {
-            return try await embedder.embedText(text)
+            return try await embedder.embedText(text, context: .passage)
         } catch {
             throw IngestError.embeddingFailed(underlying: error)
         }

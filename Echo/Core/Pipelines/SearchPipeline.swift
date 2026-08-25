@@ -368,7 +368,7 @@ public actor SearchPipeline {
         // Step 3: Generate query embedding (multilingual-e5-small → 384d)
         let rawEmbedding: [Float]
         do {
-            rawEmbedding = try await embedder.embedText(query)
+            rawEmbedding = try await embedder.embedText(query, context: .query)
         } catch {
             throw SearchError.embeddingFailed(underlying: error)
         }

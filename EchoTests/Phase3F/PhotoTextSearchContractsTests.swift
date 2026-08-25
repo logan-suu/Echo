@@ -11,6 +11,8 @@
 import Foundation
 import Testing
 
+@testable import Echo
+
 /// WP0 文档契约测试。
 ///
 /// 每个测试断言一份治理文档包含（或不包含）精确条款标记。
@@ -84,4 +86,47 @@ struct PhotoTextSearchContractsTests {
         let adr = try Self.readDoc(Self.adrPath)
         #expect(adr.contains("capability-disabled-until-release-gates"))
     }
+}
+
+// MARK: - WP1 Step 1a/1b: 生产搜索显式 E5 query 上下文
+
+/// 记录每次 embedText 收到的上下文；用于断言生产调用点显式传参。
+private actor ContextRecordingEmbedder: EmbedderProtocol {
+    private(set) var recordedContexts: [TextEmbeddingContext] = []
+    private(set) var legacyCallCount = 0
+
+    func embedImage(assetId: String) async throws -> [Float] {
+        throw EmbedderError.preprocessingFailed(reason: "spy: image unsupported")
+    }
+
+    func embedImageData(_ data: Data) async throws -> [Float] {
+        throw EmbedderError.preprocessingFailed(reason: "spy: image data unsupported")
+    }
+
+    func embedText(_ text: String) async throws -> [Float] {
+        legacyCallCount += 1
+        return [Float](repeating: 1.0 / sqrt(384), count: 384)
+    }
+
+    func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float] {
+        recordedContexts.append(context)
+        return [Float](repeating: 1.0 / sqrt(384), count: 384)
+    }
+}
+
+extension PhotoTextSearchContractsTests {
+
+@Test("Production search requests E5 query context (WP1 step 1a)")
+func testSearchUsesE5QueryContext() async throws {
+    let spy = ContextRecordingEmbedder()
+    let pipeline = SearchPipeline(
+        embedder: spy,
+        vectorStore: VectorStoreActor(dimension: 384)
+    )
+    _ = try await pipeline.search(query: "red flower", k: 1)
+    let contexts = await spy.recordedContexts
+    let legacyCalls = await spy.legacyCallCount
+    #expect(contexts == [.query])
+    #expect(legacyCalls == 0)
+}
 }

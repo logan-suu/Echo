@@ -36,6 +36,12 @@ public protocol EmbedderProtocol: Sendable {
     /// - Throws: `EmbedderError` 若推理失败
     func embedText(_ text: String) async throws -> [Float]
 
+    /// 对文本生成嵌入向量，显式指定查询/摄入上下文（WP1 步骤 1；交接计划 §7.1 根因 C7）。
+    ///
+    /// 生产搜索必须传 `.query`，生产摄入必须传 `.passage`；
+    /// 无参 `embedText(_:)` 自此视为 deprecated 兼容桥。
+    func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float]
+
     /// 对图像数据（JPEG/PNG）生成嵌入向量 — 视频关键帧等非 PHAsset 引用场景。
     ///
     /// 默认实现抛出 `preprocessingFailed`；支持图像数据的嵌入器（SigLIP2）覆盖此方法。
@@ -46,6 +52,12 @@ extension EmbedderProtocol {
     /// 默认实现：无图像数据嵌入能力的嵌入器返回预处理失败（L3 阻断）。
     public func embedImageData(_ data: Data) async throws -> [Float] {
         throw EmbedderError.preprocessingFailed(reason: "\(type(of: self)) does not support image data embedding")
+    }
+
+    /// 默认桥：未升级上下文的嵌入器走 legacy 无参路径（行为不变）。
+    /// 动态派发要求本方法为 protocol requirement——具体嵌入器应覆写以承载真实上下文语义。
+    public func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float] {
+        try await embedText(text)
     }
 }
 
