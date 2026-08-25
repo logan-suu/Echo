@@ -348,7 +348,8 @@ class SigLIP2TextEncoder(nn.Module):
             x = layer(x, bias)
         x = self.final_layer_norm(x)
         pooled = x[:, -1, :]
-        return self.head(pooled)
+        # 与图像塔共享归一化契约：Core ML 输出即单位向量（交接计划 §6 验收）
+        return F.normalize(self.head(pooled), p=2, dim=-1)
 
 
 def convert_text_to_coreml(model: nn.Module, output_path: str) -> str:
