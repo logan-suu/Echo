@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Natural-language photo retrieval release evidence manifest (handover plan WP0 deliverable). ALL scripts read inputs ONLY from this file - no env vars or shell placeholders. Every ownerVerdict must be set to approved/rejected with signature reference by the named responsible party before the corresponding gate opens.",
+  "sourcePlan": "/Users/logansu/Desktop/报告/Echo 自然语言照片检索实施交接计划.md",
+  "adr": "docs/decisions/ADR-015-photo-text-retrieval.md",
+  "checkpointPin": {
+    "modelId": "google/siglip2-base-patch32-256",
+    "revision": "94dffa8cb1179de3e03f091dbc3917e5d5a9ae84",
+    "vocabularySize": 256000,
+    "textTowerParameterCount": 282303744,
+    "textTowerRawFP16PayloadMebibytes": 538.45,
+    "note": "Raw tensor payload is NOT an app-size measurement; package facts come only from App Thinning reports."
+  },
+  "ownerVerdicts": {
+    "_gateA_pending_note": "All verdicts pending until named owners sign at Gate A..F. Agent MUST stop when a gate is undecided.",
+    "architecture": {
+      "exactCheckpointSpikeApproval": "pending",
+      "dualTowerSpikeStatusVerdict": "pending"
+    },
+    "legal": {
+      "modelLicenseShippableVerdict": "pending",
+      "convertedWeightRedistributionVerdict": "pending",
+      "datasetRightsVerdict": "pending"
+    },
+    "product": {
+      "singlePurposeAndNonGoalsApproved": "pending",
+      "capabilityCopyStaysDisabledUntilWP7": "pending",
+      "noMatchAndPartialChannelBehaviorApproved": "pending"
+    },
+    "privacy": {
+      "localOnlyModelsAndHashOnlyAuditApproved": "pending",
+      "legacySubjectHashNullAuditLogPurgeVerdict": "pending"
+    },
+    "qa": {
+      "datasetDesignVerdict": "pending",
+      "provisionalGateCalibrationVerdict": "pending"
+    },
+    "ios": {
+      "deviceSupportMatrixVerdict": "pending"
+    },
+    "release": {
+      "appThinningBudgetVerdict": "pending",
+      "deviceEvidenceFormatVerdict": "pending"
+    }
+  },
+  "dataset": {
+    "manifestPath": "EchoTests/Fixtures/PhotoTextSearch/manifest.json",
+    "requirements": {
+      "perEntryLicenseRequired": true,
+      "perEntrySha256Required": true,
+      "userPhotoLibraryAsFixtureForbidden": true,
+      "uploadOfTestDataForbidden": true
+    },
+    "slices": ["scene", "object", "color", "relation", "negation", "ocr", "hardNegative", "noMatch", "partialChannel"],
+    "languages": ["zh-Hans", "en-US"],
+    "provisionalThresholdsNote": "All numeric gates are PROVISIONAL proposals requiring QA/Product/Model approval after pilot; they are not measured facts."
+  },
+  "evidenceOutputPaths": {
+    "wp2": ".omo/evidence/photo-text-search/wp2/",
+    "wp7": ".omo/evidence/photo-text-search/wp7/",
+    "ledger": ".omo/evidence/photo-text-search/EVIDENCE_LEDGER.md"
+  },
+  "simulatorDestination": "platform=iOS Simulator,name=iPhone 17 Pro",
+  "testExecutionRule": "-parallel-testing-enabled NO is MANDATORY on every xcodebuild test invocation (AGENTS.md §9.4)"
+}

@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-12T13:30:00Z",
+  "last_updated": "2026-08-25T14:08:33Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -2685,6 +2685,23 @@
         "docs/05-planning/deferred-items.json",
         "Scripts/prepare_models.sh"
       ]
+    }
+  ],
+  "workstreams": [
+    {
+      "id": "photo-text-search",
+      "title": "自然语言照片检索（交接计划 WP0..WP7）",
+      "source": "外部交接计划（另一机器 agent 产出）",
+      "adr": "docs/decisions/ADR-015-photo-text-retrieval.md",
+      "status": "wp0-review",
+      "stories": [
+        "US-RET-003",
+        "US-ING-004"
+      ],
+      "gate": "A - 等待 Product/Architecture 批准规格与 ADR；七类责任人签署 release-evidence-manifest",
+      "evidence_ledger": ".omo/evidence/photo-text-search/EVIDENCE_LEDGER.md",
+      "drift_verification": "21/21 claims HOLDS @18784ea (E-DRIFT-001/002/003)",
+      "updated_at": "2026-08-25T14:08:33Z"
     }
   ]
 }
