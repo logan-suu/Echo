@@ -25,6 +25,7 @@ struct EchoApp: App {
                 .task {
                     // 单元测试宿主也会启动 App——跳过生产装配，避免 consent gate 泄漏到共享单例
                     guard !isRunningUnderXCTest else { return }
+                    WP2DeviceBenchmark.runIfNeeded()
                     await composition.bootstrap()
                 }
         }
