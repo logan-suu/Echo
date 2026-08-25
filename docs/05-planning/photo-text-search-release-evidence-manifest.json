@@ -22,10 +22,11 @@
       },
       "dualTowerSpikeStatusVerdict": {
         "approved": true,
-        "status": "authorized-to-begin",
-        "signedAt": "2026-08-25T19:09:35Z",
-        "gate": "B",
-        "reference": "E-GATE-B-001"
+        "status": "completed-parity-verified-fp16-recommended",
+        "signedBy": "logansu (acting as Architecture + Model)",
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "reference": "five-report verifier overallPassed=True; quantization asymmetry documented (vision low-bit degradation)"
       }
     },
     "legal": {
@@ -110,25 +111,28 @@
       "deviceSupportMatrixVerdict": {
         "approved": true,
         "signedBy": "logansu (acting as iOS)",
-        "signedAt": "2026-08-25T09:30:00-05:00",
-        "gate": "A",
-        "reference": "commit 7884bea + ADR-015"
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "reference": "E-GATE-C-001",
+        "caveat": "App Thinning precise report & xctrace attribution deferred (toolchain/device constraints); local Release approximation + single-device measurements accepted"
       }
     },
     "release": {
       "appThinningBudgetVerdict": {
         "approved": true,
+        "approvedScope": "local-release-approximation-only",
         "signedBy": "logansu (acting as Release)",
-        "signedAt": "2026-08-25T09:30:00-05:00",
-        "gate": "A",
-        "reference": "commit 7884bea + ADR-015"
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "caveat": "precise App Thinning report via ASC still required before any store-facing claim"
       },
       "deviceEvidenceFormatVerdict": {
         "approved": true,
         "signedBy": "logansu (acting as Release)",
-        "signedAt": "2026-08-25T09:30:00-05:00",
-        "gate": "A",
-        "reference": "commit 7884bea + ADR-015"
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "reference": "E-GATE-C-001",
+        "caveat": "App Thinning precise report & xctrace attribution deferred (toolchain/device constraints); local Release approximation + single-device measurements accepted"
       }
     },
     "_gateA_approval_note": "All twelve verdicts approved at Gate A on 2026-08-25 by logansu acting as every named role (sole developer project). Gates B..F still require fresh sign-off when reached."

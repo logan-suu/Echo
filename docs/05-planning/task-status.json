@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-25T20:44:34Z",
+  "last_updated": "2026-08-25T21:27:07Z",
   "current_phase": "3F",
   "phase_order": [
     "1",
@@ -2693,7 +2693,7 @@
       "title": "自然语言照片检索（交接计划 WP0..WP7）",
       "source": "外部交接计划（另一机器 agent 产出）",
       "adr": "docs/decisions/ADR-015-photo-text-retrieval.md",
-      "status": "wp2-code-complete-pending-device-evidence",
+      "status": "wp2-gate-c-signed-legal-pending",
       "stories": [
         "US-RET-003",
         "US-ING-004"
@@ -2701,7 +2701,7 @@
       "gate": "A - 等待 Product/Architecture 批准规格与 ADR；七类责任人签署 release-evidence-manifest",
       "evidence_ledger": ".omo/evidence/photo-text-search/EVIDENCE_LEDGER.md",
       "drift_verification": "21/21 claims HOLDS @18784ea (E-DRIFT-001/002/003)",
-      "updated_at": "2026-08-25T20:44:34Z",
+      "updated_at": "2026-08-25T21:27:07Z",
       "wp1_progress": "steps 0-6 done (commits fe61c2d..32b4419); 7-10 next",
       "wp2_progress": "DONE: env toolchain | steps0 protocol skeleton | steps1 official pooling chain (probe residual removed, tanh GELU) | steps2 tokenizer fixture 7-cases | steps3 text tower export fp16 sentinel fix | steps4 five-report verifier overallPassed=True | steps5 four quantization candidates with tiered gates (vision low-bit degradation documented as XFAIL) | steps7 require-coreml gate rerun PASS. BLOCKED: steps6 device evidence (6a-6f) needs physical iPhone + signed Release build."
     }
