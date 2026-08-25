@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -39,6 +40,21 @@ CASE_SPECS: dict[str, dict] = {
     "missing-e5": {"hide": ["e5Dir"], "expected_reason": "missing-e5"},
     "missing-vision": {"hide": ["visionCkptDir"], "expected_reason": "missing-vision"},
     "preparation-failure": {"corrupt_checksums": True, "expect_no_named_reason": True},
+}
+
+# WP1 steps 9-10: static early-return regression cases. The mutation injects a
+# bare `return` into the named required-model test body (in-memory only); the
+# inline static gate must fail naming this case while the runner exits 0.
+STATIC_CASES: dict[str, tuple[str, str]] = {
+    "early-return-e5-real": ("EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift", "test_embedText_realInference"),
+    "early-return-e5-context": ("EchoTests/Phase3F/3F.3_ProductionModelInferenceTests.swift", "test_embedText_queryVsPassage"),
+    "early-return-siglip-checksum": ("EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift", "test_checksums_siglip2Entry"),
+    "early-return-siglip-reference-load": ("EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift", "test_referenceVectors_load"),
+    "early-return-siglip-reference-dimension": ("EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift", "test_referenceVectors_dimension768"),
+    "early-return-siglip-conversion": ("EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift", "test_conversion_cosineSimilarity"),
+    "early-return-siglip-real-shape": ("EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift", "test_embedImage_produces768dVector"),
+    "early-return-siglip-real-different": ("EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift", "test_embedImage_differentInputs"),
+    "early-return-siglip-real-deterministic": ("EchoTests/Phase3F/3F.3a_SigLIP2ConversionTests.swift", "test_embedImage_deterministic"),
 }
 
 
@@ -138,6 +154,52 @@ def execute_case(name: str, artifacts: dict, output_path: Path | None) -> int:
     return code
 
 
+def _function_span(text: str, func: str) -> tuple[int, int] | None:
+    """Locate [body_start, body_end) braces of a named Swift function."""
+    m = re.search(rf"func {re.escape(func)}\([^)]*\)[^{{]*\{{", text)
+    if not m:
+        return None
+    depth = 1
+    i = m.end()
+    while i < len(text) and depth:
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+        i += 1
+    return m.end(), i - 1
+
+
+def execute_static_case(name: str, rel_path: str, func: str, output_path: Path | None) -> int:
+    """Inject a bare early-return into the named test body and judge statically."""
+    path = REPO_ROOT / rel_path
+    original = path.read_text(encoding="utf-8")
+    span = _function_span(original, func)
+    if span is None:
+        print(f"runner-error: function {func} not found in {rel_path}", file=sys.stderr)
+        return EXIT_RUNNER_ERROR
+    start, _end = span
+    mutated = original[:start] + "\n        return\n" + original[start:]
+    violated = re.search(r"(?m)^[ \t]*return[ \t]*$", mutated[start:]) is not None
+    gate_rc = 1 if violated else 0
+    gate_out = f"static-gate violation in {func}\ngate-reason: {name}\n" if violated else ""
+    code = decide_exit(gate_rc, gate_out, name)
+    verdict = {
+        "case": name,
+        "functionName": func,
+        "violationFound": violated,
+        "mutationDetected": code == EXIT_OK,
+        "expectedReason": name,
+    }
+    rendered = json.dumps(verdict, ensure_ascii=False, indent=2)
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(rendered + "\n", encoding="utf-8")
+    else:
+        print(rendered)
+    return code
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True,
@@ -159,6 +221,9 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_RUNNER_ERROR
 
     if args.case is not None:
+        if args.case in STATIC_CASES:
+            rel, func = STATIC_CASES[args.case]
+            return execute_static_case(args.case, rel, func, args.output)
         return execute_case(args.case, manifest["requiredArtifacts"], args.output)
 
     summary = {

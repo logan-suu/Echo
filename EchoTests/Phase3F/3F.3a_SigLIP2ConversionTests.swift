@@ -67,9 +67,7 @@ struct SigLIP2BundlePresenceTests {
                 content = try? String(contentsOf: srcURL, encoding: .utf8)
             }
         }
-        guard let text = content else {
-            return
-        }
+        let text = try #require(content, "model_checksums.sha256 unreadable from bundle and repo path")
         #expect(text.contains("SigLIP2BasePatch32"), "SHA256 checksums missing SigLIP2 entry")
     }
 }
@@ -82,25 +80,21 @@ struct SigLIP2ReferenceVectorTests {
 
     @Test("reference vectors JSON loads and contains expected keys (US-SRC-011)")
     func test_referenceVectors_load() throws {
-        var data: Data?
+        var dataOpt: Data?
         if let url = Bundle.main.url(forResource: "siglip2-reference-vectors", withExtension: "json") {
-            data = try? Data(contentsOf: url)
+            dataOpt = try? Data(contentsOf: url)
         }
-        guard let data else { return }
+        let data = try #require(dataOpt, "siglip2-reference-vectors.json missing/unreadable")
 
         let json = try JSONSerialization.jsonObject(with: data)
-        guard let dict = json as? [String: Any] else {
-            Issue.record("Expected dictionary root")
-            return
-        }
+        let dictOpt = json as? [String: Any]
+        let dict = try #require(dictOpt, "Expected dictionary root")
         #expect(dict["schemaVersion"] != nil, "schemaVersion required")
         #expect(dict["modelId"] != nil, "modelId required")
         #expect((dict["modelId"] as? String) == "siglip2-base-patch32-256-v1")
 
-        guard let references = dict["samples"] as? [[String: Any]] else {
-            Issue.record("samples array missing from siglip2-reference-vectors.json")
-            return
-        }
+        let referencesOpt = dict["samples"] as? [[String: Any]]
+        let references = try #require(referencesOpt, "samples array missing from siglip2-reference-vectors.json")
         #expect(!references.isEmpty, "At least one reference vector required")
 
         for ref in references {
@@ -117,17 +111,17 @@ struct SigLIP2ReferenceVectorTests {
 
     @Test("reference vector dimension is 768 (SigLIP2-B/32 output)")
     func test_referenceVectors_dimension768() throws {
-        guard let url = Bundle.main.url(forResource: "siglip2-reference-vectors", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-        else { return }
+        let url = try #require(Bundle.main.url(forResource: "siglip2-reference-vectors", withExtension: "json"), "siglip2-reference-vectors.json missing")
+        let data = try #require(try? Data(contentsOf: url), "reference vectors unreadable")
+        let dictOpt = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let dict = try #require(dictOpt, "reference vectors JSON malformed")
 
         #expect((dict["dimension"] as? Int) == 768)
     }
 
     @Test("cosine similarity between conversion output and reference exceeds 0.995")
     func test_conversion_cosineSimilarity() async throws {
-        guard siglip2MLModelCAvailable() else { return }
+        try #require(siglip2MLModelCAvailable(), "SigLIP2 .mlmodelc unavailable - required vision test must fail loudly")
 
         let embedder = SigLIP2Embedder()
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256))
@@ -141,20 +135,16 @@ struct SigLIP2ReferenceVectorTests {
         #expect(!embedding.allSatisfy { $0 == 0.0 }, "Real inference must produce non-zero embedding")
 
         // US-SRC-011: Core ML 运行时输出必须与 PyTorch 参考向量余弦相似度 > 0.995
-        guard let url = Bundle.main.url(forResource: "siglip2-reference-vectors", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let samples = dict["samples"] as? [[String: Any]]
-        else {
-            Issue.record("siglip2-reference-vectors.json not found or invalid")
-            return
-        }
-        guard let blueRef = samples.first(where: { ($0["label"] as? String) == "solid_blue_256" }),
-              let refEmbedding = blueRef["embedding"] as? [Double]
-        else {
-            Issue.record("solid_blue_256 reference embedding missing — run Scripts/convert_siglip2.py first")
-            return
-        }
+        let url = try #require(Bundle.main.url(forResource: "siglip2-reference-vectors", withExtension: "json"), "siglip2-reference-vectors.json missing")
+        let data = try #require(try? Data(contentsOf: url), "reference vectors unreadable")
+        let dictOpt = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let dict = try #require(dictOpt, "siglip2-reference-vectors.json invalid")
+        let samplesOpt = dict["samples"] as? [[String: Any]]
+        let samples = try #require(samplesOpt, "samples array missing from siglip2-reference-vectors.json")
+        let blueRefOpt = samples.first(where: { ($0["label"] as? String) == "solid_blue_256" })
+        let blueRef = try #require(blueRefOpt, "solid_blue_256 reference embedding missing - run Scripts/convert_siglip2.py first")
+        let refEmbeddingOpt = blueRef["embedding"] as? [Double]
+        let refEmbedding = try #require(refEmbeddingOpt, "solid_blue_256 reference embedding malformed")
         let cosine = cosineSimilarity(embedding, refEmbedding)
         #expect(cosine > 0.995, "Core ML output vs PyTorch reference cosine must exceed 0.995, got \(cosine)")
     }
@@ -168,7 +158,7 @@ struct SigLIP2RealInferenceTests {
 
     @Test("embedImage produces 768d non-zero embedding (US-ING-004 AC-3)")
     func test_embedImage_produces768dVector() async throws {
-        guard siglip2MLModelCAvailable() else { return }
+        try #require(siglip2MLModelCAvailable(), "SigLIP2 .mlmodelc unavailable - required vision test must fail loudly")
 
         let embedder = SigLIP2Embedder()
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256))
@@ -184,7 +174,7 @@ struct SigLIP2RealInferenceTests {
 
     @Test("embedImage with different inputs produces different embeddings")
     func test_embedImage_differentInputs() async throws {
-        guard siglip2MLModelCAvailable() else { return }
+        try #require(siglip2MLModelCAvailable(), "SigLIP2 .mlmodelc unavailable - required vision test must fail loudly")
 
         let embedder = SigLIP2Embedder()
         let redImage = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
@@ -204,7 +194,7 @@ struct SigLIP2RealInferenceTests {
 
     @Test("embedImage with identical input produces identical embedding (deterministic)")
     func test_embedImage_deterministic() async throws {
-        guard siglip2MLModelCAvailable() else { return }
+        try #require(siglip2MLModelCAvailable(), "SigLIP2 .mlmodelc unavailable - required vision test must fail loudly")
 
         let embedder = SigLIP2Embedder()
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256))
