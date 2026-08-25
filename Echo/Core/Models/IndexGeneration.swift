@@ -74,7 +74,7 @@ public struct IndexGeneration: Sendable, Codable, Equatable {
         generationId: String,
         indexType: String,
         manifestId: String? = nil,
-        dimension: Int = 512,
+        dimension: Int,
         state: GenerationState = .building,
         counts: Int = 0,
         validationDigest: String? = nil

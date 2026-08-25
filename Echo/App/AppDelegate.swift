@@ -127,7 +127,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         let sync = SyncPipeline(
             embedder: composition.visionEmbedder,
             privacyActor: composition.privacyActor,
-            vectorStore: VectorStoreActor(dimension: 512),
+            vectorStore: VectorStoreActor(dimension: SigLIP2Embedder.dimension),
             excludedAssets: .shared,
             progressActor: .shared,
             canonicalRepository: canonicalRepository,
@@ -141,7 +141,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             embedder: composition.textEmbedder,
             asrEngine: composition.asrEngine,
             privacyActor: composition.privacyActor,
-            vectorStore: VectorStoreActor(dimension: 512),
+            vectorStore: VectorStoreActor(dimension: E5Embedder.dimension),
             excludedAssets: .shared,
             canonicalRepository: canonicalRepository,
             generationRegistry: registry,
@@ -177,7 +177,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             searchPipeline: SearchPipeline(
                 embedder: composition.textEmbedder,
                 privacyActor: composition.privacyActor,
-                vectorStore: VectorStoreActor(dimension: 512)
+                vectorStore: VectorStoreActor(dimension: E5Embedder.dimension)
             ),
             stateStore: GeofenceStateStore(),
             healthKitProvider: healthKitSystemProvider,

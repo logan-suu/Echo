@@ -258,7 +258,11 @@ public actor DatabaseManager {
             """)
         // v3.1 schema migration: add dimension column to IndexGeneration
         // (existing DBs from initial R-A delivery lack this column)
-        try? execute(sql: "ALTER TABLE IndexGeneration ADD COLUMN dimension INTEGER NOT NULL DEFAULT 512")
+        // WP1 步骤 6b：PRAGMA 守卫替代 try?-吞错——迁移错误必须传播（对齐 AuditLog 模式）
+        let indexGenerationColumns = try columnNames(in: "IndexGeneration")
+        if !indexGenerationColumns.contains("dimension") {
+            try execute(sql: "ALTER TABLE IndexGeneration ADD COLUMN dimension INTEGER NOT NULL DEFAULT 512")
+        }
         // 逐项构建与恢复 (R-A.3)
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS IndexBuildItem (

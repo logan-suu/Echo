@@ -326,3 +326,44 @@ extension PhotoTextSearchContractsTests {
         #expect(result.metadataByID[representationID]?.sourceType == "photo")
     }
 }
+
+extension PhotoTextSearchContractsTests {
+
+    // MARK: - WP1 Step 5: 维度漂移清除（源码契约）
+
+    /// 步骤 5a：生产 initializer 不得再携带 512d 默认值——维度必须显式来自契约。
+    @Test("IndexGeneration initializer has no 512 default (WP1 step 5a)")
+    func testIndexGenerationInitializerHasNo512Default() throws {
+        let source = try Self.readDoc("Echo/Core/Models/IndexGeneration.swift")
+        #expect(!source.contains("dimension: Int = 512"))
+    }
+
+    /// 步骤 5c/5e/5g：AppDelegate 三处 store 构造不得硬编码 512d。
+    @Test("AppDelegate compositions use no hardcoded 512d stores (WP1 steps 5c/5e/5g)")
+    func testAppDelegateCompositionsUseNoHardcoded512Stores() throws {
+        let source = try Self.readDoc("Echo/App/AppDelegate.swift")
+        #expect(!source.contains("VectorStoreActor(dimension: 512)"))
+    }
+
+    // MARK: - WP1 Step 6: 维度迁移幂等
+
+    /// 步骤 6a（源码契约部分）：dimension ALTER 必须有 schema-state 守卫，
+    /// 禁止 try?-吞错模式（错误迁移会留下不一致 schema）。
+    @Test("IndexGeneration dimension ALTER is schema-guarded (WP1 step 6a)")
+    func testDimensionAlterIsSchemaGuarded() throws {
+        let source = try Self.readDoc("Echo/Core/Actors/DatabaseManager.swift")
+        #expect(source.contains("columnNames(in: \"IndexGeneration\")"))
+        #expect(!source.contains("try? execute(sql: \"ALTER TABLE IndexGeneration"))
+    }
+
+    /// 步骤 6a（行为回归守卫）：同一数据库二次 open 不抛错、dimension 列恰一份。
+    @Test("Dimension migration is idempotent across second open (WP1 step 6a)")
+    func testDimensionMigrationIsIdempotentAcrossSecondOpen() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.close()
+        try await db.open()
+        let columns = try await db.columnNames(in: "IndexGeneration")
+        #expect(columns.filter { $0 == "dimension" }.count == 1)
+    }
+}
