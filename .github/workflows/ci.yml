@@ -65,15 +65,14 @@ jobs:
             ${{ runner.os }}-models-
 
       # ── Prepare model assets (R-4.3) ──
-      # Downloads models on cache miss and verifies SHA256. continue-on-error:
-      # the HF mirror may be unreachable from GitHub runners and models are
-      # runtime-loaded (build compiles without them). ModelBundleTests stays
-      # skipped until model delivery is proven reliable in CI.
-      - name: Prepare model assets
-        continue-on-error: true
+      # REQUIRED lane (WP1 steps 7b/7d/8b, root cause F): preparation failures
+      # must FAIL CI. Mutation coverage: photo_search_ci_mutation.py --case
+      # missing-e5 | missing-vision | preparation-failure must each fail this
+      # gate with its named reason while the mutation runner itself exits 0.
+      - name: Prepare model assets (required lane)
         run: |
           pip install --quiet 'huggingface_hub==0.24.0' || true
-          bash Scripts/prepare_models.sh || echo "::warning::Model preparation failed — build proceeds without models (ModelBundleTests skipped)"
+          bash Scripts/prepare_models.sh
 
       # ── Install SwiftLint ──
       - name: Install SwiftLint

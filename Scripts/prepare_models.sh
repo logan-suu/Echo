@@ -149,7 +149,7 @@ download_e5() {
         return 0
     fi
 
-    [ "$MODE" = "verify" ] && { log_error "Missing: $emb"; return 1; }
+    [ "$MODE" = "verify" ] && { log_error "Missing: $emb"; log_error "gate-reason: missing-e5"; return 1; }
 
     log_info "  Downloading from $E5_REPO @ $E5_REVISION ..."
     HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" E5_REPO="$E5_REPO" E5_REVISION="$E5_REVISION" python3 -c "
@@ -230,7 +230,7 @@ download_siglip2() {
         return 0
     fi
 
-    [ "$MODE" = "verify" ] && { log_error "Missing: $ckpt"; return 1; }
+    [ "$MODE" = "verify" ] && { log_error "Missing: $ckpt"; log_error "gate-reason: missing-vision"; return 1; }
 
     log_warn "  SigLIP2 is a conversion source (R-3.2). Core ML conversion required before production use."
     log_info "  Downloading from $SIGLIP2_REPO @ $SIGLIP2_REVISION ..."

@@ -164,5 +164,11 @@
     "ledger": ".omo/evidence/photo-text-search/EVIDENCE_LEDGER.md"
   },
   "simulatorDestination": "platform=iOS Simulator,name=iPhone 17 Pro",
-  "testExecutionRule": "-parallel-testing-enabled NO is MANDATORY on every xcodebuild test invocation (AGENTS.md §9.4)"
+  "testExecutionRule": "-parallel-testing-enabled NO is MANDATORY on every xcodebuild test invocation (AGENTS.md §9.4)",
+  "requiredArtifacts": {
+    "_note": "Paths are repo-root-relative. CI required-model lane and photo_search_ci_mutation.py read ONLY these entries.",
+    "e5Dir": "Echo/Resources/Models/MultilingualE5Small.mlpackage",
+    "visionCkptDir": "Echo/Resources/Models/siglip2-base-patch32-256",
+    "checksumsFile": "Scripts/model_checksums.sha256"
+  }
 }
