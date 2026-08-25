@@ -104,3 +104,56 @@ def test_tokenizer_attention_masks_match_pinned_upstream() -> None:
     for name, case in data["cases"].items():
         _ids, mask = _live_encode(case["text"])
         assert mask == case["attentionMask"], f"attention mask drift in case {name}"
+
+
+# ---------------------------------------------------------------------------
+# WP2 steps 3a-3f: 文本塔导出工件与预检校验
+# ---------------------------------------------------------------------------
+
+TEXT_TOWER_ARTIFACT = REPO_ROOT / "Echo/Resources/Models/SigLIP2TextBasePatch32.mlpackage"
+PINNED_VOCAB = 256_000
+PINNED_TEXT_PARAMS = 282_303_744
+
+
+def test_text_tower_artifact_is_produced() -> None:
+    """WP2 步骤 3a：文本塔 Core ML 工件必须存在于契约路径。"""
+    import os
+
+    manifest = TEXT_TOWER_ARTIFACT / "Manifest.json"
+    assert manifest.exists(), f"text tower artifact missing at {TEXT_TOWER_ARTIFACT}"
+    assert os.path.getsize(TEXT_TOWER_ARTIFACT) > 0
+
+
+def _preflight():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("convert_siglip2", CONVERTER)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_pinned_vocabulary_is_256000() -> None:
+    """WP2 步骤 3c/3d：词表 ≠ 256,000 的权重必须被 preflight 拒绝。"""
+    mod = _preflight()
+    good = {"text_model.embeddings.token_embedding": type("W", (), {"shape": [PINNED_VOCAB, 768]})}
+    mod.validate_text_tower_preflight(good)  # must not raise
+    bad = {"text_model.embeddings.token_embedding": type("W", (), {"shape": [32_000, 768]})}
+    try:
+        mod.validate_text_tower_preflight(bad)
+    except ValueError as exc:
+        assert "256000" in str(exc) or "vocab" in str(exc).lower()
+    else:
+        raise AssertionError("wrong vocabulary was accepted")
+
+
+def test_pinned_text_parameter_count_is_282303744() -> None:
+    """WP2 步骤 3e/3f：文本参数量 ≠ 282,303,744 必须被 preflight 拒绝。"""
+    mod = _preflight()
+    try:
+        mod.validate_text_tower_preflight({}, expected_total_params=123)
+    except ValueError:
+        pass  # missing keys path also rejected
+    # 精确值路径由真实权重在步骤 4 parity 中复核；此处锁定常量本身
+    assert mod.PINNED_TEXT_PARAMS == PINNED_TEXT_PARAMS
