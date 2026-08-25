@@ -15,17 +15,17 @@
     "architecture": {
       "exactCheckpointSpikeApproval": {
         "approved": true,
-        "signedBy": "logansu (acting as Architecture)",
-        "signedAt": "2026-08-25T09:30:00-05:00",
-        "gate": "A",
-        "reference": "commit 7884bea + ADR-015"
+        "signedBy": "logansu (acting as Architecture + Model)",
+        "signedAt": "2026-08-25T19:09:35Z",
+        "gate": "B",
+        "reference": "E-GATE-B-001"
       },
       "dualTowerSpikeStatusVerdict": {
         "approved": true,
-        "signedBy": "logansu (acting as Architecture)",
-        "signedAt": "2026-08-25T09:30:00-05:00",
-        "gate": "A",
-        "reference": "commit 7884bea + ADR-015"
+        "status": "authorized-to-begin",
+        "signedAt": "2026-08-25T19:09:35Z",
+        "gate": "B",
+        "reference": "E-GATE-B-001"
       }
     },
     "legal": {
