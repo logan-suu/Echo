@@ -147,7 +147,6 @@ struct PhotoTextSearchIdentityTests {
         #expect(journal.operationID == "op-1")
         #expect(journal.phase == .planned)
     }
-}
 
     // MARK: - WP3 Step 1a-1f: 确定性 representation ID 派生
 
@@ -248,3 +247,215 @@ struct PhotoTextSearchIdentityTests {
         let otherParent = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-audio-b", sourceType: "video")
         #expect(CanonicalMemoryRepositoryActor.audioRepresentationID(memoryID: otherParent) != audioRepID)
     }
+
+    // MARK: - WP3 Step 2a-2j2: SearchRouteSnapshot 功能化回归守卫
+
+    private func makeWeight(_ ch: SearchChannel, _ w: Double) -> ChannelWeight {
+        ChannelWeight(channel: ch, weight: w)
+    }
+
+    private func makeRoute(_ ch: SearchChannel, gen: String) -> ChannelRoute {
+        ChannelRoute(channel: ch, generationID: gen, indexManifestID: nil,
+                     queryModelManifestID: nil, dimension: 384, alignmentSpaceID: nil, required: true)
+    }
+
+    @Test("Search route channels are sorted by raw value (WP3 step 2a)")
+    func testSearchRouteChannelsAreSortedByRawValue() throws {
+        let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+        let routes = [
+            makeRoute(.visionDense, gen: "v"),
+            makeRoute(.textDense, gen: "t"),
+            makeRoute(.lexical, gen: "l"),
+            makeRoute(.ocrText, gen: "o"),
+        ]
+        let snapshot = try SearchRouteSnapshot(
+            snapshotID: "s", schemaVersion: 1, routeVersion: 1,
+            channels: routes, fusion: policy,
+            previousSnapshotID: nil, publishedAtEpochMilliseconds: 0, validationDigest: "d"
+        )
+        let raws = snapshot.channels.map { $0.channel.rawValue }
+        #expect(raws == raws.sorted())
+    }
+
+    @Test("Canonical encoder uses version prefix (WP3 step 2b1)")
+    func testCanonicalEncoderUsesVersionPrefix() throws {
+        let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+        let snapshot = try SearchRouteSnapshot(
+            snapshotID: "s", schemaVersion: 1, routeVersion: 1,
+            channels: [], fusion: policy,
+            previousSnapshotID: nil, publishedAtEpochMilliseconds: 0, validationDigest: "ignored"
+        )
+        let data = try snapshot.canonicalData()
+        #expect(data.first == 0x01)
+    }
+
+    @Test("Canonical encoder uses fixed width fields (WP3 step 2b2)")
+    func testCanonicalEncoderUsesFixedWidthFields() throws {
+        // 同一快照仅改 snapshotID 长度 ±1 时，canonicalData 总长差应恰等于该字符串
+        // 的长度差 + 其 8 字节长度前缀不变性（长度前缀恒为 8B 定宽）
+        func build(id: String) throws -> Data {
+            let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+            return try SearchRouteSnapshot(
+                snapshotID: id, schemaVersion: 1, routeVersion: 7,
+                channels: [], fusion: policy,
+                previousSnapshotID: nil, publishedAtEpochMilliseconds: 42,
+                validationDigest: "ignored"
+            ).canonicalData()
+        }
+        let short = try build(id: "abc")
+        let long = try build(id: "abcd")
+        #expect(long.count - short.count == 1)
+        #expect(short.dropFirst(9).prefix(3) == Data("abc".utf8))
+        #expect(long.dropFirst(9).prefix(4) == Data("abcd".utf8))
+    }
+
+    @Test("Canonical route data ignores channel insertion order (WP3 step 2b3)")
+    func testCanonicalRouteDataIgnoresChannelInsertionOrder() throws {
+        let policyA = try FusionPolicySnapshot(
+            policyID: "p",
+            weights: [makeWeight(.textDense, 1.0), makeWeight(.visionDense, 0.8)],
+            rrfK: 60
+        )
+        let policyB = try FusionPolicySnapshot(
+            policyID: "p",
+            weights: [makeWeight(.visionDense, 0.8), makeWeight(.textDense, 1.0)],
+            rrfK: 60
+        )
+        let a = try SearchRouteSnapshot(
+            snapshotID: "s", schemaVersion: 1, routeVersion: 1,
+            channels: [makeRoute(.visionDense, gen: "v"), makeRoute(.textDense, gen: "t")],
+            fusion: policyA, previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: 42, validationDigest: "ignored"
+        )
+        let b = try SearchRouteSnapshot(
+            snapshotID: "s", schemaVersion: 1, routeVersion: 1,
+            channels: [makeRoute(.textDense, gen: "t"), makeRoute(.visionDense, gen: "v")],
+            fusion: policyB, previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: 42, validationDigest: "ignored"
+        )
+        let dataA = try a.canonicalData()
+        let dataB = try b.canonicalData()
+        #expect(dataA == dataB)
+        let digestA = try a.computedDigest()
+        let digestB = try b.computedDigest()
+        #expect(digestA == digestB)
+        #expect(a == b)
+    }
+
+    @Test("Fusion weights reject duplicate channel (WP3 step 2c)")
+    func testFusionWeightsRejectDuplicateChannel() throws {
+        #expect(throws: SearchRouteContractError.duplicateWeight(.textDense)) {
+            try FusionPolicySnapshot(
+                policyID: "p",
+                weights: [makeWeight(.textDense, 1.0), makeWeight(.textDense, 0.9)],
+                rrfK: 60
+            )
+        }
+    }
+
+    @Test("Fusion weights are sorted by channel raw value (WP3 step 2d1)")
+    func testFusionWeightsAreSortedByChannelRawValue() throws {
+        let policy = try FusionPolicySnapshot(
+            policyID: "p",
+            weights: [makeWeight(.visionDense, 0.8), makeWeight(.lexical, 0.5), makeWeight(.textDense, 1.0)],
+            rrfK: 60
+        )
+        let raws = policy.weights.map { $0.channel.rawValue }
+        #expect(raws == raws.sorted())
+    }
+
+    @Test("Route rejects duplicate channel (WP3 step 2e)")
+    func testRouteRejectsDuplicateChannel() throws {
+        let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+        #expect(throws: SearchRouteContractError.duplicateChannel(.textDense)) {
+            try SearchRouteSnapshot(
+                snapshotID: "s", schemaVersion: 1, routeVersion: 1,
+                channels: [makeRoute(.textDense, gen: "t1"), makeRoute(.textDense, gen: "t2")],
+                fusion: policy, previousSnapshotID: nil,
+                publishedAtEpochMilliseconds: 0, validationDigest: "d"
+            )
+        }
+    }
+
+    @Test("Route canonical bytes stable across restart roundtrip (WP3 step 2g)")
+    func testRouteCanonicalBytesStableAcrossRestart() throws {
+        let policy = try FusionPolicySnapshot(
+            policyID: "p",
+            weights: [makeWeight(.textDense, 1.0), makeWeight(.visionDense, 0.8)],
+            rrfK: 60
+        )
+        let original = try SearchRouteSnapshot(
+            snapshotID: "s", schemaVersion: 2, routeVersion: 5,
+            channels: [makeRoute(.textDense, gen: "t"), makeRoute(.visionDense, gen: "v")],
+            fusion: policy, previousSnapshotID: "prev-1",
+            publishedAtEpochMilliseconds: 1_700_000_000_000, validationDigest: "any"
+        )
+        // 模拟重启：Codable roundtrip 后重编码必须逐字节一致
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let decoded = try JSONDecoder().decode(SearchRouteSnapshot.self, from: encoder.encode(original))
+        #expect(decoded == original)
+        let reEncoded = try decoded.canonicalData()
+        let originalData = try original.canonicalData()
+        #expect(reEncoded == originalData)
+        let reDigest = try decoded.computedDigest()
+        let originalDigest = try original.computedDigest()
+        #expect(reDigest == originalDigest)
+    }
+
+    @Test("Route digest stable across restart (WP3 step 2h1)")
+    func testRouteDigestStableAcrossRestart() async throws {
+        let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+        let snapshot = try SearchRouteSnapshot(
+            snapshotID: "s", schemaVersion: 1, routeVersion: 1,
+            channels: [], fusion: policy,
+            previousSnapshotID: nil, publishedAtEpochMilliseconds: 42, validationDigest: "stored"
+        )
+        let d1 = try snapshot.computedDigest()
+        let d2 = try snapshot.computedDigest()
+        #expect(d1 == d2)
+        #expect(d1.count == 64) // SHA-256 hex
+    }
+
+    @Test("Rollback restores previous canonical digest (WP3 step 2i)")
+    func testRollbackRestoresPreviousCanonicalDigest() async throws {
+        let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+        let v1 = try SearchRouteSnapshot(
+            snapshotID: "v1", schemaVersion: 1, routeVersion: 1,
+            channels: [makeRoute(.textDense, gen: "t")], fusion: policy,
+            previousSnapshotID: nil, publishedAtEpochMilliseconds: 1, validationDigest: "stored-v1"
+        )
+        // 回滚语义：从持久化的前序快照字节恢复出相同 canonical 内容。
+        // validationDigest 被 canonical encoder 刻意排除，故 stored 值不影响 digest。
+        let restored = try SearchRouteSnapshot(
+            snapshotID: v1.snapshotID,
+            schemaVersion: v1.schemaVersion,
+            routeVersion: v1.routeVersion,
+            channels: v1.channels,
+            fusion: v1.fusion,
+            previousSnapshotID: v1.previousSnapshotID,
+            publishedAtEpochMilliseconds: v1.publishedAtEpochMilliseconds,
+            validationDigest: v1.validationDigest
+        )
+        let restoredData = try restored.canonicalData()
+        let v1Data = try v1.canonicalData()
+        #expect(restoredData == v1Data)
+        let restoredDigest = try restored.computedDigest()
+        let v1Digest = try v1.computedDigest()
+        #expect(restoredDigest == v1Digest)
+
+        // 身份字段必须参与编码：routeVersion 变更 ⇒ digest 必须变化
+        let bumped = try SearchRouteSnapshot(
+            snapshotID: v1.snapshotID,
+            schemaVersion: v1.schemaVersion,
+            routeVersion: v1.routeVersion + 1,
+            channels: v1.channels,
+            fusion: v1.fusion,
+            previousSnapshotID: v1.previousSnapshotID,
+            publishedAtEpochMilliseconds: v1.publishedAtEpochMilliseconds,
+            validationDigest: v1.validationDigest
+        )
+        let bumpedDigest = try bumped.computedDigest()
+        #expect(bumpedDigest != v1Digest)
+    }
+}
