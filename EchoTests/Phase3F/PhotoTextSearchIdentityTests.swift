@@ -148,3 +148,103 @@ struct PhotoTextSearchIdentityTests {
         #expect(journal.phase == .planned)
     }
 }
+
+    // MARK: - WP3 Step 1a-1f: 确定性 representation ID 派生
+
+    @Test("Photo vector ID equals representation ID (WP3 step 1a)")
+    func testPhotoVectorIDEqualsRepresentationID() async throws {
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let generationID = "text_dense/e5-v1"
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-photo", sourceType: "photo")
+
+        // 派生 helper：照片 representation ID 恒等于 canonical memory ID
+        let derivedRepID = CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId)
+        #expect(derivedRepID == memoryId)
+
+        let rep = Representation(
+            representationId: derivedRepID,
+            memoryId: memoryId,
+            modality: .visionDense,
+            preprocessVersion: "siglip2-v1",
+            contentHash: "hash-wp3"
+        )
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-photo", canonicalText: nil, sourceType: "photo"),
+            representations: [rep],
+            vectorsByGeneration: [generationID: [
+                CanonicalVectorEntry(id: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
+                                     vector: [Float](repeating: 0.25, count: 384))
+            ]],
+            traceID: "t-wp3-1a"
+        )
+
+        // vectorId == representationId == memoryId 的绑定闭环
+        let result = try await repo.mapVectorID(derivedRepID, generationID: generationID)
+        guard case .mapped(let binding) = result else {
+            Issue.record("expected mapped binding")
+            return
+        }
+        #expect(binding.vectorID == binding.representationID)
+        #expect(binding.vectorID == memoryId)
+        #expect(binding.memoryID == memoryId)
+    }
+
+    @Test("Video frame vector maps to parent memory (WP3 step 1c)")
+    func testVideoFrameVectorMapsToParentMemory() async throws {
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let generationID = "text_dense/e5-v1"
+        let parentMemoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-video", sourceType: "video")
+
+        // 帧组件 key 格式：frame:%06d（frame:000003 语义）
+        let frameRepID = CanonicalMemoryRepositoryActor.videoFrameRepresentationID(
+            sourceLocator: "PHAsset/wp3-video", frameIndex: 3
+        )
+        #expect(frameRepID != parentMemoryId)
+
+        let rep = Representation(
+            representationId: frameRepID,
+            memoryId: parentMemoryId,
+            modality: .visionDense,
+            preprocessVersion: "siglip2-v1",
+            contentHash: "hash-frame3"
+        )
+        _ = try await repo.commit(
+            memory: Memory(memoryId: parentMemoryId, sourceLocator: "PHAsset/wp3-video", canonicalText: nil, sourceType: "video"),
+            representations: [rep],
+            vectorsByGeneration: [generationID: [
+                CanonicalVectorEntry(id: frameRepID, vector: [Float](repeating: 0.5, count: 384))
+            ]],
+            traceID: "t-wp3-1c"
+        )
+
+        // 帧 vector 映射回父 memoryId
+        let result = try await repo.mapVectorID(frameRepID, generationID: generationID)
+        guard case .mapped(let binding) = result else {
+            Issue.record("expected mapped frame binding")
+            return
+        }
+        #expect(binding.vectorID == frameRepID)
+        #expect(binding.representationID == frameRepID)
+        #expect(binding.memoryID == parentMemoryId)
+
+        // 确定性：同一父与帧序号重复派生结果一致
+        let again = CanonicalMemoryRepositoryActor.videoFrameRepresentationID(
+            sourceLocator: "PHAsset/wp3-video", frameIndex: 3
+        )
+        #expect(again == frameRepID)
+    }
+
+    @Test("Audio representation uses deterministic audio component key (WP3 step 1e)")
+    func testAudioRepresentationUsesDeterministicAudioKey() async throws {
+        let parentMemoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-audio", sourceType: "video")
+
+        let audioRepID = CanonicalMemoryRepositoryActor.audioRepresentationID(memoryID: parentMemoryId)
+        #expect(audioRepID != parentMemoryId)
+
+        // 固定组件 key：重复派生一致
+        #expect(CanonicalMemoryRepositoryActor.audioRepresentationID(memoryID: parentMemoryId) == audioRepID)
+
+        // 不同父 memory 派生不同 ID
+        let otherParent = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp3-audio-b", sourceType: "video")
+        #expect(CanonicalMemoryRepositoryActor.audioRepresentationID(memoryID: otherParent) != audioRepID)
+    }

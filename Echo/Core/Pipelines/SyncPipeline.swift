@@ -418,6 +418,7 @@ public actor SyncPipeline {
                             recoverability: .full
                         )
                         let rep = Representation(
+                            representationId: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
                             memoryId: memoryId,
                             modality: .visionDense,
                             preprocessVersion: "siglip2-v1",

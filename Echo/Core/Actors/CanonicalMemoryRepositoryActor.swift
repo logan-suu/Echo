@@ -77,6 +77,32 @@ public actor CanonicalMemoryRepositoryActor {
         ))
     }
 
+    // MARK: - 确定性 representation ID 派生（WP3 步骤 1a-1f）
+
+    /// 照片 representation ID 恒等于 canonical memory ID
+    /// （vectorId == representationId == memoryId，交接计划 WP3 步骤 1a-1b2）。
+    public nonisolated static func photoRepresentationID(memoryID: UUID) -> UUID {
+        memoryID
+    }
+
+    /// 视频帧 representation ID：与既有帧向量 ID 公式完全一致
+    /// （deterministicID(assetId|frameN, video_frame)），零语义漂移。
+    public nonisolated static func videoFrameRepresentationID(sourceLocator: String, frameIndex: Int) -> UUID {
+        deterministicID(
+            sourceLocator: "\(sourceLocator)|frame\(frameIndex)",
+            sourceType: "video_frame"
+        )
+    }
+
+    /// 音频 representation ID：父 memory + 固定 「audio」 组件 key 的确定性派生
+    /// （交接计划 WP3 步骤 1e-1f）。
+    public nonisolated static func audioRepresentationID(memoryID: UUID) -> UUID {
+        deterministicID(
+            sourceLocator: "\(memoryID.uuidString.lowercased())|audio",
+            sourceType: "video_audio"
+        )
+    }
+
     // MARK: - Fault Injection (DEBUG only — Nitpick-1: release 不暴露删数据钩子)
 
     #if DEBUG

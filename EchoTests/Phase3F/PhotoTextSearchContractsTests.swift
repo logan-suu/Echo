@@ -163,7 +163,7 @@ func testSearchUsesE5QueryContext() async throws {
 // MARK: - WP1 Steps 3/4: canonical 向量正向映射
 
 /// 共享库夹具：清表 + 种子 active generation + 构造仓库。
-private enum CanonicalMappingFixtures {
+enum CanonicalMappingFixtures {
     static func prepare() async throws -> CanonicalMemoryRepositoryActor {
         let db = DatabaseManager.shared
         try await db.open()
