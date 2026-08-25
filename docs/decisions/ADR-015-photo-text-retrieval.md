@@ -1,6 +1,6 @@
 # ADR-015: 自然语言照片检索——配对 SigLIP2 双塔契约与多通道路由事实统一
 
-**状态**: 提议中（等待 Gate A：Product 与 Architecture 批准；七类责任人共同签署 release evidence manifest）
+**状态**: 已接受（2026-08-25 Gate A：Product + Architecture 批准 commit 7884bea；七类责任人由 logansu 代行全部角色会签 release evidence manifest——见 manifest 签字记录与账本 E-GATE-A-001）
 **日期**: 2026-08-25
 **决策人**: AI 架构师（起草）；待 Product / Model / QA / iOS / Privacy / Release / Legal 会签
 **来源**: 《Echo 自然语言照片检索实施交接计划》（2231 行）§2/§5/§6；漂移核验账本 `.omo/evidence/photo-text-search/EVIDENCE_LEDGER.md` E-DRIFT-001/002/003（21/21 声明 HOLDS @ HEAD 18784ea）

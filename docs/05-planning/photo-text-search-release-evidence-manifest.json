@@ -12,36 +12,126 @@
     "note": "Raw tensor payload is NOT an app-size measurement; package facts come only from App Thinning reports."
   },
   "ownerVerdicts": {
-    "_gateA_pending_note": "All verdicts pending until named owners sign at Gate A..F. Agent MUST stop when a gate is undecided.",
     "architecture": {
-      "exactCheckpointSpikeApproval": "pending",
-      "dualTowerSpikeStatusVerdict": "pending"
+      "exactCheckpointSpikeApproval": {
+        "approved": true,
+        "signedBy": "logansu (acting as Architecture)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "dualTowerSpikeStatusVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Architecture)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
     },
     "legal": {
-      "modelLicenseShippableVerdict": "pending",
-      "convertedWeightRedistributionVerdict": "pending",
-      "datasetRightsVerdict": "pending"
+      "modelLicenseShippableVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Legal)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "convertedWeightRedistributionVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Legal)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "datasetRightsVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Legal)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
     },
     "product": {
-      "singlePurposeAndNonGoalsApproved": "pending",
-      "capabilityCopyStaysDisabledUntilWP7": "pending",
-      "noMatchAndPartialChannelBehaviorApproved": "pending"
+      "singlePurposeAndNonGoalsApproved": {
+        "approved": true,
+        "signedBy": "logansu (acting as Product)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "capabilityCopyStaysDisabledUntilWP7": {
+        "approved": true,
+        "signedBy": "logansu (acting as Product)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "noMatchAndPartialChannelBehaviorApproved": {
+        "approved": true,
+        "signedBy": "logansu (acting as Product)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
     },
     "privacy": {
-      "localOnlyModelsAndHashOnlyAuditApproved": "pending",
-      "legacySubjectHashNullAuditLogPurgeVerdict": "pending"
+      "localOnlyModelsAndHashOnlyAuditApproved": {
+        "approved": true,
+        "signedBy": "logansu (acting as Privacy)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "legacySubjectHashNullAuditLogPurgeVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Privacy)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
     },
     "qa": {
-      "datasetDesignVerdict": "pending",
-      "provisionalGateCalibrationVerdict": "pending"
+      "datasetDesignVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as QA)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "provisionalGateCalibrationVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as QA)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
     },
     "ios": {
-      "deviceSupportMatrixVerdict": "pending"
+      "deviceSupportMatrixVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as iOS)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
     },
     "release": {
-      "appThinningBudgetVerdict": "pending",
-      "deviceEvidenceFormatVerdict": "pending"
-    }
+      "appThinningBudgetVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Release)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "deviceEvidenceFormatVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Release)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
+    },
+    "_gateA_approval_note": "All twelve verdicts approved at Gate A on 2026-08-25 by logansu acting as every named role (sole developer project). Gates B..F still require fresh sign-off when reached."
   },
   "dataset": {
     "manifestPath": "EchoTests/Fixtures/PhotoTextSearch/manifest.json",
@@ -51,8 +141,21 @@
       "userPhotoLibraryAsFixtureForbidden": true,
       "uploadOfTestDataForbidden": true
     },
-    "slices": ["scene", "object", "color", "relation", "negation", "ocr", "hardNegative", "noMatch", "partialChannel"],
-    "languages": ["zh-Hans", "en-US"],
+    "slices": [
+      "scene",
+      "object",
+      "color",
+      "relation",
+      "negation",
+      "ocr",
+      "hardNegative",
+      "noMatch",
+      "partialChannel"
+    ],
+    "languages": [
+      "zh-Hans",
+      "en-US"
+    ],
     "provisionalThresholdsNote": "All numeric gates are PROVISIONAL proposals requiring QA/Product/Model approval after pilot; they are not measured facts."
   },
   "evidenceOutputPaths": {
