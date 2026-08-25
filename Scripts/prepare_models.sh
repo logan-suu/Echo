@@ -218,7 +218,7 @@ download_whisper() {
 # Replaces MobileCLIP (license blocked). Requires Core ML self-conversion (R-3.2).
 # ==========================================
 SIGLIP2_REPO="google/siglip2-base-patch32-256"
-SIGLIP2_REVISION="main"  # TODO (R-4.2): pin to immutable commit hash
+SIGLIP2_REVISION="94dffa8cb1179de3e03f091dbc3917e5d5a9ae84"  # pinned immutable commit (DEF-35-001 closed; handover plan §2.3)
 
 download_siglip2() {
     log_info "Step 3/3: SigLIP2-B/32 checkpoint (Vision, ~1.5GB, conversion source)"
