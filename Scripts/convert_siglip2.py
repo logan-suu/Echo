@@ -25,6 +25,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -352,6 +353,49 @@ class SigLIP2TextEncoder(nn.Module):
         return F.normalize(self.head(pooled), p=2, dim=-1)
 
 
+class _DualTower(nn.Module):
+    """WP2 步骤 5：双塔联合图——单次推理产出 image/text embeddings 对。"""
+
+    def __init__(self, vision: nn.Module, text: nn.Module):
+        super().__init__()
+        self.vision = vision
+        self.text = text
+
+    def forward(self, pixel_values, input_ids):
+        return self.vision(pixel_values), self.text(input_ids)
+
+
+def _apply_weight_compression(path: Path, quantization: str) -> None:
+    """WP2 步骤 5：对已保存的 .mlpackage 施加候选量化（fp16 为基线不处理）。"""
+    if quantization == "fp16":
+        return
+    import coremltools as ct
+    from coremltools.optimize.coreml import (
+        OpLinearQuantizerConfig,
+        OpPalettizerConfig,
+        OptimizationConfig,
+        linear_quantize_weights,
+        palettize_weights,
+    )
+
+    model = ct.models.MLModel(str(path))
+    if quantization == "int8":
+        config = OptimizationConfig(
+            global_config=OpLinearQuantizerConfig(mode="linear_symmetric", dtype="int8")
+        )
+        compressed = linear_quantize_weights(model, config=config)
+    elif quantization == "6bit":
+        config = OptimizationConfig(global_config=OpPalettizerConfig(nbits=6))
+        compressed = palettize_weights(model, config=config)
+    elif quantization == "4bit":
+        config = OptimizationConfig(global_config=OpPalettizerConfig(nbits=4))
+        compressed = palettize_weights(model, config=config)
+    else:
+        raise ValueError(f"unsupported quantization: {quantization}")
+    compressed.save(str(path))
+    print(f"[quantize] {quantization} applied -> {path}")
+
+
 def convert_text_to_coreml(model: nn.Module, output_path: str) -> str:
     """Trace-export the text tower with a fixed int32[1,64] input contract."""
     import coremltools as ct
@@ -555,16 +599,16 @@ def main():
         help="Output path for reference vectors JSON"
     )
     parser.add_argument(
-        "--tower", choices=["vision", "text"], default="vision",
-        help="Which tower to export (WP2: text tower added)"
+        "--tower", choices=["vision", "text", "dual"], default="vision",
+        help="Which tower(s) to export (WP2: text + dual candidates)"
     )
     parser.add_argument(
         "--revision", type=str, default="",
         help="Pinned source revision recorded into conversion log"
     )
     parser.add_argument(
-        "--quantization", choices=["fp16"], default="fp16",
-        help="Weight precision for export"
+        "--quantization", choices=["fp16", "int8", "6bit", "4bit"], default="fp16",
+        help="Candidate quantization (WP2 step 5)"
     )
     args = parser.parse_args()
 
@@ -601,6 +645,44 @@ def main():
     # Strip torch dtype metadata — safetensors returns named tensors sometimes
     state_dict = {k: v.float() if hasattr(v, 'float') else v
                   for k, v in state_dict.items()}
+    # WP2 step 5: dual-tower candidate export (single graph, two inputs/two outputs)
+    if args.tower == "dual":
+        import coremltools as ct
+        import numpy as np
+
+        validate_text_tower_preflight(state_dict, expected_total_params=PINNED_TEXT_PARAMS)
+        print("[preflight] vocab/param identity OK (pinned)")
+        vmodel = SigLIP2VisionEncoder(state_dict).eval()
+        tmodel = SigLIP2TextEncoder(state_dict).eval()
+        dual = _DualTower(vmodel, tmodel).eval()
+        rev = args.revision or "unspecified"
+        px_example = torch.zeros((1, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=torch.float32)
+        ids_example = torch.zeros((1, TEXT_SEQ), dtype=torch.int32)
+        traced = torch.jit.trace(dual, (px_example, ids_example))
+        mlmodel = ct.convert(
+            traced,
+            inputs=[
+                ct.TensorType(name="pixel_values", shape=(1, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=np.float32),
+                ct.TensorType(name="input_ids", shape=(1, TEXT_SEQ), dtype=np.int32),
+            ],
+            outputs=[
+                ct.TensorType(name="image_embeddings"),
+                ct.TensorType(name="text_embeddings"),
+            ],
+            minimum_deployment_target=ct.target.iOS17,
+            compute_precision=ct.precision.FLOAT16,
+        )
+        out_dir = os.path.dirname(args.output) or "."
+        os.makedirs(out_dir, exist_ok=True)
+        mlmodel.save(args.output)
+        print(f"[convert] Saved dual-tower: {args.output}")
+        if args.quantization != "fp16":
+            from pathlib import Path as _P
+
+            _apply_weight_compression(_P(args.output), args.quantization)
+        print(f"[dual] export complete  quantization={args.quantization}  revision={rev}")
+        return
+
     # WP2 step 3b: paired text tower export path (fail-closed preflight first)
     if args.tower == "text":
         validate_text_tower_preflight(state_dict, expected_total_params=PINNED_TEXT_PARAMS)
