@@ -46,3 +46,6 @@ Echo/Resources/Models/**/*.safetensors
 *.dSYM
 buildServer.json
 compile_commands.json
+
+# Pinned model conversion sources (fetched via prepare_models.sh; not committed)
+PinnedModels/
