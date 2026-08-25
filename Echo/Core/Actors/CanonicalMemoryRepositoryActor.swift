@@ -193,6 +193,34 @@ public actor CanonicalMemoryRepositoryActor {
     /// F-3: 用户查询中的 FTS5 语法字符（引号、`*`、括号、AND/OR 等）会导致
     /// MATCH 运行时错误或异常结果。查询按空白分词，每 token 作为短语（引号包裹 +
     /// 内嵌引号转义）以隐式 AND 组合，杜绝语法注入；空查询返回空数组。
+    // MARK: - Vector→Memory Forward Mapping (WP1 步骤 3/4)
+
+    /// WP1 步骤 3：单个向量 ID → canonical memory 的类型化映射。
+    ///
+    /// 经 Representation 表按 representationId 反查 memoryId；
+    /// 查无即返回 `.missing`（是否 fail-closed 排除由调用方决定）。
+    public func mapVectorID(_ vectorID: UUID) async throws -> CanonicalMappingResult {
+        let rows = try await db.executeQuery(
+            sql: "SELECT memoryId FROM Representation WHERE representationId = ? LIMIT 1",
+            bindings: [.text(vectorID.uuidString)]
+        )
+        guard let row = rows.first,
+              let idString = row["memoryId"]?.stringValue,
+              let memoryID = UUID(uuidString: idString) else {
+            return .missing(vectorID: vectorID)
+        }
+        return .mapped(memoryID: memoryID)
+    }
+
+    /// WP1 步骤 4：批量映射 —— 调用方单次仓库交互，结果按入参 ID 键控。
+    public func mapVectorIDs(_ vectorIDs: [UUID]) async throws -> [UUID: CanonicalMappingResult] {
+        var results: [UUID: CanonicalMappingResult] = [:]
+        for vectorID in vectorIDs {
+            results[vectorID] = try await mapVectorID(vectorID)
+        }
+        return results
+    }
+
     public func searchCanonical(matching query: String, limit: Int = 50) async throws -> [UUID] {
         let tokens = query.split(whereSeparator: \.isWhitespace).map {
             "\"" + String($0).replacingOccurrences(of: "\"", with: "\"\"") + "\""

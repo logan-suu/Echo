@@ -159,3 +159,108 @@ func testSearchUsesE5QueryContext() async throws {
     #expect(legacyCalls == 0)
 }
 }
+
+// MARK: - WP1 Steps 3/4: canonical 向量正向映射
+
+/// 共享库夹具：清表 + 种子 active generation + 构造仓库。
+private enum CanonicalMappingFixtures {
+    static func prepare() async throws -> CanonicalMemoryRepositoryActor {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM Representation")
+        try await db.execute(sql: "DELETE FROM Memory")
+        try await db.execute(sql: "DELETE FROM IndexGeneration")
+        try await db.execute(sql: "DELETE FROM ActiveRouteSet")
+        let registry = GenerationRegistryActor(db: db)
+        try await registry.registerGeneration(
+            IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384)
+        )
+        try await registry.setGenerationState("text_dense/e5-v1", state: .ready)
+        try await registry.setGenerationState("text_dense/e5-v1", state: .active)
+        return CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+    }
+}
+
+extension PhotoTextSearchContractsTests {
+
+    @Test("Nil-metadata vector hit maps through canonical repository (WP1 step 3a)")
+    func testNilVectorMetadataMapsThroughCanonicalRepository() async throws {
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let representationID = UUID()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-nil", sourceType: "photo")
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp1-nil", canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(
+                representationId: representationID,
+                memoryId: memoryId,
+                modality: .visionDense,
+                preprocessVersion: "siglip2-v1",
+                contentHash: "hash-nil"
+            )],
+            vectorsByGeneration: ["text_dense/e5-v1": [
+                CanonicalVectorEntry(id: representationID, vector: [Float](repeating: 0.25, count: 384))
+            ]],
+            traceID: "t-wp1-3a"
+        )
+        let result = try await repo.mapVectorID(representationID)
+        #expect(result == .mapped(memoryID: memoryId))
+    }
+
+    @Test("EXIF-metadata vector hit maps without legacy MemoryEntry decode (WP1 step 3c)")
+    func testEXIFMetadataMapsThroughCanonicalRepository() async throws {
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let representationID = UUID()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-exif", sourceType: "photo")
+        let exifPayload = Data("{\"EXIF\":{\"Orientation\":6}}".utf8)
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp1-exif", canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(
+                representationId: representationID,
+                memoryId: memoryId,
+                modality: .visionDense,
+                preprocessVersion: "siglip2-v1",
+                contentHash: "hash-exif"
+            )],
+            vectorsByGeneration: ["text_dense/e5-v1": [
+                CanonicalVectorEntry(id: representationID, vector: [Float](repeating: 0.5, count: 384), metadata: exifPayload)
+            ]],
+            traceID: "t-wp1-3c"
+        )
+        let result = try await repo.mapVectorID(representationID)
+        #expect(result == .mapped(memoryID: memoryId))
+    }
+
+    @Test("Unknown vector ID returns typed missing mapping (WP1 step 3e)")
+    func testMissingCanonicalRowReturnsTypedMissingMapping() async throws {
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let ghost = UUID()
+        let result = try await repo.mapVectorID(ghost)
+        #expect(result == .missing(vectorID: ghost))
+    }
+
+    @Test("Batch lookup maps vector IDs keyed by input (WP1 step 4a)")
+    func testBatchLookupMapsVectorIDsInOneRepositoryCall() async throws {
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let firstID = UUID()
+        let secondID = UUID()
+        let memoryOne = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-b1", sourceType: "photo")
+        let memoryTwo = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-b2", sourceType: "photo")
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryOne, sourceLocator: "PHAsset/wp1-b1", canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: firstID, memoryId: memoryOne, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h1")],
+            vectorsByGeneration: ["text_dense/e5-v1": [CanonicalVectorEntry(id: firstID, vector: [Float](repeating: 0.25, count: 384))]],
+            traceID: "t-wp1-4a"
+        )
+        _ = try await repo.commit(
+            memory: Memory(memoryId: memoryTwo, sourceLocator: "PHAsset/wp1-b2", canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: secondID, memoryId: memoryTwo, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h2")],
+            vectorsByGeneration: ["text_dense/e5-v1": [CanonicalVectorEntry(id: secondID, vector: [Float](repeating: 0.5, count: 384))]],
+            traceID: "t-wp1-4a"
+        )
+        let ghost = UUID()
+        let results = try await repo.mapVectorIDs([firstID, secondID, ghost])
+        #expect(results[firstID] == .mapped(memoryID: memoryOne))
+        #expect(results[secondID] == .mapped(memoryID: memoryTwo))
+        #expect(results[ghost] == .missing(vectorID: ghost))
+    }
+}

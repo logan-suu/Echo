@@ -126,3 +126,13 @@ public struct Representation: Sendable, Codable, Equatable {
         self.contentHash = contentHash
     }
 }
+
+// MARK: - Vector→Memory Mapping Result (WP1 steps 3e/3f)
+
+/// 向量 ID → canonical memory 的类型化映射结果（交接计划 §7.5；ADR-015 D-7：
+/// 新建向量强制 vectorId == representationId，据此经 Representation 表正向解析）。
+/// WP3 将扩展 `.ambiguous` 第三态；WP1 二态已满足 fail-closed 判定前置。
+public nonisolated enum CanonicalMappingResult: Sendable, Equatable {
+    case mapped(memoryID: UUID)
+    case missing(vectorID: UUID)
+}
