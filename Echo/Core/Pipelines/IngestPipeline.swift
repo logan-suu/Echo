@@ -154,8 +154,8 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
 /// - 错误分级: 所有 throws 映射到 L1~L4 统一错误矩阵（AGENTS.md §4.4）
 ///
 /// ## 依赖注入
-/// - `embedder`: 嵌入服务（CLIP 编码），生产环境使用 MobileCLIPEmbedder，测试使用 StubEmbedder
-/// - `asrEngine`: 语音转写引擎（SenseVoice），生产环境使用 SenseVoiceASREngine，测试使用 StubASREngine
+/// - `embedder`: 嵌入服务（视觉编码），生产环境使用 SigLIP2 嵌入器（768d），测试使用 StubEmbedder
+/// - `asrEngine`: 语音转写引擎，生产环境使用 WhisperASREngine（GGUF），测试使用 StubASREngine
 /// - `privacyActor`: 隐私校验 Actor（默认 .shared）
 /// - `vectorStore`: 向量存储 Actor
 /// - `excludedAssets`: 排除资产管理 Actor（默认 .shared）
@@ -239,7 +239,7 @@ public actor IngestPipeline {
     /// **流程**（对应架构文档 §3.1 图片摄入时序）：
     /// 1. PrivacyCheckpoint: 校验 photo 数据源授权（R-006）
     /// 2. ExcludedAssets: 检查是否被用户手动排除（US-SRC-008）
-    /// 3. 视觉嵌入: 通过 embedder 生成 512d 向量（MobileCLIP-B LT；AC-3）
+    /// 3. 视觉嵌入: 通过 embedder 生成视觉向量（SigLIP2-B/32 768d；AC-3）
     /// 4. VectorStore: 写入向量 + 元数据
     /// 5. Audit: 记录 .imageIngested，privacyBlurApplied=false（AC-5）
     ///

@@ -1408,12 +1408,15 @@
         "Gate C legal leg sign-off"
       ],
       "acceptance_evidence": [
-        "5 residue files removed from working tree",
-        "stale comments cleaned in IngestPipeline.swift/Memory.swift",
-        "xcodebuild build passes post-removal"
+        "5 residue files deleted from working tree (untracked/gitignored binaries, filesystem-level removal, ~644MB freed)",
+        "stale docstrings refreshed in IngestPipeline.swift (L157/158/242) and Memory.swift (L7/22/30) to SigLIP2-B/32 768d + WhisperASREngine reality",
+        "xcodebuild build-for-testing SUCCEEDED post-removal",
+        "edited lines carry zero new swiftlint violations (pre-existing baseline untouched)"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "Phase integration scan or any App Store archival attempt"
+      "tracking_status": "resolved",
+      "recheck_trigger": "Phase integration scan or any App Store archival attempt",
+      "resolved_at": "2026-08-25",
+      "resolved_by": "agent disposal commit (hash recorded in evidence ledger)"
     }
   ]
 }
