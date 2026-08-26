@@ -314,3 +314,46 @@ extension PhotoTextSearchMigrationTests {
         #expect(remaining.isEmpty, "consent purge must clear deletion journals (WP6 step 8a/8b)")
     }
 }
+
+// MARK: - WP6 步骤 4a/4c 前置：canonical route bytes 与 digest 确定性
+
+extension PhotoTextSearchMigrationTests {
+
+    nonisolated private static func makeRouteSnapshot() throws -> SearchRouteSnapshot {
+        let policy = try FusionPolicySnapshot(
+            policyID: "p-wp6",
+            weights: [ChannelWeight(channel: .textDense, weight: 1.0)],
+            rrfK: 60
+        )
+        return try SearchRouteSnapshot(
+            snapshotID: "wp6-snap-1",
+            schemaVersion: 1,
+            routeVersion: 1,
+            channels: [ChannelRoute(
+                channel: .textDense,
+                generationID: "text_dense/e5-v1",
+                indexManifestID: nil,
+                queryModelManifestID: nil,
+                dimension: 384,
+                alignmentSpaceID: nil,
+                required: true
+            )],
+            fusion: policy,
+            previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: 123,
+            validationDigest: "placeholder"
+        )
+    }
+
+    @Test("Canonical route bytes and digest are deterministic across calls (WP6 step 4a/4c 前置)")
+    func testCanonicalRouteBytesAreDeterministic() throws {
+        let route = try Self.makeRouteSnapshot()
+        let bytes1 = try route.canonicalData()
+        let bytes2 = try route.canonicalData()
+        #expect(bytes1 == bytes2, "canonical bytes must be deterministic for persisted digest validation")
+        let d1 = try route.computedDigest()
+        let d2 = try route.computedDigest()
+        #expect(d1 == d2, "digest must be stable")
+        #expect(d1.count == 64, "digest must be SHA-256 hex")
+    }
+}
