@@ -158,6 +158,11 @@ public actor DatabaseManager {
             try execute(sql: "ALTER TABLE AuditLog ADD COLUMN hasAudio INTEGER")
         }
         // v4 schema migration (3F.1): add hash-only content column (AGENTS.md §5.4)
+        // 修复：v4 迁移仅有注释无 ALTER——干净容器下 AuditLog 缺 contentHash 列，
+        // 使 writeAuditLog 的 INSERT 静默失败（调用方 try? 吞错）
+        if !auditColumns.contains("contentHash") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN contentHash TEXT")
+        }
 
         // WP3 steps 3c-3c5 (photo-text-search): audit subject identity columns + index
         if !auditColumns.contains("subjectKind") {

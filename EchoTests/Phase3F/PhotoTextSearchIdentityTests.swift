@@ -848,7 +848,19 @@ extension PhotoTextSearchIdentityTests {
         try await db.open()
         try await db.execute(sql: "DELETE FROM AuditLog")
         try await db.execute(sql: "DELETE FROM FeedbackStore")
+        // 环境自含：种子 UserPolicy——writeAuditLog 依赖合法 policyVersion，
+        // 不得依赖跨套件残留（干净容器下默认策略导致 try? 吞错）
+        try await db.executeWrite(
+            sql: "INSERT OR REPLACE INTO UserPolicyStore (id, preferredLanguage, authorizedSourceTypes, policyVersion, updatedAt) VALUES (1, ?, ?, ?, ?)",
+            bindings: [
+                .text("zh-Hans"),
+                .text(#"["search","photo","note","voice","text","video"]"#),
+                .int(1),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
         let privacy = PrivacyActor(db: db)
+        try await privacy.loadPolicy()
         let feedback = FeedbackActor(db: db, privacyActor: privacy)
         let memoryId = UUID()
         let canaryQuery = "PLAINTEXT-CANARY-QUERY-7GQ"

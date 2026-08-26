@@ -310,6 +310,10 @@ extension PhotoTextSearchContractsTests {
         )
         try await PrivacyActor.shared.loadPolicy()
         let registry = GenerationRegistryActor(db: db)
+        // 环境自含：清理同名 store 文件——前序套件可能向该代写入残留向量，
+        // 导致重建 generation 时加载污染 store（单独跑绿、全量跑红的根因）
+        try? await registry.removeStoreFile(generationId: "vision_dense/siglip2-v1")
+        try? await registry.removeStoreFile(generationId: "text_dense/e5-v1")
         try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
         try await registry.finishShadowBuild("text_dense/e5-v1", counts: 0, validationDigest: nil)
         try await registry.setGenerationState("text_dense/e5-v1", state: .ready)
