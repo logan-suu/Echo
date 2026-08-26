@@ -27,7 +27,7 @@
     {
       "id": "low-confidence",
       "file": "images/low-confidence.png",
-      "sha256": "56d61dbdba1f9704abe7ed81923c07278baae42908c41ae7ef476bdac1debd99",
+      "sha256": "1c58178be5ce2ae523804c08739a4f96e25c3760ced91c2975aeb59f05a3030a",
       "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
       "purpose": "low-confidence filtering negative case"
     },

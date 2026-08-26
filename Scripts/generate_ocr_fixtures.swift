@@ -93,9 +93,9 @@ let specs: [FixtureSpec] = [
     FixtureSpec(
         name: "low-confidence",
         lines: [("barely visible whisper text", smallBlurry)],
-        background: NSColor(calibratedWhite: 0.62, alpha: 1),
-        foreground: NSColor(calibratedWhite: 0.58, alpha: 1),
-        rotationDegrees: 0, size: NSSize(width: 700, height: 300)
+        background: NSColor(calibratedWhite: 0.78, alpha: 1),
+        foreground: NSColor(calibratedWhite: 0.74, alpha: 1),
+        rotationDegrees: 2, size: NSSize(width: 700, height: 300)
     ),
     FixtureSpec(
         name: "mixed-language",
