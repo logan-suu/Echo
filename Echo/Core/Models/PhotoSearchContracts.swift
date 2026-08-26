@@ -239,3 +239,58 @@ public nonisolated protocol CanonicalRRFFusing: Sendable {
         routeSnapshotID: String
     ) -> [(memoryID: UUID, score: Double, provenance: [ChannelRankProvenance])]
 }
+
+// MARK: - DefaultCanonicalRRFFuser（WP4 步骤 4b/4d/4f）
+
+/// canonical RRF 融合器默认实现——
+/// 按 memoryID 聚合多通道命中，score = Σ w_c/(rrfK+rank)，
+/// 以 canonical UUID 升序做确定性 tie-breaking，
+/// 保留每个有贡献通道的 provenance。
+public struct DefaultCanonicalRRFFuser: CanonicalRRFFusing {
+    public nonisolated init() {}
+
+    public func fuse(
+        mappedHits: [CanonicalMappedHit],
+        weights: [SearchChannel: Double],
+        rrfK: Double,
+        limit: Int,
+        routeSnapshotID: String
+    ) -> [(memoryID: UUID, score: Double, provenance: [ChannelRankProvenance])] {
+        // 按 memoryID 聚合贡献
+        var contributions: [UUID: (score: Double, provs: [ChannelRankProvenance])] = [:]
+        var order: [UUID] = []
+
+        for mapped in mappedHits {
+            let memID = mapped.binding.memoryID
+            let ch = mapped.hit.channel
+            let rank = max(1, mapped.hit.rank)
+            let weight = weights[ch] ?? 1.0
+            let contribution = weight / (rrfK + Double(rank))
+
+            if contributions[memID] == nil {
+                order.append(memID)
+                contributions[memID] = (0, [])
+            }
+            contributions[memID]!.score += contribution
+            contributions[memID]!.provs.append(ChannelRankProvenance(
+                channel: ch,
+                rank: mapped.hit.rank,
+                generationID: mapped.hit.generationID,
+                vectorID: mapped.hit.vectorID,
+                nativeScore: mapped.hit.nativeScore
+            ))
+        }
+
+        // 按分数降序；分数相同按 UUID 升序确定性 tie-break
+        let ranked = order.sorted { a, b in
+            let sa = contributions[a]!.score
+            let sb = contributions[b]!.score
+            if sa != sb { return sa > sb }
+            return a.uuidString < b.uuidString
+        }.prefix(limit)
+
+        return ranked.map { memID in
+            (memoryID: memID, score: contributions[memID]!.score, provenance: contributions[memID]!.provs)
+        }
+    }
+}

@@ -352,3 +352,68 @@ extension PhotoTextSearchIntegrationTests {
         #expect(reason == .routeUnavailable)
     }
 }
+
+// MARK: - WP4 Steps 4a-4f: Canonical RRF 融合
+
+extension PhotoTextSearchIntegrationTests {
+
+    @Test("Canonical RRF coalesces two vectors into one memory (WP4 step 4a)")
+    func testCanonicalRRFCoalescesTwoVectorsIntoOneMemory() async throws {
+        let fuser = DefaultCanonicalRRFFuser()
+        let memoryId = UUID()
+        let textBinding = CanonicalVectorBinding(
+            vectorID: UUID(), representationID: UUID(), memoryID: memoryId,
+            modality: .textDense, generationID: "text_dense/e5-v1"
+        )
+        let visionBinding = CanonicalVectorBinding(
+            vectorID: UUID(), representationID: UUID(), memoryID: memoryId,
+            modality: .visionDense, generationID: "vision_dense/siglip2-v1"
+        )
+        let hits = [
+            CanonicalMappedHit(binding: textBinding, hit: RawChannelHit(
+                channel: .textDense, vectorID: textBinding.vectorID, rank: 1,
+                nativeScore: 0.95, generationID: "text_dense/e5-v1")),
+            CanonicalMappedHit(binding: visionBinding, hit: RawChannelHit(
+                channel: .visionDense, vectorID: visionBinding.vectorID, rank: 2,
+                nativeScore: 0.88, generationID: "vision_dense/siglip2-v1")),
+        ]
+        let weights: [SearchChannel: Double] = [.textDense: 1.0, .visionDense: 0.8]
+        let results = fuser.fuse(mappedHits: hits, weights: weights,
+                                 rrfK: 60, limit: 10, routeSnapshotID: "snap")
+        #expect(results.count == 1, "two channel hits for same memory must coalesce into one result")
+        #expect(results[0].memoryID == memoryId)
+        #expect(results[0].provenance.count == 2, "both channels contribute provenance")
+    }
+
+    @Test("Canonical RRF ranks multi-channel above single-channel (WP4 step 4e)")
+    func testCanonicalRRFRanksMultiChannelAboveSingle() async throws {
+        let fuser = DefaultCanonicalRRFFuser()
+        // 同一 memory 在两个通道命中 vs 另一 memory 仅单通道命中
+        let sharedMemory = UUID()
+        let dualText = CanonicalVectorBinding(vectorID: UUID(), representationID: UUID(),
+                                              memoryID: sharedMemory, modality: .textDense, generationID: "g")
+        let dualVision = CanonicalVectorBinding(vectorID: UUID(), representationID: UUID(),
+                                                memoryID: sharedMemory, modality: .visionDense, generationID: "g")
+        let singleMemory = UUID()
+        let singleBinding = CanonicalVectorBinding(vectorID: UUID(), representationID: UUID(),
+                                                   memoryID: singleMemory, modality: .textDense, generationID: "g")
+        let hits = [
+            CanonicalMappedHit(binding: singleBinding, hit: RawChannelHit(
+                channel: .textDense, vectorID: singleBinding.vectorID, rank: 1,
+                nativeScore: nil, generationID: "g")),
+            CanonicalMappedHit(binding: dualText, hit: RawChannelHit(
+                channel: .textDense, vectorID: dualText.vectorID, rank: 2,
+                nativeScore: nil, generationID: "g")),
+            CanonicalMappedHit(binding: dualVision, hit: RawChannelHit(
+                channel: .visionDense, vectorID: dualVision.vectorID, rank: 1,
+                nativeScore: nil, generationID: "g")),
+        ]
+        let weights: [SearchChannel: Double] = [.textDense: 1.0, .visionDense: 1.0]
+        let results = fuser.fuse(mappedHits: hits, weights: weights,
+                                 rrfK: 60, limit: 10, routeSnapshotID: "snap")
+        #expect(results.count == 2)
+        #expect(results[0].memoryID == sharedMemory, "dual-channel memory outranks single-channel")
+        #expect(results[0].provenance.count == 2)
+        #expect(results[1].memoryID == singleMemory)
+    }
+}
