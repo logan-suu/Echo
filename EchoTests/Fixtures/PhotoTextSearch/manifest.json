@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "generator": "Scripts/generate_ocr_fixtures.swift",
+  "note": "All fixtures are self-generated text renders (CC0). SHA256 values match the committed PNG bytes; regenerate via the generator script and re-hash if updated.",
+  "fixtures": [
+    {
+      "id": "screenshot-basic",
+      "file": "images/screenshot-basic.png",
+      "sha256": "eb7c456ee27b88a4a528c98659d0e417b185f5a0764037f4adcaca032177529e",
+      "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
+      "purpose": "raw recognized text baseline"
+    },
+    {
+      "id": "rotated-90",
+      "file": "images/rotated-90.png",
+      "sha256": "3369b773446e14e8519229133a984858d9116d9b6f1d30f658f8e1c9412dbb1c",
+      "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
+      "purpose": "orientation handling baseline"
+    },
+    {
+      "id": "blank-photo",
+      "file": "images/blank-photo.png",
+      "sha256": "c71bc57e6c68d6cfed523fde969d3091bc1a0373cce581a7aa91cc3b0e660cf1",
+      "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
+      "purpose": "no-text negative case"
+    },
+    {
+      "id": "low-confidence",
+      "file": "images/low-confidence.png",
+      "sha256": "56d61dbdba1f9704abe7ed81923c07278baae42908c41ae7ef476bdac1debd99",
+      "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
+      "purpose": "low-confidence filtering negative case"
+    },
+    {
+      "id": "mixed-language",
+      "file": "images/mixed-language.png",
+      "sha256": "b479d02c58b56bd0fd7e8a0b764755b3014ba4cfa629af57c3792a83ad982999",
+      "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
+      "purpose": "zh-Hans + en-US approved locale set"
+    }
+  ]
+}
