@@ -64,6 +64,14 @@ public final class AppComposition {
     /// ASR 引擎（Whisper）— 语音转写生产路径（CR-10）
     public let asrEngine: (any ASREngineProtocol)?
 
+    // MARK: - WP4 Composition 接线（上下文感知嵌入器 typed 引用）
+
+    /// E5 上下文感知嵌入器——textDense/ocrText 通道的 .query 载荷来源。
+    /// 返回 nil 表示底层嵌入器尚未升级为 ContextualTextEmbedder。
+    public var textContextualEmbedder: (any ContextualTextEmbedder)? {
+        textEmbedder as? (any ContextualTextEmbedder)
+    }
+
     // MARK: - Production Wiring (3F.11 fix: 权限入口接线)
 
     /// 生产同步管线（AppDelegate 装配后注入）— 照片授权授予后的首次全量导入入口
