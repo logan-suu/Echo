@@ -92,6 +92,19 @@ public actor PhotoSearchMigrationActor {
         _ = try await cache.invalidateAll()
     }
 
+    /// 完整回滚到前序路由快照（WP6 迁移算法 E.1-E.6；步骤 5c-5d）：
+    /// 加载最近两条记录，取前序快照 → canonical 解码（digest 校验）→ 重新原子发布。
+    /// 回滚期间保留失败的新快照记录供诊断（E.6），且缓存随新发布失效。
+    public func rollbackToPreviousSnapshot(traceID: String) async throws -> SearchRouteSnapshot? {
+        let recent = try await db.loadRecentRouteSnapshots(limit: 2)
+        guard recent.count == 2 else { return nil }
+        let previous = recent[1]
+        let snapshot = try SearchRouteCanonicalEncoder.decode(previous.bytes)
+        // 重新发布前序快照（decode 后 digest 重算，与持久化 digest 一致性由 publishRouteSnapshot 校验）
+        try await publishRouteSnapshot(snapshot, traceID: traceID)
+        return snapshot
+    }
+
     /// 验证 shadow generation 无 orphan/歧义向量（WP6 迁移算法 D.3 / I.1-I.5）：
     /// 逐向量解析到唯一 canonical memory；任一 missing（orphan）或 ambiguous 即验证失败，
     /// 该代不得参与路由发布（验收清单第 3 条：活跃路由绝不指向 invalid generation）。

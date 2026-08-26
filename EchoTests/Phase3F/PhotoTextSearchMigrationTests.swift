@@ -566,3 +566,59 @@ extension PhotoTextSearchMigrationTests {
         }
     }
 }
+
+// MARK: - WP6 步骤 5c-5d：完整回滚恢复前序快照
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Rollback restores the complete previous route snapshot (WP6 step 5c/5d)")
+    func testRollbackRestoresCompletePreviousRoute() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM RouteSnapshot")
+        let migration = PhotoSearchMigrationActor(
+            db: db, generationRegistry: GenerationRegistryActor(db: db)
+        )
+
+        // 发布两个不同快照（snapshotID 唯一，publish 不触发 digestMismatch）
+        let v1 = try Self.makeRouteSnapshot()
+        try await migration.publishRouteSnapshot(v1, traceID: "t-wp6-5c-v1")
+        let v2 = try SearchRouteSnapshot(
+            snapshotID: "wp6-snap-2",
+            schemaVersion: 1,
+            routeVersion: 2,
+            channels: v1.channels,
+            fusion: v1.fusion,
+            previousSnapshotID: v1.snapshotID,
+            publishedAtEpochMilliseconds: 456,
+            validationDigest: "placeholder"
+        )
+        try await migration.publishRouteSnapshot(v2, traceID: "t-wp6-5c-v2")
+
+        // 回滚：恢复前序（v1）
+        let restored = try await migration.rollbackToPreviousSnapshot(traceID: "t-wp6-5c-rollback")
+        #expect(restored != nil, "rollback must return the previous snapshot")
+        #expect(restored?.snapshotID == v1.snapshotID)
+        #expect(restored?.routeVersion == v1.routeVersion)
+
+        // 最新记录恢复为 v1（digest 与 bytes 一致）
+        let latest = try await db.loadRecentRouteSnapshots(limit: 1)
+        #expect(latest.first?.snapshotID == v1.snapshotID, "latest record must be the rolled-back previous snapshot")
+        #expect(latest.first?.digest == (try v1.computedDigest()))
+    }
+
+    @Test("Rollback returns nil when fewer than two snapshots exist (WP6 step 5c fail-safe)")
+    func testRollbackReturnsNilWithoutPrevious() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM RouteSnapshot")
+        let migration = PhotoSearchMigrationActor(
+            db: db, generationRegistry: GenerationRegistryActor(db: db)
+        )
+        let v1 = try Self.makeRouteSnapshot()
+        try await migration.publishRouteSnapshot(v1, traceID: "t-wp6-5c-single")
+
+        let restored = try await migration.rollbackToPreviousSnapshot(traceID: "t-wp6-5c-none")
+        #expect(restored == nil, "no previous snapshot means nothing to roll back to")
+    }
+}

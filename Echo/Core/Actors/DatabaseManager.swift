@@ -594,6 +594,20 @@ public actor DatabaseManager {
               let digest = row["canonicalDigest"]?.stringValue else { return nil }
         return (bytes, digest)
     }
+
+    /// 读取最近发布的路由快照记录（按 publishedAt 降序；WP6 5c-5d 回滚用前序）。
+    public func loadRecentRouteSnapshots(limit: Int) throws -> [(snapshotID: String, bytes: Data, digest: String)] {
+        let rows = try executeQuery(
+            sql: "SELECT snapshotID, canonicalBytes, canonicalDigest FROM RouteSnapshot ORDER BY publishedAt DESC LIMIT ?",
+            bindings: [.int(Int64(limit))]
+        )
+        return rows.compactMap { row in
+            guard let id = row["snapshotID"]?.stringValue,
+                  let bytes = row["canonicalBytes"]?.blobValue,
+                  let digest = row["canonicalDigest"]?.stringValue else { return nil }
+            return (id, bytes, digest)
+        }
+    }
 }
 
 // MARK: - Database Binding & Value Types
