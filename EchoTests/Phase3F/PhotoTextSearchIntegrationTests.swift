@@ -487,3 +487,50 @@ extension PhotoTextSearchIntegrationTests {
         #expect(ch == .visionDense)
         #expect(reason == .indexEmpty)
     }
+
+// MARK: - WP4 Steps 2a/2b: vision 失败隔离回归守卫
+
+/// 故障注入用视觉嵌入器——embedVisionQuery 必然抛错。
+private struct FailingVisionEmbedder: VisionTextEmbedder {
+    nonisolated let modelManifestID = "failing-siglip2"
+    nonisolated let alignmentSpaceID = "aligned-siglip2-v1"
+    nonisolated let dimension = 768
+
+    func embedVisionQuery(text: String, locale: String, traceID: String) async throws -> [Float] {
+        throw PhotoSearchContractError.dimensionMismatch(expected: 768, actual: 0)
+    }
+}
+
+extension PhotoTextSearchIntegrationTests {
+
+    @Test("Vision embedding failure preserves text payload (WP4 step 2a)")
+    func testVisionEmbeddingFailurePreservesTextPayload() async throws {
+        let failingFactory = DefaultQueryRepresentationFactory(
+            textEmbedder: ContextRecordingE5(),
+            visionEmbedder: FailingVisionEmbedder()
+        )
+        let healthyFactory = DefaultQueryRepresentationFactory(
+            textEmbedder: ContextRecordingE5(),
+            visionEmbedder: StubVisionEmbedder()
+        )
+        let route = try fourChannelRoute()
+
+        let failed = await failingFactory.makeQuery(
+            text: "red flower", locale: "en-US", route: route, traceID: "t-2a-fail"
+        )
+        let healthy = await healthyFactory.makeQuery(
+            text: "red flower", locale: "en-US", route: route, traceID: "t-2a-ok"
+        )
+
+        // vision 失败时 textDense payload 仍然存在且维度正确
+        guard case .dense(let dvFailed)? = failed.query.payloads[.textDense] else {
+            Issue.record("textDense payload missing after vision failure")
+            return
+        }
+        #expect(dvFailed.dimension == 384)
+
+        // vision 失败记入 failures
+        #expect(failed.failures[.visionDense] != nil)
+        #expect(healthy.failures[.visionDense] == nil)
+    }
+}
