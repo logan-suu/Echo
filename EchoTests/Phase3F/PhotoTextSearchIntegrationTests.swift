@@ -534,3 +534,66 @@ extension PhotoTextSearchIntegrationTests {
         #expect(healthy.failures[.visionDense] == nil)
     }
 }
+
+// MARK: - WP4 Steps 5g/5h: E5 失败隔离回归守卫（与 vision 失败隔离对称）
+
+/// 故障注入用 E5 嵌入器——embed 必然抛错。
+private struct FailingContextualEmbedder: ContextualTextEmbedder {
+    nonisolated let modelManifestID = "failing-e5"
+    nonisolated let dimension = 384
+
+    func embed(text: String, context: TextEmbeddingContext, traceID: String) async throws -> [Float] {
+        throw PhotoSearchContractError.dimensionMismatch(expected: 384, actual: 0)
+    }
+}
+
+extension PhotoTextSearchIntegrationTests {
+
+    @Test("E5 embedding failure preserves vision payload (WP4 step 5g)")
+    func testE5EmbeddingFailurePreservesVisionPayload() async throws {
+        let factory = DefaultQueryRepresentationFactory(
+            textEmbedder: FailingContextualEmbedder(),
+            visionEmbedder: StubVisionEmbedder()
+        )
+        let route = try fourChannelRoute()
+        let outcome = await factory.makeQuery(
+            text: "red flower", locale: "en-US", route: route, traceID: "t-5g"
+        )
+
+        // E5 失败时 textDense 和 ocrText 载荷缺失
+        #expect(outcome.query.payloads[.textDense] == nil)
+        #expect(outcome.query.payloads[.ocrText] == nil)
+
+        // visionDense 载荷不受影响且维度正确
+        guard case .dense(let dv)? = outcome.query.payloads[.visionDense] else {
+            Issue.record("visionDense payload missing after E5 failure")
+            return
+        }
+        #expect(dv.dimension == 768)
+
+        // E5 失败记入 failures
+        #expect(outcome.failures[.textDense] != nil)
+        #expect(outcome.failures[.ocrText] != nil)
+        #expect(outcome.failures[.visionDense] == nil, "vision should not be affected by E5 failure")
+    }
+
+    @Test("E5 embedding failure preserves lexical payload (WP4 step 5g)")
+    func testE5EmbeddingFailurePreservesLexicalPayload() async throws {
+        let factory = DefaultQueryRepresentationFactory(
+            textEmbedder: FailingContextualEmbedder(),
+            visionEmbedder: StubVisionEmbedder()
+        )
+        let route = try fourChannelRoute()
+        let outcome = await factory.makeQuery(
+            text: "红色的花", locale: "zh-Hans", route: route, traceID: "t-5g-lex"
+        )
+
+        // 词法载荷不依赖嵌入器，即使 E5 全挂也不受影响
+        guard case .lexical(let text, let locale)? = outcome.query.payloads[.lexical] else {
+            Issue.record("lexical payload missing after E5 failure")
+            return
+        }
+        #expect(text == "红色的花")
+        #expect(locale == "zh-Hans")
+    }
+}
