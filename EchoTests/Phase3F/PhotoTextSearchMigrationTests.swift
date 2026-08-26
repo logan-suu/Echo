@@ -428,3 +428,46 @@ extension PhotoTextSearchMigrationTests {
         #expect(after?.textGeneration == before?.textGeneration)
     }
 }
+
+// MARK: - WP6 步骤 4e-4f：原子路由发布（单事务四通道同时可见）
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Route publication makes all channels visible together in one transaction (WP6 step 4e/4f)")
+    func testRouteTransactionPublishesAllChannelsTogether() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+
+        // 注册四通道 generation 并激活
+        let suffix = UUID().uuidString.prefix(6)
+        let gens = [
+            ("text_dense/e5-v1-\(suffix)", "text_dense", 384),
+            ("vision_dense/siglip2-v1-\(suffix)", "vision_dense", 768),
+            ("ocr_text/e5-v1-\(suffix)", "ocr_text", 384),
+            ("lexical/f5-\(suffix)", "lexical", 384),
+        ]
+        for (genId, indexType, dim) in gens {
+            try await registry.registerGeneration(IndexGeneration(generationId: genId, indexType: indexType, dimension: dim))
+            try await registry.setGenerationState(genId, state: .ready)
+            try await registry.setGenerationState(genId, state: .active)
+        }
+
+        let activated = try await registry.activateGeneration(gens[0].0)
+        try await registry.publishRoute(ActiveRouteSet(
+            textGeneration: gens[0].0,
+            ocrGeneration: gens[2].0,
+            visionGeneration: gens[1].0,
+            lexicalGeneration: gens[3].0,
+            version: activated.version
+        ))
+
+        // 单事务发布后四通道同时可见（全部来自同一次 commit，无部分发布）
+        let route = try await registry.loadActiveRoute()
+        #expect(route?.textGeneration == gens[0].0)
+        #expect(route?.visionGeneration == gens[1].0)
+        #expect(route?.ocrGeneration == gens[2].0)
+        #expect(route?.lexicalGeneration == gens[3].0)
+        #expect(route?.version == activated.version)
+    }
+}
