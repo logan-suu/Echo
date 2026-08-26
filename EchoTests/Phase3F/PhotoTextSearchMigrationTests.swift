@@ -622,3 +622,58 @@ extension PhotoTextSearchMigrationTests {
         #expect(restored == nil, "no previous snapshot means nothing to roll back to")
     }
 }
+
+// MARK: - WP6 步骤 3e-3h：模型加载失败保持活跃路由 + build item failed
+
+private struct WP6FailingEmbedder: EmbedderProtocol {
+    func embedImage(assetId: String) async throws -> [Float] { Array(repeating: 0, count: 768) }
+    func embedText(_ text: String) async throws -> [Float] { Array(repeating: 0, count: 384) }
+    func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float] {
+        Array(repeating: 0, count: 384)
+    }
+    func embedImageData(_ data: Data) async throws -> [Float] {
+        throw EmbedderError.modelNotLoaded
+    }
+}
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Model load failure keeps active route and marks build item failed (WP6 step 3e-3h)")
+    func testModelLoadFailureKeepsActiveRouteAndMarksFailed() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let migration = PhotoSearchMigrationActor(
+            generationRegistry: registry,
+            canonicalRepository: repo,
+            visionEmbedder: WP6FailingEmbedder(),
+            photoExtractor: WP6StubPhotoExtractor(imageData: Data([0x89, 0x50, 0x4E, 0x47])),
+            progressActor: ProgressActor.shared
+        )
+
+        let beforeSnapshot = try await Self.seedActiveRoute(db: db, registry: registry)
+        let st = try await migration.startPhotoShadowBuild(traceID: "t-wp6-3e")
+        guard let shadowID = st.shadowGenerationID else { return }
+
+        let locator = "PHAsset/wp6-fail-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await repo.commit(
+            memory: Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memID, vector: Array(repeating: 0.25, count: 768))]],
+            traceID: "t-wp6-seed"
+        )
+
+        // 3e/3f：模型失败不改变活跃路由（migratePhoto 返回 failed item 而非 throw）
+        let item = try await migration.migratePhoto(
+            memoryId: memID, shadowGenerationID: shadowID, taskID: "t-wp6-3e", traceID: "t-wp6-3e"
+        )
+        #expect(item.state == "failed")
+        #expect(item.error == "embedding-failed")
+        let after = try await registry.loadActiveRoute()
+        let afterSnapshot = after.flatMap { "active-v\($0.version)-\($0.textGeneration)" }
+        #expect(afterSnapshot == beforeSnapshot, "model failure must keep the active route byte-identical")
+    }
+}

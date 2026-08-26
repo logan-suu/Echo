@@ -196,7 +196,28 @@ public actor PhotoSearchMigrationActor {
             return failed
         }
 
-        let vector = try await visionEmbedder.embedImageData(imageData)
+        let vector: [Float]
+        do {
+            vector = try await visionEmbedder.embedImageData(imageData)
+        } catch {
+            // 3g/3h：模型加载失败 → 对应 build item 标记 failed（不虚构向量），活跃路由保持逐字节不变
+            let failed = IndexBuildItem(
+                generationId: shadowGenerationID,
+                representationId: memoryId.uuidString,
+                state: "failed",
+                error: "embedding-failed"
+            )
+            try await generationRegistry.upsertBuildItem(failed)
+            try await advanceProgress(taskID: taskID, locator: memory.sourceLocator)
+            state = PhotoSearchMigrationState(
+                phase: .shadowBuilding,
+                sourceSnapshotID: state.sourceSnapshotID,
+                shadowGenerationID: shadowGenerationID,
+                processedCount: state.processedCount + 1,
+                lastProcessedLocator: memory.sourceLocator
+            )
+            return failed
+        }
         let repID = CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId)
         guard let store = await generationRegistry.vectorStore(for: shadowGenerationID) else {
             throw PhotoSearchMigrationError.shadowStoreUnavailable
