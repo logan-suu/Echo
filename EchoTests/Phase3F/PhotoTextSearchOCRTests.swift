@@ -306,3 +306,105 @@ extension PhotoTextSearchOCRTests {
         #expect(ocrRep?.contentHash == "sha256:wp5-ocr")
     }
 }
+
+// MARK: - WP5 步骤组 5+6：OCR 查询侧与隔离/删除验证
+
+extension PhotoTextSearchOCRTests {
+
+    @Test("OCR hit carries ocrText provenance through canonical RRF (WP5 steps 5c/5d)")
+    func testOCRHitCarriesOCRProvenance() async throws {
+        let vecID = UUID()
+        let memID = UUID()
+        let binding = CanonicalVectorBinding(
+            vectorID: vecID, representationID: vecID, memoryID: memID,
+            modality: .ocrText, generationID: "ocr_text/e5-v1"
+        )
+        let hit = RawChannelHit(
+            channel: .ocrText, vectorID: vecID, rank: 1,
+            nativeScore: nil, generationID: "ocr_text/e5-v1"
+        )
+        let fused = DefaultCanonicalRRFFuser().fuse(
+            mappedHits: [CanonicalMappedHit(binding: binding, hit: hit)],
+            weights: [:], rrfK: 60, limit: 10, routeSnapshotID: "r-wp5-5c"
+        )
+        #expect(fused.count == 1)
+        #expect(fused.first?.provenance.first?.channel == .ocrText,
+                "OCR hit must carry ocrText provenance channel")
+    }
+
+    @Test("OCR channel failure preserves vision results (WP5 steps 6a/6b)")
+    func testOCRFailurePreservesVisionResults() async throws {
+        let visionID = UUID()
+        let memID = UUID()
+        let visionBinding = CanonicalVectorBinding(
+            vectorID: visionID, representationID: visionID, memoryID: memID,
+            modality: .visionDense, generationID: "vision_dense/siglip2-v1"
+        )
+        let visionHit = RawChannelHit(
+            channel: .visionDense, vectorID: visionID, rank: 1,
+            nativeScore: nil, generationID: "vision_dense/siglip2-v1"
+        )
+        // 仅 vision 命中进入融合（OCR 失败 = 无贡献，不阻断健康通道）
+        let fused = DefaultCanonicalRRFFuser().fuse(
+            mappedHits: [CanonicalMappedHit(binding: visionBinding, hit: visionHit)],
+            weights: [:], rrfK: 60, limit: 10, routeSnapshotID: "r-wp5-6a"
+        )
+        #expect(fused.count == 1)
+        #expect(fused.first?.provenance.map(\.channel) == [.visionDense],
+                "vision result must survive absent OCR channel")
+    }
+
+    @Test("OCR memory deletion leaves zero cache residue (WP5 steps 6c/6d)")
+    func testOCRDeletionLeavesZeroCacheResidue() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let cache = SearchResultCacheActor()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let memID = UUID()
+
+        let key = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "ocr-q", routeSnapshotID: "r")
+        let item = SearchResultItem(
+            id: memID,
+            assetId: "PHAsset/ocr-cache",
+            sourceType: "photo",
+            timestamp: Date().timeIntervalSince1970,
+            originalText: nil,
+            sourceLanguage: nil,
+            cosineSimilarity: 0.9
+        )
+        try await cache.store(
+            key: key,
+            result: CachedSearchResult(items: [item])
+        )
+        try await cache.invalidate(memoryID: memID)
+        #expect(try await cache.lookup(key: key) == nil,
+                "cache must carry no residue after invalidation")
+    }
+
+    @Test("OCR memory deletion leaves zero subject-linked audit residue (WP5 steps 6e/6f)")
+    func testOCRDeletionLeavesZeroAuditSubjectResidue() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        let privacy = PrivacyActor(db: db)
+        let feedback = FeedbackActor(db: db, privacyActor: privacy)
+        let memoryId = UUID()
+        let subject = AuditSubject.memory(memoryId)
+
+        let entry = FeedbackEntry(
+            id: UUID(), memoryId: memoryId, queryText: "ocr term",
+            sentiment: .like, cosineSimilarity: 0.9, createdAt: Date()
+        )
+        try await feedback.recordFeedback(entry, traceID: "t-wp5-6e")
+
+        // 验证 subject-linked audit 清除路径可用（purgeAuditRecords）
+        try await privacy.purgeAuditRecords(subject: subject, traceID: "t-wp5-6e")
+        let rows = try await db.executeQuery(
+            sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?",
+            bindings: [.text(subject.subjectHash)]
+        )
+        #expect(rows.first?["c"]?.intValue == 0,
+                "subject-linked audit must be purged with the deleted memory")
+    }
+}
