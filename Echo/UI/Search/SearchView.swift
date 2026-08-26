@@ -64,7 +64,7 @@ struct SearchView: View {
     /// 首次出现标记 — 控制 fixture 注入仅执行一次 (2026-08-02 回归修复)
     @State private var hasHandledLaunchArguments = false
 
-    init(viewModel: SearchViewModel = SearchViewModel()) {
+    init(viewModel: SearchViewModel = SearchViewModel(composition: AppComposition.shared)) {
         _viewModel = State(initialValue: viewModel)
     }
 

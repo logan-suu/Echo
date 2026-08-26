@@ -1135,6 +1135,7 @@ public actor IngestPipeline {
             recoverability: .full
         )
         let rep = Representation(
+            representationId: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
             memoryId: memoryId,
             modality: .visionDense,
             preprocessVersion: "siglip2-v1",
@@ -1303,14 +1304,19 @@ public actor IngestPipeline {
         for (index, frameData) in content.frameImages.enumerated() {
             try context.checkCancelled()
             let frameVector = try await productionEmbedImageData(frameData)
+            // WP3 步骤 1d 系列：帧 representationId == 帧 vectorId（同一确定性派生）
+            let frameRepID = CanonicalMemoryRepositoryActor.videoFrameRepresentationID(
+                sourceLocator: assetId, frameIndex: index
+            )
             representations.append(Representation(
+                representationId: frameRepID,
                 memoryId: memoryId,
                 modality: .visionDense,
                 preprocessVersion: "siglip2-v1",
                 contentHash: Self.sha256(of: frameData)
             ))
             vectors[visionGen, default: []].append(
-                CanonicalVectorEntry(id: CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "\(assetId)|frame\(index)", sourceType: "video_frame"), vector: frameVector)
+                CanonicalVectorEntry(id: frameRepID, vector: frameVector)
             )
             try await context.report(processedIndex: index + 1, lastProcessedId: "\(assetId)|frame\(index)")
         }
@@ -1399,7 +1405,7 @@ public actor IngestPipeline {
     /// 生产路径文本嵌入包装：错误映射为 `IngestError.embeddingFailed`（L3，CR-5）。
     private func productionEmbedText(_ text: String) async throws -> [Float] {
         do {
-            return try await embedder.embedText(text)
+            return try await embedder.embedText(text, context: .passage)
         } catch {
             throw IngestError.embeddingFailed(underlying: error)
         }

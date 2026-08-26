@@ -77,6 +77,32 @@ public actor CanonicalMemoryRepositoryActor {
         ))
     }
 
+    // MARK: - 确定性 representation ID 派生（WP3 步骤 1a-1f）
+
+    /// 照片 representation ID 恒等于 canonical memory ID
+    /// （vectorId == representationId == memoryId，交接计划 WP3 步骤 1a-1b2）。
+    public nonisolated static func photoRepresentationID(memoryID: UUID) -> UUID {
+        memoryID
+    }
+
+    /// 视频帧 representation ID：与既有帧向量 ID 公式完全一致
+    /// （deterministicID(assetId|frameN, video_frame)），零语义漂移。
+    public nonisolated static func videoFrameRepresentationID(sourceLocator: String, frameIndex: Int) -> UUID {
+        deterministicID(
+            sourceLocator: "\(sourceLocator)|frame\(frameIndex)",
+            sourceType: "video_frame"
+        )
+    }
+
+    /// 音频 representation ID：父 memory + 固定 「audio」 组件 key 的确定性派生
+    /// （交接计划 WP3 步骤 1e-1f）。
+    public nonisolated static func audioRepresentationID(memoryID: UUID) -> UUID {
+        deterministicID(
+            sourceLocator: "\(memoryID.uuidString.lowercased())|audio",
+            sourceType: "video_audio"
+        )
+    }
+
     // MARK: - Fault Injection (DEBUG only — Nitpick-1: release 不暴露删数据钩子)
 
     #if DEBUG
@@ -87,6 +113,18 @@ public actor CanonicalMemoryRepositoryActor {
         case afterCanonicalWrite
         /// 在 deleteMemory 向量清理前注入失败（模拟 DB 删除故障，3F.5 W-03）
         case deleteFail
+        /// WP3 steps 3k-3t2: 删除管线阶段注入点
+        case cacheInvalidation
+        case vectorDeletePersist
+        case auditPurge
+        case canonicalTransaction
+    }
+
+    /// WP3 steps 3k-3t2：删除管线协作方（组合根 setter 注入，避免 init 连锁）。
+    private var deletionCacheActor: SearchResultCacheActor?
+
+    public func configureDeletionCollaborators(cache: SearchResultCacheActor) {
+        deletionCacheActor = cache
     }
 
     public func setFault(_ fault: FaultPoint?) {
@@ -193,6 +231,43 @@ public actor CanonicalMemoryRepositoryActor {
     /// F-3: 用户查询中的 FTS5 语法字符（引号、`*`、括号、AND/OR 等）会导致
     /// MATCH 运行时错误或异常结果。查询按空白分词，每 token 作为短语（引号包裹 +
     /// 内嵌引号转义）以隐式 AND 组合，杜绝语法注入；空查询返回空数组。
+    // MARK: - Vector→Memory Forward Mapping (WP1 步骤 3/4)
+
+    /// WP1 步骤 3：单个向量 ID → canonical memory 的类型化映射。
+    ///
+    /// 经 Representation 表按 representationId 反查 memoryId；
+    /// 查无即返回 `.missing`（是否 fail-closed 排除由调用方决定）。
+    public func mapVectorID(_ vectorID: UUID, generationID: String) async throws -> CanonicalMappingResult {
+        let rows = try await db.executeQuery(
+            sql: "SELECT memoryId, modality FROM Representation WHERE representationId = ? LIMIT 1",
+            bindings: [.text(vectorID.uuidString)]
+        )
+        guard let row = rows.first,
+              let idString = row["memoryId"]?.stringValue,
+              let memoryID = UUID(uuidString: idString),
+              let modalityRaw = row["modality"]?.stringValue,
+              let modality = Modality(rawValue: modalityRaw) else {
+            return .missing(vectorID: vectorID, generationID: generationID)
+        }
+        // ADR-015 D-7: vectorId == representationId，一对一绑定
+        return .mapped(CanonicalVectorBinding(
+            vectorID: vectorID,
+            representationID: vectorID,
+            memoryID: memoryID,
+            modality: modality,
+            generationID: generationID
+        ))
+    }
+
+    /// WP1 步骤 4：批量映射 —— 调用方单次仓库交互，结果按入参 ID 键控。
+    public func mapVectorIDs(_ vectorIDs: [UUID], generationID: String) async throws -> [UUID: CanonicalMappingResult] {
+        var results: [UUID: CanonicalMappingResult] = [:]
+        for vectorID in vectorIDs {
+            results[vectorID] = try await mapVectorID(vectorID, generationID: generationID)
+        }
+        return results
+    }
+
     public func searchCanonical(matching query: String, limit: Int = 50) async throws -> [UUID] {
         let tokens = query.split(whereSeparator: \.isWhitespace).map {
             "\"" + String($0).replacingOccurrences(of: "\"", with: "\"\"") + "\""
@@ -227,29 +302,63 @@ public actor CanonicalMemoryRepositoryActor {
         let memory = try await loadMemory(memoryId: memoryId)
         guard memory != nil else { return false }
 
+        // D-005 (WP3 steps 3i-3t2): journal 驱动的可恢复删除阶段机。
+        // 固定 operationID ⇒ 故障重放幂等更新同一 journal 行。
+        let operationID = "del-\(memoryId.uuidString.lowercased())"
+        let subject = AuditSubject.memory(memoryId)
+
+        func advance(_ phase: MemoryDeletionPhase,
+                     vectors: [GenerationVectorIDs] = []) async throws {
+            let j = MemoryDeletionJournal(
+                operationID: operationID,
+                memoryID: memoryId,
+                auditSubjectHash: subject.subjectHash,
+                traceID: traceID,
+                phase: phase,
+                vectorIDsByGeneration: vectors
+            )
+            try await db.upsertDeletionJournal(j)
+        }
+
+        // Phase: planned —— 先于一切副作用持久化
+        let generations = try await generationRegistry.loadGenerations()
+        try await advance(
+            .planned,
+            vectors: generations.map {
+                GenerationVectorIDs(generationID: $0.generationId, vectorIDs: [memoryId])
+            }
+        )
+
         #if DEBUG
         if fault == .deleteFail {
             throw CanonicalRepositoryError.deleteInjected
         }
         #endif
 
-        // 1) 删除全部 generation 中的向量（内存实例 + 持久化磁盘副本，D-005 跨全 generation）
-        //    F-1: 未在本会话加载的 generation（retired/未恢复）其 .pxkt 磁盘副本同样必须清理，
-        //    否则重启恢复后残留向量。磁盘清理失败记录到审计日志，不阻断 SQLite 删除事务。
+        // Stage 1: cache 失效（协作方经 configureDeletionCollaborators 注入；
+        // 未注入时跳过——单元夹具场景无 cache 可失效）
+        if let cache = deletionCacheActor {
+            _ = try await cache.invalidate(memoryID: memoryId)
+            #if DEBUG
+            if fault == .cacheInvalidation {
+                throw CanonicalRepositoryError.deleteInjected
+            }
+            #endif
+        }
+        try await advance(.cacheInvalidated)
+
+        // Stage 2: 全 generation 向量删除（内存实例 + 磁盘副本 F-1）
         var diskCleanupFailed = false
-        let generations = try await generationRegistry.loadGenerations()
         for gen in generations {
             let generationId = gen.generationId
             if let store = await generationRegistry.vectorStore(for: generationId) {
                 _ = await store.delete(id: memoryId)
-                // 内存删除后持久化，避免磁盘副本仍保留已删向量（F-1）
                 do {
                     try await generationRegistry.persistStore(generationId: generationId)
                 } catch {
                     diskCleanupFailed = true
                 }
             } else {
-                // 未加载的 generation：直接从磁盘副本加载并删除对应向量（F-1）
                 let url = await generationRegistry.storeFileURL(for: generationId)
                 guard FileManager.default.fileExists(atPath: url.path),
                       let diskStore = try? VectorStoreActor.load(from: url) else { continue }
@@ -261,17 +370,36 @@ public actor CanonicalMemoryRepositoryActor {
                 }
             }
         }
+        #if DEBUG
+        if fault == .vectorDeletePersist {
+            throw CanonicalRepositoryError.deleteInjected
+        }
+        #endif
+        try await advance(.vectorsDeleted)
 
-        // 2) SQLite 事务：canonical + FTS + translationCache 原子清除
+        // Stage 3: subject-linked audit purge（精确按 kind+subjectHash）
+        _ = try await privacyActor.purgeAuditRecords(subject: subject, traceID: traceID)
+        #if DEBUG
+        if fault == .auditPurge {
+            throw CanonicalRepositoryError.deleteInjected
+        }
+        #endif
+        try await advance(.auditPurged)
+
+        // Stage 4: canonical transaction（canonical + FTS + translationCache 原子清除）
         try await db.executeTransaction([
             .init(sql: "DELETE FROM MemoryFTS WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
             .init(sql: "DELETE FROM translationCache WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
             .init(sql: "DELETE FROM Memory WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
         ])
+        #if DEBUG
+        if fault == .canonicalTransaction {
+            throw CanonicalRepositoryError.deleteInjected
+        }
+        #endif
+        try await advance(.canonicalDeleted)
 
-        // 3) ExcludedAssets 契约 (US-PRV-004 AC-2 / US-PRV-007 AC-2)
-        //    CR-1 (PR#56 review): 缺省 sourceLocator/sourceType 时回退已加载 memory 的
-        //    定位信息，避免静默跳过排除写入；审计记录真实写入结果。
+        // ExcludedAssets 契约 (US-PRV-004 AC-2 / US-PRV-007 AC-2; CR-1 PR#56)
         let effectiveLocator = sourceLocator ?? memory?.sourceLocator
         let effectiveType = sourceType ?? memory?.sourceType
         var excludedActuallyWritten = false
@@ -280,7 +408,7 @@ public actor CanonicalMemoryRepositoryActor {
             excludedActuallyWritten = true
         }
 
-        // 4) 审计
+        // 完成审计（不含 memory subject 明文；携带向量磁盘清理标记）
         let policy = await privacyActor.getPolicy()
         try? await privacyActor.writeAuditLog(
             eventType: .memoryDeleted,
@@ -291,7 +419,21 @@ public actor CanonicalMemoryRepositoryActor {
             excludedWritten: excludedActuallyWritten,
             content: diskCleanupFailed ? "vectorDiskCleanupFailed=true" : nil
         )
+
+        // Completed：journal 自移除（防 subject 经 journal 重引入）
+        try await advance(.completed)
+        try await db.deleteDeletionJournal(operationID: operationID)
         return true
+    }
+
+    /// WP3 steps 5a-5f：consent revoke 三接通组合入口——
+    /// cache 全量失效 + AuditLog 全量 purge + deletion journal 清理。
+    public func purgeEverythingForConsent() async throws {
+        if let cache = deletionCacheActor {
+            _ = try await cache.invalidateAll()
+        }
+        _ = try await privacyActor.purgeAllAuditRecords()
+        try await db.deleteAllDeletionJournals()
     }
 
     /// 原始文件级联删除（US-PRV-007）— 不写 ExcludedAssets，清理无效排除记录。

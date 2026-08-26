@@ -126,3 +126,37 @@ public struct Representation: Sendable, Codable, Equatable {
         self.contentHash = contentHash
     }
 }
+
+// MARK: - Vector→Memory Mapping (WP3 steps 0a/0b, §7.5)
+
+/// 向量 ↔ representation ↔ canonical memory 的一对一绑定（ADR-015 D-7：
+/// 新建向量强制 vectorId == representationId，限定 generation scope）。
+public nonisolated struct CanonicalVectorBinding: Sendable, Equatable {
+    public nonisolated let vectorID: UUID
+    public nonisolated let representationID: UUID
+    public nonisolated let memoryID: UUID
+    public nonisolated let modality: Modality
+    public nonisolated let generationID: String
+
+    public nonisolated init(
+        vectorID: UUID,
+        representationID: UUID,
+        memoryID: UUID,
+        modality: Modality,
+        generationID: String
+    ) {
+        self.vectorID = vectorID
+        self.representationID = representationID
+        self.memoryID = memoryID
+        self.modality = modality
+        self.generationID = generationID
+    }
+}
+
+/// 向量 ID → canonical memory 的类型化映射结果（交接计划 §7.5 三态；
+/// WP1 二态已升级为 WP3 全形态，歧义 fail-closed 判定就绪）。
+public nonisolated enum CanonicalMappingResult: Sendable, Equatable {
+    case mapped(CanonicalVectorBinding)
+    case missing(vectorID: UUID, generationID: String)
+    case ambiguous(vectorID: UUID, generationID: String, candidateMemoryIDs: [UUID])
+}

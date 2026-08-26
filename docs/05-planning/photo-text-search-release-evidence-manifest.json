@@ -1,0 +1,178 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Natural-language photo retrieval release evidence manifest (handover plan WP0 deliverable). ALL scripts read inputs ONLY from this file - no env vars or shell placeholders. Every ownerVerdict must be set to approved/rejected with signature reference by the named responsible party before the corresponding gate opens.",
+  "sourcePlan": "/Users/logansu/Desktop/报告/Echo 自然语言照片检索实施交接计划.md",
+  "adr": "docs/decisions/ADR-015-photo-text-retrieval.md",
+  "checkpointPin": {
+    "modelId": "google/siglip2-base-patch32-256",
+    "revision": "94dffa8cb1179de3e03f091dbc3917e5d5a9ae84",
+    "vocabularySize": 256000,
+    "textTowerParameterCount": 282303744,
+    "textTowerRawFP16PayloadMebibytes": 538.45,
+    "note": "Raw tensor payload is NOT an app-size measurement; package facts come only from App Thinning reports."
+  },
+  "ownerVerdicts": {
+    "architecture": {
+      "exactCheckpointSpikeApproval": {
+        "approved": true,
+        "signedBy": "logansu (acting as Architecture + Model)",
+        "signedAt": "2026-08-25T19:09:35Z",
+        "gate": "B",
+        "reference": "E-GATE-B-001"
+      },
+      "dualTowerSpikeStatusVerdict": {
+        "approved": true,
+        "status": "completed-parity-verified-fp16-recommended",
+        "signedBy": "logansu (acting as Architecture + Model)",
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "reference": "five-report verifier overallPassed=True; quantization asymmetry documented (vision low-bit degradation)"
+      }
+    },
+    "legal": {
+      "modelLicenseShippableVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Legal)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "convertedWeightRedistributionVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Legal)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "datasetRightsVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Legal)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
+    },
+    "product": {
+      "singlePurposeAndNonGoalsApproved": {
+        "approved": true,
+        "signedBy": "logansu (acting as Product)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "capabilityCopyStaysDisabledUntilWP7": {
+        "approved": true,
+        "signedBy": "logansu (acting as Product)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "noMatchAndPartialChannelBehaviorApproved": {
+        "approved": true,
+        "signedBy": "logansu (acting as Product)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
+    },
+    "privacy": {
+      "localOnlyModelsAndHashOnlyAuditApproved": {
+        "approved": true,
+        "signedBy": "logansu (acting as Privacy)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "legacySubjectHashNullAuditLogPurgeVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Privacy)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
+    },
+    "qa": {
+      "datasetDesignVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as QA)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      },
+      "provisionalGateCalibrationVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as QA)",
+        "signedAt": "2026-08-25T09:30:00-05:00",
+        "gate": "A",
+        "reference": "commit 7884bea + ADR-015"
+      }
+    },
+    "ios": {
+      "deviceSupportMatrixVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as iOS)",
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "reference": "E-GATE-C-001",
+        "caveat": "App Thinning precise report & xctrace attribution deferred (toolchain/device constraints); local Release approximation + single-device measurements accepted"
+      }
+    },
+    "release": {
+      "appThinningBudgetVerdict": {
+        "approved": true,
+        "approvedScope": "local-release-approximation-only",
+        "signedBy": "logansu (acting as Release)",
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "caveat": "precise App Thinning report via ASC still required before any store-facing claim"
+      },
+      "deviceEvidenceFormatVerdict": {
+        "approved": true,
+        "signedBy": "logansu (acting as Release)",
+        "signedAt": "2026-08-25T21:27:07Z",
+        "gate": "C",
+        "reference": "E-GATE-C-001",
+        "caveat": "App Thinning precise report & xctrace attribution deferred (toolchain/device constraints); local Release approximation + single-device measurements accepted"
+      }
+    },
+    "_gateA_approval_note": "All twelve verdicts approved at Gate A on 2026-08-25 by logansu acting as every named role (sole developer project). Gates B..F still require fresh sign-off when reached."
+  },
+  "dataset": {
+    "manifestPath": "EchoTests/Fixtures/PhotoTextSearch/manifest.json",
+    "requirements": {
+      "perEntryLicenseRequired": true,
+      "perEntrySha256Required": true,
+      "userPhotoLibraryAsFixtureForbidden": true,
+      "uploadOfTestDataForbidden": true
+    },
+    "slices": [
+      "scene",
+      "object",
+      "color",
+      "relation",
+      "negation",
+      "ocr",
+      "hardNegative",
+      "noMatch",
+      "partialChannel"
+    ],
+    "languages": [
+      "zh-Hans",
+      "en-US"
+    ],
+    "provisionalThresholdsNote": "All numeric gates are PROVISIONAL proposals requiring QA/Product/Model approval after pilot; they are not measured facts."
+  },
+  "evidenceOutputPaths": {
+    "wp2": ".omo/evidence/photo-text-search/wp2/",
+    "wp7": ".omo/evidence/photo-text-search/wp7/",
+    "ledger": ".omo/evidence/photo-text-search/EVIDENCE_LEDGER.md"
+  },
+  "simulatorDestination": "platform=iOS Simulator,name=iPhone 17 Pro",
+  "testExecutionRule": "-parallel-testing-enabled NO is MANDATORY on every xcodebuild test invocation (AGENTS.md §9.4)",
+  "requiredArtifacts": {
+    "_note": "Paths are repo-root-relative. CI required-model lane and photo_search_ci_mutation.py read ONLY these entries.",
+    "e5Dir": "Echo/Resources/Models/MultilingualE5Small.mlpackage",
+    "visionCkptDir": "Echo/Resources/Models/siglip2-base-patch32-256",
+    "checksumsFile": "Scripts/model_checksums.sha256"
+  }
+}

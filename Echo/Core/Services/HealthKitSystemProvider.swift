@@ -154,7 +154,8 @@ public final class HealthKitSystemProvider: HealthKitProvider, CrossAppSourcePro
     /// 数据源类型（US-SRC-010: health）
     public nonisolated let sourceType = "health"
 
-    private let store: any HealthStoreServing
+    /// 底层健康存储 — Awakening 设置页权限状态读取（ADR-012 决策-2）
+    public nonisolated let store: any HealthStoreServing
 
     // MARK: - Init
 

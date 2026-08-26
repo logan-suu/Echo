@@ -22,7 +22,13 @@ import SwiftUI
 // MARK: - AwakeningSettingsView
 
 struct AwakeningSettingsView: View {
-    @State private var viewModel = AwakeningSettingsViewModel()
+    @State private var viewModel: AwakeningSettingsViewModel
+
+    /// 注入或默认构造 ViewModel；State 首次构建后复用同一实例。
+    /// 3F.11 fix: 生产路径由 SettingsView 注入 live 系统适配器（真实权限状态，ADR-012 决策-2/3）。
+    init(viewModel: AwakeningSettingsViewModel? = nil) {
+        _viewModel = State(initialValue: viewModel ?? AwakeningSettingsViewModel())
+    }
 
     var body: some View {
         content

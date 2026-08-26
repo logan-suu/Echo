@@ -49,7 +49,8 @@ struct HomeView: View {
     private var viewModel: HomeViewModel
 
     /// 后台任务面板 ViewModel — 由工具栏按钮展示 (US-SYS-001 AC-1 顶部状态栏入口)
-    @State private var taskPanelViewModel = BackgroundTaskViewModel()
+    /// 3F.11 fix: 注入真实 ProgressActor — 面板读取 SQLite TaskProgress 实时进度（US-SYS-001 AC-2）
+    @State private var taskPanelViewModel = BackgroundTaskViewModel(progressActor: .shared)
 
     /// 后台任务面板展示开关
     @State private var isTaskPanelPresented = false
@@ -72,6 +73,11 @@ struct HomeView: View {
 
     init(viewModel: HomeViewModel = HomeViewModel()) {
         self.viewModel = viewModel
+    }
+
+    /// 3F.11 fix: 面板关闭后重建时注入真实 ProgressActor（US-SYS-001 AC-2）
+    private func makeTaskPanelViewModel() -> BackgroundTaskViewModel {
+        BackgroundTaskViewModel(progressActor: .shared)
     }
 
     // MARK: - Body
@@ -119,7 +125,7 @@ struct HomeView: View {
         }
         .sheet(isPresented: $isTaskPanelPresented) {
             BackgroundTaskPanelView(viewModel: taskPanelViewModel) {
-                taskPanelViewModel = BackgroundTaskViewModel()
+                taskPanelViewModel = makeTaskPanelViewModel()
             }
         }
         .onAppear {

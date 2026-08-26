@@ -78,7 +78,7 @@ public actor E5Embedder: EmbedderProtocol {
     /// - Returns: 384d 浮点向量（L2 归一化）
     /// - Throws: `EmbedderError` 若模型未加载或推理失败
     public func embedText(_ text: String) async throws -> [Float] {
-        try await embedText(text, context: .passage)
+        try await embedText(text, context: EmbeddingContext.passage)
     }
 
     /// 对文本生成 E5 嵌入向量，带上下文前缀（R-3.8）。
@@ -105,6 +105,16 @@ public actor E5Embedder: EmbedderProtocol {
             expectedCount: Self.dimension
         )
         return output
+    }
+
+    /// WP1 步骤 1：协议级上下文入口 —— 映射到 R-3.8 内部前缀注入实现。
+    public func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float] {
+        switch context {
+        case .query:
+            return try await embedText(text, context: EmbeddingContext.query)
+        case .passage:
+            return try await embedText(text, context: EmbeddingContext.passage)
+        }
     }
 
     /// E5 不处理图像——视觉嵌入由 SigLIP2Embedder（R-3.2）负责。

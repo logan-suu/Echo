@@ -1,5 +1,7 @@
 # OpenCode agent runtime data
 .omo/
+# Personal model/provider routing (user-specific, not shared)
+.opencode/oh-my-openagent.json
 
 # Legacy tool artifacts (not used)
 .codex/
@@ -44,3 +46,6 @@ Echo/Resources/Models/**/*.safetensors
 *.dSYM
 buildServer.json
 compile_commands.json
+
+# Pinned model conversion sources (fetched via prepare_models.sh; not committed)
+PinnedModels/

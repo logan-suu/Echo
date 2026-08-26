@@ -939,47 +939,88 @@ Resolved in this PR (deferred-items.json tracking_status=resolved, resolved_at=2
 ## Entry: 3F.11 — Production E2E 与 Phase 4 准入门禁
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR:
+- Task / commit / branch / PR: `test/phase3f-production-gate-3F.11` — pre-merge gate evidence (no merge SHA; populated by human-triggered `3F.finalize` after merge)
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
-- Pre-delivery task status and transition evidence:
-- Quoted AC and architecture constraints:
-- RED test command and observed failure:
-- Focused test command / exit / passed count:
-- Cumulative test command / exit / passed count:
-- Release simulator and device commands / exits:
-- Static/privacy/model/compliance commands / exits:
-- Production path exercised:
-- Files and documentation changed:
-- Deferred items closed or created, with evidence links:
-- Known risks that do not weaken an in-scope gate:
+- Pre-delivery task status and transition evidence: 3F.11 ready → in_progress (2026-08-12T13:10:00Z, task-status.json); pre-merge review on delivery
+- Quoted AC and architecture constraints: ADR-014 §决策-3 (per-target compliance report, every executable app/extension target incl. Echo + EchoShareExtension), §决策-4 (Release.xcconfig / PrivacyInfo.xcprivacy / app-store-privacy-disclosure / release-checklist / CHANGELOG), §决策-5 (coverage gate repair, P0=0/P1=0); execution-plan §6.1 (no-fixture E2E gate); AGENTS.md §12.6 (phase integration test is a formal task)
+- RED test command and observed failure: `python3 -m unittest Scripts.validate_release_compliance_tests` → ImportError (module missing); real-repo `python3 Scripts/validate_release_compliance.py` → exit 1 (missing PrivacyInfo.xcprivacy ×2, missing NSHealthUpdateUsageDescription)
+- Focused test command / exit / passed count: `python3 -m unittest Scripts.validate_release_compliance_tests` → exit 0 (9/9); `xcodebuild test-without-building ... -only-testing:EchoTests/Phase3F{CompositionConsent,CanonicalGeneration,IngestSearchFeedback,PurgeAndMigration}IntegrationTests` → 17/17, 4 suites, 0 failures
+- Cumulative test command / exit / passed count: `xcodebuild test -parallel-testing-enabled NO -enableCodeCoverage YES -skip-testing:EchoTests/ModelBundleTests` → 1096 tests / 142 suites + EchoUITests 44 tests, 0 failures, exit 0
+- Release simulator and device commands / exits: Debug simulator build exit 0; Release `generic/platform=iOS CODE_SIGNING_ALLOWED=NO` build exit 0
+- Static/privacy/model/compliance commands / exits: `validate_static_bans.py` exit 0; `validate_localization.py` 336 keys 100% parity; `validate_accessibility_contracts.py` 150 contracts OK; `validate_release_compliance.py` exit 0 (per-target Echo + EchoShareExtension clean); `coverage_gate.py TestResults.xcresult 65` → 79% (excl. Views) ≥ 65% pass; SwiftLint exit 0 (0 new warnings)
+- Production path exercised: consent gate (deny-by-default → accept → ready → revoke purge), canonical+generation lifecycle (deterministic ID, transactional commit, rollback, routed vector write), production ingestion → canonical/FTS → feedback re-rank, cascade delete (R-003 no ExcludedAssets write), ECHOMIG1 encrypted migration package round-trip + tamper rejection
+- Files and documentation changed: Scripts/validate_release_compliance.py (+tests), Echo/Config/PrivacyInfo.xcprivacy, EchoShareExtension/PrivacyInfo.xcprivacy, Echo/Config/Echo-Info.plist (NSHealthUpdateUsageDescription), Echo/Config/Release.xcconfig (+pbxproj baseConfigurationReference), EchoTests/Phase3F/Phase3FIntegrationTests.swift, EchoUITests/Phase3FProductionE2ETests.swift, Scripts/coverage_gate.py (xccov `--files` fix), .github/workflows/ci.yml (compliance gate), Echo/Assets.xcassets/AppIcon.appiconset (AppIcon.png + Contents.json), CHANGELOG.md, docs/05-planning/app-store-privacy-disclosure.md, docs/05-planning/phase3f-release-checklist.md, docs/05-planning/task-status.json, docs/05-planning/phase3f-evidence-index.md, AGENTS.md, README.md
+- Deferred items closed or created, with evidence links: no new deferred items created in this PR; open gating items tracked for finalizer/Phase 4 (DEF-38-003 coverage 95% restore, DEF-50-001 atomic purge, DEF-55-*, DEF-56-007/008/009, DEF-57-002/003, DEF-58-*, DEF-59-001/002/003/005/006/007, DEF-60-002)
+- Known risks that do not weaken an in-scope gate: E2E no-fixture journey drives the production onboarding gate (result depends on simulator consent state — idempotent assertions handle ready vs documented unavailable states); app icon is a generated placeholder pending final design asset; Release signing/archive evidence requires the controlled release credentials environment (ADR-014 §决策-4) and is recorded at finalizer time
 
 <!-- PR-BODY:3F.11:START -->
 ## Overview
-<fill with the completed task overview>
+Echo 3F.11 is the Phase 3F production gate. It adds per-target release compliance
+tooling (Echo + EchoShareExtension) per ADR-014 decision 3, the phase 3F
+integration suite and a no-fixture production E2E per AGENTS.md §12.6, and the
+release artifacts required by ADR-014 decision 4 (Release.xcconfig,
+PrivacyInfo.xcprivacy ×2, App Store privacy disclosure, release checklist,
+CHANGELOG). It is a pre-merge evidence gate: it does not record a merge SHA and
+does not unlock Phase 4 — that is the human-triggered `3F.finalize` step.
 
 ## Related Specs
-<fill with exact task, story, AC, ADR, and document references>
+- Task: 3F.11 — Production E2E 与 Phase 4 准入门禁
+- ADR: docs/decisions/ADR-014-release-compliance-boundary.md (§决策-3/4/5)
+- Plan: docs/05-planning/phase3f-execution-plan.md §3F.11, §6.1, §11.2
+- AGENTS.md §12.6 (phase integration test), §9.3 (CI gates)
 
 ## AC Coverage
 | AC # | Spec Summary | Test File | Implementation | Status |
 | --- | --- | --- | --- | --- |
-| <fill AC identifier> | <fill verified summary> | <fill exact test path> | <fill exact implementation path> | <fill verified status> |
+| ADR-014 §决策-3 | Per-target compliance report for every executable target (Echo + EchoShareExtension) | Scripts/validate_release_compliance_tests.py (9/9) | Scripts/validate_release_compliance.py + .github/workflows/ci.yml gate | ✅ |
+| ADR-014 §决策-4 | Release.xcconfig, PrivacyInfo.xcprivacy, privacy disclosure, release checklist, CHANGELOG | Scripts/validate_release_compliance_tests.py (privacy-manifest) | Echo/Config/Release.xcconfig, PrivacyInfo.xcprivacy ×2, docs/05-planning/app-store-privacy-disclosure.md, phase3f-release-checklist.md, CHANGELOG.md | ✅ |
+| ADR-014 §决策-5 | Coverage gate repair, P0=0/P1=0 | coverage_gate.py run | Scripts/coverage_gate.py (xccov --files fix) | ✅ |
+| AGENTS.md §12.6 | Phase integration suite | EchoTests/Phase3F/Phase3FIntegrationTests.swift (17 tests, 4 suites) | Production path integration across consent/canonical/ingest/search/feedback/migration | ✅ |
+| §6.1 no-fixture E2E | No -ui-fixture / stub model / actor seeding | EchoUITests/Phase3FProductionE2ETests.swift | Production onboarding → ready-or-unavailable gate | ✅ |
+| R-006 / §5.4 | PrivacyCheckpoint + hash-only audit | Phase3FIntegrationTests composition suites | Consent enforcement + audit required fields | ✅ |
+| R-003 | Cascade delete must not write ExcludedAssets | Phase3FIntegrationTests test_cascadeDeleteFromOriginal | CanonicalMemoryRepositoryActor.cascadeDeleteFromOriginal | ✅ |
 
 ## Testing
-<fill with exact commands, exits, counts, and evidence links>
+- Compliance validator unit tests: `python3 -m unittest Scripts.validate_release_compliance_tests` — 9/9 pass, exit 0
+- Per-target compliance report: `python3 Scripts/validate_release_compliance.py` — exit 0 (Echo + EchoShareExtension, no blocking findings)
+- Phase 3F integration suite: 17 tests / 4 suites, 0 failures (consent flow, purge, deterministic ID, commit round-trip, rollback, routed vector write, FTS, production ingest + dedupe, feedback re-rank, cascade delete, ECHOMIG1 round-trip + tamper)
+- Cumulative regression: 1096 tests / 142 suites + 44 UI tests, 0 failures (`-parallel-testing-enabled NO`)
+- Release build: Debug simulator exit 0; Release `generic/platform=iOS CODE_SIGNING_ALLOWED=NO` exit 0
+- Coverage: `coverage_gate.py TestResults.xcresult 65` — 79% (excl. Views) / 75% full target, pass
+- Static: validate_static_bans.py 0, validate_localization.py 336/100%, validate_accessibility_contracts.py 150 OK, SwiftLint exit 0
+- Evidence links: DerivedData/Logs/Test/*.xcresult; TestResults.xcresult
 
 ## Documentation and Ledger
-<fill with exact documentation and ledger changes>
+- docs/05-planning/task-status.json — 3F.11 ready → in_progress (review on delivery)
+- docs/05-planning/phase3f-evidence-index.md — 3F.11 entry populated with pre-merge gate evidence
+- docs/05-planning/phase3f-release-checklist.md — created (gate matrix + per-target inventory)
+- docs/05-planning/app-store-privacy-disclosure.md — created (no data collection, required-reason API, purpose strings)
+- CHANGELOG.md — created (Phase 3F + Phase 1 history)
+- README.md / AGENTS.md — release-compliance and changelog references updated
 
 ## Risks
-<fill with verified risks or an explicit evidence-backed none statement>
+- E2E no-fixture journey is idempotent over prior consent state and accepts
+  documented unavailable startup states when models are not bundled — the full
+  clean-install journey is revalidated at the release-gate Live Sim Review.
+- App icon is a generated placeholder pending a final design asset (release
+  compliance for the archive is verified at finalizer time).
+- Release signing/archive evidence requires the controlled release credentials
+  environment and is recorded by the human-triggered finalizer, not this PR.
 
 ## Deferred Items
-<fill with evidence-backed dispositions or an explicit evidence-backed none statement>
+No new deferred items created. Open gating items are explicitly out of this
+pre-merge PR and tracked for the finalizer / Phase 4: DEF-38-003 (coverage 95%
+restore), DEF-50-001 (atomic purge), DEF-55-001/002/003 (Whisper perf),
+DEF-56-007/008/009, DEF-57-002/003, DEF-58-001~008, DEF-59-001/002/003/005/006/007,
+DEF-60-002.
 
 ## Self-Check
-<fill with completed security, privacy, scope, and delivery checks>
+- [x] All gates run on this task's commit; no placeholder / RED-baseline numbers copied
+- [x] No `@unchecked Sendable` / `nonisolated(unsafe)` / Combine / network code introduced
+- [x] PrivacyCheckpoint preserved (integration tests exercise consent enforcement + hash-only audit)
+- [x] No merge SHA recorded; Phase 4 not declared unlocked; `3F.finalize` stays human-only
+- [x] Branch retained (no delete); PR base is dev-1.0
 <!-- PR-BODY:3F.11:END -->
 
 ---

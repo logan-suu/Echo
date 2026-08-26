@@ -130,14 +130,19 @@ final class BackgroundTaskViewModel {
 
     private let progressActor: ProgressActor?
     private let auditWriter: PrivacyActor?
+    /// 实时轮询间隔（测试注入小值；3F.11 fix：面板读取真实 TaskProgress）
+    private let pollIntervalNanoseconds: UInt64
 
     private var loadTask: Task<Void, Never>?
     private var stubTasks: [TaskProgress] = []
     private var simulateError = false
 
-    init(progressActor: ProgressActor? = nil, auditWriter: PrivacyActor? = nil) {
+    init(progressActor: ProgressActor? = nil,
+         auditWriter: PrivacyActor? = nil,
+         pollIntervalNanoseconds: UInt64 = 1_000_000_000) {
         self.progressActor = progressActor
         self.auditWriter = auditWriter
+        self.pollIntervalNanoseconds = pollIntervalNanoseconds
     }
 
     // MARK: - Computed Properties
@@ -176,15 +181,24 @@ final class BackgroundTaskViewModel {
                     throw BackgroundTaskError.loadFailed
                 }
 
+                if let progressActor = self.progressActor {
+                    // 3F.11 fix: 真实 TaskProgress 实时轮询（US-SYS-001 AC-2）——面板打开期间
+                    // 持续读取 SQLite TaskProgress；任务完成即消失（§4.5 完成即清理）。
+                    while !Task.isCancelled {
+                        let rows = (try? await progressActor.loadAll()) ?? []
+                        guard !Task.isCancelled else { return }
+                        self.tasks = rows.map(BackgroundTaskModel.init)
+                        self.viewState = .completed
+                        try await Task.sleep(nanoseconds: self.pollIntervalNanoseconds)
+                    }
+                    return
+                }
+
                 try await Task.sleep(nanoseconds: 300_000_000)
 
                 guard !Task.isCancelled else {
                     self.viewState = .cancelled
                     return
-                }
-
-                if self.progressActor != nil {
-                    // Phase 3.9+: TaskQueueActor.progressStream live subscription
                 }
 
                 self.tasks = self.stubTasks.map(BackgroundTaskModel.init)

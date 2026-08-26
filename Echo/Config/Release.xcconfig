@@ -1,0 +1,20 @@
+//
+//  Release.xcconfig
+//  Echo
+//
+//  对应规格: docs/decisions/ADR-014-release-compliance-boundary.md §决策-4 (发布制品)
+//  任务: 3F.11 - Production E2E 与 Phase 4 准入门禁
+//  架构约束: Release 构建仅用于受控 release 环境；本地 Release 构建无签名 (CODE_SIGNING_ALLOWED=NO)。
+//  生成时间: 2026-08-12
+//
+
+// 发布版本标识 — 由 Release Manager 在 RC 时冻结（ADR-014 §决策-4）
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+
+// Release 优化级别（纯函数化，无网络/隐私影响）
+SWIFT_OPTIMIZATION_LEVEL = -O
+SWIFT_COMPILATION_MODE = wholemodule
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+ENABLE_NS_ASSERTIONS = NO
+VALIDATE_PRODUCT = YES

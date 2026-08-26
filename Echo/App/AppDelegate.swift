@@ -56,9 +56,20 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         ) { [weak self] _ in
             Task { @MainActor in
                 await self?.presentLimitedLibraryPickerIfNeeded()
+                // 3F.11 fix: 回前台时排空 Share 队列 — 运行期分享的信封此前要等下次启动才消费
+                await self?.drainSharedImportsIfNeeded()
             }
         }
         return true
+    }
+
+    /// 3F.11 fix: 排空 Share Extension 队列（ADR-008 §决策-3 恰好一次消费）。
+    ///
+    /// 分享发生在 App 运行期时信封入队但无消费触发——drain 仅在启动装配时执行一次。
+    /// 回前台排空保证运行期分享及时摄入（用户从分享面板返回 Echo 即触发）。
+    private func drainSharedImportsIfNeeded() async {
+        guard let ingestPipeline else { return }
+        _ = try? await ingestPipeline.drainSharedImports(from: .shared)
     }
 
     /// 来源边界装配（3F.2）：相册变更监听 + Share 队列排空。
@@ -102,6 +113,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // 3F.5 生产接线：经 GenerationRegistryActor 消费 per-generation 向量存储（ADR-010），
         // 摄入/同步经 TaskQueueActor 串行 + ProgressActor 持久化。
         // CR-19: sync 与 ingest 共享单一 CanonicalMemoryRepositoryActor（同一 DB/registry，单一串行域）。
+        // 3F.11 fix: 生产初始 generation 引导（text+vision 路由）——此前生产从未引导初始代，
+        // loadActiveRoute() 返回 nil 导致所有生产摄入抛 productionRouteUnavailable。
+        // fail-closed：引导失败则停止来源装配（Settings 照片导入将显示 L3 可诊断错误）。
+        guard (try? await composition.generationRegistry.ensureInitialGenerations()) != nil else {
+            return
+        }
         let registry = composition.generationRegistry
         let canonicalRepository = CanonicalMemoryRepositoryActor(
             db: composition.databaseManager,
@@ -110,7 +127,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         let sync = SyncPipeline(
             embedder: composition.visionEmbedder,
             privacyActor: composition.privacyActor,
-            vectorStore: VectorStoreActor(dimension: 512),
+            vectorStore: VectorStoreActor(dimension: SigLIP2Embedder.dimension),
             excludedAssets: .shared,
             progressActor: .shared,
             canonicalRepository: canonicalRepository,
@@ -118,11 +135,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         )
         await sync.registerPhotoLibraryObserver()
         syncPipeline = sync        // Share 队列排空（US-SRC-001/003, ADR-008 §决策-3）— 恰好一次消费
+        // 3F.11 fix: 注入生产同步管线 — Settings 照片授权/首次全量导入入口（US-SRC-001 AC-3/AC-5）
+        composition.attachProductionSyncPipeline(sync)
         let ingest = IngestPipeline(
             embedder: composition.textEmbedder,
             asrEngine: composition.asrEngine,
             privacyActor: composition.privacyActor,
-            vectorStore: VectorStoreActor(dimension: 512),
+            vectorStore: VectorStoreActor(dimension: E5Embedder.dimension),
             excludedAssets: .shared,
             canonicalRepository: canonicalRepository,
             generationRegistry: registry,
@@ -145,6 +164,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         let notifAdapter = LocalNotificationAdapter()
         notificationAdapter = notifAdapter
         _ = notificationRouter
+        // 3F.11 fix: 注入唤醒系统适配器 — Awakening 设置页读取真实权限状态（ADR-012 决策-2/3）
+        composition.attachAwakeningAdapters(
+            locationProvider: locProvider,
+            healthStore: healthKitSystemProvider?.store,
+            notificationScheduler: notifAdapter
+        )
         try? await awakeningCardRepository.ensureSchema()
 
         let awakening = AwakeningPipeline(
@@ -152,7 +177,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             searchPipeline: SearchPipeline(
                 embedder: composition.textEmbedder,
                 privacyActor: composition.privacyActor,
-                vectorStore: VectorStoreActor(dimension: 512)
+                vectorStore: VectorStoreActor(dimension: E5Embedder.dimension)
             ),
             stateStore: GeofenceStateStore(),
             healthKitProvider: healthKitSystemProvider,

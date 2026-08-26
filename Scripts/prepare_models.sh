@@ -149,7 +149,7 @@ download_e5() {
         return 0
     fi
 
-    [ "$MODE" = "verify" ] && { log_error "Missing: $emb"; return 1; }
+    [ "$MODE" = "verify" ] && { log_error "Missing: $emb"; log_error "gate-reason: missing-e5"; return 1; }
 
     log_info "  Downloading from $E5_REPO @ $E5_REVISION ..."
     HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" E5_REPO="$E5_REPO" E5_REVISION="$E5_REVISION" python3 -c "
@@ -218,7 +218,7 @@ download_whisper() {
 # Replaces MobileCLIP (license blocked). Requires Core ML self-conversion (R-3.2).
 # ==========================================
 SIGLIP2_REPO="google/siglip2-base-patch32-256"
-SIGLIP2_REVISION="main"  # TODO (R-4.2): pin to immutable commit hash
+SIGLIP2_REVISION="94dffa8cb1179de3e03f091dbc3917e5d5a9ae84"  # pinned immutable commit (DEF-35-001 closed; handover plan §2.3)
 
 download_siglip2() {
     log_info "Step 3/3: SigLIP2-B/32 checkpoint (Vision, ~1.5GB, conversion source)"
@@ -230,7 +230,7 @@ download_siglip2() {
         return 0
     fi
 
-    [ "$MODE" = "verify" ] && { log_error "Missing: $ckpt"; return 1; }
+    [ "$MODE" = "verify" ] && { log_error "Missing: $ckpt"; log_error "gate-reason: missing-vision"; return 1; }
 
     log_warn "  SigLIP2 is a conversion source (R-3.2). Core ML conversion required before production use."
     log_info "  Downloading from $SIGLIP2_REPO @ $SIGLIP2_REVISION ..."

@@ -36,7 +36,7 @@ def compute_coverage(xcresult_path: str, exclude_fn) -> tuple[float, int, int, i
 
     result = subprocess.run(
         [
-            "xcrun", "xccov", "view", "--report", "--json", "--files",
+            "xcrun", "xccov", "view", "--report", "--json",
             xcresult_path,
         ],
         capture_output=True,

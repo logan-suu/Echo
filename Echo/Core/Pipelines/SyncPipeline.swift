@@ -418,6 +418,7 @@ public actor SyncPipeline {
                             recoverability: .full
                         )
                         let rep = Representation(
+                            representationId: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
                             memoryId: memoryId,
                             modality: .visionDense,
                             preprocessVersion: "siglip2-v1",
@@ -617,6 +618,49 @@ public actor SyncPipeline {
         }
         guard !deduped.isEmpty else { return }
         _ = try? await sync(changes: deduped)
+    }
+
+    // MARK: - Initial Full Library Import (3F.11 fix)
+
+    /// 首次全量导入：枚举相册全部资产，以 `.added` 变更驱动生产增量同步
+    /// （复用 canonical 确定性 ID upsert + 每代向量 + TaskProgress + 审计，US-SRC-012 AC-1）。
+    ///
+    /// - 入口 PrivacyCheckpoint(.sync, photo)（R-006），拒绝时返回空结果且不写审计
+    /// - 仅导入本地已下载资产（US-SRC-001 AC-6）
+    /// - 排除项 fail-closed（AC-5，经 sync() 既有路径）
+    /// - 导入完成后写 `.dataSourceConnected` 审计（US-SRC-001 AC-5，hash-only）
+    /// - Parameters:
+    ///   - adapter: 照片来源适配器（真实 PhotoKit 或测试注入 Fake）
+    ///   - traceID: 审计追溯 ID
+    /// - Returns: 同步结果（replaced/skipped/failed 计数）
+    public func importPhotoLibrary(
+        adapter: PhotoKitSourceAdapter,
+        traceID: String = UUID().uuidString
+    ) async throws -> SyncResult {
+        let checkpoint = await privacyActor.validate(
+            operation: .sync,
+            traceID: traceID,
+            sourceTypes: ["photo"]
+        )
+        guard checkpoint.isAllowed else {
+            return SyncResult()
+        }
+
+        let refs = await adapter.fetchAllAssets()
+        var changes: [ChangeEvent] = []
+        for ref in refs {
+            if await adapter.isLocallyAvailable(assetId: ref.assetId) {
+                changes.append(ChangeEvent(assetId: ref.assetId, source: .photo, changeType: .added))
+            }
+        }
+
+        // US-SRC-001 AC-5 — 数据源接入审计（hash-only，不含原文）：
+        // 授权触发即记录（与导入结果解耦，保证可观测性）
+        await adapter.recordDataSourceConnected(traceID: traceID)
+
+        let result = try await sync(changes: changes, traceID: traceID)
+
+        return result
     }
 
     // MARK: - Auto-sync Toggle (AC-3, AC-8)

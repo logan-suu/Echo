@@ -29,9 +29,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from safetensors.torch import load_file
+from torch import nn
 
 # ---- Architecture Constants (verified from safetensors) ----
 IMAGE_SIZE = 256
@@ -72,6 +72,51 @@ def sha256_dir(path: str) -> str:
 # ---------------------------------------------------------------------------
 # Vision Transformer (SigLIP2 vision encoder)
 # ---------------------------------------------------------------------------
+
+# ---- Pinned identity constants (handover plan WP2 steps 3c-3f) ----
+PINNED_VOCAB = 256_000
+PINNED_TEXT_PARAMS = 282_303_744
+TEXT_HIDDEN = 768
+TEXT_LAYERS = 12
+TEXT_HEADS = 12
+TEXT_INTERMEDIATE = 3072
+TEXT_SEQ = 64
+TEXT_PAD_ID = 0
+# fp16-safe additive mask sentinel: finfo(float32).min overflows during
+# compute_precision=FLOAT16 conversion (observed cosine collapse on
+# all-real-token inputs); a finite -1e4 keeps masked softmax weights ~0
+# without any overflow path.
+TEXT_MASK_SENTINEL = -1e4
+
+
+def validate_text_tower_preflight(state_dict: dict, expected_total_params=None) -> int:
+    """Fail-closed identity checks on text-tower weights (WP2 steps 3c/3e).
+
+    Rejects wrong vocabulary size and (optionally) wrong total parameter count
+    BEFORE any conversion work happens.
+    """
+    emb = state_dict.get("text_model.embeddings.token_embedding.weight")
+    if emb is None:
+        emb = state_dict.get("text_model.embeddings.token_embedding")
+    if emb is None:
+        raise ValueError("text tower preflight: missing token embedding weights")
+    vocab = int(emb.shape[0])
+    if vocab != PINNED_VOCAB:
+        raise ValueError(f"pinned vocabulary must be {PINNED_VOCAB}, got {vocab}")
+    # 只统计文本塔键——源文件同时携带 vision/text 双塔权重（WP2 步骤 3b 实测）
+    total = 0
+    for key, t in state_dict.items():
+        if not key.startswith("text_model."):
+            continue
+        numel = getattr(t, "numel", None)
+        if callable(numel):
+            total += int(numel())
+    if expected_total_params is not None and total != expected_total_params:
+        raise ValueError(
+            f"text tower parameter count mismatch: {total} != {expected_total_params}"
+        )
+    return total
+
 
 class SigLIP2VisionEncoder(nn.Module):
     """SigLIP2-B/32-256 vision encoder.
@@ -193,11 +238,11 @@ class SigLIP2VisionEncoder(nn.Module):
         attn = attn.transpose(1, 2).reshape(B, 1, EMBED_DIM)
         probe_out = self.head_attn_out(attn)         # [B, 1, 768]
 
-        # Residual + LayerNorm + MLP (upstream chain)
-        probe_out = probe_out + probe               # residual
-        probe_out = self.head_ln(probe_out)
+        # Official pinned chain (HF SiglipMultiheadAttentionPoolingHead):
+        # h = LN(A); out = A + MLP(h) -- no extra probe residual (WP2 step 1b)
+        h = self.head_ln(probe_out)
         mlp_out = self.head_mlp_fc2(
-            F.gelu(self.head_mlp_fc1(probe_out))
+            F.gelu(self.head_mlp_fc1(h), approximate="tanh")   # checkpoint tanh GELU (WP2 step 1d)
         )
         probe_out = probe_out + mlp_out             # [B, 1, 768]
 
@@ -205,6 +250,171 @@ class SigLIP2VisionEncoder(nn.Module):
         probe_out = F.normalize(probe_out, p=2, dim=-1)
 
         return probe_out.squeeze(1)                 # [B, 768]
+
+
+# ---- Paired text tower (WP2 steps 3a-3b) ----
+class _TextSelfAttention(nn.Module):
+    """Multi-head attention matching HF SiglipText self_attn (q/k/v/out_proj)."""
+
+    def __init__(self, sd: dict, prefix: str):
+        super().__init__()
+        self.q_proj = nn.Linear(TEXT_HIDDEN, TEXT_HIDDEN)
+        self.k_proj = nn.Linear(TEXT_HIDDEN, TEXT_HIDDEN)
+        self.v_proj = nn.Linear(TEXT_HIDDEN, TEXT_HIDDEN)
+        self.out_proj = nn.Linear(TEXT_HIDDEN, TEXT_HIDDEN)
+        for name in ("q_proj", "k_proj", "v_proj", "out_proj"):
+            lin = getattr(self, name)
+            lin.weight = nn.Parameter(sd[prefix + name + ".weight"])
+            lin.bias = nn.Parameter(sd[prefix + name + ".bias"])
+        self.head_dim = TEXT_HIDDEN // TEXT_HEADS
+        self.scale = self.head_dim ** -0.5
+
+    def forward(self, x, bias):
+        B, S, _H = x.shape
+        hd = self.head_dim
+        q = self.q_proj(x).view(B, S, TEXT_HEADS, hd).transpose(1, 2)
+        k = self.k_proj(x).view(B, S, TEXT_HEADS, hd).transpose(1, 2)
+        v = self.v_proj(x).view(B, S, TEXT_HEADS, hd).transpose(1, 2)
+        scores = (q @ k.transpose(-2, -1)) * self.scale + bias
+        attn = F.softmax(scores, dim=-1) @ v
+        attn = attn.transpose(1, 2).reshape(B, S, TEXT_HIDDEN)
+        return self.out_proj(attn)
+
+
+class _TextMLP(nn.Module):
+    def __init__(self, sd: dict, prefix: str):
+        super().__init__()
+        self.fc1 = nn.Linear(TEXT_HIDDEN, TEXT_INTERMEDIATE)
+        self.fc2 = nn.Linear(TEXT_INTERMEDIATE, TEXT_HIDDEN)
+        self.fc1.weight = nn.Parameter(sd[prefix + "fc1.weight"])
+        self.fc1.bias = nn.Parameter(sd[prefix + "fc1.bias"])
+        self.fc2.weight = nn.Parameter(sd[prefix + "fc2.weight"])
+        self.fc2.bias = nn.Parameter(sd[prefix + "fc2.bias"])
+
+    def forward(self, x):
+        return self.fc2(F.gelu(self.fc1(x), approximate="tanh"))
+
+
+class _TextLayer(nn.Module):
+    def __init__(self, sd: dict, idx: int):
+        super().__init__()
+        p = f"text_model.encoder.layers.{idx}."
+        self.ln1 = nn.LayerNorm(TEXT_HIDDEN, eps=1e-6)
+        self.ln1.weight = nn.Parameter(sd[p + "layer_norm1.weight"])
+        self.ln1.bias = nn.Parameter(sd[p + "layer_norm1.bias"])
+        self.attn = _TextSelfAttention(sd, p + "self_attn.")
+        self.ln2 = nn.LayerNorm(TEXT_HIDDEN, eps=1e-6)
+        self.ln2.weight = nn.Parameter(sd[p + "layer_norm2.weight"])
+        self.ln2.bias = nn.Parameter(sd[p + "layer_norm2.bias"])
+        self.mlp = _TextMLP(sd, p + "mlp.")
+
+    def forward(self, x, bias):
+        x = x + self.attn(self.ln1(x), bias)
+        x = x + self.mlp(self.ln2(x))
+        return x
+
+
+class SigLIP2TextEncoder(nn.Module):
+    """Paired text tower replicating HF SiglipTextTransformer semantics.
+
+    Bidirectional attention (NO causal mask, unlike CLIP); padding positions
+    masked via additive bias; final LayerNorm then LAST-position pooling
+    (documented HF behavior: may be a padding position) then head projection.
+    """
+
+    def __init__(self, sd: dict):
+        super().__init__()
+        self.token_embedding = nn.Embedding(PINNED_VOCAB, TEXT_HIDDEN)
+        self.token_embedding.weight = nn.Parameter(
+            sd["text_model.embeddings.token_embedding.weight"]
+        )
+        self.position_embedding = nn.Embedding(TEXT_SEQ, TEXT_HIDDEN)
+        self.position_embedding.weight = nn.Parameter(
+            sd["text_model.embeddings.position_embedding.weight"]
+        )
+        self.layers = nn.ModuleList([_TextLayer(sd, i) for i in range(TEXT_LAYERS)])
+        self.final_layer_norm = nn.LayerNorm(TEXT_HIDDEN, eps=1e-6)
+        self.final_layer_norm.weight = nn.Parameter(sd["text_model.final_layer_norm.weight"])
+        self.final_layer_norm.bias = nn.Parameter(sd["text_model.final_layer_norm.bias"])
+        self.head = nn.Linear(TEXT_HIDDEN, TEXT_HIDDEN)
+        self.head.weight = nn.Parameter(sd["text_model.head.weight"])
+        self.head.bias = nn.Parameter(sd["text_model.head.bias"])
+
+    def forward(self, input_ids):
+        ids = input_ids.to(torch.long)
+        mask = (ids != TEXT_PAD_ID).to(torch.float32)
+        bias = ((1.0 - mask) * TEXT_MASK_SENTINEL)[:, None, None, :]
+        x = self.token_embedding(ids) + self.position_embedding.weight[: ids.shape[1]][None]
+        for layer in self.layers:
+            x = layer(x, bias)
+        x = self.final_layer_norm(x)
+        pooled = x[:, -1, :]
+        # 与图像塔共享归一化契约：Core ML 输出即单位向量（交接计划 §6 验收）
+        return F.normalize(self.head(pooled), p=2, dim=-1)
+
+
+class _DualTower(nn.Module):
+    """WP2 步骤 5：双塔联合图——单次推理产出 image/text embeddings 对。"""
+
+    def __init__(self, vision: nn.Module, text: nn.Module):
+        super().__init__()
+        self.vision = vision
+        self.text = text
+
+    def forward(self, pixel_values, input_ids):
+        return self.vision(pixel_values), self.text(input_ids)
+
+
+def _apply_weight_compression(path: Path, quantization: str) -> None:
+    """WP2 步骤 5：对已保存的 .mlpackage 施加候选量化（fp16 为基线不处理）。"""
+    if quantization == "fp16":
+        return
+    import coremltools as ct
+    from coremltools.optimize.coreml import (
+        OpLinearQuantizerConfig,
+        OpPalettizerConfig,
+        OptimizationConfig,
+        linear_quantize_weights,
+        palettize_weights,
+    )
+
+    model = ct.models.MLModel(str(path))
+    if quantization == "int8":
+        config = OptimizationConfig(
+            global_config=OpLinearQuantizerConfig(mode="linear_symmetric", dtype="int8")
+        )
+        compressed = linear_quantize_weights(model, config=config)
+    elif quantization == "6bit":
+        config = OptimizationConfig(global_config=OpPalettizerConfig(nbits=6))
+        compressed = palettize_weights(model, config=config)
+    elif quantization == "4bit":
+        config = OptimizationConfig(global_config=OpPalettizerConfig(nbits=4))
+        compressed = palettize_weights(model, config=config)
+    else:
+        raise ValueError(f"unsupported quantization: {quantization}")
+    compressed.save(str(path))
+    print(f"[quantize] {quantization} applied -> {path}")
+
+
+def convert_text_to_coreml(model: nn.Module, output_path: str) -> str:
+    """Trace-export the text tower with a fixed int32[1,64] input contract."""
+    import coremltools as ct
+    import numpy as np
+
+    model.eval()
+    example_ids = torch.zeros((1, TEXT_SEQ), dtype=torch.int32)
+    traced = torch.jit.trace(model, example_ids)
+    mlmodel = ct.convert(
+        traced,
+        inputs=[ct.TensorType(name="input_ids", shape=(1, TEXT_SEQ), dtype=np.int32)],
+        outputs=[ct.TensorType(name="text_embeddings")],
+        minimum_deployment_target=ct.target.iOS17,
+        compute_precision=ct.precision.FLOAT16,
+    )
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    mlmodel.save(output_path)
+    print(f"[convert] Saved: {output_path}")
+    return output_path
 
 
 class _EncoderLayer(nn.Module):
@@ -388,6 +598,18 @@ def main():
         default="Echo/Resources/Models/siglip2-reference-vectors.json",
         help="Output path for reference vectors JSON"
     )
+    parser.add_argument(
+        "--tower", choices=["vision", "text", "dual"], default="vision",
+        help="Which tower(s) to export (WP2: text + dual candidates)"
+    )
+    parser.add_argument(
+        "--revision", type=str, default="",
+        help="Pinned source revision recorded into conversion log"
+    )
+    parser.add_argument(
+        "--quantization", choices=["fp16", "int8", "6bit", "4bit"], default="fp16",
+        help="Candidate quantization (WP2 step 5)"
+    )
     args = parser.parse_args()
 
     print("=" * 60)
@@ -423,6 +645,57 @@ def main():
     # Strip torch dtype metadata — safetensors returns named tensors sometimes
     state_dict = {k: v.float() if hasattr(v, 'float') else v
                   for k, v in state_dict.items()}
+    # WP2 step 5: dual-tower candidate export (single graph, two inputs/two outputs)
+    if args.tower == "dual":
+        import coremltools as ct
+        import numpy as np
+
+        validate_text_tower_preflight(state_dict, expected_total_params=PINNED_TEXT_PARAMS)
+        print("[preflight] vocab/param identity OK (pinned)")
+        vmodel = SigLIP2VisionEncoder(state_dict).eval()
+        tmodel = SigLIP2TextEncoder(state_dict).eval()
+        dual = _DualTower(vmodel, tmodel).eval()
+        rev = args.revision or "unspecified"
+        px_example = torch.zeros((1, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=torch.float32)
+        ids_example = torch.zeros((1, TEXT_SEQ), dtype=torch.int32)
+        traced = torch.jit.trace(dual, (px_example, ids_example))
+        mlmodel = ct.convert(
+            traced,
+            inputs=[
+                ct.TensorType(name="pixel_values", shape=(1, 3, IMAGE_SIZE, IMAGE_SIZE), dtype=np.float32),
+                ct.TensorType(name="input_ids", shape=(1, TEXT_SEQ), dtype=np.int32),
+            ],
+            outputs=[
+                ct.TensorType(name="image_embeddings"),
+                ct.TensorType(name="text_embeddings"),
+            ],
+            minimum_deployment_target=ct.target.iOS17,
+            compute_precision=ct.precision.FLOAT16,
+        )
+        out_dir = os.path.dirname(args.output) or "."
+        os.makedirs(out_dir, exist_ok=True)
+        mlmodel.save(args.output)
+        print(f"[convert] Saved dual-tower: {args.output}")
+        if args.quantization != "fp16":
+            from pathlib import Path as _P
+
+            _apply_weight_compression(_P(args.output), args.quantization)
+        print(f"[dual] export complete  quantization={args.quantization}  revision={rev}")
+        return
+
+    # WP2 step 3b: paired text tower export path (fail-closed preflight first)
+    if args.tower == "text":
+        validate_text_tower_preflight(state_dict, expected_total_params=PINNED_TEXT_PARAMS)
+        print("[preflight] vocab/param identity OK (pinned)")
+        model = SigLIP2TextEncoder(state_dict)
+        model.eval()
+        n_params = sum(p.numel() for p in model.parameters())
+        rev = args.revision or "unspecified"
+        print(f"[load]   Text tower loaded ({n_params:,} params)  revision={rev}")
+        convert_text_to_coreml(model, args.output)
+        print("\n[text] Text tower export complete.")
+        return
+
     model = SigLIP2VisionEncoder(state_dict)
     model.eval()
     print(f"[load]   Model loaded ({sum(p.numel() for p in model.parameters()):,} params)")
@@ -455,7 +728,7 @@ def main():
         output_dir = os.path.dirname(mlpackage_path) or "."
         result = subprocess.run(
             ["xcrun", "coremlcompiler", "compile", mlpackage_path, output_dir],
-            capture_output=True, text=True,
+            capture_output=True, text=True, check=False,
         )
         if result.returncode != 0:
             print(f"  WARNING: coremlcompiler failed:\n{result.stderr}", file=sys.stderr)

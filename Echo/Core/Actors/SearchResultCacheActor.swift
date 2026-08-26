@@ -35,11 +35,19 @@ public nonisolated struct SearchCacheKey: Sendable, Hashable {
     public nonisolated let modelVersion: String
     /// 查询文本哈希（makeKey 生成）
     public nonisolated let queryHash: String
+    /// 路由快照 ID——cache 条目与路由版本绑定，路由变更即失效（WP3 steps 6a-6b）
+    public nonisolated let routeSnapshotID: String
 
-    public nonisolated init(policyVersion: Int, modelVersion: String, queryHash: String) {
+    public nonisolated init(
+        policyVersion: Int,
+        modelVersion: String,
+        queryHash: String,
+        routeSnapshotID: String = "active"
+    ) {
         self.policyVersion = policyVersion
         self.modelVersion = modelVersion
         self.queryHash = queryHash
+        self.routeSnapshotID = routeSnapshotID
     }
 
     // MARK: Hashable（SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，显式 nonisolated）
@@ -47,12 +55,14 @@ public nonisolated struct SearchCacheKey: Sendable, Hashable {
         lhs.policyVersion == rhs.policyVersion
             && lhs.modelVersion == rhs.modelVersion
             && lhs.queryHash == rhs.queryHash
+            && lhs.routeSnapshotID == rhs.routeSnapshotID
     }
 
     public nonisolated func hash(into hasher: inout Hasher) {
         hasher.combine(policyVersion)
         hasher.combine(modelVersion)
         hasher.combine(queryHash)
+        hasher.combine(routeSnapshotID)
     }
 }
 
@@ -147,6 +157,22 @@ public actor SearchResultCacheActor {
     /// 必须全部失效，防止隐私越界结果被复用。
     ///
     /// - Parameter policyVersion: 失效的策略版本（仅移除该版本的条目，其他版本保留）
+    /// WP3 步骤 3e/3f：删除任何包含该 memoryId 的完整 cache entry，返回删除条数。
+    public func invalidate(memoryID: UUID) async throws -> Int {
+        let before = entries.count
+        entries = entries.filter { _, result in
+            !result.items.contains { $0.id == memoryID }
+        }
+        return before - entries.count
+    }
+
+    /// consent purge / route migration 全量失效，返回清除条数。
+    public func invalidateAll() async throws -> Int {
+        let count = entries.count
+        entries.removeAll()
+        return count
+    }
+
     public func invalidate(policyVersion: Int) async throws {
         entries = entries.filter { $0.key.policyVersion != policyVersion }
     }

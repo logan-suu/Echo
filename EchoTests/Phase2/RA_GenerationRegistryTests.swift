@@ -43,7 +43,8 @@ struct GenerationRegistryTests {
         let gen = IndexGeneration(
             generationId: "text_dense/e5-v1",
             indexType: "text_dense",
-            manifestId: "e5-small-v1"
+            manifestId: "e5-small-v1",
+            dimension: 384
         )
         try await sut.registerGeneration(gen)
 
@@ -59,10 +60,10 @@ struct GenerationRegistryTests {
     @Test("registerGeneration is idempotent for same generationId")
     func test_register_idempotent() async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g1", indexType: "text_dense")
+            IndexGeneration(generationId: "g1", indexType: "text_dense", dimension: 384)
         )
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g1", indexType: "text_dense")
+            IndexGeneration(generationId: "g1", indexType: "text_dense", dimension: 384)
         )
         #expect(try await sut.loadGenerations().count == 1)
     }
@@ -70,7 +71,7 @@ struct GenerationRegistryTests {
     @Test("setGenerationState transitions building → ready → active")
     func test_setState_transitions() async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g-state", indexType: "text_dense")
+            IndexGeneration(generationId: "g-state", indexType: "text_dense", dimension: 384)
         )
         try await sut.setGenerationState("g-state", state: .ready, counts: 42, validationDigest: "digest-1")
         let ready = try await sut.loadGeneration("g-state")
@@ -86,7 +87,7 @@ struct GenerationRegistryTests {
     @Test("setGenerationState rejects illegal transition building → retired")
     func test_setState_rejects_illegal_transition() async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g-illegal", indexType: "text_dense")
+            IndexGeneration(generationId: "g-illegal", indexType: "text_dense", dimension: 384)
         )
         do {
             try await sut.setGenerationState("g-illegal", state: .retired)
@@ -115,7 +116,7 @@ struct GenerationRegistryTests {
     func test_buildItem_lifecycle() async throws {
         // Register parent generation first (FK constraint on IndexBuildItem.generationId)
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g-build", indexType: "text_dense")
+            IndexGeneration(generationId: "g-build", indexType: "text_dense", dimension: 384)
         )
         let item = IndexBuildItem(
             generationId: "g-build",
@@ -138,7 +139,7 @@ struct GenerationRegistryTests {
     func test_buildItem_retry() async throws {
         // Register parent generation first (FK constraint)
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "g-retry", indexType: "text_dense")
+            IndexGeneration(generationId: "g-retry", indexType: "text_dense", dimension: 384)
         )
         try await sut.upsertBuildItem(IndexBuildItem(generationId: "g-retry", representationId: "r1"))
         try await sut.updateBuildItem(
@@ -171,7 +172,7 @@ struct ActiveRouteSetTests {
 
     private func seedActiveGeneration(_ id: String = "text_dense/e5-v1") async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: id, indexType: "text_dense")
+            IndexGeneration(generationId: id, indexType: "text_dense", dimension: 384)
         )
         try await sut.setGenerationState(id, state: .ready)
         try await sut.setGenerationState(id, state: .active)
@@ -210,7 +211,7 @@ struct ActiveRouteSetTests {
     @Test("publishRoute throws when generation is still building")
     func test_publish_building_generation_throws() async throws {
         try await sut.registerGeneration(
-            IndexGeneration(generationId: "building-gen", indexType: "text_dense")
+            IndexGeneration(generationId: "building-gen", indexType: "text_dense", dimension: 384)
         )
         let route = ActiveRouteSet(textGeneration: "building-gen")
         do {

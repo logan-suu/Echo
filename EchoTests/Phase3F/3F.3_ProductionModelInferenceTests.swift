@@ -151,9 +151,9 @@ struct E5RealInferenceTests {
     /// 仅在 E5 模型存在时运行真推理；缺失时跳过（CI 无模型场景）。
     @Test("E5 embedText returns real 384d non-zero vector (model present)")
     func test_embedText_realInference() async throws {
-        guard e5ModelAvailable() else { return }
+        try #require(e5ModelAvailable(), "E5 model unavailable - required inference test must fail loudly")
         let embedder = E5Embedder()
-        let vec = try await embedder.embedText("the quick brown fox", context: .passage)
+        let vec = try await embedder.embedText("the quick brown fox", context: EmbeddingContext.passage)
         #expect(vec.count == 384)
         let nonzero = vec.contains { abs($0) > 0.001 }
         #expect(nonzero, "Real inference must produce non-zero vector")
@@ -163,10 +163,10 @@ struct E5RealInferenceTests {
 
     @Test("query and passage embeddings differ")
     func test_embedText_queryVsPassage() async throws {
-        guard e5ModelAvailable() else { return }
+        try #require(e5ModelAvailable(), "E5 model unavailable - required inference test must fail loudly")
         let embedder = E5Embedder()
-        let q = try await embedder.embedText("vacation", context: .query)
-        let p = try await embedder.embedText("vacation", context: .passage)
+        let q = try await embedder.embedText("vacation", context: EmbeddingContext.query)
+        let p = try await embedder.embedText("vacation", context: EmbeddingContext.passage)
         let dot = zip(q, p).reduce(0) { $0 + Double($1.0) * Double($1.1) }
         #expect(dot < 0.99, "Query/passage embeddings should differ meaningfully")
     }

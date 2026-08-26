@@ -63,7 +63,9 @@ public actor FeedbackActor {
             eventType: .feedbackReceived,
             traceID: traceID,
             policyVersion: currentPolicyVersion,
-            success: true
+            success: true,
+            subjectKind: AuditSubject.memory(entry.memoryId).kind,
+            subjectHash: AuditSubject.memory(entry.memoryId).subjectHash
         )
     }
 
@@ -226,20 +228,30 @@ public actor FeedbackActor {
     ///   - traceID: 审计追踪 ID（AC-7）
     @discardableResult
     public func revoke(feedbackId: UUID, traceID: String = "") async throws -> Bool {
+        // WP3 steps 6e/6f2: DELETE 前先查 memoryId 以构造 AuditSubject
+        let memRows = try await db.executeQuery(
+            sql: "SELECT memoryId FROM FeedbackStore WHERE feedbackId = ?",
+            bindings: [.text(feedbackId.uuidString)]
+        )
+        let memoryIdStr = memRows.first?["memoryId"]?.stringValue
+        let memoryId = memoryIdStr.flatMap { UUID(uuidString: $0) }
+
         let changes = try await db.executeWrite(
             sql: "DELETE FROM FeedbackStore WHERE feedbackId = ?",
             bindings: [.text(feedbackId.uuidString)]
         )
         let success = changes > 0
 
-        // AC-7: 审计记录 .feedbackRevoked（仅成功删除时记录）
+        // AC-7 + WP3 steps 6e/6f2: 审计记录 .feedbackRevoked 携带 subject identity
         if success {
             let currentPolicyVersion = await privacyActor.getPolicy().policyVersion
             try? await privacyActor.writeAuditLog(
                 eventType: .feedbackRevoked,
                 traceID: traceID,
                 policyVersion: currentPolicyVersion,
-                success: true
+                success: true,
+                subjectKind: memoryId.map { AuditSubject.memory($0).kind },
+                subjectHash: memoryId.map { AuditSubject.memory($0).subjectHash }
             )
         }
         return success

@@ -89,6 +89,29 @@ public actor ProgressActor {
         return (rows.first?["cnt"]?.intValue ?? 0) > 0
     }
 
+    /// 加载全部活跃任务进度（3F.11 fix：后台任务面板真实数据源，US-SYS-001 AC-2）。
+    public func loadAll() async throws -> [TaskProgress] {
+        let rows = try await db.executeQuery(
+            sql: "SELECT taskId, taskType, lastProcessedId, lastProcessedIndex, totalCount, resumeData, createdAt, updatedAt FROM TaskProgress",
+            bindings: []
+        )
+        return rows.compactMap { row in
+            guard let id = row["taskId"]?.stringValue,
+                  let typeStr = row["taskType"]?.stringValue,
+                  let type = TaskType(rawValue: typeStr) else { return nil }
+            return TaskProgress(
+                taskId: id,
+                taskType: type,
+                lastProcessedIndex: row["lastProcessedIndex"]?.intValue.map(Int.init) ?? 0,
+                totalCount: row["totalCount"]?.intValue.map(Int.init) ?? 0,
+                lastProcessedId: row["lastProcessedId"]?.stringValue,
+                resumeData: row["resumeData"]?.blobValue,
+                updatedAt: row["updatedAt"]?.doubleValue.map { Date(timeIntervalSince1970: $0) } ?? Date(),
+                createdAt: row["createdAt"]?.doubleValue.map { Date(timeIntervalSince1970: $0) } ?? Date()
+            )
+        }
+    }
+
     /// 删除指定任务的进度（US-SYS-001 AC-4：任务完成后立即删除）
     @discardableResult
     public func delete(taskId: String) async throws -> Bool {

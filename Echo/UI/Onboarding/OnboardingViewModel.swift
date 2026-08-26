@@ -288,21 +288,33 @@ final class OnboardingViewModel {
         stubFixture = nil
     }
 
-    // MARK: - Model Loading (fixture simulated)
+    // MARK: - Model Loading
 
-    /// 模拟首次模型加载进度 (echo-memory-canvas §15.6)。
+    /// 首次模型加载（echo-memory-canvas §15.6）。
     ///
-    /// 🔮 Phase 3.9: 替换为 ModelLoaderActor 真实进度订阅。
+    /// 3F.11 fix: 生产路径（consentStore 已注入）真实加载模型（ModelLoaderActor.loadModel，
+    /// E5/SigLIP2/Whisper 逐个加载，进度 = 已加载数/总数）；fixture/测试路径保留模拟进度。
     private func startModelLoad() {
         loadTask?.cancel()
         loadTask = Task { [weak self] in
             guard let self else { return }
-            var progress = 0.0
-            while progress < 1.0 {
-                try? await Task.sleep(nanoseconds: loadDelayNanoseconds / 10)
-                guard !Task.isCancelled else { return }
-                progress = min(progress + 0.1, 1.0)
-                self.viewState = .modelLoading(progress)
+            if self.consentStore == nil {
+                // fixture/preview：确定性模拟进度（测试注入 loadDelayNanoseconds）
+                var progress = 0.0
+                while progress < 1.0 {
+                    try? await Task.sleep(nanoseconds: self.loadDelayNanoseconds / 10)
+                    guard !Task.isCancelled else { return }
+                    progress = min(progress + 0.1, 1.0)
+                    self.viewState = .modelLoading(progress)
+                }
+            } else {
+                // 生产：真实模型加载（失败容错——模型在首次推理时也会惰性加载，fail-closed）
+                let models = ModelLoaderActor.ModelType.allCases
+                for (index, modelType) in models.enumerated() {
+                    guard !Task.isCancelled else { return }
+                    self.viewState = .modelLoading(Double(index) / Double(models.count))
+                    _ = await ModelLoaderActor.shared.loadModel(modelType)
+                }
             }
             self.viewState = .completed
         }

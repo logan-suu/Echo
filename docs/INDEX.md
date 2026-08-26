@@ -23,6 +23,7 @@
 | **Phase 3F 故事矩阵**  | `05-planning/phase3f-story-matrix.md`             | 66 个用户故事的 Phase 3F 归属矩阵                 |
 | **Phase 3F 证据索引**  | `05-planning/phase3f-evidence-index.md`           | Phase 3F 预合并证据索引                           |
 | **决策记录 (ADR)**     | `decisions/ADR-006~014`                            | Phase 3F 范围、离线运行时、发布合规等 9 项决策    |
+| **疑难杂症问题**       | `06-troubleshooting/`                              | 架构性限制/难解问题的定位与根因分析（如照片文本搜索跨模态限制） |
 | **UI 文档路由**        | `ui/README.md`                                     | Phase 3 UI 设计配置、自动化工作流、架构边界、测试 |
 | **UI 设计风格**        | `ui/echo-memory-canvas-style.md`                   | echo-memory-canvas 完整设计规范、surface family、token |
 | **UI 自动化工作流**    | `ui/automation-workflow.md`                        | 状态机、批准点、重试/停止规则、试点评分           |
@@ -62,6 +63,7 @@
 | UI 测试策略与 artifact                     | `ui/testing-and-artifacts.md`                          |
 | Echo 就绪门禁                              | `ui/echo-readiness.md`                                 |
 | 当前开发任务与进度                        | `05-planning/task-status.json`                         |
+| 疑难杂症/架构限制问题分析                  | `06-troubleshooting/照片文本搜索架构限制-跨模态对齐缺失.md` |
 
 ---
 

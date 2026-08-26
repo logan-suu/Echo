@@ -211,34 +211,46 @@ struct SettingsView: View {
     private func dataSourcesSection(_ sections: SettingsSections) -> some View {
         Section {
             ForEach(sections.dataSources) { source in
+                if source.id == "photo" {
+                    // 3F.11 fix: 照片行始终可点击 — 未授权=授权+首次导入；已授权=重新导入（重触发）
+                    Button {
+                        Task { await viewModel.requestPhotoLibraryAccess() }
+                    } label: {
+                        photoDataSourceRow(source)
+                    }
+                    .disabled(viewModel.photoImportState == .requesting
+                              || viewModel.photoImportState == .importing)
+                    .accessibilityHint(source.isAuthorized
+                                       ? "Re-syncs your photo library into Echo"
+                                       : "Requests photo library access and indexes your photos")
+                } else {
+                    dataSourceRow(source)
+                }
+            }
+
+            // 3F.11 fix: 首次全量导入进度指示
+            if case .importing = viewModel.photoImportState {
                 HStack {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(source.displayName)
-                                .font(.body)
-                                .foregroundStyle(Color.primary)
-                            Text(source.isAuthorized ? "\(source.itemCount) items indexed" : "Not authorized")
-                                .font(.caption)
-                                .foregroundStyle(Color.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: source.systemImage)
-                            .foregroundStyle(Color.accentColor)
-                    }
-
-                    Spacer()
-
-                    if source.isAuthorized {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.accentColor)
-                            .accessibilityLabel("Authorized")
-                    } else {
-                        Image(systemName: "xmark.circle")
-                            .foregroundStyle(Color.secondary)
-                            .accessibilityLabel("Not authorized")
-                    }
+                    ProgressView()
+                        .padding(.trailing, 4)
+                    Text("Importing photos…")
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
                 }
                 .accessibilityElement(children: .combine)
+                .accessibilityLabel("Importing photos")
+            }
+
+            // 3F.11 fix: 照片授权/导入错误态展示（此前静默）
+            if case .error(let level) = viewModel.photoImportState {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text(photoErrorText(level))
+                        .font(.caption)
+                }
+                .foregroundStyle(Color.red)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Photo import error")
             }
 
             Toggle(isOn: $viewModel.isSyncingEnabled) {
@@ -273,12 +285,96 @@ struct SettingsView: View {
         }
     }
 
+    private func photoErrorText(_ level: SettingsViewModel.ErrorLevel) -> String {
+        switch level {
+        case .l1Transient:
+            return EchoStrings.tr("settings.photo.import.unavailable")
+        case .l2Recoverable(let message), .l3Blocking(let message), .l4Conflict(let message):
+            return message
+        }
+    }
+
+    private func photoDataSourceRow(_ source: DataSourceItem) -> some View {
+        HStack {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(source.displayName)
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                    if source.isAuthorized {
+                        Text("\(source.itemCount) items indexed — tap to re-sync")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                    } else {
+                        Text("Not authorized — tap to grant access")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+            } icon: {
+                Image(systemName: source.systemImage)
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            Spacer()
+
+            if viewModel.photoImportState == .requesting
+                || viewModel.photoImportState == .importing {
+                ProgressView()
+            } else if source.isAuthorized {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityLabel("Authorized")
+            } else {
+                Image(systemName: "arrow.forward.circle")
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func dataSourceRow(_ source: DataSourceItem) -> some View {
+        HStack {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(source.displayName)
+                        .font(.body)
+                        .foregroundStyle(Color.primary)
+                    Text(source.isAuthorized ? "\(source.itemCount) items indexed" : "Not authorized")
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
+            } icon: {
+                Image(systemName: source.systemImage)
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            Spacer()
+
+            if source.isAuthorized {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityLabel("Authorized")
+            } else {
+                Image(systemName: "xmark.circle")
+                    .foregroundStyle(Color.secondary)
+                    .accessibilityLabel("Not authorized")
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     // MARK: - Awakening Section (US-AWK-001/002/003 — Task 3.12)
 
     private var awakeningSection: some View {
         Section {
             NavigationLink {
-                AwakeningSettingsView()
+                // 3F.11 fix: 生产注入 live 系统适配器 — 真实权限状态 + 真实通知授权（ADR-012 决策-2/3）
+                AwakeningSettingsView(viewModel: AwakeningSettingsViewModel(
+                    locationProvider: AppComposition.shared.productionLocationProvider,
+                    healthStore: AppComposition.shared.productionHealthStore,
+                    notificationScheduler: AppComposition.shared.productionNotificationScheduler
+                ))
             } label: {
                 Label {
                     Text("Awakening")
