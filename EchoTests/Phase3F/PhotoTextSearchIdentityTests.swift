@@ -837,3 +837,45 @@ struct PhotoTextSearchIdentityTests {
         )
         #expect(rows.count >= 1, "revoke audit row with target subjectHash must exist")
     }
+
+// MARK: - WP4 Step 6e1: 结果选择审计无明文回归守卫
+
+extension PhotoTextSearchIdentityTests {
+
+    @Test("Result selection audit contains no memory plaintext (WP4 step 6e1)")
+    func testResultSelectionAuditContainsNoMemoryPlaintext() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        try await db.execute(sql: "DELETE FROM FeedbackStore")
+        let privacy = PrivacyActor(db: db)
+        let feedback = FeedbackActor(db: db, privacyActor: privacy)
+        let memoryId = UUID()
+        let canaryQuery = "PLAINTEXT-CANARY-QUERY-7GQ"
+
+        let entry = FeedbackEntry(
+            id: UUID(),
+            memoryId: memoryId,
+            queryText: canaryQuery,
+            sentiment: .like,
+            cosineSimilarity: 0.9,
+            createdAt: Date()
+        )
+        try await feedback.recordFeedback(entry, traceID: "t-wp4-6e1")
+
+        // 取结果选择审计行全部列，逐列断言无明文泄漏
+        let rows = try await db.executeQuery(
+            sql: "SELECT * FROM AuditLog WHERE eventType = 'feedbackReceived'",
+            bindings: []
+        )
+        #expect(rows.count >= 1, "feedbackReceived audit row must exist")
+        guard let row = rows.last else { return }
+        for col in ["eventType", "traceID", "sourceType", "sourceLanguage", "subjectKind"] {
+            let value = row[col]?.stringValue ?? ""
+            #expect(!value.contains(canaryQuery), "\(col) must not carry query plaintext")
+            #expect(!value.contains(memoryId.uuidString), "\(col) must not carry raw memoryId")
+        }
+        let hashValue = row["subjectHash"]?.stringValue ?? ""
+        #expect(!hashValue.contains(memoryId.uuidString), "subjectHash must be digest-only")
+    }
+}
