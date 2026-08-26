@@ -197,6 +197,8 @@ public actor IngestPipeline {
     private let sharedAudioExtractor: (any SharedAudioExtracting)?
     /// 视觉嵌入器（SigLIP2）— 图片/视频帧生产路径使用；缺省时回退 `embedder`（CR-10）
     private let visionEmbedder: (any EmbedderProtocol)?
+    /// WP5: OCR 服务— 注入时图片摄入附带可见文本提取（nil = 既有行为不变）
+    private let ocrService: (any PhotoOCRService)?
 
     // MARK: - Initialization
 
@@ -214,7 +216,8 @@ public actor IngestPipeline {
         videoExtractor: (any VideoAssetExtracting)? = nil,
         sharedTextExtractor: (any SharedTextExtracting)? = nil,
         sharedAudioExtractor: (any SharedAudioExtracting)? = nil,
-        visionEmbedder: (any EmbedderProtocol)? = nil
+        visionEmbedder: (any EmbedderProtocol)? = nil,
+        ocrService: (any PhotoOCRService)? = nil
     ) {
         self.embedder = embedder
         self.asrEngine = asrEngine
@@ -230,6 +233,7 @@ public actor IngestPipeline {
         self.sharedTextExtractor = sharedTextExtractor
         self.sharedAudioExtractor = sharedAudioExtractor
         self.visionEmbedder = visionEmbedder
+        self.ocrService = ocrService
     }
 
     // MARK: - Image Ingestion (US-ING-004)
@@ -1142,13 +1146,38 @@ public actor IngestPipeline {
             contentHash: Self.sha256(of: visionVector)
         )
         let visionGen = try await productionGeneration(for: .visionDense)
+        var representations = [rep]
+        var vectorsByGeneration: [String: [CanonicalVectorEntry]] = [
+            visionGen: [CanonicalVectorEntry(id: memoryId, vector: visionVector, metadata: exifMetadata)]
+        ]
+
+        // WP5: OCR 辅助通道——注入 ocrService 且可取到图像数据时提取可见文本，
+        // E5 .passage 向量化写入 ocr 表示（确定性 ID：vectorId == representationId，ADR-015 D-7）。
+        if let ocrService,
+           let imageData = try await (photoExtractor ?? RealPhotoAssetExtractor()).extractImageData(assetId: assetId),
+           let document = try? await ocrService.recognizeText(
+               imageData: imageData,
+               preferredLanguages: ["zh-Hans", "en-US"],
+               traceID: traceID
+           ) {
+            let ocrVector = try await embedder.embedText(document.normalizedText, context: .passage)
+            let ocrRepID = CanonicalMemoryRepositoryActor.ocrRepresentationID(memoryID: memoryId)
+            representations.append(Representation(
+                representationId: ocrRepID,
+                memoryId: memoryId,
+                modality: .ocrText,
+                preprocessVersion: "e5-v1",
+                contentHash: document.contentHash
+            ))
+            let ocrGen = try await productionGeneration(for: .ocrText)
+            vectorsByGeneration[ocrGen] = [CanonicalVectorEntry(id: ocrRepID, vector: ocrVector)]
+        }
+
         try await productionCommit(
             canonicalRepository,
             memory: memory,
-            representations: [rep],
-            vectorsByGeneration: [
-                visionGen: [CanonicalVectorEntry(id: memoryId, vector: visionVector, metadata: exifMetadata)]
-            ],
+            representations: representations,
+            vectorsByGeneration: vectorsByGeneration,
             traceID: traceID
         )
         let policy = await privacyActor.getPolicy()

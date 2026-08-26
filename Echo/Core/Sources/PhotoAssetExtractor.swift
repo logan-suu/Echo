@@ -47,6 +47,9 @@ public protocol PhotoAssetExtracting: Sendable {
     func extractMetadata(assetId: String) async throws -> PhotoAssetContent
     /// 是否已下载到本地（US-SRC-001 AC-6：isNetworkAccessAllowed=false）。
     func isLocallyAvailable(assetId: String) async -> Bool
+    /// 提取原始图像数据（WP5 OCR 摄入用）——协议扩展提供默认实现返回 nil，
+    /// 未实现提取的资产跳过 OCR；真实实现经 PhotoKit requestImageDataAndOrientation。
+    func extractImageData(assetId: String) async throws -> Data?
 }
 
 /// 真实 PhotoKit 图片资产提取实现。
@@ -63,6 +66,10 @@ public struct RealPhotoAssetExtractor: PhotoAssetExtracting {
 
     public nonisolated func isLocallyAvailable(assetId: String) async -> Bool {
         await Self.assetDownloaded(assetId)
+    }
+
+    public nonisolated func extractImageData(assetId: String) async throws -> Data? {
+        try await Self.fetchImageData(assetId: assetId)
     }
 
     // MARK: - @MainActor PhotoKit Helpers
@@ -170,3 +177,28 @@ public actor FakePhotoAssetExtractor: PhotoAssetExtracting {
     }
 }
 #endif
+
+// MARK: - WP5: OCR 图像数据提取（协议扩展默认实现）
+
+extension PhotoAssetExtracting {
+    /// 默认实现返回 nil——既有 conformer（含测试 stub）零改动；
+    /// 真实提取器覆盖为 PhotoKit 数据。
+    public func extractImageData(assetId: String) async throws -> Data? { nil }
+}
+
+extension RealPhotoAssetExtractor {
+    @MainActor
+    private static func fetchImageData(assetId: String) async throws -> Data? {
+        guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else {
+            return nil
+        }
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        return await withCheckedContinuation { continuation in
+            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
+                continuation.resume(returning: data)
+            }
+        }
+    }
+}

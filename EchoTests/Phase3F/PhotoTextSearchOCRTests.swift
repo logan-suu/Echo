@@ -207,3 +207,102 @@ extension PhotoTextSearchOCRTests {
         )
     }
 }
+
+// MARK: - WP5 步骤组 3+4：OCR 摄入接线（E5 .passage / 确定性 ID / ocr 代写入）
+
+private struct WP5StubOCRService: PhotoOCRService {
+    let document: OCRDocument?
+    func recognizeText(imageData: Data, preferredLanguages: [String], traceID: String) async throws -> OCRDocument? {
+        document
+    }
+}
+
+private actor WP5EmbedderSpy: EmbedderProtocol {
+    private(set) var contexts: [TextEmbeddingContext] = []
+
+    func embedImage(assetId: String) async throws -> [Float] { Array(repeating: 0, count: 768) }
+    func embedText(_ text: String) async throws -> [Float] { Array(repeating: 0, count: 384) }
+    func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float] {
+        contexts.append(context)
+        return Array(repeating: 0, count: 384)
+    }
+    func contextsSnapshot() -> [TextEmbeddingContext] { contexts }
+}
+
+private struct WP5StubPhotoExtractor: PhotoAssetExtracting {
+    let imageData: Data?
+
+    func extractMetadata(assetId: String) async throws -> PhotoAssetContent {
+        PhotoAssetContent(assetId: assetId, creationDate: Date(), exifMetadata: nil)
+    }
+    func isLocallyAvailable(assetId: String) async -> Bool { true }
+    func extractImageData(assetId: String) async throws -> Data? { imageData }
+}
+
+extension PhotoTextSearchOCRTests {
+
+    @Test("OCR ingestion embeds with passage and commits ocr representation (WP5 steps 3a-3d/4a-4b)")
+    func testOCRIngestionUsesPassageAndWritesOcrRepresentation() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.executeWrite(
+            sql: "INSERT OR REPLACE INTO UserPolicyStore (id, preferredLanguage, authorizedSourceTypes, policyVersion, updatedAt) VALUES (1, ?, ?, ?, ?)",
+            bindings: [
+                .text("zh-Hans"),
+                .text(#"["search","photo","note","voice","text","video"]"#),
+                .int(1),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let spy = WP5EmbedderSpy()
+        let ocrDoc = OCRDocument(
+            normalizedText: "Quarterly Report Due Friday",
+            locale: "en-US",
+            observationCount: 1,
+            contentHash: "sha256:wp5-ocr"
+        )
+
+        // 注册并激活 vision + ocr 代（ingest 需要 vision 路由 + ocr 回落目标）
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await registry.setGenerationState("vision_dense/siglip2-v1", state: .ready)
+        try await registry.setGenerationState("vision_dense/siglip2-v1", state: .active)
+        try await registry.registerGeneration(IndexGeneration(generationId: "ocr_text/e5-v1", indexType: "ocr_text", dimension: 384))
+        try await registry.setGenerationState("ocr_text/e5-v1", state: .ready)
+        try await registry.setGenerationState("ocr_text/e5-v1", state: .active)
+        let published = try await registry.activateGeneration("vision_dense/siglip2-v1")
+        try await registry.publishRoute(ActiveRouteSet(
+            textGeneration: "vision_dense/siglip2-v1",
+            ocrGeneration: "ocr_text/e5-v1",
+            visionGeneration: "vision_dense/siglip2-v1",
+            version: published.version
+        ))
+
+        let pipeline = IngestPipeline(
+            embedder: spy,
+            privacyActor: PrivacyActor(db: db),
+            vectorStore: VectorStoreActor(dimension: 768),
+            canonicalRepository: repo,
+            generationRegistry: registry,
+            photoExtractor: WP5StubPhotoExtractor(imageData: Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])),
+            ocrService: WP5StubOCRService(document: ocrDoc)
+        )
+
+        let assetId = "PHAsset/wp5-ocr-ingest-\(UUID().uuidString)"
+        _ = try await pipeline.ingestProductionPhoto(assetId: assetId, taskID: "t-wp5-ocr", traceID: "t-wp5-ocr")
+
+        // 3a/3b: E5 .passage 被调用
+        let contexts = await spy.contextsSnapshot()
+        #expect(contexts.contains(.passage), "OCR ingestion must embed with .passage context; got \(contexts)")
+
+        // 3c/3d + 4b: ocr 表示落库且 representationId 为确定性派生（vectorId == representationId）
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: assetId, sourceType: "photo")
+        let reps = try await repo.loadRepresentations(memoryId: memoryId)
+        let ocrRep = reps.first { $0.modality == .ocrText }
+        #expect(ocrRep != nil, "OCR representation must be committed")
+        #expect(ocrRep?.representationId == CanonicalMemoryRepositoryActor.ocrRepresentationID(memoryID: memoryId),
+                "vectorId == representationId (ADR-015 D-7)")
+        #expect(ocrRep?.contentHash == "sha256:wp5-ocr")
+    }
+}

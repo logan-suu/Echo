@@ -85,6 +85,15 @@ public actor CanonicalMemoryRepositoryActor {
         memoryID
     }
 
+    /// OCR 表示 ID：deterministicID(memoryID|ocr, ocr_text)——与照片视觉表示解耦
+    /// （vectorId == representationId，ADR-015 D-7 一对一），避免与 memoryID/视觉表示冲突。
+    public nonisolated static func ocrRepresentationID(memoryID: UUID) -> UUID {
+        deterministicID(
+            sourceLocator: "\(memoryID.uuidString)|ocr",
+            sourceType: "ocr_text"
+        )
+    }
+
     /// 视频帧 representation ID：与既有帧向量 ID 公式完全一致
     /// （deterministicID(assetId|frameN, video_frame)），零语义漂移。
     public nonisolated static func videoFrameRepresentationID(sourceLocator: String, frameIndex: Int) -> UUID {
