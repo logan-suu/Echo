@@ -142,3 +142,125 @@ struct PhotoTextSearchIntegrationTests {
         _ = channel
     }
 }
+
+// MARK: - WP4 Steps 1a-1j: QueryRepresentationFactory 四通道载荷生成
+
+/// E5 spy——记录每次 embed 收到的上下文。
+private actor ContextRecordingE5: ContextualTextEmbedder {
+    nonisolated let modelManifestID = "stub-e5"
+    nonisolated let dimension = 384
+    private(set) var recordedContexts: [TextEmbeddingContext] = []
+
+    func embed(text: String, context: TextEmbeddingContext, traceID: String) async throws -> [Float] {
+        recordedContexts.append(context)
+        return [Float](repeating: 0.25, count: 384)
+    }
+}
+
+/// SigLIP2 文本塔 stub——固定 768d 单位向量。
+private struct StubVisionEmbedder: VisionTextEmbedder {
+    nonisolated let modelManifestID = "stub-siglip2-text"
+    nonisolated let alignmentSpaceID = "aligned-siglip2-v1"
+    nonisolated let dimension = 768
+
+    func embedVisionQuery(text: String, locale: String, traceID: String) async throws -> [Float] {
+        [Float](repeating: 1.0 / sqrt(768), count: 768)
+    }
+}
+
+extension PhotoTextSearchIntegrationTests {
+
+    private func fourChannelRoute() throws -> SearchRouteSnapshot {
+        let policy = try FusionPolicySnapshot(
+            policyID: "p-wp4",
+            weights: [
+                ChannelWeight(channel: .textDense, weight: 1.0),
+                ChannelWeight(channel: .visionDense, weight: 0.8),
+                ChannelWeight(channel: .ocrText, weight: 0.6),
+                ChannelWeight(channel: .lexical, weight: 0.4),
+            ],
+            rrfK: 60
+        )
+        func route(_ ch: SearchChannel, dim: Int?) -> ChannelRoute {
+            ChannelRoute(channel: ch, generationID: ch.rawValue + "/gen", indexManifestID: nil,
+                         queryModelManifestID: nil, dimension: dim, alignmentSpaceID: nil, required: true)
+        }
+        return try SearchRouteSnapshot(
+            snapshotID: "wp4-route", schemaVersion: 1, routeVersion: 1,
+            channels: [
+                route(.textDense, dim: 384), route(.visionDense, dim: 768),
+                route(.ocrText, dim: 384), route(.lexical, dim: nil),
+            ],
+            fusion: policy, previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: 42, validationDigest: "ignored"
+        )
+    }
+
+    @Test("Factory builds text-dense E5 query payload (WP4 step 1a)")
+    func testQueryFactoryBuildsTextDenseE5Payload() async throws {
+        let e5 = ContextRecordingE5()
+        let factory = DefaultQueryRepresentationFactory(textEmbedder: e5, visionEmbedder: StubVisionEmbedder())
+        let route = try fourChannelRoute()
+        let outcome = await factory.makeQuery(text: "red flower", locale: "en-US", route: route, traceID: "t-1a")
+        guard case .dense(let dv)? = outcome.query.payloads[.textDense] else {
+            Issue.record("expected dense payload for textDense")
+            return
+        }
+        #expect(dv.dimension == 384)
+        #expect(dv.modelManifestID == "stub-e5")
+    }
+
+    @Test("Factory builds vision-dense SigLIP2 payload (WP4 step 1c)")
+    func testQueryFactoryBuildsVisionDenseSigLIPPayload() async throws {
+        let factory = DefaultQueryRepresentationFactory(
+            textEmbedder: ContextRecordingE5(), visionEmbedder: StubVisionEmbedder()
+        )
+        let route = try fourChannelRoute()
+        let outcome = await factory.makeQuery(text: "red flower", locale: "en-US", route: route, traceID: "t-1c")
+        guard case .dense(let dv)? = outcome.query.payloads[.visionDense] else {
+            Issue.record("expected dense payload for visionDense")
+            return
+        }
+        #expect(dv.dimension == 768)
+        #expect(dv.alignmentSpaceID == "aligned-siglip2-v1")
+    }
+
+    @Test("Factory builds OCR query payload via E5 query context (WP4 step 1e)")
+    func testQueryFactoryBuildsOCRQueryPayload() async throws {
+        let e5 = ContextRecordingE5()
+        let factory = DefaultQueryRepresentationFactory(textEmbedder: e5, visionEmbedder: StubVisionEmbedder())
+        let route = try fourChannelRoute()
+        let outcome = await factory.makeQuery(text: "receipt total", locale: "en-US", route: route, traceID: "t-1e")
+        guard case .dense(let dv)? = outcome.query.payloads[.ocrText] else {
+            Issue.record("expected dense payload for ocrText")
+            return
+        }
+        #expect(dv.dimension == 384)
+        let contexts = await e5.recordedContexts
+        #expect(contexts.allSatisfy { $0 == .query })
+    }
+
+    @Test("Lexical payload preserves query text (WP4 step 1g)")
+    func testLexicalPayloadPreservesQueryText() async throws {
+        let factory = DefaultQueryRepresentationFactory(
+            textEmbedder: ContextRecordingE5(), visionEmbedder: StubVisionEmbedder()
+        )
+        let route = try fourChannelRoute()
+        let outcome = await factory.makeQuery(text: "红色的花", locale: "zh-Hans", route: route, traceID: "t-1g")
+        guard case .lexical(let text, _)? = outcome.query.payloads[.lexical] else {
+            Issue.record("expected lexical payload")
+            return
+        }
+        #expect(text == "红色的花")
+    }
+
+    @Test("Lexical payload preserves locale (WP4 step 1i)")
+    func testLexicalPayloadPreservesLocale() async throws {
+        let factory = DefaultQueryRepresentationFactory(
+            textEmbedder: ContextRecordingE5(), visionEmbedder: StubVisionEmbedder()
+        )
+        let route = try fourChannelRoute()
+        let outcome = await factory.makeQuery(text: "red flower", locale: "zh-Hans", route: route, traceID: "t-1i")
+        #expect(outcome.query.locale == "zh-Hans")
+    }
+}
