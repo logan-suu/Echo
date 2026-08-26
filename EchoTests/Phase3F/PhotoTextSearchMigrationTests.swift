@@ -724,3 +724,39 @@ extension PhotoTextSearchMigrationTests {
         #expect(afterSnapshot == beforeSnapshot, "store unavailability must keep the active route byte-identical")
     }
 }
+
+// MARK: - WP6 步骤 3a-3b：迁移中断保持活跃路由（crash 类比）
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Interrupted migration keeps active route byte-identical (WP6 step 3a/3b)")
+    func testInterruptedMigrationKeepsActiveRoute() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let migration = PhotoSearchMigrationActor(
+            generationRegistry: registry,
+            canonicalRepository: repo,
+            visionEmbedder: WP6MigrationEmbedder(),
+            photoExtractor: WP6StubPhotoExtractor(imageData: Data([0x89, 0x50, 0x4E, 0x47]))
+        )
+
+        let beforeSnapshot = try await Self.seedActiveRoute(db: db, registry: registry)
+
+        // 中断注入（crash 类比）：迁移一个不存在的 memory → memoryNotFound
+        await #expect(throws: PhotoSearchMigrationError.memoryNotFound) {
+            _ = try await migration.migratePhoto(
+                memoryId: UUID(),
+                shadowGenerationID: "vision_dense/shadow-\(UUID().uuidString)",
+                taskID: "t-wp6-3a",
+                traceID: "t-wp6-3a"
+            )
+        }
+
+        // 活跃路由逐字节不变（迁移从不发布路由，任何中断/失败均不触碰 ActiveRouteSet）
+        let after = try await registry.loadActiveRoute()
+        let afterSnapshot = after.flatMap { "active-v\($0.version)-\($0.textGeneration)" }
+        #expect(afterSnapshot == beforeSnapshot, "interrupted migration must keep the active route byte-identical")
+    }
+}
