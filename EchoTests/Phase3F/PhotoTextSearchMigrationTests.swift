@@ -498,3 +498,33 @@ extension PhotoTextSearchMigrationTests {
                 "canonical bytes must be identical after restart")
     }
 }
+
+// MARK: - WP6 步骤 6a-6b：路由发布后检索缓存失效
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Route migration invalidates all search cache entries (WP6 step 6a/6b)")
+    func testRouteMigrationInvalidatesAllSearchCacheEntries() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let cache = SearchResultCacheActor()
+        let migration = PhotoSearchMigrationActor(
+            db: db,
+            generationRegistry: GenerationRegistryActor(db: db),
+            cache: cache
+        )
+
+        // 发布前写入两条缓存（旧路由身份）
+        let keyA = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "q-a", routeSnapshotID: "old-route")
+        let keyB = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "q-b", routeSnapshotID: "old-route")
+        try await cache.store(key: keyA, result: CachedSearchResult(items: []))
+        try await cache.store(key: keyB, result: CachedSearchResult(items: []))
+
+        // 发布新路由快照
+        let snapshot = try Self.makeRouteSnapshot()
+        try await migration.publishRouteSnapshot(snapshot, traceID: "t-wp6-6a")
+
+        #expect(try await cache.lookup(key: keyA) == nil, "cache must be fully invalidated after route migration")
+        #expect(try await cache.lookup(key: keyB) == nil)
+    }
+}

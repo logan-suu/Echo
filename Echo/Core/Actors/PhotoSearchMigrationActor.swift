@@ -47,6 +47,8 @@ public actor PhotoSearchMigrationActor {
     private let photoExtractor: (any PhotoAssetExtracting)?
     /// 断点续传 checkpoint
     private let progressActor: ProgressActor?
+    /// 路由发布后的检索缓存失效（验收清单 D.6）
+    private let cache: SearchResultCacheActor
     private var state: PhotoSearchMigrationState
 
     public init(
@@ -55,7 +57,8 @@ public actor PhotoSearchMigrationActor {
         canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
         visionEmbedder: (any EmbedderProtocol)? = nil,
         photoExtractor: (any PhotoAssetExtracting)? = nil,
-        progressActor: ProgressActor? = nil
+        progressActor: ProgressActor? = nil,
+        cache: SearchResultCacheActor = SearchResultCacheActor()
     ) {
         self.db = db
         self.generationRegistry = generationRegistry
@@ -63,6 +66,7 @@ public actor PhotoSearchMigrationActor {
         self.visionEmbedder = visionEmbedder
         self.photoExtractor = photoExtractor
         self.progressActor = progressActor
+        self.cache = cache
         self.state = PhotoSearchMigrationState(phase: .idle)
     }
 
@@ -84,6 +88,8 @@ public actor PhotoSearchMigrationActor {
             canonicalBytes: bytes,
             canonicalDigest: digest
         )
+        // 验收清单 D.6：事务成功后使检索缓存整体失效（新路由下旧缓存不可信）
+        _ = try await cache.invalidateAll()
     }
 
     /// 验证 shadow generation 无 orphan/歧义向量（WP6 迁移算法 D.3 / I.1-I.5）：
