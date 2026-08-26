@@ -770,3 +770,70 @@ struct PhotoTextSearchIdentityTests {
         let auditCount = try await db.executeQuery(sql: "SELECT COUNT(*) AS c FROM AuditLog", bindings: [])
         #expect(auditCount.first?["c"]?.intValue == 0)
     }
+
+    @Test("Record feedback audit carries memory subject hash (WP3 step 6e)")
+    func testRecordFeedbackAuditCarriesMemorySubjectHash() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        try await db.execute(sql: "DELETE FROM FeedbackStore")
+        let privacy = PrivacyActor(db: db)
+        let feedback = FeedbackActor(db: db, privacyActor: privacy)
+        let memoryId = UUID()
+        let targetSubject = AuditSubject.memory(memoryId)
+
+        // 构造 FeedbackEntry 并调用 recordFeedback
+        let entry = FeedbackEntry(
+            id: UUID(),
+            memoryId: memoryId,
+            queryText: "red flower",
+            sentiment: .like,
+            cosineSimilarity: 0.92,
+            createdAt: Date()
+        )
+        try await feedback.recordFeedback(entry, traceID: "t-wp3-6e")
+
+        // 断言 AuditLog 中存在含目标 subjectHash 的行
+        let rows = try await db.executeQuery(
+            sql: "SELECT subjectKind, subjectHash FROM AuditLog WHERE subjectHash = ?",
+            bindings: [.text(targetSubject.subjectHash)]
+        )
+        #expect(rows.count >= 1, "audit row with target subjectHash must exist")
+        #expect(rows.first?["subjectKind"]?.stringValue == "memory")
+        #expect(rows.first?["subjectHash"]?.stringValue == targetSubject.subjectHash)
+
+        // 不含明文 memoryId
+        #expect(!(rows.first?["subjectHash"]?.stringValue ?? "").contains(memoryId.uuidString))
+    }
+
+    @Test("Revoke audit carries memory subject hash (WP3 step 6f)")
+    func testRevokeAuditCarriesMemorySubjectHash() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        try await db.execute(sql: "DELETE FROM FeedbackStore")
+        let privacy = PrivacyActor(db: db)
+        let feedback = FeedbackActor(db: db, privacyActor: privacy)
+        let memoryId = UUID()
+        let feedbackId = UUID()
+        let targetSubject = AuditSubject.memory(memoryId)
+
+        // 先插入一条反馈再撤销
+        let entry = FeedbackEntry(
+            id: feedbackId,
+            memoryId: memoryId,
+            queryText: "blue sky",
+            sentiment: .dislike,
+            cosineSimilarity: 0.85,
+            createdAt: Date()
+        )
+        try await feedback.rawInsert(entry)
+        _ = try await feedback.revoke(feedbackId: feedbackId, traceID: "t-wp3-6f")
+
+        // 断言 revoke 审计含目标 subjectHash
+        let rows = try await db.executeQuery(
+            sql: "SELECT subjectKind, subjectHash FROM AuditLog WHERE eventType = ? AND subjectHash = ?",
+            bindings: [.text(AuditEvent.feedbackRevoked.rawValue), .text(targetSubject.subjectHash)]
+        )
+        #expect(rows.count >= 1, "revoke audit row with target subjectHash must exist")
+    }
