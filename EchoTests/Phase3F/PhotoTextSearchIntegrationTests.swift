@@ -417,3 +417,30 @@ extension PhotoTextSearchIntegrationTests {
         #expect(results[1].memoryID == singleMemory)
     }
 }
+
+    @Test("Ambiguous mapping excluded from RRF (WP4 step 4c)")
+    func testCanonicalRRFExcludesAmbiguousMapping() async throws {
+        let fuser = DefaultCanonicalRRFFuser()
+        let sharedVecID = UUID()
+        // 同一 vectorID 绑定到不同 memoryID ⇒ 歧义 ⇒ fail-closed 整组排除
+        let b1 = CanonicalVectorBinding(
+            vectorID: sharedVecID, representationID: sharedVecID,
+            memoryID: UUID(), modality: .textDense, generationID: "g"
+        )
+        let b2 = CanonicalVectorBinding(
+            vectorID: sharedVecID, representationID: sharedVecID,
+            memoryID: UUID(), modality: .textDense, generationID: "g"
+        )
+        let hits = [
+            CanonicalMappedHit(binding: b1, hit: RawChannelHit(
+                channel: .textDense, vectorID: sharedVecID, rank: 1,
+                nativeScore: nil, generationID: "g")),
+            CanonicalMappedHit(binding: b2, hit: RawChannelHit(
+                channel: .textDense, vectorID: sharedVecID, rank: 1,
+                nativeScore: nil, generationID: "g")),
+        ]
+        let weights: [SearchChannel: Double] = [.textDense: 1.0]
+        let results = fuser.fuse(mappedHits: hits, weights: weights,
+                                 rrfK: 60, limit: 10, routeSnapshotID: "snap")
+        #expect(results.isEmpty, "ambiguous vector must be excluded from RRF entirely")
+    }

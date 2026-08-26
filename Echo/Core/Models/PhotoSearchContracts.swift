@@ -256,11 +256,24 @@ public struct DefaultCanonicalRRFFuser: CanonicalRRFFusing {
         limit: Int,
         routeSnapshotID: String
     ) -> [(memoryID: UUID, score: Double, provenance: [ChannelRankProvenance])] {
+        // WP3 步骤 4c/4d：歧义向量 fail-closed 排除——
+        // 同一 vectorID 绑定到不同 memoryID 时无法确定性归属，整组排除。
+        var vectorToMemory = [UUID: UUID]()
+        let deduped = mappedHits.filter { hit in
+            let vid = hit.binding.vectorID
+            let mid = hit.binding.memoryID
+            if let known = vectorToMemory[vid] {
+                return known == mid  // 同一 memory 的合法重复命中保留
+            }
+            vectorToMemory[vid] = mid
+            return true
+        }
+
         // 按 memoryID 聚合贡献
         var contributions: [UUID: (score: Double, provs: [ChannelRankProvenance])] = [:]
         var order: [UUID] = []
 
-        for mapped in mappedHits {
+        for mapped in deduped {
             let memID = mapped.binding.memoryID
             let ch = mapped.hit.channel
             let rank = max(1, mapped.hit.rank)
