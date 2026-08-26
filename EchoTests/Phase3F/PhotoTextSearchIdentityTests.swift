@@ -250,11 +250,11 @@ struct PhotoTextSearchIdentityTests {
 
     // MARK: - WP3 Step 2a-2j2: SearchRouteSnapshot 功能化回归守卫
 
-    private func makeWeight(_ ch: SearchChannel, _ w: Double) -> ChannelWeight {
+    func makeWeight(_ ch: SearchChannel, _ w: Double) -> ChannelWeight {
         ChannelWeight(channel: ch, weight: w)
     }
 
-    private func makeRoute(_ ch: SearchChannel, gen: String) -> ChannelRoute {
+    func makeRoute(_ ch: SearchChannel, gen: String) -> ChannelRoute {
         ChannelRoute(channel: ch, generationID: gen, indexManifestID: nil,
                      queryModelManifestID: nil, dimension: 384, alignmentSpaceID: nil, required: true)
     }
@@ -503,8 +503,8 @@ struct PhotoTextSearchIdentityTests {
         let cache = SearchResultCacheActor()
         let target = UUID()
         let other = UUID()
-        let keyA = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "qA")
-        let keyB = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "qB")
+        let keyA = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "qA", routeSnapshotID: "snap-test")
+        let keyB = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "qB", routeSnapshotID: "snap-test")
         try await cache.store(key: keyA, result: CachedSearchResult(items: [makeBenchmarkItem(id: target)]))
         try await cache.store(key: keyB, result: CachedSearchResult(items: [makeBenchmarkItem(id: other)]))
 
@@ -747,9 +747,9 @@ struct PhotoTextSearchIdentityTests {
         await repo.configureDeletionCollaborators(cache: SearchResultCacheActor())
         let cache = SearchResultCacheActor()
         let m1 = UUID(); let m2 = UUID()
-        try await cache.store(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a"),
+        try await cache.store(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a", routeSnapshotID: "snap-test"),
                               result: CachedSearchResult(items: [makeBenchmarkItem(id: m1)]))
-        try await cache.store(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b"),
+        try await cache.store(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b", routeSnapshotID: "snap-test"),
                               result: CachedSearchResult(items: [makeBenchmarkItem(id: m2)]))
 
         let j1 = MemoryDeletionJournal(operationID: "j-consent-a", memoryID: m1,
@@ -763,8 +763,8 @@ struct PhotoTextSearchIdentityTests {
 
         try await repo.purgeEverythingForConsent()
 
-        #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a")) == nil)
-        #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b")) == nil)
+        #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a", routeSnapshotID: "snap-test")) == nil)
+        #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b", routeSnapshotID: "snap-test")) == nil)
         #expect(try await db.loadDeletionJournals(memoryId: m1).isEmpty)
         #expect(try await db.loadDeletionJournals(memoryId: m2).isEmpty)
         let auditCount = try await db.executeQuery(sql: "SELECT COUNT(*) AS c FROM AuditLog", bindings: [])

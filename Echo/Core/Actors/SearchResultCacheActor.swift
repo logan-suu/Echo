@@ -35,11 +35,19 @@ public nonisolated struct SearchCacheKey: Sendable, Hashable {
     public nonisolated let modelVersion: String
     /// 查询文本哈希（makeKey 生成）
     public nonisolated let queryHash: String
+    /// 路由快照 ID——cache 条目与路由版本绑定，路由变更即失效（WP3 steps 6a-6b）
+    public nonisolated let routeSnapshotID: String
 
-    public nonisolated init(policyVersion: Int, modelVersion: String, queryHash: String) {
+    public nonisolated init(
+        policyVersion: Int,
+        modelVersion: String,
+        queryHash: String,
+        routeSnapshotID: String = "active"
+    ) {
         self.policyVersion = policyVersion
         self.modelVersion = modelVersion
         self.queryHash = queryHash
+        self.routeSnapshotID = routeSnapshotID
     }
 
     // MARK: Hashable（SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，显式 nonisolated）
@@ -47,12 +55,14 @@ public nonisolated struct SearchCacheKey: Sendable, Hashable {
         lhs.policyVersion == rhs.policyVersion
             && lhs.modelVersion == rhs.modelVersion
             && lhs.queryHash == rhs.queryHash
+            && lhs.routeSnapshotID == rhs.routeSnapshotID
     }
 
     public nonisolated func hash(into hasher: inout Hasher) {
         hasher.combine(policyVersion)
         hasher.combine(modelVersion)
         hasher.combine(queryHash)
+        hasher.combine(routeSnapshotID)
     }
 }
 
