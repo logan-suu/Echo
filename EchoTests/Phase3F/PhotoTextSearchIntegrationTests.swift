@@ -444,3 +444,46 @@ extension PhotoTextSearchIntegrationTests {
                                  rrfK: 60, limit: 10, routeSnapshotID: "snap")
         #expect(results.isEmpty, "ambiguous vector must be excluded from RRF entirely")
     }
+
+    @Test("Adapter returns index empty for registered but empty generation (WP4 step 3i)")
+    func testAdapterReturnsIndexEmptyForEmptyGeneration() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let gen = IndexGeneration(
+            generationId: "vision_dense/siglip2-v1",
+            indexType: "vision_dense",
+            dimension: 768
+        )
+        try await registry.registerGeneration(gen)
+        try await registry.setGenerationState(gen.generationId, state: .ready)
+
+        let adapter = PayloadTypedChannelAdapter(
+            generationRegistry: registry,
+            channel: .visionDense,
+            dimension: 768,
+            alignmentSpaceID: "aligned-siglip2-v1"
+        )
+        let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+        let vdRoute = ChannelRoute(
+            channel: .visionDense, generationID: "vision_dense/siglip2-v1",
+            indexManifestID: nil, queryModelManifestID: nil,
+            dimension: 768, alignmentSpaceID: "aligned-siglip2-v1", required: true
+        )
+        let emptyRoute = try SearchRouteSnapshot(
+            snapshotID: "wp4-empty", schemaVersion: 1, routeVersion: 1,
+            channels: [vdRoute], fusion: policy,
+            previousSnapshotID: nil, publishedAtEpochMilliseconds: 0,
+            validationDigest: "d"
+        )
+        let dv = try DenseQueryVector(
+            values: [Float](repeating: 0.25, count: 768), dimension: 768,
+            modelManifestID: "siglip2", alignmentSpaceID: "aligned-siglip2-v1"
+        )
+        let outcome = await adapter.search(payload: .dense(dv), route: emptyRoute, limit: 5, traceID: "t-3i")
+        guard case .skipped(let ch, let reason) = outcome else {
+            Issue.record("expected skipped outcome for empty index"); return
+        }
+        #expect(ch == .visionDense)
+        #expect(reason == .indexEmpty)
+    }
