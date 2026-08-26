@@ -286,3 +286,31 @@ extension PhotoTextSearchMigrationTests {
         #expect(valid == false, "orphan vector must fail route publication validation")
     }
 }
+
+// MARK: - WP6 步骤 8a-8b：consent purge 清理 deletion journals
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Consent purge clears deletion journals (WP6 step 8a/8b)")
+    func testConsentPurgeClearsDeletionJournals() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        let memID = UUID()
+        try await db.upsertDeletionJournal(MemoryDeletionJournal(
+            operationID: "j-wp6-8a",
+            memoryID: memID,
+            auditSubjectHash: "h-8a",
+            traceID: "t-wp6-8a",
+            phase: .planned,
+            vectorIDsByGeneration: []
+        ))
+
+        try await repo.purgeEverythingForConsent()
+
+        let remaining = try await db.loadDeletionJournals(memoryId: memID)
+        #expect(remaining.isEmpty, "consent purge must clear deletion journals (WP6 step 8a/8b)")
+    }
+}
