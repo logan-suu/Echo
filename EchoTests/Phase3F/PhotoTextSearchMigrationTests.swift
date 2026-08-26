@@ -237,3 +237,52 @@ extension PhotoTextSearchMigrationTests {
         #expect(afterCancel.lastProcessedLocator == locator)
     }
 }
+
+// MARK: - WP6 步骤 2c-2d：歧义/orphan 向量阻断路由发布验证
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Orphan legacy vector blocks route publication validation (WP6 step 2c/2d)")
+    func testAmbiguousLegacyVectorBlocksPublication() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let migration = PhotoSearchMigrationActor(
+            generationRegistry: registry,
+            canonicalRepository: repo,
+            visionEmbedder: WP6MigrationEmbedder(),
+            photoExtractor: WP6StubPhotoExtractor(imageData: Data([0x89, 0x50, 0x4E, 0x47]))
+        )
+
+        _ = try await Self.seedActiveRoute(db: db, registry: registry)
+        let st = try await migration.startPhotoShadowBuild(traceID: "t-wp6-2c")
+        guard let shadowID = st.shadowGenerationID else { return }
+
+        // 创建一张真实 photo memory（正常映射路径）
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        let locB = "PHAsset/wp6-amb-b-\(UUID().uuidString)"
+        let memB = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locB, sourceType: "photo")
+        try await repo.commit(
+            memory: Memory(memoryId: memB, sourceLocator: locB, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memB, memoryId: memB, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memB, vector: Array(repeating: 0.25, count: 768))]],
+            traceID: "t-wp6-seed"
+        )
+
+        guard let store = await registry.vectorStore(for: shadowID) else {
+            Issue.record("shadow store unavailable")
+            return
+        }
+        // 正常映射向量（id == memB，photoRepresentationID 恒等）
+        try await store.ingest(vector: Array(repeating: 0.5, count: 768), id: memB, metadata: nil)
+        #expect(try await migration.validateShadowGeneration(generationID: shadowID, traceID: "t-wp6-2c"),
+                "fully mapped shadow must pass validation")
+
+        // orphan 向量（无 Representation 行）——fail-closed 阻断（迁移算法 I.1）
+        let orphan = UUID()
+        try await store.ingest(vector: Array(repeating: 0.4, count: 768), id: orphan, metadata: nil)
+        let valid = try await migration.validateShadowGeneration(generationID: shadowID, traceID: "t-wp6-2c")
+        #expect(valid == false, "orphan vector must fail route publication validation")
+    }
+}

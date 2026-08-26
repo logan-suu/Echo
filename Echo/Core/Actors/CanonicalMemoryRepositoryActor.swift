@@ -248,11 +248,19 @@ public actor CanonicalMemoryRepositoryActor {
     /// 查无即返回 `.missing`（是否 fail-closed 排除由调用方决定）。
     public func mapVectorID(_ vectorID: UUID, generationID: String) async throws -> CanonicalMappingResult {
         let rows = try await db.executeQuery(
-            sql: "SELECT memoryId, modality FROM Representation WHERE representationId = ? LIMIT 1",
+            sql: "SELECT memoryId, modality FROM Representation WHERE representationId = ?",
             bindings: [.text(vectorID.uuidString)]
         )
-        guard let row = rows.first,
-              let idString = row["memoryId"]?.stringValue,
+        guard let row = rows.first else {
+            return .missing(vectorID: vectorID, generationID: generationID)
+        }
+        // WP6 步骤 2c/2d：同一 representationId 对应多个候选 memory 即歧义——fail-closed，
+        // 歧义向量不具备参与 RRF、迁移复用或路由验证资格（迁移算法 I.3）。
+        if rows.count > 1 {
+            let candidates = rows.compactMap { $0["memoryId"]?.stringValue.flatMap { UUID(uuidString: $0) } }
+            return .ambiguous(vectorID: vectorID, generationID: generationID, candidateMemoryIDs: candidates)
+        }
+        guard let idString = row["memoryId"]?.stringValue,
               let memoryID = UUID(uuidString: idString),
               let modalityRaw = row["modality"]?.stringValue,
               let modality = Modality(rawValue: modalityRaw) else {

@@ -63,6 +63,27 @@ public actor PhotoSearchMigrationActor {
     /// 当前迁移状态快照。
     public func currentState() -> PhotoSearchMigrationState { state }
 
+    /// 验证 shadow generation 无 orphan/歧义向量（WP6 迁移算法 D.3 / I.1-I.5）：
+    /// 逐向量解析到唯一 canonical memory；任一 missing（orphan）或 ambiguous 即验证失败，
+    /// 该代不得参与路由发布（验收清单第 3 条：活跃路由绝不指向 invalid generation）。
+    public func validateShadowGeneration(generationID: String, traceID: String) async throws -> Bool {
+        guard let repo = canonicalRepository,
+              let store = await generationRegistry.vectorStore(for: generationID) else {
+            throw PhotoSearchMigrationError.shadowStoreUnavailable
+        }
+        let entries = await store.allEntries()
+        for (vectorID, _) in entries {
+            let resolution = try await repo.mapVectorID(vectorID, generationID: generationID)
+            switch resolution {
+            case .mapped:
+                continue
+            case .missing, .ambiguous:
+                return false
+            }
+        }
+        return true
+    }
+
     /// 取消迁移（WP6 迁移算法 A.8 / G.5）：
     /// 保留 checkpoint（processedCount/lastProcessedLocator）供恢复，不发布 shadow route——
     /// 活跃路由保持逐字节不变（验收清单第 5 条）。phase 保持 shadowBuilding 以允许
