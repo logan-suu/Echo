@@ -260,6 +260,8 @@ public actor SearchPipeline {
     /// 3F.11 fix: canonical 仓库 — legacy MemoryEntry 元数据解码失败时按 ID 回填
     /// （canonical 分代 store 不写 legacy 元数据，sourceType 变 "unknown" 会被授权过滤剔除）
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
+    /// WP4 steps 5 基础设施：多通道查询表示工厂（可选，nil 时保持既有仅文本搜索行为不变）
+    private let queryFactory: (any QueryRepresentationFactory)?
 
     // MARK: - Session State (US-RET-005 AC-4)
 
@@ -299,13 +301,15 @@ public actor SearchPipeline {
         privacyActor: PrivacyActor = .shared,
         vectorStore: VectorStoreActor,
         feedbackActor: FeedbackActor = .shared,
-        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
+        canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
+        queryFactory: (any QueryRepresentationFactory)? = nil
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
         self.vectorStore = vectorStore
         self.feedbackActor = feedbackActor
         self.canonicalRepository = canonicalRepository
+        self.queryFactory = queryFactory
     }
 
     // MARK: - Search

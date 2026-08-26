@@ -32,12 +32,21 @@ public enum LiveAppAdapters {
         guard let activeStore = await resolveActiveTextStore(registry: registry) else {
             return nil
         }
+        // WP4 steps 5 基础设施：构造多通道查询工厂（当前仅注入不启用，
+        // 后续切片在 SearchPipeline 内部按路由快照逐步切换到多通道路径）
+        let queryFactory: (any QueryRepresentationFactory)? = {
+            guard let textCtx = composition.textContextualEmbedder else { return nil }
+            return DefaultQueryRepresentationFactory(
+                textEmbedder: textCtx, visionEmbedder: StubVisionTextEmbedder()
+            )
+        }()
         return SearchPipeline(
             embedder: composition.textEmbedder,
             privacyActor: composition.privacyActor,
             vectorStore: activeStore,
             feedbackActor: .shared,
-            canonicalRepository: makeCanonicalRepository(composition: composition)
+            canonicalRepository: makeCanonicalRepository(composition: composition),
+            queryFactory: queryFactory
         )
     }
 
@@ -144,5 +153,17 @@ public enum LiveAppAdapters {
     ) async -> VectorStoreActor? {
         guard let route = try? await registry.loadActiveRoute() else { return nil }
         return await registry.vectorStore(for: route.textGeneration)
+    }
+}
+
+
+/// WP4 steps 5 基础设施：配对文本塔占位——Core ML 工件产出后替换为 SigLIP2TextEmbedder。
+private struct StubVisionTextEmbedder: VisionTextEmbedder {
+    nonisolated let modelManifestID = "siglip2-text-pending"
+    nonisolated let alignmentSpaceID = "aligned-siglip2-v1"
+    nonisolated let dimension = 768
+
+    func embedVisionQuery(text: String, locale: String, traceID: String) async throws -> [Float] {
+        throw PhotoSearchContractError.dimensionMismatch(expected: 768, actual: 0)
     }
 }
