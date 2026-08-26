@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.1",
-  "_last_updated": "2026-08-12",
+  "_last_updated": "2026-08-25",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -1390,6 +1390,30 @@
       "recheck_trigger": "Phase 4 集成扫描",
       "resolved_at": "2026-08-12",
       "resolved_by": "PR #63 review-fix (DEF-63-001/002 + DEF-55-004)"
+    },
+    {
+      "id": "DEF-64-001",
+      "pr": null,
+      "title": "License-blocked model artifacts (~644MB MobileCLIP/SenseVoice) still auto-bundle into every app build",
+      "severity": "P0",
+      "location": "Echo/Resources/Models/{MobileCLIP-B-lt_image.mlpackage(165M), MobileCLIP-B-lt_text.mlpackage(121M), SenseVoiceSmall_int8.mlmodelc(226M), SenseVoicePreprocessor.mlmodelc(2.9M), sensevoice-small-q4_k.gguf(129M)}",
+      "reason": "Discovered during Gate C legal-leg evidence gathering (not from a PR review; recorded here for written tracking). prepare_models.sh L14-16 documents their exclusion decision and model-manifest.json registers only approved models, but disk residue was never removed. Main app folder is PBXFileSystemSynchronizedRootGroup (pbxproj L59-64) whose membershipExceptions (L88-103) exempt only plist/entitlements, so residue ships in every TestFlight/App Store build. Shipping weights that prohibit commercial use is a direct violation risk regardless of the legal verdict. Swift references are stale comments only (IngestPipeline.swift L12/157/158/242/653, Memory.swift L7/22/30) - no runtime loading, deletion is build-safe.",
+      "defer_to": "User authorization via legal-review-package.md Q5; hard prerequisite before any App Store archive submission",
+      "deferred_at": "2026-08-25",
+      "last_checked_at": "2026-08-25",
+      "owners": [
+        "human"
+      ],
+      "target_tasks": [
+        "Gate C legal leg sign-off"
+      ],
+      "acceptance_evidence": [
+        "5 residue files removed from working tree",
+        "stale comments cleaned in IngestPipeline.swift/Memory.swift",
+        "xcodebuild build passes post-removal"
+      ],
+      "tracking_status": "open",
+      "recheck_trigger": "Phase integration scan or any App Store archival attempt"
     }
   ]
 }
