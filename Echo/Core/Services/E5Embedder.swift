@@ -178,3 +178,20 @@ extension EmbeddingContext {
         }
     }
 }
+
+// MARK: - ContextualTextEmbedder（WP4 composition 接线）
+
+extension E5Embedder: ContextualTextEmbedder {
+    public nonisolated var modelManifestID: String { "multilingual-e5-small" }
+    public nonisolated var dimension: Int { 384 }
+
+    /// ContextualTextEmbedder 契约方法——委托给内部 embedText(_:context:)
+    /// 并忽略 traceID（现有方法暂不含 trace 参数，后续统一时补齐）。
+    public func embed(
+        text: String,
+        context: TextEmbeddingContext,
+        traceID: String
+    ) async throws -> [Float] {
+        try await embedText(text, context: context)
+    }
+}
