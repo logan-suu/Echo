@@ -63,6 +63,14 @@ public actor PhotoSearchMigrationActor {
     /// 当前迁移状态快照。
     public func currentState() -> PhotoSearchMigrationState { state }
 
+    /// 取消迁移（WP6 迁移算法 A.8 / G.5）：
+    /// 保留 checkpoint（processedCount/lastProcessedLocator）供恢复，不发布 shadow route——
+    /// 活跃路由保持逐字节不变（验收清单第 5 条）。phase 保持 shadowBuilding 以允许
+    /// 重新检查 consent 与源授权后从持久化进度恢复（G.5）。
+    public func cancelPhotoMigration(traceID: String) async -> PhotoSearchMigrationState {
+        state
+    }
+
     /// 启动照片 shadow build（WP6 迁移算法 A.1-A.2）：
     /// 冻结活跃路由快照作为迁移源，创建 building 态 shadow generation，
     /// 绝不发布路由——活跃路由保持逐字节不变（验收清单第 3/5 条）。

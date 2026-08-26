@@ -179,3 +179,61 @@ extension PhotoTextSearchMigrationTests {
         #expect(items.first?.state == "failed")
     }
 }
+
+// MARK: - WP6 步骤 1e-1h：视频帧确定性 ID + 取消保持路由
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Video frame representation ID is deterministic across recovery (WP6 step 1e/1f)")
+    func testVideoFrameMigrationUsesDeterministicRepresentationID() async throws {
+        let id1 = CanonicalMemoryRepositoryActor.videoFrameRepresentationID(sourceLocator: "PHAsset/v1", frameIndex: 3)
+        let id2 = CanonicalMemoryRepositoryActor.videoFrameRepresentationID(sourceLocator: "PHAsset/v1", frameIndex: 3)
+        #expect(id1 == id2, "frame ID must be reproducible across recovery")
+        let id3 = CanonicalMemoryRepositoryActor.videoFrameRepresentationID(sourceLocator: "PHAsset/v1", frameIndex: 4)
+        #expect(id1 != id3, "different frame index must yield a different ID")
+    }
+
+    @Test("Migration cancellation keeps active route digest and preserves progress (WP6 step 1g/1h)")
+    func testMigrationCancellationKeepsActiveRouteAndProgress() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let migration = PhotoSearchMigrationActor(
+            generationRegistry: registry,
+            canonicalRepository: repo,
+            visionEmbedder: WP6MigrationEmbedder(),
+            photoExtractor: WP6StubPhotoExtractor(imageData: Data([0x89, 0x50, 0x4E, 0x47])),
+            progressActor: ProgressActor.shared
+        )
+
+        let beforeSnapshot = try await Self.seedActiveRoute(db: db, registry: registry)
+        let st = try await migration.startPhotoShadowBuild(traceID: "t-wp6-1g")
+        guard let shadowID = st.shadowGenerationID else { return }
+
+        // 迁移一张照片使进度 = 1
+        let locator = "PHAsset/wp6-cancel-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await repo.commit(
+            memory: Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memID, vector: Array(repeating: 0.25, count: 768))]],
+            traceID: "t-wp6-seed"
+        )
+        _ = try await migration.migratePhoto(memoryId: memID, shadowGenerationID: shadowID, taskID: "t-wp6-1g", traceID: "t-wp6-1g")
+
+        // 取消
+        let afterCancel = await migration.cancelPhotoMigration(traceID: "t-wp6-1g")
+
+        // 活跃路由 digest 不变
+        let after = try await registry.loadActiveRoute()
+        let afterSnapshot = after.flatMap { "active-v\($0.version)-\($0.textGeneration)" }
+        #expect(afterSnapshot == beforeSnapshot, "cancellation must not publish or alter the active route")
+
+        // 进度保留（processedCount == 1，phase 保持 shadowBuilding 可恢复）
+        #expect(afterCancel.phase == .shadowBuilding)
+        #expect(afterCancel.processedCount == 1, "cancellation must preserve processed progress")
+        #expect(afterCancel.lastProcessedLocator == locator)
+    }
+}
