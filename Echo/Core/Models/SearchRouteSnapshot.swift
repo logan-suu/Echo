@@ -28,6 +28,7 @@ public nonisolated enum SearchRouteContractError: Error, Sendable, Equatable {
     case duplicateWeight(SearchChannel)
     case missingRequiredChannel(SearchChannel)
     case digestMismatch(expected: String, actual: String)
+    case malformedCanonicalData
 }
 
 // MARK: - ChannelRoute
@@ -208,6 +209,101 @@ public nonisolated enum SearchRouteCanonicalEncoder {
         // validationDigest 刻意排除（防递归）
 
         return d
+    }
+
+    /// canonical bytes 解码（与 encode 完全对称；WP6 步骤 5b 重启校验）。
+    /// 解码不携带 validationDigest（encode 刻意排除）；快照 init 的排序/去重会重建契约。
+    public nonisolated static func decode(_ data: Data) throws -> SearchRouteSnapshot {
+        var d = data
+        guard d.popFirst() == versionPrefix else {
+            throw SearchRouteContractError.malformedCanonicalData
+        }
+        let snapshotID = try readString(&d)
+        let schemaVersion = Int(try readInt64(&d))
+        let routeVersion = Int(try readInt64(&d))
+
+        let channelCount = Int(try readInt64(&d))
+        var channels: [ChannelRoute] = []
+        for _ in 0..<channelCount {
+            guard let channel = SearchChannel(rawValue: try readString(&d)) else {
+                throw SearchRouteContractError.malformedCanonicalData
+            }
+            let generationID = try readString(&d)
+            let indexManifestID = try readOptionalString(&d)
+            let queryModelManifestID = try readOptionalString(&d)
+            let hasDim = d.popFirst() == 1
+            let dim = hasDim ? Int(try readInt64(&d)) : nil
+            let alignmentSpaceID = try readOptionalString(&d)
+            let required = d.popFirst() == 1
+            channels.append(ChannelRoute(
+                channel: channel,
+                generationID: generationID,
+                indexManifestID: indexManifestID,
+                queryModelManifestID: queryModelManifestID,
+                dimension: dim,
+                alignmentSpaceID: alignmentSpaceID,
+                required: required
+            ))
+        }
+
+        let policyID = try readString(&d)
+        let weightCount = Int(try readInt64(&d))
+        var weights: [ChannelWeight] = []
+        for _ in 0..<weightCount {
+            guard let channel = SearchChannel(rawValue: try readString(&d)) else {
+                throw SearchRouteContractError.malformedCanonicalData
+            }
+            let weight = Double(bitPattern: try readUInt64(&d))
+            weights.append(ChannelWeight(channel: channel, weight: weight))
+        }
+        let rrfK = Double(bitPattern: try readUInt64(&d))
+
+        let previousSnapshotID = try readOptionalString(&d)
+        let publishedAt = try readInt64(&d)
+
+        return try SearchRouteSnapshot(
+            snapshotID: snapshotID,
+            schemaVersion: schemaVersion,
+            routeVersion: routeVersion,
+            channels: channels,
+            fusion: FusionPolicySnapshot(policyID: policyID, weights: weights, rrfK: rrfK),
+            previousSnapshotID: previousSnapshotID,
+            publishedAtEpochMilliseconds: publishedAt,
+            validationDigest: ""
+        )
+    }
+
+    private static func readString(_ data: inout Data) throws -> String {
+        let count = Int(try readUInt64(&data))
+        guard count >= 0, data.count >= count else {
+            throw SearchRouteContractError.malformedCanonicalData
+        }
+        let utf8 = data.prefix(count)
+        data.removeFirst(count)
+        guard let value = String(data: Data(utf8), encoding: .utf8) else {
+            throw SearchRouteContractError.malformedCanonicalData
+        }
+        return value
+    }
+
+    private static func readOptionalString(_ data: inout Data) throws -> String? {
+        guard let flag = data.popFirst() else {
+            throw SearchRouteContractError.malformedCanonicalData
+        }
+        return flag == 1 ? try readString(&data) : nil
+    }
+
+    private static func readInt64(_ data: inout Data) throws -> Int64 {
+        Int64(bitPattern: try readUInt64(&data))
+    }
+
+    private static func readUInt64(_ data: inout Data) throws -> UInt64 {
+        guard data.count >= 8 else {
+            throw SearchRouteContractError.malformedCanonicalData
+        }
+        let bytes = data.prefix(8)
+        data.removeFirst(8)
+        return bytes.withUnsafeBytes { $0.loadUnaligned(as: UInt64.self).bigEndian }
     }
 
     private static func appendString(_ data: inout Data, _ value: String) {

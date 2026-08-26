@@ -528,3 +528,41 @@ extension PhotoTextSearchMigrationTests {
         #expect(try await cache.lookup(key: keyB) == nil)
     }
 }
+
+// MARK: - WP6 步骤 5b：canonical decode / digest validation
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Canonical decode round-trips and revalidates digest after restart (WP6 step 5b)")
+    func testCanonicalDecodeRoundTripsAndRevalidatesDigest() throws {
+        let snapshot = try Self.makeRouteSnapshot()
+        let bytes = try snapshot.canonicalData()
+
+        // 解码回快照——字段级一致性
+        let decoded = try SearchRouteCanonicalEncoder.decode(bytes)
+        #expect(decoded.snapshotID == snapshot.snapshotID)
+        #expect(decoded.schemaVersion == snapshot.schemaVersion)
+        #expect(decoded.routeVersion == snapshot.routeVersion)
+        #expect(decoded.channels == snapshot.channels, "channel array must survive encode/decode")
+        #expect(decoded.fusion == snapshot.fusion, "fusion policy must survive encode/decode")
+        #expect(decoded.previousSnapshotID == snapshot.previousSnapshotID)
+        #expect(decoded.publishedAtEpochMilliseconds == snapshot.publishedAtEpochMilliseconds)
+
+        // 解码后 digest 重算与持久化 digest 一致（重启校验语义）
+        let decodedBytes = try decoded.canonicalData()
+        #expect(decodedBytes == bytes, "re-encode must be byte-identical")
+        let decodedDigest = try decoded.computedDigest()
+        let originalDigest = try snapshot.computedDigest()
+        #expect(decodedDigest == originalDigest, "digest over decoded bytes must match the original")
+    }
+
+    @Test("Canonical decode rejects malformed data (WP6 step 5b fail-closed)")
+    func testCanonicalDecodeRejectsMalformedData() throws {
+        #expect(throws: SearchRouteContractError.malformedCanonicalData) {
+            _ = try SearchRouteCanonicalEncoder.decode(Data([0x02]))  // 错误版本前缀
+        }
+        #expect(throws: SearchRouteContractError.malformedCanonicalData) {
+            _ = try SearchRouteCanonicalEncoder.decode(Data([]))  // 空数据
+        }
+    }
+}
