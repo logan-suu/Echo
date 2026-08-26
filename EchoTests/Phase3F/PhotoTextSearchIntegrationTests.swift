@@ -597,3 +597,95 @@ extension PhotoTextSearchIntegrationTests {
         #expect(locale == "zh-Hans")
     }
 }
+// MARK: - WP4: 多通道编排器集成（factory 驱动 / canonical 先于 RRF / 双通道 provenance）
+
+private struct WP4CannedChannel: NativeSearchChannel {
+    let channel: SearchChannel
+    private let canned: ChannelSearchOutcome
+
+    init(channel: SearchChannel, outcome: ChannelSearchOutcome) {
+        self.channel = channel
+        self.canned = outcome
+    }
+
+    func search(payload: ChannelQueryPayload, route: SearchRouteSnapshot, limit: Int, traceID: String) async -> ChannelSearchOutcome {
+        canned
+    }
+}
+
+extension PhotoTextSearchIntegrationTests {
+
+    @Test("Typed orchestration coalesces two dense channels into one fused memory (WP4 产出接口)")
+    func testTypedOrchestrationCoalescesTwoChannelsIntoOneFusedMemory() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        // 播种：generation 每次运行唯一（共享持久库防重复注册）；
+        // ADR-015 D-7：vectorId == representationId，显式对齐以便 mapVectorID 反查。
+        let genText = "text_dense/e5-v1-\(UUID().uuidString.prefix(6))"
+        let genVis = "vision_dense/siglip2-v1-\(UUID().uuidString.prefix(6))"
+        try await registry.registerGeneration(IndexGeneration(generationId: genText, indexType: "text_dense", dimension: 384))
+        try await registry.setGenerationState(genText, state: .ready)
+        try await registry.setGenerationState(genText, state: .active)
+        try await registry.registerGeneration(IndexGeneration(generationId: genVis, indexType: "vision_dense", dimension: 768))
+        try await registry.setGenerationState(genVis, state: .ready)
+        try await registry.setGenerationState(genVis, state: .active)
+
+        let locator = "PHAsset/wp4-orch-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        let textVecID = UUID()
+        let visVecID = UUID()
+
+        let memory = Memory(
+            memoryId: memID,
+            sourceLocator: locator,
+            canonicalText: "red flower on windowsill",
+            sourceType: "photo"
+        )
+        try await repo.commit(
+            memory: memory,
+            representations: [
+                Representation(representationId: textVecID, memoryId: memID, modality: .textDense, preprocessVersion: "e5-v1", contentHash: "sha256:wp4-t"),
+                Representation(representationId: visVecID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "sha256:wp4-v")
+            ],
+            vectorsByGeneration: [
+                genText: [CanonicalVectorEntry(id: textVecID, vector: Array(repeating: 0.5, count: 384))],
+                genVis: [CanonicalVectorEntry(id: visVecID, vector: Array(repeating: 0.25, count: 768))]
+            ],
+            traceID: "t-wp4-orch"
+        )
+
+        let factory = DefaultQueryRepresentationFactory(textEmbedder: ContextRecordingE5(), visionEmbedder: StubVisionEmbedder())
+        let route = try fourChannelRoute()
+
+        let results = await SearchPipeline.searchMultiChannelTyped(
+            factory: factory,
+            route: route,
+            adapters: [
+                WP4CannedChannel(channel: .textDense, outcome: .success(
+                    channel: .textDense,
+                    hits: [RawChannelHit(channel: .textDense, vectorID: textVecID, rank: 1, nativeScore: nil, generationID: genText)],
+                    elapsedMs: 1
+                )),
+                WP4CannedChannel(channel: .visionDense, outcome: .success(
+                    channel: .visionDense,
+                    hits: [RawChannelHit(channel: .visionDense, vectorID: visVecID, rank: 1, nativeScore: nil, generationID: genVis)],
+                    elapsedMs: 1
+                ))
+            ],
+            repo: repo,
+            query: "red flower",
+            locale: "en-US",
+            k: 10,
+            traceID: "t-wp4-orch"
+        )
+
+        #expect(results.count == 1, "two dense hits on the same memory must coalesce into one fused result")
+        #expect(results.first?.memory.memoryId == memID)
+        #expect(results.first?.provenance.count == 2, "both channel provenances must be preserved")
+        #expect(Set(results.first?.provenance.map(\.channel) ?? []) == [.textDense, .visionDense])
+        #expect(results.first?.routeSnapshotID == route.snapshotID)
+    }
+}

@@ -870,6 +870,101 @@ public actor SearchPipeline {
         return items
     }
 
+    // MARK: - WP4: Factory 驱动的类型化多通道编排
+
+    /// WP4 产出接口——每通道原生载荷（禁共享向量）、canonical 映射先于 RRF、
+    /// 歧义 fail-closed 排除、timedOut 部分结果保留、全通道 provenance 聚合与 hydration。
+    /// 全依赖注入的静态纯编排：composition 层决定何时以生产工厂激活。
+    nonisolated static func searchMultiChannelTyped(
+        factory: any QueryRepresentationFactory,
+        route: SearchRouteSnapshot,
+        adapters: [any NativeSearchChannel],
+        repo: CanonicalMemoryRepositoryActor,
+        query: String,
+        locale: String,
+        k: Int,
+        traceID: String,
+        weights: [SearchChannel: Double] = [:],
+        rrfK: Double = 60
+    ) async -> [FusedSearchResult] {
+        // Step 1: 每通道原生载荷生成（部分失败隔离由 factory 内部保证）
+        let outcome = await factory.makeQuery(text: query, locale: locale, route: route, traceID: traceID)
+
+        // Step 2: 逐通道执行类型化检索；无原生载荷的通道直接跳过（绝不降级到共享向量）
+        var rawHits: [RawChannelHit] = []
+        for adapter in adapters {
+            guard let payload = outcome.query.payloads[adapter.channel] else { continue }
+            let limit = max(k * 3, 30)
+            let channelOutcome = await adapter.search(
+                payload: payload, route: route, limit: limit, traceID: traceID
+            )
+            switch channelOutcome {
+            case .success(_, let hits, _):
+                rawHits.append(contentsOf: hits)
+            case .timedOut(_, let partialHits, _):
+                rawHits.append(contentsOf: partialHits)
+            case .empty, .skipped, .failed:
+                continue
+            }
+        }
+        guard !rawHits.isEmpty else { return [] }
+
+        // Step 3: canonical 映射先于 RRF——dense 命中按 generation 分组批量映射；
+        // 词法命中 vectorID 即 memoryID，经 loadRepresentations 构造合法绑定（无表示则 fail-closed 跳过）。
+        var bindingsByID: [UUID: CanonicalVectorBinding] = [:]
+        var byGeneration: [String: [UUID]] = [:]
+        var lexicalMemIDs: [UUID] = []
+        for hit in rawHits {
+            if hit.generationID.hasPrefix("lexical/") {
+                if !lexicalMemIDs.contains(hit.vectorID) { lexicalMemIDs.append(hit.vectorID) }
+            } else {
+                byGeneration[hit.generationID, default: []].append(hit.vectorID)
+            }
+        }
+        for (gen, ids) in byGeneration {
+            let map = (try? await repo.mapVectorIDs(ids, generationID: gen)) ?? [:]
+            for (id, res) in map {
+                if case .mapped(let binding) = res { bindingsByID[id] = binding }
+            }
+        }
+        for memID in lexicalMemIDs {
+            let reps = (try? await repo.loadRepresentations(memoryId: memID)) ?? []
+            guard let rep = reps.first else { continue }
+            bindingsByID[memID] = CanonicalVectorBinding(
+                vectorID: memID,
+                representationID: rep.representationId,
+                memoryID: memID,
+                modality: rep.modality,
+                generationID: rawHits.first { $0.vectorID == memID && $0.generationID.hasPrefix("lexical/") }?.generationID ?? ""
+            )
+        }
+
+        let mappedHits: [CanonicalMappedHit] = rawHits.compactMap { hit in
+            guard let binding = bindingsByID[hit.vectorID] else { return nil }
+            return CanonicalMappedHit(binding: binding, hit: hit)
+        }
+        guard !mappedHits.isEmpty else { return [] }
+
+        // Step 4: canonical RRF 融合（歧义排除 + 确定性 tie-break + provenance 聚合）
+        let fused = DefaultCanonicalRRFFuser().fuse(
+            mappedHits: mappedHits, weights: weights, rrfK: rrfK,
+            limit: k, routeSnapshotID: route.snapshotID
+        )
+
+        // Step 5: hydration——按融合结果取回 Memory 组装
+        var results: [FusedSearchResult] = []
+        for entry in fused {
+            guard let memory = try? await repo.loadMemory(memoryId: entry.memoryID) else { continue }
+            results.append(FusedSearchResult(
+                memory: memory,
+                rrfScore: entry.score,
+                provenance: entry.provenance,
+                routeSnapshotID: route.snapshotID
+            ))
+        }
+        return results
+    }
+
     // MARK: - Source Type Normalization
 
     /// 将记忆细粒度 sourceType 归一化为授权词汇表的数据源类型（P1）。
