@@ -264,3 +264,91 @@ extension PhotoTextSearchIntegrationTests {
         #expect(outcome.query.locale == "zh-Hans")
     }
 }
+
+// MARK: - WP4 Steps 3a-3l: PayloadTypedChannelAdapter 六守卫
+
+extension PhotoTextSearchIntegrationTests {
+
+    @Test("Adapter rejects wrong payload type before store search (WP4 step 3a)")
+    func testAdapterRejectsWrongPayloadTypeBeforeStoreSearch() async throws {
+        let registry = GenerationRegistryActor(db: DatabaseManager.shared)
+        let adapter = PayloadTypedChannelAdapter(
+            generationRegistry: registry, channel: .visionDense, dimension: 768
+        )
+        let route = try fourChannelRoute()
+        let wrongPayload = ChannelQueryPayload.lexical(text: "text query", locale: "en-US")
+        let outcome = await adapter.search(payload: wrongPayload, route: route, limit: 5, traceID: "t-3a")
+        guard case .failed(_, let failure) = outcome else {
+            Issue.record("expected failed outcome"); return
+        }
+        #expect(failure.code == "payloadTypeMismatch")
+    }
+
+    @Test("Adapter rejects dimension mismatch before store search (WP4 step 3c)")
+    func testAdapterRejectsDimensionMismatchBeforeStoreSearch() async throws {
+        let registry = GenerationRegistryActor(db: DatabaseManager.shared)
+        let adapter = PayloadTypedChannelAdapter(
+            generationRegistry: registry, channel: .visionDense, dimension: 768
+        )
+        let route = try fourChannelRoute()
+        let wrongDim = try DenseQueryVector(
+            values: [Float](repeating: 0.25, count: 384), dimension: 384,
+            modelManifestID: "stub-e5", alignmentSpaceID: "aligned-e5-v1"
+        )
+        let outcome = await adapter.search(payload: .dense(wrongDim), route: route, limit: 5, traceID: "t-3c")
+        guard case .failed(_, let failure) = outcome else {
+            Issue.record("expected failed outcome"); return
+        }
+        #expect(failure.code == "dimensionMismatch")
+    }
+
+    @Test("Adapter rejects alignment space mismatch before store search (WP4 step 3e)")
+    func testAdapterRejectsAlignmentSpaceMismatchBeforeStoreSearch() async throws {
+        let registry = GenerationRegistryActor(db: DatabaseManager.shared)
+        let adapter = PayloadTypedChannelAdapter(
+            generationRegistry: registry, channel: .visionDense, dimension: 768,
+            alignmentSpaceID: "aligned-siglip2-v1"
+        )
+        let route = try fourChannelRoute()
+        let wrongSpace = try DenseQueryVector(
+            values: [Float](repeating: 0.25, count: 768), dimension: 768,
+            modelManifestID: "siglip2", alignmentSpaceID: "aligned-e5-wrong-space"
+        )
+        let outcome = await adapter.search(payload: .dense(wrongSpace), route: route, limit: 5, traceID: "t-3e")
+        guard case .failed(_, let failure) = outcome else {
+            Issue.record("expected failed outcome"); return
+        }
+        #expect(failure.code == "alignmentSpaceMismatch")
+    }
+
+    @Test("Adapter returns route unavailable for missing channel (WP4 step 3g)")
+    func testAdapterReturnsRouteUnavailableForMissingChannel() async throws {
+        let registry = GenerationRegistryActor(db: DatabaseManager.shared)
+        let adapter = PayloadTypedChannelAdapter(
+            generationRegistry: registry, channel: .ocrText, dimension: 384
+        )
+        // 路由仅声明 textDense——ocrText 缺失 ⇒ fail-closed 跳过
+        let policy = try FusionPolicySnapshot(policyID: "p", weights: [], rrfK: 60)
+        let textOnly = ChannelRoute(
+            channel: .textDense, generationID: "text_dense/e5-v1",
+            indexManifestID: nil, queryModelManifestID: nil,
+            dimension: nil, alignmentSpaceID: nil, required: true
+        )
+        let partialRoute = try SearchRouteSnapshot(
+            snapshotID: "partial-route", schemaVersion: 1, routeVersion: 1,
+            channels: [textOnly],
+            fusion: policy, previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: 0, validationDigest: "d"
+        )
+        let dv = try DenseQueryVector(
+            values: [Float](repeating: 0.25, count: 384), dimension: 384,
+            modelManifestID: "stub-e5", alignmentSpaceID: "aligned-e5-v1"
+        )
+        let outcome = await adapter.search(payload: .dense(dv), route: partialRoute, limit: 5, traceID: "t-3g")
+        guard case .skipped(let ch, let reason) = outcome else {
+            Issue.record("expected skipped outcome"); return
+        }
+        #expect(ch == .ocrText)
+        #expect(reason == .routeUnavailable)
+    }
+}

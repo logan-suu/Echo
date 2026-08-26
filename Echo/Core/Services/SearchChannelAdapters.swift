@@ -407,3 +407,128 @@ public enum ChannelAdapterError: Error, LocalizedError, Sendable, Equatable {
         }
     }
 }
+
+// MARK: - PayloadTypedChannelAdapter（WP4 steps 3a-3l）
+
+/// payload 类型化通道适配器——六守卫 + 五态结果，
+/// 严格遵循 NativeSearchChannel 契约（交接计划 §7.4/WP4 steps 3a-3l）。
+///
+/// 守卫顺序（任一失败即提前返回，绝不触达向量 store）：
+/// 1. payload 类型必须匹配通道种类（稠密通道拒收词法载荷，反之亦然）
+/// 2. 稠密载荷维度必须等于适配器声明维度
+/// 3. 对齐空间标识必须等于期望值（跨空间混用 fail-closed）
+/// 4. 路由快照缺失该通道 → `.skipped(.routeUnavailable)`
+/// 5. 索引为空 → `.skipped(.indexEmpty)`
+/// （超时归编排层并发 race 负责，适配器自身不计时——设计决策记录于 E-WP4-004）
+public actor PayloadTypedChannelAdapter: NativeSearchChannel {
+
+    public nonisolated let channel: SearchChannel
+    private let generationRegistry: GenerationRegistryActor
+    private let expectedDimension: Int
+    /// nil 表示该通道无对齐空间约束（如 lexical）。
+    private let expectedAlignmentSpaceID: String?
+    /// 词法通道 FTS 检索回调（组合根注入 CanonicalMemoryRepositoryActor.searchCanonical）。
+    private let lexicalSearch: ((String, Int) async -> [UUID])?
+
+    public init(
+        generationRegistry: GenerationRegistryActor,
+        channel: SearchChannel,
+        dimension: Int,
+        alignmentSpaceID: String? = nil,
+        lexicalSearch: ((String, Int) async -> [UUID])? = nil
+    ) {
+        self.generationRegistry = generationRegistry
+        self.channel = channel
+        self.expectedDimension = dimension
+        self.expectedAlignmentSpaceID = alignmentSpaceID
+        self.lexicalSearch = lexicalSearch
+    }
+
+    // MARK: - NativeSearchChannel
+
+    public func search(
+        payload: ChannelQueryPayload,
+        route: SearchRouteSnapshot,
+        limit: Int,
+        traceID: String
+    ) async -> ChannelSearchOutcome {
+        // ---- Guard 1: payload 类型匹配通道种类 ----
+        let denseVector: DenseQueryVector
+        switch (channel, payload) {
+        case (_, .lexical(let text, let locale)) where channel == .lexical:
+            // 词法通道：走 FTS 检索（复用 searchCanonical 语义的轻量路径）
+            guard let lexicalSearch else {
+                return .skipped(channel: channel, reason: .payloadUnavailable)
+            }
+            let ids = await lexicalSearch(text, limit)
+            let hits = ids.enumerated().map { idx, mid in
+                RawChannelHit(channel: channel, vectorID: mid, rank: idx + 1,
+                              nativeScore: nil, generationID: "lexical/\(locale)")
+            }
+            return hits.isEmpty
+                ? .empty(channel: channel, elapsedMs: 0)
+                : .success(channel: channel, hits: hits, elapsedMs: 0)
+        case (.textDense, .dense(let dv)),
+             (.visionDense, .dense(let dv)),
+             (.ocrText, .dense(let dv)):
+            denseVector = dv
+        case (.lexical, _):
+            return .failed(channel: channel, failure: ChannelFailure(
+                channel: channel, code: "payloadTypeMismatch", level: "L1", retryable: false))
+        default:
+            return .failed(channel: channel, failure: ChannelFailure(
+                channel: channel, code: "payloadTypeMismatch", level: "L1", retryable: false))
+        }
+
+        // ---- Guard 2: 维度匹配 ----
+        guard denseVector.dimension == expectedDimension else {
+            return .failed(channel: channel, failure: ChannelFailure(
+                channel: channel,
+                code: "dimensionMismatch",
+                level: "L1",
+                retryable: false
+            ))
+        }
+
+        // ---- Guard 3: 对齐空间匹配 ----
+        if let expected = expectedAlignmentSpaceID,
+           denseVector.alignmentSpaceID != expected {
+            return .failed(channel: channel, failure: ChannelFailure(
+                channel: channel,
+                code: "alignmentSpaceMismatch",
+                level: "L1",
+                retryable: false
+            ))
+        }
+
+        // ---- Guard 4: 路由缺失 ----
+        guard let channelRoute = route.channelsByKind()[channel] else {
+            return .skipped(channel: channel, reason: .routeUnavailable)
+        }
+
+        // ---- Guard 5: store 可用性 ----
+        guard let store = await generationRegistry.vectorStore(for: channelRoute.generationID) else {
+            return .skipped(channel: channel, reason: .routeUnavailable)
+        }
+
+        // ---- Guard 6: 空索引 ----
+        if await store.isEmpty {
+            return .skipped(channel: channel, reason: .indexEmpty)
+        }
+
+        // ---- 检索 ----
+        let results = await store.search(query: denseVector.values, k: max(1, limit))
+        let hits = results.enumerated().map { idx, result in
+            RawChannelHit(
+                channel: channel,
+                vectorID: result.id,
+                rank: idx + 1,
+                nativeScore: 1.0 - Float(result.distance),
+                generationID: channelRoute.generationID
+            )
+        }
+        return hits.isEmpty
+            ? .empty(channel: channel, elapsedMs: 0)
+            : .success(channel: channel, hits: hits, elapsedMs: 0)
+    }
+}
