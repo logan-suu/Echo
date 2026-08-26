@@ -297,6 +297,18 @@ extension PhotoTextSearchContractsTests {
         for table in ["Representation", "Memory", "IndexGeneration", "ActiveRouteSet"] {
             try await db.execute(sql: "DELETE FROM \(table)")
         }
+        // 环境自含：种子含 photo 授权的 UserPolicy——adapter(privacyActor: .shared)
+        // 的逐源授权过滤依赖授权状态，不得依赖跨套件残留（消除执行顺序敏感性）
+        try await db.executeWrite(
+            sql: "INSERT OR REPLACE INTO UserPolicyStore (id, preferredLanguage, authorizedSourceTypes, policyVersion, updatedAt) VALUES (1, ?, ?, ?, ?)",
+            bindings: [
+                .text("zh-Hans"),
+                .text(#"["search","photo","note","voice","text","video"]"#),
+                .int(1),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
+        try await PrivacyActor.shared.loadPolicy()
         let registry = GenerationRegistryActor(db: db)
         try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
         try await registry.finishShadowBuild("text_dense/e5-v1", counts: 0, validationDigest: nil)

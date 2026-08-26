@@ -13,13 +13,25 @@ import Testing
 @Suite(.serialized)
 struct PhotoTextSearchMigrationTests {
 
-    nonisolated private static func seedActiveRoute(db: DatabaseManager, registry: GenerationRegistryActor) async throws -> String {
+    @MainActor
+    private static func seedActiveRoute(db: DatabaseManager, registry: GenerationRegistryActor) async throws -> String {
         let genId = "text_dense/e5-v1-\(UUID().uuidString.prefix(6))"
         try await registry.registerGeneration(IndexGeneration(generationId: genId, indexType: "text_dense", dimension: 384))
         try await registry.setGenerationState(genId, state: .ready)
         try await registry.setGenerationState(genId, state: .active)
+        // 维持既有测试依赖的 vision 代环境（WP1 step 4c 期望活跃路由含 vision）：
+        // 不存在才注册激活；已存在（含 active 态）直接引用，避免非法状态迁移
+        if try await registry.loadGeneration("vision_dense/siglip2-v1") == nil {
+            try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+            try await registry.setGenerationState("vision_dense/siglip2-v1", state: .ready)
+            try await registry.setGenerationState("vision_dense/siglip2-v1", state: .active)
+        }
         let published = try await registry.activateGeneration(genId)
-        try await registry.publishRoute(ActiveRouteSet(textGeneration: published.textGeneration, version: published.version))
+        try await registry.publishRoute(ActiveRouteSet(
+            textGeneration: published.textGeneration,
+            visionGeneration: "vision_dense/siglip2-v1",
+            version: published.version
+        ))
         return "active-v\(published.version)-\(published.textGeneration)"
     }
 
@@ -355,5 +367,64 @@ extension PhotoTextSearchMigrationTests {
         let d2 = try route.computedDigest()
         #expect(d1 == d2, "digest must be stable")
         #expect(d1.count == 64, "digest must be SHA-256 hex")
+    }
+}
+
+// MARK: - WP6 步骤 4a-4d：canonical bytes 持久化 + digest 校验
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Publication persists canonical route bytes with matching digest (WP6 step 4a/4b)")
+    func testPublicationPersistsCanonicalRouteBytes() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let migration = PhotoSearchMigrationActor(db: db, generationRegistry: registry)
+        let snapshot = try Self.makeRouteSnapshot()
+
+        try await migration.publishRouteSnapshot(snapshot, traceID: "t-wp6-4a")
+
+        let loaded = try await db.loadRouteSnapshot(snapshotID: snapshot.snapshotID)
+        #expect(loaded != nil, "canonical route bytes must be persisted")
+        #expect(loaded?.bytes == (try snapshot.canonicalData()))
+        #expect(loaded?.digest == (try snapshot.computedDigest()))
+    }
+
+    @Test("Publication rejects digest mismatch without changing active route (WP6 step 4c/4d)")
+    func testPublicationRejectsDigestMismatch() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let migration = PhotoSearchMigrationActor(db: db, generationRegistry: registry)
+
+        let v1 = try Self.makeRouteSnapshot()
+        try await migration.publishRouteSnapshot(v1, traceID: "t-wp6-4c")
+        let before = try await registry.loadActiveRoute()
+
+        // 同 snapshotID、不同融合权重 → canonical bytes 不同 → digest 不一致
+        let policy2 = try FusionPolicySnapshot(
+            policyID: "p-wp6",
+            weights: [ChannelWeight(channel: .textDense, weight: 0.5)],
+            rrfK: 60
+        )
+        let v2 = try SearchRouteSnapshot(
+            snapshotID: v1.snapshotID,
+            schemaVersion: 1,
+            routeVersion: 1,
+            channels: v1.channels,
+            fusion: policy2,
+            previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: 123,
+            validationDigest: "placeholder"
+        )
+        await #expect(throws: PhotoSearchMigrationError.digestMismatch) {
+            try await migration.publishRouteSnapshot(v2, traceID: "t-wp6-4c")
+        }
+        // 持久化记录保持 v1 原样
+        let loaded = try await db.loadRouteSnapshot(snapshotID: v1.snapshotID)
+        #expect(loaded?.digest == (try v1.computedDigest()), "first persisted digest must be untouched")
+        // 活跃路由不受影响
+        let after = try await registry.loadActiveRoute()
+        #expect(after?.textGeneration == before?.textGeneration)
     }
 }

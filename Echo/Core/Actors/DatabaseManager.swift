@@ -322,6 +322,15 @@ public actor DatabaseManager {
                 updatedAt REAL NOT NULL
             )
             """)
+        // WP6 (4b): 完整路由快照 canonical bytes 持久化——原子发布校验基础
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS RouteSnapshot (
+                snapshotID TEXT PRIMARY KEY NOT NULL,
+                canonicalBytes BLOB NOT NULL,
+                canonicalDigest TEXT NOT NULL,
+                publishedAt REAL NOT NULL
+            )
+            """)
     }
 
     // MARK: - Transaction Support (3F.1, ADR-007 §决策-3)
@@ -552,6 +561,33 @@ public actor DatabaseManager {
 
     public func databaseSize() -> Int64 {
         Int64((try? Data(contentsOf: dbURL).count) ?? 0)
+    }
+
+    // MARK: - Route Snapshot (WP6 4b: canonical route bytes 持久化)
+
+    /// 持久化完整路由快照 canonical bytes（原子发布校验基础）。
+    public func saveRouteSnapshot(snapshotID: String, canonicalBytes: Data, canonicalDigest: String) throws {
+        try executeWrite(
+            sql: "INSERT OR REPLACE INTO RouteSnapshot (snapshotID, canonicalBytes, canonicalDigest, publishedAt) VALUES (?, ?, ?, ?)",
+            bindings: [
+                .text(snapshotID),
+                .blob(canonicalBytes),
+                .text(canonicalDigest),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
+    }
+
+    /// 读取已持久化的路由快照 bytes 与 digest。
+    public func loadRouteSnapshot(snapshotID: String) throws -> (bytes: Data, digest: String)? {
+        let rows = try executeQuery(
+            sql: "SELECT canonicalBytes, canonicalDigest FROM RouteSnapshot WHERE snapshotID = ?",
+            bindings: [.text(snapshotID)]
+        )
+        guard let row = rows.first,
+              let bytes = row["canonicalBytes"]?.blobValue,
+              let digest = row["canonicalDigest"]?.stringValue else { return nil }
+        return (bytes, digest)
     }
 }
 

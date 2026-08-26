@@ -14,6 +14,7 @@ public enum PhotoSearchMigrationError: Error, LocalizedError, Sendable, Equatabl
     case dependenciesMissing
     case memoryNotFound
     case shadowStoreUnavailable
+    case digestMismatch
 
     public var errorDescription: String? {
         switch self {
@@ -25,6 +26,8 @@ public enum PhotoSearchMigrationError: Error, LocalizedError, Sendable, Equatabl
             return "Canonical memory not found for migration"
         case .shadowStoreUnavailable:
             return "Shadow generation vector store is not materialized"
+        case .digestMismatch:
+            return "Route snapshot canonical digest does not match the persisted record"
         }
     }
 }
@@ -35,6 +38,7 @@ public enum PhotoSearchMigrationError: Error, LocalizedError, Sendable, Equatabl
 /// - 活跃路由绝不指向 building/invalid generation
 /// - shadow build 启动/取消/失败均保持活跃路由逐字节不变
 public actor PhotoSearchMigrationActor {
+    private let db: DatabaseManager
     private let generationRegistry: GenerationRegistryActor
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
     /// 修正后图像塔（SigLIP2）——迁移重嵌入专用
@@ -46,12 +50,14 @@ public actor PhotoSearchMigrationActor {
     private var state: PhotoSearchMigrationState
 
     public init(
+        db: DatabaseManager = .shared,
         generationRegistry: GenerationRegistryActor,
         canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
         visionEmbedder: (any EmbedderProtocol)? = nil,
         photoExtractor: (any PhotoAssetExtracting)? = nil,
         progressActor: ProgressActor? = nil
     ) {
+        self.db = db
         self.generationRegistry = generationRegistry
         self.canonicalRepository = canonicalRepository
         self.visionEmbedder = visionEmbedder
@@ -62,6 +68,23 @@ public actor PhotoSearchMigrationActor {
 
     /// 当前迁移状态快照。
     public func currentState() -> PhotoSearchMigrationState { state }
+
+    /// 持久化完整路由快照 canonical bytes（WP6 迁移算法 D.4-D.6；步骤 4b/4d）：
+    /// 发布前重算 digest；同 snapshotID 已存在且 digest 不一致 → 拒绝（digestMismatch）。
+    /// 仅写 RouteSnapshot 记录，绝不触碰 ActiveRouteSet——活跃路由不因记录写入而改变。
+    public func publishRouteSnapshot(_ snapshot: SearchRouteSnapshot, traceID: String) async throws {
+        let digest = try snapshot.computedDigest()
+        if let existing = try await db.loadRouteSnapshot(snapshotID: snapshot.snapshotID),
+           existing.digest != digest {
+            throw PhotoSearchMigrationError.digestMismatch
+        }
+        let bytes = try snapshot.canonicalData()
+        try await db.saveRouteSnapshot(
+            snapshotID: snapshot.snapshotID,
+            canonicalBytes: bytes,
+            canonicalDigest: digest
+        )
+    }
 
     /// 验证 shadow generation 无 orphan/歧义向量（WP6 迁移算法 D.3 / I.1-I.5）：
     /// 逐向量解析到唯一 canonical memory；任一 missing（orphan）或 ambiguous 即验证失败，
