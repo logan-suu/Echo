@@ -11,11 +11,20 @@ import Foundation
 /// 照片搜索迁移错误（WP6 专用，L2 可恢复 / L3 阻断语义由调用方映射）。
 public enum PhotoSearchMigrationError: Error, LocalizedError, Sendable, Equatable {
     case routeUnavailable
+    case dependenciesMissing
+    case memoryNotFound
+    case shadowStoreUnavailable
 
     public var errorDescription: String? {
         switch self {
         case .routeUnavailable:
             return "No active route available to freeze as migration source"
+        case .dependenciesMissing:
+            return "Photo search migration requires vision embedder and photo extractor"
+        case .memoryNotFound:
+            return "Canonical memory not found for migration"
+        case .shadowStoreUnavailable:
+            return "Shadow generation vector store is not materialized"
         }
     }
 }
@@ -28,14 +37,26 @@ public enum PhotoSearchMigrationError: Error, LocalizedError, Sendable, Equatabl
 public actor PhotoSearchMigrationActor {
     private let generationRegistry: GenerationRegistryActor
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
+    /// 修正后图像塔（SigLIP2）——迁移重嵌入专用
+    private let visionEmbedder: (any EmbedderProtocol)?
+    /// 本地源加载器——禁用网络访问条件下提取图像数据
+    private let photoExtractor: (any PhotoAssetExtracting)?
+    /// 断点续传 checkpoint
+    private let progressActor: ProgressActor?
     private var state: PhotoSearchMigrationState
 
     public init(
         generationRegistry: GenerationRegistryActor,
-        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
+        canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
+        visionEmbedder: (any EmbedderProtocol)? = nil,
+        photoExtractor: (any PhotoAssetExtracting)? = nil,
+        progressActor: ProgressActor? = nil
     ) {
         self.generationRegistry = generationRegistry
         self.canonicalRepository = canonicalRepository
+        self.visionEmbedder = visionEmbedder
+        self.photoExtractor = photoExtractor
+        self.progressActor = progressActor
         self.state = PhotoSearchMigrationState(phase: .idle)
     }
 
@@ -62,5 +83,90 @@ public actor PhotoSearchMigrationActor {
             shadowGenerationID: shadowID
         )
         return state
+    }
+
+    /// 迁移单张照片（WP6 迁移算法 A.3-A.8）：
+    /// 校验源存在（D-4：缺失 → build item failed，不伪造向量）→ 本地加载源 →
+    /// 修正后图像塔重嵌入 → 确定性 representation ID 写入 shadow generation →
+    /// 持久化 IndexBuildItem 与 progress checkpoint（A.8）。
+    @discardableResult
+    public func migratePhoto(
+        memoryId: UUID,
+        shadowGenerationID: String,
+        taskID: String,
+        traceID: String
+    ) async throws -> IndexBuildItem {
+        guard let repo = canonicalRepository,
+              let visionEmbedder,
+              let extractor = photoExtractor else {
+            throw PhotoSearchMigrationError.dependenciesMissing
+        }
+        guard let memory = try await repo.loadMemory(memoryId: memoryId) else {
+            throw PhotoSearchMigrationError.memoryNotFound
+        }
+
+        // D-4: 源缺失 → 对应 build item 标记 failed 并从发布数量排除
+        guard let imageData = try await extractor.extractImageData(assetId: memory.sourceLocator) else {
+            let failed = IndexBuildItem(
+                generationId: shadowGenerationID,
+                representationId: memoryId.uuidString,
+                state: "failed",
+                error: "source-missing"
+            )
+            try await generationRegistry.upsertBuildItem(failed)
+            try await advanceProgress(taskID: taskID, locator: memory.sourceLocator)
+            state = PhotoSearchMigrationState(
+                phase: .shadowBuilding,
+                sourceSnapshotID: state.sourceSnapshotID,
+                shadowGenerationID: shadowGenerationID,
+                processedCount: state.processedCount + 1,
+                lastProcessedLocator: memory.sourceLocator
+            )
+            return failed
+        }
+
+        let vector = try await visionEmbedder.embedImageData(imageData)
+        let repID = CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId)
+        guard let store = await generationRegistry.vectorStore(for: shadowGenerationID) else {
+            throw PhotoSearchMigrationError.shadowStoreUnavailable
+        }
+        try await store.ingest(vector: vector, id: repID, metadata: nil)
+
+        let item = IndexBuildItem(
+            generationId: shadowGenerationID,
+            representationId: repID.uuidString,
+            state: "done"
+        )
+        try await generationRegistry.upsertBuildItem(item)
+        try await advanceProgress(taskID: taskID, locator: memory.sourceLocator)
+        state = PhotoSearchMigrationState(
+            phase: .shadowBuilding,
+            sourceSnapshotID: state.sourceSnapshotID,
+            shadowGenerationID: shadowGenerationID,
+            processedCount: state.processedCount + 1,
+            lastProcessedLocator: memory.sourceLocator
+        )
+        return item
+    }
+
+    /// 推进断点续传 checkpoint：已有记录则更新；否则 upsert 创建（迁移进度自足，
+    /// 不要求调用方预先建记录）。
+    private func advanceProgress(taskID: String, locator: String) async throws {
+        guard let progressActor else { return }
+        let index = state.processedCount + 1
+        do {
+            try await progressActor.updateProgress(
+                taskId: taskID,
+                lastProcessedIndex: index,
+                lastProcessedId: locator
+            )
+        } catch {
+            try await progressActor.save(progress: TaskProgress(
+                taskId: taskID,
+                taskType: .fullIndex,
+                lastProcessedIndex: index,
+                lastProcessedId: locator
+            ))
+        }
     }
 }

@@ -59,3 +59,123 @@ struct PhotoTextSearchMigrationTests {
         #expect(st.phase == .shadowBuilding)
     }
 }
+
+// MARK: - WP6 步骤 1c-1d2：逐照片迁移 + IndexBuildItem + progress checkpoint
+
+private struct WP6MigrationEmbedder: EmbedderProtocol {
+    func embedImage(assetId: String) async throws -> [Float] { Array(repeating: 0, count: 768) }
+    func embedText(_ text: String) async throws -> [Float] { Array(repeating: 0, count: 384) }
+    func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float] {
+        Array(repeating: 0, count: 384)
+    }
+    func embedImageData(_ data: Data) async throws -> [Float] { Array(repeating: 0.5, count: 768) }
+}
+
+private struct WP6StubPhotoExtractor: PhotoAssetExtracting {
+    let imageData: Data?
+    func extractMetadata(assetId: String) async throws -> PhotoAssetContent {
+        PhotoAssetContent(assetId: assetId, creationDate: Date(), exifMetadata: nil)
+    }
+    func isLocallyAvailable(assetId: String) async -> Bool { imageData != nil }
+    func extractImageData(assetId: String) async throws -> Data? { imageData }
+}
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Photo migration persists one IndexBuildItem and progress checkpoint (WP6 steps 1c-1d2)")
+    func testPhotoMigrationPersistsBuildItemAndProgress() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let progress = ProgressActor.shared
+        let migration = PhotoSearchMigrationActor(
+            generationRegistry: registry,
+            canonicalRepository: repo,
+            visionEmbedder: WP6MigrationEmbedder(),
+            photoExtractor: WP6StubPhotoExtractor(imageData: Data([0x89, 0x50, 0x4E, 0x47])),
+            progressActor: progress
+        )
+
+        // 种子：活跃路由 + shadow generation + 一张 canonical photo memory
+        _ = try await Self.seedActiveRoute(db: db, registry: registry)
+        let st = try await migration.startPhotoShadowBuild(traceID: "t-wp6-1c")
+        guard let shadowID = st.shadowGenerationID else {
+            Issue.record("shadow ID missing")
+            return
+        }
+
+        let locator = "PHAsset/wp6-mig-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        let memory = Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo")
+        try await repo.commit(
+            memory: memory,
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memID, vector: Array(repeating: 0.25, count: 768))]],
+            traceID: "t-wp6-seed"
+        )
+
+        let item = try await migration.migratePhoto(
+            memoryId: memID,
+            shadowGenerationID: shadowID,
+            taskID: "t-wp6-1c",
+            traceID: "t-wp6-1c"
+        )
+
+        // 步骤 1c/1d: IndexBuildItem 持久化
+        #expect(item.state == "done")
+        let items = try await registry.loadBuildItems(generationId: shadowID)
+        #expect(items.count == 1, "one build item per migrated photo")
+        #expect(items.first?.state == "done")
+        #expect(items.first?.representationId == CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memID).uuidString,
+                "representationId must be the deterministic photo representation ID")
+
+        // 步骤 1d1/1d2: progress checkpoint 更新
+        let saved = try await progress.load(taskId: "t-wp6-1c")
+        #expect(saved?.lastProcessedId == locator)
+        #expect(saved?.lastProcessedIndex == 1)
+    }
+
+    @Test("Source-missing photo marks build item failed without fabricating vector (WP6 step 2a/2b)")
+    func testMissingSourceMarksOnlyBuildItemFailed() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let migration = PhotoSearchMigrationActor(
+            generationRegistry: registry,
+            canonicalRepository: repo,
+            visionEmbedder: WP6MigrationEmbedder(),
+            photoExtractor: WP6StubPhotoExtractor(imageData: nil),
+            progressActor: ProgressActor.shared
+        )
+
+        _ = try await Self.seedActiveRoute(db: db, registry: registry)
+        let st = try await migration.startPhotoShadowBuild(traceID: "t-wp6-2a")
+        guard let shadowID = st.shadowGenerationID else { return }
+
+        let locator = "PHAsset/wp6-missing-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await repo.commit(
+            memory: Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memID, vector: Array(repeating: 0.25, count: 768))]],
+            traceID: "t-wp6-seed"
+        )
+
+        let item = try await migration.migratePhoto(
+            memoryId: memID,
+            shadowGenerationID: shadowID,
+            taskID: "t-wp6-2a",
+            traceID: "t-wp6-2a"
+        )
+
+        #expect(item.state == "failed", "missing source must mark the build item failed")
+        #expect(item.error == "source-missing")
+        let items = try await registry.loadBuildItems(generationId: shadowID)
+        #expect(items.count == 1)
+        #expect(items.first?.state == "failed")
+    }
+}
