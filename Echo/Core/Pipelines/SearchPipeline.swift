@@ -262,6 +262,8 @@ public actor SearchPipeline {
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
     /// WP4 steps 5 基础设施：多通道查询表示工厂（可选，nil 时保持既有仅文本搜索行为不变）
     private let queryFactory: (any QueryRepresentationFactory)?
+    /// WP4 尾刀：分代注册表引用——searchTyped 内部按活跃路由解析快照与适配器（可选）
+    private let generationRegistry: GenerationRegistryActor?
 
     // MARK: - Session State (US-RET-005 AC-4)
 
@@ -302,7 +304,8 @@ public actor SearchPipeline {
         vectorStore: VectorStoreActor,
         feedbackActor: FeedbackActor = .shared,
         canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
-        queryFactory: (any QueryRepresentationFactory)? = nil
+        queryFactory: (any QueryRepresentationFactory)? = nil,
+        generationRegistry: GenerationRegistryActor? = nil
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
@@ -310,6 +313,7 @@ public actor SearchPipeline {
         self.feedbackActor = feedbackActor
         self.canonicalRepository = canonicalRepository
         self.queryFactory = queryFactory
+        self.generationRegistry = generationRegistry
     }
 
     // MARK: - Search
@@ -963,6 +967,157 @@ public actor SearchPipeline {
             ))
         }
         return results
+    }
+
+    // MARK: - WP4 尾刀：生产多通道入口（queryFactory 消费点）
+
+    /// 工厂驱动的生产检索错误（独立于 SearchError，避免扰动其穷尽 switch）。
+    enum TypedSearchError: Error, LocalizedError {
+        case featureDisabled
+        case dependenciesMissing
+        case routeUnavailable
+
+        public var errorDescription: String? {
+            switch self {
+            case .featureDisabled: return "Typed multi-channel search is feature-disabled (queryFactory not injected)"
+            case .dependenciesMissing: return "Typed multi-channel search requires generationRegistry and canonicalRepository"
+            case .routeUnavailable: return "No active route published in GenerationRegistry"
+            }
+        }
+    }
+
+    /// 生产多通道检索入口——消费注入的 queryFactory，按活跃路由切换到类型化编排。
+    ///
+    /// - route/adapters 缺省时内部从 GenerationRegistry 活跃路由桥接构造；
+    ///   测试与特殊调用方可显式注入以绕过真实向量存储。
+    /// - 权重沿用 legacy channelWeights 数值（text 1.0 / vision 0.8 / ocr 0.6 / lexical 0.5）。
+    public func searchTyped(
+        query: String,
+        locale: String,
+        k: Int = 10,
+        traceID: String = UUID().uuidString,
+        route: SearchRouteSnapshot? = nil,
+        adapters: [any NativeSearchChannel]? = nil,
+        weights: [SearchChannel: Double] = [
+            .textDense: 1.0, .visionDense: 0.8, .ocrText: 0.6, .lexical: 0.5,
+        ]
+    ) async throws -> [FusedSearchResult] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw SearchError.emptyQuery }
+
+        // 功能开关为最外层闸门：未注入工厂时不产生隐私检查开销
+        guard queryFactory != nil else { throw TypedSearchError.featureDisabled }
+
+        // R-006 与 legacy 路径同规
+        let checkpoint = await privacyActor.validate(
+            operation: .search,
+            traceID: traceID,
+            sourceTypes: ["search"]
+        )
+        guard checkpoint.isAllowed else {
+            throw SearchError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+        guard let factory = queryFactory, let registry = generationRegistry, let repo = canonicalRepository else {
+            throw TypedSearchError.dependenciesMissing
+        }
+
+        let resolvedRoute: SearchRouteSnapshot
+        if let route {
+            resolvedRoute = route
+        } else {
+            guard let activeSet = try await registry.loadActiveRoute() else {
+                throw TypedSearchError.routeUnavailable
+            }
+            resolvedRoute = try await Self.bridgeRouteSnapshot(from: activeSet, registry: registry)
+        }
+
+        let resolvedAdapters: [any NativeSearchChannel]
+        if let adapters {
+            resolvedAdapters = adapters
+        } else {
+            resolvedAdapters = try Self.makeDefaultAdapters(route: resolvedRoute, registry: registry, repo: repo)
+        }
+
+        return await Self.searchMultiChannelTyped(
+            factory: factory,
+            route: resolvedRoute,
+            adapters: resolvedAdapters,
+            repo: repo,
+            query: trimmed,
+            locale: locale,
+            k: k,
+            traceID: traceID,
+            weights: weights
+        )
+    }
+
+    /// ActiveRouteSet → SearchRouteSnapshot 桥接：逐通道经 loadGeneration 解析原生维度。
+    nonisolated private static func bridgeRouteSnapshot(
+        from activeSet: ActiveRouteSet,
+        registry: GenerationRegistryActor
+    ) async throws -> SearchRouteSnapshot {
+        struct Pending {
+            let channel: SearchChannel
+            let generationID: String
+        }
+        var pending: [Pending] = [Pending(channel: .textDense, generationID: activeSet.textGeneration)]
+        if let v = activeSet.visionGeneration { pending.append(Pending(channel: .visionDense, generationID: v)) }
+        if let o = activeSet.ocrGeneration { pending.append(Pending(channel: .ocrText, generationID: o)) }
+        if let l = activeSet.lexicalGeneration { pending.append(Pending(channel: .lexical, generationID: l)) }
+
+        var routes: [ChannelRoute] = []
+        for item in pending {
+            let dim = try await registry.loadGeneration(item.generationID)?.dimension
+            routes.append(ChannelRoute(
+                channel: item.channel,
+                generationID: item.generationID,
+                indexManifestID: nil,
+                queryModelManifestID: nil,
+                dimension: dim,
+                alignmentSpaceID: nil,
+                required: true
+            ))
+        }
+
+        let weightMap: [String: Double] = [
+            "text_dense": 1.0, "vision_dense": 0.8, "ocr_text": 0.6, "lexical": 0.5,
+        ]
+        let fusion = try FusionPolicySnapshot(
+            policyID: "active-route-bridge",
+            weights: routes.compactMap { cr in
+                weightMap[cr.channel.rawValue].map { ChannelWeight(channel: cr.channel, weight: $0) }
+            },
+            rrfK: Self.rrfK
+        )
+        return try SearchRouteSnapshot(
+            snapshotID: "active-v\(activeSet.version)-\(activeSet.textGeneration)",
+            schemaVersion: 1,
+            routeVersion: activeSet.version,
+            channels: routes,
+            fusion: fusion,
+            previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: Int64(Date().timeIntervalSince1970 * 1000),
+            validationDigest: "legacy-bridge-unvalidated"
+        )
+    }
+
+    /// 按路由快照构造默认类型化适配器集合；词法通道绑定 canonical FTS 回调。
+    nonisolated private static func makeDefaultAdapters(
+        route: SearchRouteSnapshot,
+        registry: GenerationRegistryActor,
+        repo: CanonicalMemoryRepositoryActor
+    ) throws -> [any NativeSearchChannel] {
+        try route.channels.map { cr in
+            try PayloadTypedChannelAdapter(
+                generationRegistry: registry,
+                channel: cr.channel,
+                dimension: cr.dimension ?? 0,
+                alignmentSpaceID: cr.alignmentSpaceID,
+                lexicalSearch: { text, limit in
+                    (try? await repo.searchCanonical(matching: text, limit: limit)) ?? []
+                }
+            )
+        }
     }
 
     // MARK: - Source Type Normalization

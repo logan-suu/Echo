@@ -689,3 +689,100 @@ extension PhotoTextSearchIntegrationTests {
         #expect(results.first?.routeSnapshotID == route.snapshotID)
     }
 }
+
+// MARK: - WP4 尾刀：生产多通道入口（queryFactory 消费点）
+
+private struct WP4NoopEmbedder: EmbedderProtocol {
+    func embedImage(assetId: String) async throws -> [Float] { [] }
+    func embedText(_ text: String) async throws -> [Float] {
+        Array(repeating: 0, count: 384)
+    }
+    func embedText(_ text: String, context: TextEmbeddingContext) async throws -> [Float] {
+        Array(repeating: 0, count: 384)
+    }
+}
+
+extension PhotoTextSearchIntegrationTests {
+
+    @Test("searchTyped consumes injected factory and resolves active route (WP4 尾刀)")
+    func testSearchTypedConsumesFactoryAndResolvesActiveRoute() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let privacy = PrivacyActor(db: db)
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        // 注册并激活 text generation（activateGeneration 发布 ActiveRouteSet 行 id=1）
+        let genText = "text_dense/e5-v1-\(UUID().uuidString.prefix(6))"
+        try await registry.registerGeneration(IndexGeneration(generationId: genText, indexType: "text_dense", dimension: 384))
+        try await registry.finishShadowBuild(genText, counts: 0, validationDigest: nil)
+        try await registry.setGenerationState(genText, state: .ready)
+        let published = try await registry.activateGeneration(genText)
+        try await registry.publishRoute(ActiveRouteSet(textGeneration: published.textGeneration, version: published.version))
+
+        // 播种 canonical memory（ADR-015 D-7：vectorId == representationId）
+        let locator = "PHAsset/wp4-typed-entry-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        let vecID = UUID()
+        let memory = Memory(
+            memoryId: memID,
+            sourceLocator: locator,
+            canonicalText: "red flower on windowsill",
+            sourceType: "photo"
+        )
+        try await repo.commit(
+            memory: memory,
+            representations: [Representation(representationId: vecID, memoryId: memID, modality: .textDense, preprocessVersion: "e5-v1", contentHash: "sha256:t")],
+            vectorsByGeneration: [genText: [CanonicalVectorEntry(id: vecID, vector: Array(repeating: 0.5, count: 384))]],
+            traceID: "t-wp4-entry"
+        )
+
+        // 授权种子：deny-by-default 下 search 需在 UserPolicyStore 白名单（3F.7 seedSearchPolicy 先例）
+        try await db.executeWrite(
+            sql: "INSERT OR REPLACE INTO UserPolicyStore (id, preferredLanguage, authorizedSourceTypes, policyVersion, updatedAt) VALUES (1, ?, ?, ?, ?)",
+            bindings: [
+                .text("zh-Hans"),
+                .text(#"["search","photo","note","voice","text","video"]"#),
+                .int(1),
+                .double(Date().timeIntervalSince1970),
+            ]
+        )
+        try await privacy.loadPolicy()
+
+        let pipeline = SearchPipeline(
+            embedder: WP4NoopEmbedder(),
+            privacyActor: privacy,
+            vectorStore: VectorStoreActor(dimension: 384),
+            canonicalRepository: repo,
+            queryFactory: DefaultQueryRepresentationFactory(textEmbedder: ContextRecordingE5(), visionEmbedder: StubVisionEmbedder()),
+            generationRegistry: registry
+        )
+
+        let results = try await pipeline.searchTyped(
+            query: "red flower",
+            locale: "en-US",
+            k: 10,
+            traceID: "t-wp4-entry",
+            adapters: [WP4CannedChannel(channel: .textDense, outcome: .success(
+                channel: .textDense,
+                hits: [RawChannelHit(channel: .textDense, vectorID: vecID, rank: 1, nativeScore: nil, generationID: genText)],
+                elapsedMs: 1
+            ))]
+        )
+
+        #expect(results.count == 1, "single dense hit must produce one fused result")
+        #expect(results.first?.memory.memoryId == memID)
+        #expect(results.first?.provenance.map(\.channel) == [.textDense])
+    }
+
+    @Test("searchTyped throws featureDisabled without injected factory (WP4 尾刀)")
+    func testSearchTypedThrowsWhenFeatureDisabled() async throws {
+        let pipeline = SearchPipeline(
+            embedder: WP4NoopEmbedder(),
+            vectorStore: VectorStoreActor(dimension: 384)
+        )
+        await #expect(throws: SearchPipeline.TypedSearchError.featureDisabled) {
+            try await pipeline.searchTyped(query: "red flower", locale: "en-US")
+        }
+    }
+}
