@@ -677,3 +677,50 @@ extension PhotoTextSearchMigrationTests {
         #expect(afterSnapshot == beforeSnapshot, "model failure must keep the active route byte-identical")
     }
 }
+
+// MARK: - WP6 步骤 3c-3d：store 不可用（磁盘类故障）保持活跃路由
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Store unavailability during migration keeps active route digest (WP6 step 3c/3d)")
+    func testStoreUnavailableKeepsActiveRouteDigest() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        let migration = PhotoSearchMigrationActor(
+            generationRegistry: registry,
+            canonicalRepository: repo,
+            visionEmbedder: WP6MigrationEmbedder(),
+            photoExtractor: WP6StubPhotoExtractor(imageData: Data([0x89, 0x50, 0x4E, 0x47]))
+        )
+
+        let beforeSnapshot = try await Self.seedActiveRoute(db: db, registry: registry)
+
+        // 种子一张照片 memory
+        let locator = "PHAsset/wp6-disk-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await repo.commit(
+            memory: Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memID, vector: Array(repeating: 0.25, count: 768))]],
+            traceID: "t-wp6-seed"
+        )
+
+        // 使用不存在的 shadow generation → store 不可用（磁盘/加载故障 fail-safe）
+        await #expect(throws: PhotoSearchMigrationError.shadowStoreUnavailable) {
+            _ = try await migration.migratePhoto(
+                memoryId: memID,
+                shadowGenerationID: "vision_dense/nonexistent-\(UUID().uuidString)",
+                taskID: "t-wp6-3c",
+                traceID: "t-wp6-3c"
+            )
+        }
+
+        // 活跃路由 digest 逐字节不变
+        let after = try await registry.loadActiveRoute()
+        let afterSnapshot = after.flatMap { "active-v\($0.version)-\($0.textGeneration)" }
+        #expect(afterSnapshot == beforeSnapshot, "store unavailability must keep the active route byte-identical")
+    }
+}
