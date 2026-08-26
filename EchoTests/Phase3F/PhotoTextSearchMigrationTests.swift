@@ -471,3 +471,30 @@ extension PhotoTextSearchMigrationTests {
         #expect(route?.version == activated.version)
     }
 }
+
+// MARK: - WP6 步骤 5a：重启恢复 canonical digest
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Restart restores canonical route digest unchanged (WP6 step 5a)")
+    func testRestartRestoresCanonicalRouteDigest() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let snapshot = try Self.makeRouteSnapshot()
+
+        // 第一生命周期：发布持久化
+        let migration1 = PhotoSearchMigrationActor(
+            db: db, generationRegistry: GenerationRegistryActor(db: db)
+        )
+        try await migration1.publishRouteSnapshot(snapshot, traceID: "t-wp6-5a")
+
+        // 模拟重启：全新实例从同一持久化 DB 重读
+        _ = PhotoSearchMigrationActor(db: db, generationRegistry: GenerationRegistryActor(db: db))
+        let loaded = try await db.loadRouteSnapshot(snapshotID: snapshot.snapshotID)
+        #expect(loaded != nil, "persisted route snapshot must survive restart")
+        #expect(loaded?.digest == (try snapshot.computedDigest()),
+                "canonical digest must be identical after restart")
+        #expect(loaded?.bytes == (try snapshot.canonicalData()),
+                "canonical bytes must be identical after restart")
+    }
+}
