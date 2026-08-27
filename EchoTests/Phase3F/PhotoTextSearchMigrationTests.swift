@@ -803,3 +803,55 @@ extension PhotoTextSearchMigrationTests {
                 "export records must be limited to memory/excludedAsset; got \(recordTypes)")
     }
 }
+
+// MARK: - WP6 步骤 7c-7d：目标迁移写新 subject-linked audit
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Device migration writes new subject-linked audit for imported memories (WP6 step 7c/7d)")
+    func testDeviceMigrationWritesNewTargetAuditSubject() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+        _ = try await Self.seedActiveRoute(db: db, registry: registry)
+
+        // 种子一条可导出的 canonical memory
+        let locator = "PHAsset/wp6-imp-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await repo.commit(
+            memory: Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "h")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memID, vector: Array(repeating: 0.25, count: 768))]],
+            traceID: "t-wp6-seed"
+        )
+
+        // 导出 → 导入（merge 策略，同一库）
+        let actor = DeviceMigrationActor(
+            db: db,
+            canonicalRepository: repo,
+            generationRegistry: registry,
+            textEmbedder: WP6MigrationEmbedder()
+        )
+        let exported = try await actor.exportPackage(traceID: "t-wp6-7c-export")
+        _ = try await actor.importPackage(
+            package: exported.package,
+            transferKey: exported.transferKey,
+            strategy: .merge,
+            fromDevice: "src-device",
+            toDevice: "dst-device",
+            traceID: "t-wp6-7c-import"
+        )
+
+        // 目标端写入新的 subject-linked audit（指向导入 memory 的 subjectHash）
+        let subject = AuditSubject.memory(memID)
+        let rows = try await db.executeQuery(
+            sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ? AND eventType = 'deviceMigrationCompleted'",
+            bindings: [.text(subject.subjectHash)]
+        )
+        #expect((rows.first?["c"]?.intValue ?? 0) >= 1,
+                "target migration must write a new subject-linked audit for the imported memory")
+    }
+}

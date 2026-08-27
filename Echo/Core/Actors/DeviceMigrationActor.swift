@@ -335,6 +335,23 @@ public actor DeviceMigrationActor {
             content: "fromDevice=\(fromDevice)|toDevice=\(toDevice)|integrityCheckPassed=\(integrityPassed)|method=\(method)|mergeStrategy=\(strategy.rawValue)|batchPolicy=\(batchPolicy.rawValue)|conflictResolutions=\(conflictCount)"
         )
 
+        // WP6 7c/7d: 目标迁移为每个导入 memory 写入新的 subject-linked hash-only 审计
+        // （跨设备不复制源 AuditLog，仅记录新迁移操作的 subject 身份）
+        if integrityPassed {
+            for memoryID in importedMemoryIDs {
+                let subject = AuditSubject.memory(memoryID)
+                try? await privacyActor.writeAuditLog(
+                    eventType: .deviceMigrationCompleted,
+                    traceID: traceID,
+                    policyVersion: policy.policyVersion,
+                    success: true,
+                    sourceType: "migration",
+                    subjectKind: subject.kind,
+                    subjectHash: subject.subjectHash
+                )
+            }
+        }
+
         return DeviceMigrationResult(
             memoryCount: memoryCount,
             excludedCount: excludedCount,
