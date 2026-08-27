@@ -760,3 +760,46 @@ extension PhotoTextSearchMigrationTests {
         #expect(afterSnapshot == beforeSnapshot, "interrupted migration must keep the active route byte-identical")
     }
 }
+
+// MARK: - WP6 步骤 7a-7b：设备迁移不复制源 AuditLog
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Device migration export schema excludes source audit rows (WP6 step 7a/7b)")
+    func testDeviceMigrationExportExcludesAuditRows() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        // 种子一条源 memory-scoped audit（迁移不得复制）
+        try await db.executeWrite(
+            sql: "INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success) VALUES (?, ?, ?, ?, ?)",
+            bindings: [.text("feedbackReceived"), .double(Date().timeIntervalSince1970), .text("t-wp6-7a"), .int(1), .int(1)]
+        )
+
+        // 种子一条 canonical memory（空库导出会拒绝）
+        try await registry.registerGeneration(IndexGeneration(generationId: "text_dense/e5-v1", indexType: "text_dense", dimension: 384))
+        try await registry.setGenerationState("text_dense/e5-v1", state: .ready)
+        try await registry.setGenerationState("text_dense/e5-v1", state: .active)
+        let locator = "PHAsset/wp6-dev-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await repo.commit(
+            memory: Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .textDense, preprocessVersion: "e5-v1", contentHash: "h")],
+            vectorsByGeneration: ["text_dense/e5-v1": [CanonicalVectorEntry(id: memID, vector: Array(repeating: 0.5, count: 384))]],
+            traceID: "t-wp6-seed"
+        )
+
+        // 导出并解密 manifest（importPackage 返回明文 records）
+        let actor = DeviceMigrationActor(db: db, canonicalRepository: repo, generationRegistry: registry)
+        let exported = try await actor.exportPackage(traceID: "t-wp6-7a")
+        let imported = try DeviceMigrationService.importPackage(exported.package, transferKey: exported.transferKey)
+
+        let recordTypes = Set(imported.manifest.records.map(\.type))
+        #expect(!recordTypes.contains("audit"), "export schema must exclude source audit rows")
+        #expect(recordTypes.isSubset(of: ["memory", "excludedAsset"]),
+                "export records must be limited to memory/excludedAsset; got \(recordTypes)")
+    }
+}
