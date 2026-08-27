@@ -855,3 +855,55 @@ extension PhotoTextSearchMigrationTests {
                 "target migration must write a new subject-linked audit for the imported memory")
     }
 }
+
+// MARK: - WP6 步骤 6c-6d：staging 失败补偿
+
+extension PhotoTextSearchMigrationTests {
+
+    @Test("Staging failure compensation purges staging audit subjects and cache (WP6 step 6c/6d)")
+    func testStagingFailurePurgesStagingAuditSubject() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM AuditLog")
+        let cache = SearchResultCacheActor()
+        let actor = DeviceMigrationActor(db: db, cache: cache)
+        let memoryID = UUID()
+        let subject = AuditSubject.memory(memoryID)
+
+        // 模拟 staging 过程痕迹：subject audit + cache 条目（含该 memory）
+        try await db.executeWrite(
+            sql: "INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, subjectKind, subjectHash) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            bindings: [
+                .text("memoryIngested"),
+                .double(Date().timeIntervalSince1970),
+                .text("t-staging"),
+                .int(1),
+                .int(1),
+                .text(subject.kind),
+                .text(subject.subjectHash),
+            ]
+        )
+        let key = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "q", routeSnapshotID: "r")
+        try await cache.store(
+            key: key,
+            result: CachedSearchResult(items: [SearchResultItem(
+                id: memoryID, assetId: "x", sourceType: "photo",
+                timestamp: Date().timeIntervalSince1970,
+                originalText: nil, sourceLanguage: nil, cosineSimilarity: 0.9
+            )])
+        )
+
+        // 补偿（6d: subject-linked audit purge + cache 失效；不触碰活跃路由）
+        let count = await actor.compensateStagingFailure(stagingMemoryIDs: [memoryID], traceID: "t-wp6-6c")
+        #expect(count == 1, "staging failure compensation must purge the staging subject")
+
+        // 6c: staging subject AuditLog 为零
+        let rows = try await db.executeQuery(
+            sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?",
+            bindings: [.text(subject.subjectHash)]
+        )
+        #expect(rows.first?["c"]?.intValue == 0, "staging subject audit must be purged")
+        // cache 零残留
+        #expect(try await cache.lookup(key: key) == nil, "staging cache entry must be invalidated")
+    }
+}

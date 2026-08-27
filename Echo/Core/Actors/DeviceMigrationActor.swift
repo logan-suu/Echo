@@ -85,6 +85,8 @@ public actor DeviceMigrationActor {
     private let privacyActor: PrivacyActor
     private let generationRegistry: GenerationRegistryActor
     private let textEmbedder: (any EmbedderProtocol)?
+    /// WP6 6c/6d: staging 失败补偿的检索缓存失效
+    private let cache: SearchResultCacheActor
 
     // MARK: - Initialization
 
@@ -94,7 +96,8 @@ public actor DeviceMigrationActor {
         excludedAssets: ExcludedAssetsActor = .shared,
         privacyActor: PrivacyActor = .shared,
         generationRegistry: GenerationRegistryActor = .shared,
-        textEmbedder: (any EmbedderProtocol)? = nil
+        textEmbedder: (any EmbedderProtocol)? = nil,
+        cache: SearchResultCacheActor = SearchResultCacheActor()
     ) {
         self.db = db
         self.canonicalRepository = canonicalRepository
@@ -103,6 +106,7 @@ public actor DeviceMigrationActor {
         self.privacyActor = privacyActor
         self.generationRegistry = generationRegistry
         self.textEmbedder = textEmbedder
+        self.cache = cache
     }
     // MARK: - Export (US-SRC-007 AC-1/AC-6)
 
@@ -359,6 +363,29 @@ public actor DeviceMigrationActor {
             overwrittenCount: overwrittenCount,
             integrityCheckPassed: integrityPassed
         )
+    }
+
+    /// WP6 6c/6d: staging 失败补偿——清除 staging 区域痕迹（检索缓存 + subject-linked audit）。
+    ///
+    /// 计划 H.7：任一 staging 失败都必须使 staging cache 失效并 purge staging subject AuditLog，
+    /// 保持目标活跃路由不变（补偿不触碰 ActiveRouteSet）。逐条补偿失败保留恢复 journal 语义（L3 blocked）。
+    @discardableResult
+    public func compensateStagingFailure(
+        stagingMemoryIDs: [UUID],
+        traceID: String
+    ) async -> Int {
+        var compensated = 0
+        for memoryID in stagingMemoryIDs {
+            _ = try? await cache.invalidate(memoryID: memoryID)
+            let subject = AuditSubject.memory(memoryID)
+            do {
+                try await privacyActor.purgeAuditRecords(subject: subject, traceID: traceID)
+                compensated += 1
+            } catch {
+                // 补偿失败保持 blocked（L3）——由调用方按恢复 journal 决策
+            }
+        }
+        return compensated
     }
 
     // MARK: - Private Helpers
