@@ -32,12 +32,13 @@ public enum LiveAppAdapters {
         guard let activeStore = await resolveActiveTextStore(registry: registry) else {
             return nil
         }
-        // WP4 steps 5 基础设施：构造多通道查询工厂（当前仅注入不启用，
-        // 后续切片在 SearchPipeline 内部按路由快照逐步切换到多通道路径）
+        // WP4 5c/5d：构造多通道查询工厂——配对 SigLIP2 文本塔真实接线（工件缺失时
+        // SigLIP2TextEmbedder 运行时 fail-closed，queryFactory 照常注入）
         let queryFactory: (any QueryRepresentationFactory)? = {
             guard let textCtx = composition.textContextualEmbedder else { return nil }
             return DefaultQueryRepresentationFactory(
-                textEmbedder: textCtx, visionEmbedder: StubVisionTextEmbedder()
+                textEmbedder: textCtx,
+                visionEmbedder: SigLIP2TextEmbedder()
             )
         }()
         return SearchPipeline(
@@ -157,13 +158,3 @@ public enum LiveAppAdapters {
 }
 
 
-/// WP4 steps 5 基础设施：配对文本塔占位——Core ML 工件产出后替换为 SigLIP2TextEmbedder。
-private struct StubVisionTextEmbedder: VisionTextEmbedder {
-    nonisolated let modelManifestID = "siglip2-text-pending"
-    nonisolated let alignmentSpaceID = "aligned-siglip2-v1"
-    nonisolated let dimension = 768
-
-    func embedVisionQuery(text: String, locale: String, traceID: String) async throws -> [Float] {
-        throw PhotoSearchContractError.dimensionMismatch(expected: 768, actual: 0)
-    }
-}

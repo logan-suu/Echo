@@ -281,3 +281,34 @@ extension PhotoTextSearchQualityTests {
                 "first valid quality measurement must be persisted as evidence")
     }
 }
+
+// MARK: - WP4 5c/5d：SigLIP2 文本塔真实接线（模拟器优先验证）
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("SigLIP2 tokenizer cross-validates against the pytest fixture sequence (WP4 5c/5d)")
+    func testSigLIP2TokenizerFixtureCrossValidation() throws {
+        let tokenizerURL = Self.repoRoot.appendingPathComponent("Echo/Resources/Models/siglip2-tokenizer.json")
+        let tokenizer = try SigLIP2Tokenizer(tokenizerJSON: try Data(contentsOf: tokenizerURL))
+        let ids = tokenizer.encode("red flower")
+        #expect(Array(ids.prefix(3)) == [854, 10377, 1],
+                "red flower must tokenize to the pytest fixture sequence [854, 10377, 1]; got \(Array(ids.prefix(5)))")
+        #expect(ids.count == SigLIP2Tokenizer.maxLength)
+    }
+
+    @Test("SigLIP2 text tower real inference on simulator (WP4 5c/5d)")
+    func testSigLIP2TextTowerRealInference() async throws {
+        let embedder = SigLIP2TextEmbedder()
+        let vector = try await embedder.embedVisionQuery(
+            text: "red flower", locale: "en-US", traceID: "t-wp7-texttower"
+        )
+        #expect(vector.count == 768, "text tower must emit 768d")
+        let squaredSum = vector.reduce(0) { $0 + $1 * $1 }
+        #expect(abs(sqrt(squaredSum) - 1.0) < 1e-3, "L2 normalized output")
+
+        let repeatVector = try await embedder.embedVisionQuery(
+            text: "red flower", locale: "en-US", traceID: "t-wp7-texttower-2"
+        )
+        #expect(vector == repeatVector, "same input must produce an identical embedding")
+    }
+}
