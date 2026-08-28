@@ -172,7 +172,7 @@
   "requiredArtifacts": {
     "_note": "Paths are repo-root-relative. CI required-model lane and photo_search_ci_mutation.py read ONLY these entries.",
     "e5Dir": "Echo/Resources/Models/MultilingualE5Small.mlpackage",
-    "visionCkptDir": "Echo/Resources/Models/siglip2-base-patch32-256",
+    "visionCkptDir": "PinnedModels/siglip2-base-patch32-256",
     "checksumsFile": "Scripts/model_checksums.sha256",
     "tokenizerFile": "Echo/Resources/Models/tokenizer.json",
     "licenseNoticeFile": "Echo/Resources/Models/LICENSE-NOTICE.md"

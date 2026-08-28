@@ -223,7 +223,9 @@ SIGLIP2_REVISION="94dffa8cb1179de3e03f091dbc3917e5d5a9ae84"  # pinned immutable 
 download_siglip2() {
     log_info "Step 3/3: SigLIP2-B/32 checkpoint (Vision, ~1.5GB, conversion source)"
 
-    local ckpt="$MODELS_DIR/siglip2-base-patch32-256"
+    # WP7: checkpoint 为转换源工件，驻留 PinnedModels/（资源目录外的同名
+    # tokenizer.json 会与 E5 资源冲突——Multiple commands produce tokenizer.json）
+    local ckpt="$PROJECT_ROOT/PinnedModels/siglip2-base-patch32-256"
     if [ -d "$ckpt" ] && [ "$MODE" != "generate" ]; then
         log_info "  Already present — verifying checksum"
         verify_or_record "$ckpt/model.safetensors" || return 1
@@ -240,7 +242,7 @@ from huggingface_hub import snapshot_download
 target = os.environ['MODELS_DIR']
 repo = os.environ['SIGLIP2_REPO']
 revision = os.environ['SIGLIP2_REVISION']
-dst = os.path.join(target, 'siglip2-base-patch32-256')
+dst = os.path.join(os.environ.get('PROJECT_ROOT', ''), 'PinnedModels', 'siglip2-base-patch32-256')
 path = snapshot_download(repo, revision=revision, local_dir=dst, resume_download=True)
 print(f'  siglip2-base-patch32-256')
 sys.exit(0 if os.path.exists(os.path.join(dst, 'model.safetensors')) else 1)
