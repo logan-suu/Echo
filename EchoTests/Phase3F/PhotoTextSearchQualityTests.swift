@@ -312,3 +312,28 @@ extension PhotoTextSearchQualityTests {
         #expect(vector == repeatVector, "same input must produce an identical embedding")
     }
 }
+
+// MARK: - WP7 UI 采用：FusedSearchResult → SearchResultModel 映射
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("mapFused maps FusedSearchResult to the UI model (route ENABLED adoption)")
+    @MainActor
+    func testMapFusedMapping() {
+        let memID = UUID()
+        let memory = Memory(
+            memoryId: memID, sourceLocator: "PHAsset/ui-map",
+            canonicalText: "red flower", sourceType: "photo"
+        )
+        let fused = FusedSearchResult(
+            memory: memory, rrfScore: 0.0328,
+            provenance: [], routeSnapshotID: "r-ui"
+        )
+        let model = SearchViewModel.mapFused(fused)
+        #expect(model.id == memID)
+        #expect(model.assetId == "PHAsset/ui-map")
+        #expect(model.sourceType == "photo")
+        #expect(model.cosineSimilarity == Float(0.0328), "RRF score carries into the similarity field")
+        #expect(model.originalText == "red flower")
+    }
+}

@@ -243,6 +243,22 @@ final class SearchViewModel {
 
     /// 提交搜索查询。
     ///
+    /// WP4 route ENABLED：FusedSearchResult → UI 模型映射（多通道路径采用）。
+    /// cosineSimilarity 字段承载 RRF 融合分数（展示适配待 UI 侧跟进）。
+    static func mapFused(_ result: FusedSearchResult) -> SearchResultModel {
+        // 经 SearchResultItem 中转复用 init(from:) 的全字段映射（cosineSimilarity 承载 RRF 分数）
+        let item = SearchResultItem(
+            id: result.memory.memoryId,
+            assetId: result.memory.sourceLocator,
+            sourceType: result.memory.sourceType,
+            timestamp: result.memory.createdAt.timeIntervalSince1970,
+            originalText: result.memory.canonicalText,
+            sourceLanguage: nil,
+            cosineSimilarity: Float(result.rrfScore)
+        )
+        return SearchResultModel(from: item)
+    }
+
     /// 设置 state = .loading，调用 SearchPipeline.search()，完成后设置 .completed 或 .error。
     /// 遵循 AGENTS.md §8.2 状态流转: idle→loading→completed/error/cancelled。
     func submitQuery(_ newQuery: String) {
@@ -281,16 +297,31 @@ final class SearchViewModel {
                 }
 
                 if let pipeline {
-                    let items = try await pipeline.search(
-                        query: self.query,
-                        k: 10,
-                        traceID: UUID().uuidString
-                    )
-                    guard !Task.isCancelled else {
-                        self.viewState = .cancelled
-                        return
+                    // WP4 route ENABLED：queryFactory 注入的 pipeline 走多通道 typed 路径
+                    // （原生载荷 + canonical RRF + provenance）；否则 legacy 仅文本路径。
+                    if pipeline.supportsTypedSearch {
+                        let fused = try await pipeline.searchTyped(
+                            query: self.query,
+                            k: 10,
+                            traceID: UUID().uuidString
+                        )
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
+                        self.results = fused.map(Self.mapFused)
+                    } else {
+                        let items = try await pipeline.search(
+                            query: self.query,
+                            k: 10,
+                            traceID: UUID().uuidString
+                        )
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
+                        self.results = items.map(SearchResultModel.init)
                     }
-                    self.results = items.map(SearchResultModel.init)
                 } else {
                     // 无 Pipeline（测试/Preview fixture 模式）：返回 fixture 注入的 stub 结果
                     try await Task.sleep(nanoseconds: 300_000_000)

@@ -265,6 +265,9 @@ public actor SearchPipeline {
     /// WP4 尾刀：分代注册表引用——searchTyped 内部按活跃路由解析快照与适配器（可选）
     private let generationRegistry: GenerationRegistryActor?
 
+    /// typed 多通道路径是否可用（queryFactory 注入且路由 ENABLED 后由 UI 采用）
+    public nonisolated var supportsTypedSearch: Bool { queryFactory != nil }
+
     // MARK: - Session State (US-RET-005 AC-4)
 
     /// 上一次检索的 traceID（跟进查询审计的父 traceID；nil = 尚无前序轮次）
@@ -993,7 +996,7 @@ public actor SearchPipeline {
     /// - 权重沿用 legacy channelWeights 数值（text 1.0 / vision 0.8 / ocr 0.6 / lexical 0.5）。
     public func searchTyped(
         query: String,
-        locale: String,
+        locale: String? = nil,
         k: Int = 10,
         traceID: String = UUID().uuidString,
         route: SearchRouteSnapshot? = nil,
@@ -1007,6 +1010,7 @@ public actor SearchPipeline {
 
         // 功能开关为最外层闸门：未注入工厂时不产生隐私检查开销
         guard queryFactory != nil else { throw TypedSearchError.featureDisabled }
+        let resolvedLocale = locale ?? (detectLanguage(from: trimmed) ?? "en-US")
 
         // R-006 与 legacy 路径同规
         let checkpoint = await privacyActor.validate(
@@ -1044,7 +1048,7 @@ public actor SearchPipeline {
             adapters: resolvedAdapters,
             repo: repo,
             query: trimmed,
-            locale: locale,
+            locale: resolvedLocale,
             k: k,
             traceID: traceID,
             weights: weights
