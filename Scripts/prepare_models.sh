@@ -145,7 +145,7 @@ download_e5() {
     if [ -d "$emb" ] && [ "$MODE" != "generate" ]; then
         log_info "  Already present — verifying checksum"
         verify_or_record "$emb/Manifest.json" || return 1
-        verify_or_record "$MODELS_DIR/tokenizer.json" || return 1
+        verify_or_record "$MODELS_DIR/tokenizer.json" || { log_error "gate-reason: missing-tokenizer"; return 1; }
         return 0
     fi
 
