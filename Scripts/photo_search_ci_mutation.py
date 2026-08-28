@@ -48,14 +48,16 @@ CASE_SPECS: dict[str, dict] = {
         "expected_reason": "missing-dataset-entry",
         "child_cmd": [
             "python3", "-c",
-            "import json, os, sys\n"
-            "m = json.load(open('docs/05-planning/photo-text-search-release-evidence-manifest.json'))\n"
-            "ds = m.get('dataset', {})\n"
-            "p = ds.get('manifestPath')\n"
-            "if not p or not os.path.exists(p):\n"
-            "    print('gate-reason: missing-dataset-entry')\n"
-            "    sys.exit(1)\n"
-            "print('dataset OK:', p)\n"
+            (
+                "import json, os, sys\n"
+                "m = json.load(open('docs/05-planning/photo-text-search-release-evidence-manifest.json'))\n"
+                "ds = m.get('dataset', {})\n"
+                "p = ds.get('manifestPath')\n"
+                "if not p or not os.path.exists(p):\n"
+                "    print('gate-reason: missing-dataset-entry')\n"
+                "    sys.exit(1)\n"
+                "print('dataset OK:', p)\n"
+            ),
         ],
     },
     "preparation-failure": {"corrupt_checksums": True, "expect_no_named_reason": True},
