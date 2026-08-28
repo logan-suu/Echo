@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -23,18 +24,25 @@ def load_manifest(path: Path) -> dict:
 
 
 def connected_iphone() -> tuple[str, str] | None:
-    """Return (udid, name) of the first available paired iPhone."""
+    """Return (udid, name) of the first connectable paired iPhone.
+
+    devicectl 的状态字段随连接方式变化（available (paired) / connected /
+    waiting…）——只要含 iPhone 且未标记 unavailable 即视为可寻址；
+    UDID 以 CoreDevice UUID 正则提取（列位随名字空格数漂移，不可按列取）。
+    """
     proc = subprocess.run(
         ["xcrun", "devicectl", "list", "devices"],
         capture_output=True, text=True, check=False,
     )
+    uuid_pattern = re.compile(
+        r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
+    )
     for line in proc.stdout.splitlines():
-        if "iPhone" in line and "available" in line:
-            parts = line.split()
-            # CoreDevice UUID is the 3rd column in devicectl output
-            udid = parts[2] if len(parts) > 3 else parts[0]
-            name = "iPhone"
-            return (udid, name)
+        if "iPhone" not in line or "unavailable" in line:
+            continue
+        match = uuid_pattern.search(line)
+        if match:
+            return (match.group(0), "iPhone")
     return None
 
 
