@@ -85,3 +85,41 @@ struct PhotoTextSearchQualityTests {
         }
     }
 }
+
+// MARK: - WP7 Steps 2a-2d：synthetic 拒绝 + 路由 digest 预检
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("Harness rejects synthetic fixtures (WP7 step 2a/2b)")
+    func testHarnessRejectsSyntheticVectors() throws {
+        let harness = try RealPhotoSearchEvaluationHarness(manifestData: Data("""
+        {"fixtures": [{"id": "synth", "file": "images/x.png", "sha256": "abc", "license": "l", "rights": "r", "synthetic": true}]}
+        """.utf8))
+
+        #expect(throws: PhotoSearchHarnessError.syntheticVectorDetected(fixtureID: "synth")) {
+            try harness.validateNoSynthetic()
+        }
+    }
+
+    @Test("Harness rejects route digest mismatch (WP7 step 2c/2d)")
+    func testHarnessRejectsRouteDigestMismatch() throws {
+        let policy = try FusionPolicySnapshot(
+            policyID: "p-wp7", weights: [ChannelWeight(channel: .textDense, weight: 1.0)], rrfK: 60
+        )
+        let route = try SearchRouteSnapshot(
+            snapshotID: "wp7-route-1", schemaVersion: 1, routeVersion: 1,
+            channels: [ChannelRoute(channel: .textDense, generationID: "text_dense/e5-v1", indexManifestID: nil, queryModelManifestID: nil, dimension: 384, alignmentSpaceID: nil, required: true)],
+            fusion: policy, previousSnapshotID: nil,
+            publishedAtEpochMilliseconds: 1, validationDigest: "placeholder"
+        )
+        let harness = try RealPhotoSearchEvaluationHarness(manifestData: Data("""
+        {"fixtures": [{"id": "real", "file": "images/x.png", "sha256": "abc", "license": "l", "rights": "r"}]}
+        """.utf8))
+
+        let correct = try route.computedDigest()
+        #expect(throws: Never.self) { try harness.validateRouteDigest(route, expected: correct) }
+        #expect(throws: PhotoSearchHarnessError.routeDigestMismatch(expected: "stale", actual: correct)) {
+            try harness.validateRouteDigest(route, expected: "stale")
+        }
+    }
+}

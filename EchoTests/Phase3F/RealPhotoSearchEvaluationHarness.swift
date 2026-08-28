@@ -9,6 +9,8 @@
 import CryptoKit
 import Foundation
 
+@testable import Echo
+
 /// 真实工件评估 harness 的 typed 失败（fail-closed，发布门禁预检）。
 public enum PhotoSearchHarnessError: Error, Equatable, Sendable {
     case missingArtifact(path: String)
@@ -30,15 +32,19 @@ public struct RealPhotoSearchEvaluationHarness {
         public nonisolated let sha256: String
         public nonisolated let license: String
         public nonisolated let rights: String
+        /// synthetic 标记——true 的 fixture 不具备参与质量测量资格（real-artifact-only）
+        public nonisolated let synthetic: Bool
 
         public nonisolated init(
-            id: String, file: String, sha256: String, license: String, rights: String
+            id: String, file: String, sha256: String, license: String, rights: String,
+            synthetic: Bool = false
         ) {
             self.id = id
             self.file = file
             self.sha256 = sha256
             self.license = license
             self.rights = rights
+            self.synthetic = synthetic
         }
     }
 
@@ -56,7 +62,8 @@ public struct RealPhotoSearchEvaluationHarness {
                 file: raw["file"] as? String ?? "",
                 sha256: raw["sha256"] as? String ?? "",
                 license: raw["license"] as? String ?? "",
-                rights: raw["rights"] as? String ?? ""
+                rights: raw["rights"] as? String ?? "",
+                synthetic: raw["synthetic"] as? Bool ?? false
             )
         }
         guard !fixtures.isEmpty else {
@@ -92,6 +99,21 @@ public struct RealPhotoSearchEvaluationHarness {
             guard !fixture.rights.isEmpty else {
                 throw PhotoSearchHarnessError.missingRights(fixtureID: fixture.id)
             }
+        }
+    }
+
+    /// 步骤 2a/2b：real-artifact-only guard——任一 fixture 标记 synthetic 即拒绝参与质量测量。
+    public func validateNoSynthetic() throws {
+        for fixture in fixtures where fixture.synthetic {
+            throw PhotoSearchHarnessError.syntheticVectorDetected(fixtureID: fixture.id)
+        }
+    }
+
+    /// 步骤 2c/2d：路由 canonical digest 预检——重算 digest 与期望比对，不一致即拒绝。
+    public func validateRouteDigest(_ route: SearchRouteSnapshot, expected digest: String) throws {
+        let computed = try route.computedDigest()
+        guard computed == digest else {
+            throw PhotoSearchHarnessError.routeDigestMismatch(expected: digest, actual: computed)
         }
     }
 }
