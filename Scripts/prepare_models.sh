@@ -265,6 +265,17 @@ main() {
         exit 1
     fi
 
+    # WP7 9g/9h: license notice gate——verify 模式下检查许可声明文件存在
+    if [ "$MODE" = "verify" ]; then
+        NOTICE_FILE="$PROJECT_ROOT/Echo/Resources/Models/LICENSE-NOTICE.md"
+        if [ ! -f "$NOTICE_FILE" ]; then
+            log_error "gate-reason: missing-notice"
+            log_error "Missing license notice: $NOTICE_FILE"
+            exit 1
+        fi
+        log_info "  License notice OK: $NOTICE_FILE"
+    fi
+
     echo ""
     log_info "======================================"
     log_info "Bundle: $(du -sh "$MODELS_DIR" | cut -f1)"

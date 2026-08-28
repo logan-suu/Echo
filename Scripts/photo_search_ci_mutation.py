@@ -40,6 +40,7 @@ CASE_SPECS: dict[str, dict] = {
     "missing-e5": {"hide": ["e5Dir"], "expected_reason": "missing-e5"},
     "missing-vision": {"hide": ["visionCkptDir"], "expected_reason": "missing-vision"},
     "missing-tokenizer": {"hide": ["tokenizerFile"], "expected_reason": "missing-tokenizer"},
+    "missing-notice": {"hide": ["licenseNoticeFile"], "expected_reason": "missing-notice"},
     "preparation-failure": {"corrupt_checksums": True, "expect_no_named_reason": True},
 }
 
