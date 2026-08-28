@@ -246,7 +246,13 @@ final class SearchViewModel {
     /// WP4 route ENABLED：FusedSearchResult → UI 模型映射（多通道路径采用）。
     /// cosineSimilarity 字段承载 RRF 融合分数（展示适配待 UI 侧跟进）。
     static func mapFused(_ result: FusedSearchResult) -> SearchResultModel {
-        // 经 SearchResultItem 中转复用 init(from:) 的全字段映射（cosineSimilarity 承载 RRF 分数）
+        // 经 SearchResultItem 中转复用 init(from:) 的全字段映射。
+        // RRF 分数归一化到 0~1（相对理论最大：贡献通道数 × 1/(rrfK+1)），
+        // 使 UI 的 match 百分比保持「相对匹配强度」语义。
+        let theoreticalMax = Double(result.provenance.count) / 61.0
+        let normalized = theoreticalMax > 0
+            ? min(1.0, result.rrfScore / theoreticalMax)
+            : 0.0
         let item = SearchResultItem(
             id: result.memory.memoryId,
             assetId: result.memory.sourceLocator,
@@ -254,7 +260,7 @@ final class SearchViewModel {
             timestamp: result.memory.createdAt.timeIntervalSince1970,
             originalText: result.memory.canonicalText,
             sourceLanguage: nil,
-            cosineSimilarity: Float(result.rrfScore)
+            cosineSimilarity: Float(normalized)
         )
         return SearchResultModel(from: item)
     }

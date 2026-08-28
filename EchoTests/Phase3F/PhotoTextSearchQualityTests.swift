@@ -325,15 +325,20 @@ extension PhotoTextSearchQualityTests {
             memoryId: memID, sourceLocator: "PHAsset/ui-map",
             canonicalText: "red flower", sourceType: "photo"
         )
+        // 双通道 rank-1 = RRF 理论最大（2 × 1/61）→ 归一化后应为 1.0
         let fused = FusedSearchResult(
             memory: memory, rrfScore: 0.0328,
-            provenance: [], routeSnapshotID: "r-ui"
+            provenance: [
+                ChannelRankProvenance(channel: .textDense, rank: 1, generationID: "text_dense/e5-v1", vectorID: memID, nativeScore: nil),
+                ChannelRankProvenance(channel: .visionDense, rank: 1, generationID: "vision_dense/siglip2-v1", vectorID: memID, nativeScore: nil),
+            ],
+            routeSnapshotID: "r-ui"
         )
         let model = SearchViewModel.mapFused(fused)
         #expect(model.id == memID)
         #expect(model.assetId == "PHAsset/ui-map")
         #expect(model.sourceType == "photo")
-        #expect(model.cosineSimilarity == Float(0.0328), "RRF score carries into the similarity field")
+        #expect(model.cosineSimilarity == 1.0, "RRF score must normalize to relative match strength (theoretical max)")
         #expect(model.originalText == "red flower")
     }
 }
