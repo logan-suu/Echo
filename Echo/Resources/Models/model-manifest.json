@@ -56,6 +56,28 @@
       "referenceVectors": "siglip2-reference-vectors.json",
       "conversionLineage": "Google SigLIP2-B/32-256 (Apache-2.0) → PyTorch safetensors → coremltools 9.0 → Xcode coremlcompiler → SigLIP2BasePatch32.mlmodelc (SHA-256: 841ef1)",
       "provenance": "pending-evaluation"
+    },
+    {
+      "modelId": "siglip2-text-base-patch32-256-v1",
+      "revision": "94dffa8cb1179de3e03f091dbc3917e5d5a9ae84",
+      "artifactHash": "3b30a393c14ea9dd07696d87c534b46e217df1aa80d6dccdbd487710f11bc971",
+      "artifactFile": "SigLIP2TextBasePatch32.mlmodelc",
+      "artifactHashScope": "model.mil (core model definition; deterministic SHA-256)",
+      "convertSourceFile": "siglip2-base-patch32-256/model.safetensors",
+      "convertSourceHash": "7d241bb3becad218f211f480487f491df4f8c0a472ecf7afdec5615815a301f1",
+      "convertScript": "Scripts/convert_siglip2.py",
+      "licenseId": "apache-2.0",
+      "runtime": "coreML",
+      "tokenizer": "bpe",
+      "promptTemplate": null,
+      "pooling": "attentionProbe",
+      "normalization": "l2",
+      "dimension": 768,
+      "quantization": "fp16",
+      "source": "google/siglip2-base-patch32-256",
+      "referenceVectors": null,
+      "conversionLineage": "Google SigLIP2-B/32-256 (Apache-2.0) → PyTorch safetensors → coremltools 9.0 → Xcode coremlcompiler → SigLIP2TextBasePatch32.mlmodelc",
+      "provenance": "pending-evaluation"
     }
   ]
 }
