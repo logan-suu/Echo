@@ -41,6 +41,23 @@ CASE_SPECS: dict[str, dict] = {
     "missing-vision": {"hide": ["visionCkptDir"], "expected_reason": "missing-vision"},
     "missing-tokenizer": {"hide": ["tokenizerFile"], "expected_reason": "missing-tokenizer"},
     "missing-notice": {"hide": ["licenseNoticeFile"], "expected_reason": "missing-notice"},
+    # WP7 9i/9j: dataset manifest gate——child 命令检查 dataset.manifestPath 完整性，
+    # mutation 直接删除 release-evidence-manifest 的 dataset 键（备份恢复）。
+    "missing-dataset-entry": {
+        "corrupt_dataset": True,
+        "expected_reason": "missing-dataset-entry",
+        "child_cmd": [
+            "python3", "-c",
+            "import json, os, sys\n"
+            "m = json.load(open('docs/05-planning/photo-text-search-release-evidence-manifest.json'))\n"
+            "ds = m.get('dataset', {})\n"
+            "p = ds.get('manifestPath')\n"
+            "if not p or not os.path.exists(p):\n"
+            "    print('gate-reason: missing-dataset-entry')\n"
+            "    sys.exit(1)\n"
+            "print('dataset OK:', p)\n"
+        ],
+    },
     "preparation-failure": {"corrupt_checksums": True, "expect_no_named_reason": True},
 }
 
@@ -105,6 +122,15 @@ def execute_case(name: str, artifacts: dict, output_path: Path | None) -> int:
                 hidden = target.with_name(target.name + ".mutation-hidden")
                 os.rename(target, hidden)
                 moved.append((target, hidden))
+        corrupted_manifest: tuple[Path, str] | None = None
+        if spec.get("corrupt_dataset"):
+            ds_path = REPO_ROOT / "docs/05-planning/photo-text-search-release-evidence-manifest.json"
+            original = ds_path.read_text(encoding="utf-8")
+            ds_obj = json.loads(original)
+            ds_obj.pop("dataset", None)
+            corrupted_manifest = (ds_path, original)
+            ds_path.write_text(json.dumps(ds_obj, ensure_ascii=False, indent=2), encoding="utf-8")
+
         if spec.get("corrupt_checksums"):
             cs_path = REPO_ROOT / artifacts["checksumsFile"]
             original = cs_path.read_text(encoding="utf-8")
@@ -123,8 +149,9 @@ def execute_case(name: str, artifacts: dict, output_path: Path | None) -> int:
             corrupted = (cs_path, original)
             cs_path.write_text(mutated, encoding="utf-8")
 
+        child_cmd = spec.get("child_cmd", CHILD_CMD)
         proc = subprocess.run(
-            CHILD_CMD, cwd=str(REPO_ROOT), capture_output=True, text=True, check=False
+            child_cmd, cwd=str(REPO_ROOT), capture_output=True, text=True, check=False
         )
         child_rc = proc.returncode
         combined = proc.stdout + proc.stderr
@@ -136,6 +163,8 @@ def execute_case(name: str, artifacts: dict, output_path: Path | None) -> int:
             os.rename(hidden, src)
         if corrupted is not None:
             corrupted[0].write_text(corrupted[1], encoding="utf-8")
+        if corrupted_manifest is not None:
+            corrupted_manifest[0].write_text(corrupted_manifest[1], encoding="utf-8")
 
     code = evaluate_case(child_rc, combined, spec)
     tail = [ln for ln in combined.strip().splitlines()
