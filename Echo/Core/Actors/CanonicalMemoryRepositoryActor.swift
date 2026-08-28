@@ -114,6 +114,11 @@ public actor CanonicalMemoryRepositoryActor {
 
     // MARK: - Fault Injection (DEBUG only — Nitpick-1: release 不暴露删数据钩子)
 
+    /// 删除管线协作方（缓存失效）——属性常驻（deleteMemory/purge 的 cache 失效使用处
+    /// 在 Release 下仍被引用）；注入 setter 保持 DEBUG-only（Nitpick-1：release 不暴露
+    /// 删数据钩子），未注入时使用处跳过（与单元夹具场景一致）。
+    private var deletionCacheActor: SearchResultCacheActor?
+
     #if DEBUG
     public enum FaultPoint: Sendable, Equatable {
         /// 在向量写入前注入失败（模拟向量存储故障）→ 触发补偿回滚
@@ -128,9 +133,6 @@ public actor CanonicalMemoryRepositoryActor {
         case auditPurge
         case canonicalTransaction
     }
-
-    /// WP3 steps 3k-3t2：删除管线协作方（组合根 setter 注入，避免 init 连锁）。
-    private var deletionCacheActor: SearchResultCacheActor?
 
     public func configureDeletionCollaborators(cache: SearchResultCacheActor) {
         deletionCacheActor = cache

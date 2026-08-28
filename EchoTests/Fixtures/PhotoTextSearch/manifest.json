@@ -8,35 +8,40 @@
       "file": "images/screenshot-basic.png",
       "sha256": "eb7c456ee27b88a4a528c98659d0e417b185f5a0764037f4adcaca032177529e",
       "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
-      "purpose": "raw recognized text baseline"
+      "purpose": "raw recognized text baseline",
+      "rights": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)"
     },
     {
       "id": "rotated-90",
       "file": "images/rotated-90.png",
       "sha256": "3369b773446e14e8519229133a984858d9116d9b6f1d30f658f8e1c9412dbb1c",
       "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
-      "purpose": "orientation handling baseline"
+      "purpose": "orientation handling baseline",
+      "rights": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)"
     },
     {
       "id": "blank-photo",
       "file": "images/blank-photo.png",
       "sha256": "c71bc57e6c68d6cfed523fde969d3091bc1a0373cce581a7aa91cc3b0e660cf1",
       "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
-      "purpose": "no-text negative case"
+      "purpose": "no-text negative case",
+      "rights": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)"
     },
     {
       "id": "low-confidence",
       "file": "images/low-confidence.png",
       "sha256": "1c58178be5ce2ae523804c08739a4f96e25c3760ced91c2975aeb59f05a3030a",
       "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
-      "purpose": "low-confidence filtering negative case"
+      "purpose": "low-confidence filtering negative case",
+      "rights": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)"
     },
     {
       "id": "mixed-language",
       "file": "images/mixed-language.png",
       "sha256": "b479d02c58b56bd0fd7e8a0b764755b3014ba4cfa629af57c3792a83ad982999",
       "license": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)",
-      "purpose": "zh-Hans + en-US approved locale set"
+      "purpose": "zh-Hans + en-US approved locale set",
+      "rights": "Self-generated via Scripts/generate_ocr_fixtures.swift (CC0)"
     }
   ]
 }
