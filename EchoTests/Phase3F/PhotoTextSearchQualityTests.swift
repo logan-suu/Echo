@@ -342,3 +342,76 @@ extension PhotoTextSearchQualityTests {
         #expect(model.originalText == "red flower")
     }
 }
+
+// MARK: - 端到端冒烟：真实图片 → 视觉推理入库 → 文字查询 → 多通道检索命中
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("E2E smoke: real image → vision ingest → text query → multichannel hit (闭环验证)")
+    @MainActor
+    func testEndToEndImageSemanticSmoke() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        let registry = GenerationRegistryActor(db: db)
+        let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
+
+        // 种子活跃路由（text + vision 双代）
+        let textGen = "text_dense/e5-v1-\(UUID().uuidString.prefix(6))"
+        try await registry.registerGeneration(IndexGeneration(generationId: textGen, indexType: "text_dense", dimension: 384))
+        try await registry.setGenerationState(textGen, state: .ready)
+        try await registry.setGenerationState(textGen, state: .active)
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await registry.setGenerationState("vision_dense/siglip2-v1", state: .ready)
+        try await registry.setGenerationState("vision_dense/siglip2-v1", state: .active)
+        let activated = try await registry.activateGeneration(textGen)
+        try await registry.publishRoute(ActiveRouteSet(
+            textGeneration: activated.textGeneration,
+            visionGeneration: "vision_dense/siglip2-v1",
+            version: activated.version
+        ))
+
+        // 1. 真实视觉推理（冻结 fixture → SigLIP2 视觉塔，模拟器 cpuOnly）
+        let imageData = try Data(contentsOf: Self.fixturesBaseDir.appendingPathComponent("images/screenshot-basic.png"))
+        let visionEmbedder = SigLIP2Embedder()
+        let visionVector = try await visionEmbedder.embedImageData(imageData)
+        #expect(visionVector.count == 768, "vision tower must emit 768d")
+        let norm = sqrt(visionVector.reduce(0) { $0 + $1 * $1 })
+        #expect(abs(norm - 1.0) < 1e-3, "real vision inference must be L2-normalized (got \(norm))")
+
+        // 2. 摄入：canonical memory + vision 向量写入活跃代
+        try await registry.registerGeneration(IndexGeneration(generationId: "vision_dense/siglip2-v1", indexType: "vision_dense", dimension: 768))
+        try await registry.setGenerationState("vision_dense/siglip2-v1", state: .ready)
+        try await registry.setGenerationState("vision_dense/siglip2-v1", state: .active)
+        let locator = "PHAsset/e2e-smoke-\(UUID().uuidString)"
+        let memID = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: locator, sourceType: "photo")
+        try await repo.commit(
+            memory: Memory(memoryId: memID, sourceLocator: locator, canonicalText: nil, sourceType: "photo"),
+            representations: [Representation(representationId: memID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "sha256:e2e")],
+            vectorsByGeneration: ["vision_dense/siglip2-v1": [CanonicalVectorEntry(id: memID, vector: visionVector)]],
+            traceID: "t-e2e-ingest"
+        )
+
+        // 3. 文字查询 → 多通道检索（真实 E5 + 真实 SigLIP2 文本塔 + 融合）
+        let e5 = E5Embedder()
+        let pipeline = SearchPipeline(
+            embedder: e5,
+            privacyActor: PrivacyActor(db: db),
+            vectorStore: VectorStoreActor(dimension: 768),
+            canonicalRepository: repo,
+            queryFactory: DefaultQueryRepresentationFactory(
+                textEmbedder: e5,
+                visionEmbedder: SigLIP2TextEmbedder()
+            ),
+            generationRegistry: registry
+        )
+        let fused = try await pipeline.searchTyped(
+            query: "quarterly report meeting", k: 10, traceID: "t-e2e-search"
+        )
+
+        // 闭环断言：摄入的图片经文字查询命中，provenance 含视觉通道
+        #expect(!fused.isEmpty, "E2E: the ingested image must be retrievable by text query")
+        #expect(fused.first?.memory.memoryId == memID, "top fused result must be the ingested photo")
+        #expect(fused.first?.provenance.contains(where: { $0.channel == .visionDense }) == true,
+                "hit must carry visionDense provenance")
+    }
+}
