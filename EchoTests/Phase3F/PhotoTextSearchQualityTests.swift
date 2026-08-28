@@ -123,3 +123,96 @@ extension PhotoTextSearchQualityTests {
         }
     }
 }
+
+// MARK: - WP7 Steps 3a-3f + 5a-6h：质量报告计算
+
+extension PhotoTextSearchQualityTests {
+
+    nonisolated private static func evalCase(
+        _ id: String, locale: String = "en-US", expected: UUID?, ranks: [UUID],
+        active: Int = 4, total: Int = 4
+    ) -> PhotoSearchEvaluationCase {
+        PhotoSearchEvaluationCase(
+            queryID: id, locale: locale, expectedMemoryID: expected,
+            rankedIDs: ranks, activeChannelCount: active, totalChannelCount: total
+        )
+    }
+
+    @Test("Quality report computes R@K nDCG MRR no-match partial-channel (WP7 steps 3a-3f/5a-5d)")
+    func testQualityReportMetrics() throws {
+        let target = UUID()
+        let noise1 = UUID(); let noise2 = UUID()
+        let knownCases = [
+            // rank 1 命中
+            Self.evalCase("q1", expected: target, ranks: [target, noise1]),
+            // rank 3 命中
+            Self.evalCase("q2", expected: target, ranks: [noise1, noise2, target]),
+            // 未命中（rank > 10 之外）
+            Self.evalCase("q3", expected: target, ranks: [noise1, noise2]),
+        ]
+        let noMatchCases = [
+            Self.evalCase("q4", expected: nil, ranks: []),           // 正确：空
+            Self.evalCase("q5", expected: nil, ranks: [noise1]),     // 错误：非空
+        ]
+        let report = PhotoSearchQualityMetrics.report(
+            locale: "en-US", cases: knownCases + noMatchCases
+        )
+        // R@1 = 1/3（q1）；R@5 = 2/3（q1,q2）；R@10 = 2/3
+        #expect(abs(report.recallAt1 - 1.0/3.0) < 1e-9)
+        #expect(abs(report.recallAt5 - 2.0/3.0) < 1e-9)
+        #expect(abs(report.recallAt10 - 2.0/3.0) < 1e-9)
+        // nDCG@10 = (1 + 1/log2(4) + 0)/3 = (1 + 0.5)/3
+        #expect(abs(report.ndcgAt10 - 1.5/3.0) < 1e-9)
+        // MRR@10 = (1 + 1/3 + 0)/3（known-item-only）
+        #expect(report.mrrAt10 != nil)
+        #expect(abs((report.mrrAt10 ?? 0) - (4.0/3.0)/3.0) < 1e-9)
+        // no-match 正确率 = 1/2
+        #expect(abs(report.noMatchCorrectRate - 0.5) < 1e-9)
+        // partial-channel：全部 4/4 无降级 → 0
+        #expect(abs(report.partialChannelRate - 0.0) < 1e-9)
+    }
+
+    @Test("Partial-channel rate counts degraded queries (WP7 step 5c/5d)")
+    func testPartialChannelRate() throws {
+        let cases = [
+            Self.evalCase("p1", expected: nil, ranks: [], active: 4, total: 4),
+            Self.evalCase("p2", expected: nil, ranks: [], active: 2, total: 4),  // 降级
+        ]
+        let report = PhotoSearchQualityMetrics.report(locale: "en-US", cases: cases)
+        #expect(abs(report.partialChannelRate - 0.5) < 1e-9)
+    }
+
+    @Test("Bilingual reports plus macro average (WP7 steps 6a-6f)")
+    func testBilingualAndMacro() throws {
+        let target = UUID()
+        let zhCases = [
+            Self.evalCase("z1", locale: "zh-Hans", expected: target, ranks: [target]),
+        ]
+        let enCases = [
+            Self.evalCase("e1", locale: "en-US", expected: target, ranks: []),
+        ]
+        let zh = PhotoSearchQualityMetrics.report(locale: "zh-Hans", cases: zhCases)
+        let en = PhotoSearchQualityMetrics.report(locale: "en-US", cases: enCases)
+        #expect(abs(zh.recallAt1 - 1.0) < 1e-9)
+        #expect(abs(en.recallAt1 - 0.0) < 1e-9)
+
+        guard let macro = PhotoSearchQualityMetrics.macroAverage([zh, en]) else {
+            Issue.record("macro average missing")
+            return
+        }
+        #expect(macro.locale == "macro")
+        #expect(abs(macro.recallAt1 - 0.5) < 1e-9)
+    }
+
+    @Test("Paired confidence interval covers the observed recall difference (WP7 step 6g/6h)")
+    func testPairedConfidenceInterval() throws {
+        guard let ci = PhotoSearchQualityMetrics.pairedConfidenceInterval(
+            recallA: 0.9, sampleA: 100, recallB: 0.8, sampleB: 100
+        ) else {
+            Issue.record("CI missing")
+            return
+        }
+        #expect(ci.lower <= 0.1 && ci.upper >= 0.1, "CI must contain the observed 0.1 difference")
+        #expect(ci.lower < ci.upper)
+    }
+}
