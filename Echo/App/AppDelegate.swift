@@ -147,7 +147,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             generationRegistry: registry,
             taskQueue: .shared,
             progressActor: .shared,
-            visionEmbedder: composition.visionEmbedder
+            visionEmbedder: composition.visionEmbedder,
+            ocrService: VisionPhotoOCRService()
         )
         ingestPipeline = ingest
         _ = try? await ingest.drainSharedImports(from: .shared)

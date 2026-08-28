@@ -47,7 +47,8 @@ public enum LiveAppAdapters {
             vectorStore: activeStore,
             feedbackActor: .shared,
             canonicalRepository: makeCanonicalRepository(composition: composition),
-            queryFactory: queryFactory
+            queryFactory: queryFactory,
+            generationRegistry: composition.generationRegistry
         )
     }
 
