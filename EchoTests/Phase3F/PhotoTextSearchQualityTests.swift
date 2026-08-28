@@ -216,3 +216,68 @@ extension PhotoTextSearchQualityTests {
         #expect(ci.lower < ci.upper)
     }
 }
+
+// MARK: - WP7 Steps 4a-4n + 7a：slice 注册 + 首次有效质量测量
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("All quality slices register and are retrievable (WP7 steps 4a-4n)")
+    func testAllSlicesRegistered() throws {
+        var registry = PhotoSearchSliceRegistry()
+        let sample = Self.evalCase("s1", expected: UUID(), ranks: [UUID()])
+        for slice in PhotoSearchQualitySlice.allCases {
+            registry.register(slice, cases: [sample])
+        }
+        for slice in PhotoSearchQualitySlice.allCases {
+            #expect(!registry.cases(for: slice).isEmpty, "\(slice.rawValue) must be registered")
+        }
+        #expect(Set(registry.registeredSlices) == Set(PhotoSearchQualitySlice.allCases),
+                "all seven slices must be registered")
+    }
+
+    @Test("First valid quality measurement over the frozen OCR fixture (WP7 step 7a EVIDENCE)")
+    func testFirstValidQualityMeasurement() async throws {
+        // 冻结 fixture 的真实 Vision 识别（OCR slice 测量）
+        let data = try Data(contentsOf: Self.fixturesBaseDir.appendingPathComponent("images/mixed-language.png"))
+        let service = VisionPhotoOCRService()
+        let document = try await service.recognizeText(
+            imageData: data, preferredLanguages: ["zh-Hans", "en-US"], traceID: "t-wp7-7a"
+        )
+
+        let observed = document?.normalizedText ?? ""
+        let lowered = observed.lowercased()
+        let hit = lowered.contains("每周") || lowered.contains("quarterly") || lowered.contains("sync")
+
+        var registry = PhotoSearchSliceRegistry()
+        registry.register(.ocr, cases: [
+            PhotoSearchEvaluationCase(
+                queryID: "wp7-ocr-mixed-1",
+                locale: document?.locale ?? "en-US",
+                expectedMemoryID: hit ? UUID() : nil,
+                rankedIDs: hit ? [UUID()] : [],
+                activeChannelCount: 1,
+                totalChannelCount: 1
+            )
+        ])
+        let report = PhotoSearchQualityMetrics.report(
+            locale: document?.locale ?? "en-US", cases: registry.cases(for: .ocr)
+        )
+        #expect(report.knownItemCount == 1, "OCR slice measurement must record one known-item case")
+
+        // EVIDENCE：保存首次有效测量报告
+        let evidence: [String: Any] = [
+            "slice": "ocr",
+            "fixture": "mixed-language",
+            "observedLocale": document?.locale ?? "unknown",
+            "observationCount": document?.observationCount ?? 0,
+            "hit": hit,
+            "recallAt1": report.recallAt1,
+        ]
+        let outDir = Self.repoRoot.appendingPathComponent(".omo/evidence/photo-text-search/wp7")
+        try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
+        let jsonData = try JSONSerialization.data(withJSONObject: evidence, options: [.prettyPrinted, .sortedKeys])
+        try jsonData.write(to: outDir.appendingPathComponent("quality-measurement-ocr.json"))
+        #expect(FileManager.default.fileExists(atPath: outDir.appendingPathComponent("quality-measurement-ocr.json").path),
+                "first valid quality measurement must be persisted as evidence")
+    }
+}

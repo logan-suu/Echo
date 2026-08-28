@@ -21,6 +21,36 @@ public enum PhotoSearchHarnessError: Error, Equatable, Sendable {
     case malformedManifest(reason: String)
 }
 
+/// 质量评估 slice（WP7 步骤 4a-4n 的 8 类强制语义/失败切片）
+public enum PhotoSearchQualitySlice: String, CaseIterable, Sendable {
+    case scene
+    case object
+    case color
+    case relation
+    case negation
+    case ocr
+    case hardNegative = "hard-negative"
+}
+
+/// slice 注册表——每个强制 slice 的评估用例集合（未注册 slice 不产出报告）。
+public struct PhotoSearchSliceRegistry {
+    private var storage: [PhotoSearchQualitySlice: [PhotoSearchEvaluationCase]] = [:]
+
+    public init() {}
+
+    public mutating func register(_ slice: PhotoSearchQualitySlice, cases: [PhotoSearchEvaluationCase]) {
+        storage[slice, default: []].append(contentsOf: cases)
+    }
+
+    public func cases(for slice: PhotoSearchQualitySlice) -> [PhotoSearchEvaluationCase] {
+        storage[slice] ?? []
+    }
+
+    public var registeredSlices: [PhotoSearchQualitySlice] {
+        PhotoSearchQualitySlice.allCases.filter { !(storage[$0] ?? []).isEmpty }
+    }
+}
+
 /// 真实工件评估 harness——解析冻结的 fixture manifest 并执行
 /// 存在性 / SHA-256 / 权利必填 / synthetic 拒绝 / 路由 digest 预检。
 ///
