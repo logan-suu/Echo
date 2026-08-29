@@ -19,6 +19,7 @@
 
 import SwiftUI
 import Foundation
+import Photos
 
 // MARK: - Memory Detail UI Model
 
@@ -272,6 +273,8 @@ final class MemoryDetailViewModel {
 
     /// 当前活跃的翻译 Task — 视图消失时取消
     private var translationTask: Task<Void, Never>?
+    /// WP7: 详情页媒体预览——PHAsset 图片本体（照片记忆展示生产接线）
+    private(set) var photoImage: UIImage?
     /// WP7: canonical 仓库——生产 load 接线（route ENABLED 后详情真实加载）
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
 
@@ -376,6 +379,24 @@ final class MemoryDetailViewModel {
                     message: "Unable to load this memory. Please try again."
                 ))
             }
+        }
+    }
+
+    /// WP7: PHAsset 图片本体加载——详情页媒体预览生产接线。
+    /// 本地仅提取（isNetworkAccessAllowed=false，与摄入策略一致）；无资产静默跳过。
+    public func loadPhotoImage(assetId: String) {
+        guard photoImage == nil,
+              let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else { return }
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        PHImageManager.default().requestImage(
+            for: asset,
+            targetSize: PHImageManagerMaximumSize,
+            contentMode: .aspectFit,
+            options: options
+        ) { [weak self] image, _ in
+            self?.photoImage = image
         }
     }
 

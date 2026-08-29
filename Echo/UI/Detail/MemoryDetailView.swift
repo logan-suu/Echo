@@ -70,6 +70,12 @@ struct MemoryDetailView: View {
         }
         .navigationTitle("Memory")
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: viewModel.memory?.assetId) {
+            if let assetId = viewModel.memory?.assetId,
+               viewModel.memory?.sourceType == "photo" {
+                viewModel.loadPhotoImage(assetId: assetId)
+            }
+        }
         .toolbar {
             if viewModel.viewState == .completed, viewModel.memory != nil {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -324,7 +330,15 @@ struct MemoryDetailView: View {
     private func mediaPreview(_ memory: MemoryDetailModel) -> some View {
         switch memory.mediaKind {
         case .image:
-            if let name = memory.mediaAssetName, let uiImage = UIImage(named: name) {
+            // WP7: PHAsset 真实图片优先（生产接线）；bundle 样本保留为 fallback
+            if let uiImage = viewModel.photoImage {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .accessibilityLabel("\(memory.title) photo")
+            } else if let name = memory.mediaAssetName, let uiImage = UIImage(named: name) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
