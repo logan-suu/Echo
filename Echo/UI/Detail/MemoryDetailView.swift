@@ -54,7 +54,9 @@ struct MemoryDetailView: View {
     }
 
     init(memoryId: UUID) {
-        _viewModel = State(initialValue: MemoryDetailViewModel())
+        _viewModel = State(initialValue: MemoryDetailViewModel(
+            canonicalRepository: LiveAppAdapters.makeCanonicalRepository()
+        ))
         _pendingMemoryID = State(initialValue: memoryId)
     }
 

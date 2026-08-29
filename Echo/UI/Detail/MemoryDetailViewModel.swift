@@ -272,6 +272,8 @@ final class MemoryDetailViewModel {
 
     /// 当前活跃的翻译 Task — 视图消失时取消
     private var translationTask: Task<Void, Never>?
+    /// WP7: canonical 仓库——生产 load 接线（route ENABLED 后详情真实加载）
+    private let canonicalRepository: CanonicalMemoryRepositoryActor?
 
     // MARK: - Translation State (US-DIS-002)
 
@@ -294,10 +296,12 @@ final class MemoryDetailViewModel {
 
     init(
         translationService: any TranslationService = AppleTranslationService(),
-        translationCache: any TranslationCaching = MemoryDetailViewModel.defaultPersistentCache()
+        translationCache: any TranslationCaching = MemoryDetailViewModel.defaultPersistentCache(),
+        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
     ) {
         self.translationService = translationService
         self.translationCache = translationCache
+        self.canonicalRepository = canonicalRepository
     }
 
     /// 生产默认持久缓存目录 — Application Support 下 EchoTranslationCache。
@@ -316,6 +320,22 @@ final class MemoryDetailViewModel {
     ///
     /// 设置 state = .loading，加载完成后设置 .completed 或 .error。
     /// 🔮 Phase 3.9+: 通过 Core 按 memoryId 拉取。当前 UI 切片通过 loadPreloaded 注入。
+    /// WP7: Memory → 详情模型生产映射（canonical 数据 → 展示字段）。
+    static func makeDetailModel(from memory: Memory) -> MemoryDetailModel {
+        MemoryDetailModel(
+            id: memory.memoryId,
+            assetId: memory.sourceLocator,
+            sourceType: memory.sourceType,
+            title: memory.canonicalText ?? "A photo memory",
+            originalText: memory.canonicalText ?? "",
+            sourceLanguage: "en-US",
+            preferredLanguage: "en-US",
+            timestamp: memory.createdAt,
+            tags: [],
+            userEdited: memory.userEdited
+        )
+    }
+
     func load(memoryId: UUID) {
         guard viewState != .loading else { return }
 
@@ -332,6 +352,19 @@ final class MemoryDetailViewModel {
 
             guard !Task.isCancelled else {
                 self.viewState = .cancelled
+                return
+            }
+
+            // WP7: 生产 load——canonical 仓库真实加载（route ENABLED 后详情接线）
+            if let repo = canonicalRepository {
+                guard let memory = try? await repo.loadMemory(memoryId: memoryId) else {
+                    self.viewState = .error(.l2Recoverable(
+                        message: "Unable to load this memory. Please try again."
+                    ))
+                    return
+                }
+                self.memory = Self.makeDetailModel(from: memory)
+                self.viewState = .completed
                 return
             }
 

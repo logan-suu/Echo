@@ -415,3 +415,24 @@ extension PhotoTextSearchQualityTests {
                 "hit must carry visionDense provenance")
     }
 }
+
+// MARK: - WP7 UI 接线：详情页生产 load 映射
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("Detail production load maps Memory to the detail model (WP7 详情接线)")
+    @MainActor
+    func testDetailProductionLoadMapping() {
+        let memID = UUID()
+        let memory = Memory(
+            memoryId: memID, sourceLocator: "PHAsset/detail-map",
+            canonicalText: "red flower", sourceType: "photo"
+        )
+        let model = MemoryDetailViewModel.makeDetailModel(from: memory)
+        #expect(model.id == memID)
+        #expect(model.assetId == "PHAsset/detail-map")
+        #expect(model.title == "red flower", "canonical text becomes the title")
+        #expect(model.originalText == "red flower")
+        #expect(model.sourceType == "photo")
+    }
+}
