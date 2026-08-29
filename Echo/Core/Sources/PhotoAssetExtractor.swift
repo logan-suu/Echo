@@ -61,35 +61,37 @@ public struct RealPhotoAssetExtractor: PhotoAssetExtracting {
     public nonisolated init() {}
 
     public nonisolated func extractMetadata(assetId: String) async throws -> PhotoAssetContent {
-        try await Self.fetchMetadata(assetId: assetId)
+        guard let content = Self.fetchMetadata(assetId: assetId) else {
+            throw EmbedderError.assetUnavailable(assetId: assetId)
+        }
+        return content
     }
 
     public nonisolated func isLocallyAvailable(assetId: String) async -> Bool {
-        await Self.assetDownloaded(assetId)
+        Self.assetDownloaded(assetId)
     }
 
     public nonisolated func extractImageData(assetId: String) async throws -> Data? {
-        try await Self.fetchImageData(assetId: assetId)
+        Self.fetchImageData(assetId: assetId)
     }
 
     // MARK: - @MainActor PhotoKit Helpers
 
-    @MainActor
-    private static func fetchMetadata(assetId: String) async throws -> PhotoAssetContent {
+    // WP7: 同步提取（isSynchronous=true）——后台线程同步回调，杜绝 continuation 挂起
+    // （模拟器实证：异步回调可能永不触发导致摄入任务 0% 卡死）
+    private nonisolated static func fetchMetadata(assetId: String) -> PhotoAssetContent? {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else {
-            throw EmbedderError.assetUnavailable(assetId: assetId)
+            return nil
         }
         let creationDate = asset.creationDate
         var exifData: Data?
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
         options.deliveryMode = .highQualityFormat
-        await withCheckedContinuation { continuation in
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-                if let data, let source = CGImageSourceCreateWithData(data as CFData, nil) {
-                    exifData = Self.extractEXIF(from: source)
-                }
-                continuation.resume()
+        options.isSynchronous = true
+        PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
+            if let data, let source = CGImageSourceCreateWithData(data as CFData, nil) {
+                exifData = Self.extractEXIF(from: source)
             }
         }
         return PhotoAssetContent(
@@ -99,19 +101,20 @@ public struct RealPhotoAssetExtractor: PhotoAssetExtracting {
         )
     }
 
-    @MainActor
-    private static func assetDownloaded(_ assetId: String) async -> Bool {
+    // WP7: 同步化（同 fetchMetadata）
+    private nonisolated static func assetDownloaded(_ assetId: String) -> Bool {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else {
             return false
         }
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
         options.deliveryMode = .fastFormat
-        return await withCheckedContinuation { continuation in
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-                continuation.resume(returning: data != nil)
-            }
+        options.isSynchronous = true
+        var downloaded = false
+        PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
+            downloaded = (data != nil)
         }
+        return downloaded
     }
 
     /// 从 CGImageSource 提取 EXIF 字典（JSON 编码，GPS 保留原始值，展示层按 UserPolicy 决定）。
@@ -187,18 +190,19 @@ extension PhotoAssetExtracting {
 }
 
 extension RealPhotoAssetExtractor {
-    @MainActor
-    private static func fetchImageData(assetId: String) async throws -> Data? {
+    // WP7: 同步提取（isSynchronous=true）——杜绝 continuation 挂起
+    private nonisolated static func fetchImageData(assetId: String) -> Data? {
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else {
             return nil
         }
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
         options.deliveryMode = .highQualityFormat
-        return await withCheckedContinuation { continuation in
-            PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-                continuation.resume(returning: data)
-            }
+        options.isSynchronous = true
+        var result: Data?
+        PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
+            result = data
         }
+        return result
     }
 }
