@@ -189,7 +189,7 @@ sys.exit(0 if found else 1)
 # ==========================================
 # R-5.4 (2026-08-01): whisper tiny approved (~39MB GGUF). small stays as
 # challenger for later evaluation. Model artifact must match the decision.
-WHISPER_GGUF_URL="${HF_ENDPOINT:-https://hf-mirror.com}/ggml-org/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin"
+WHISPER_GGUF_URL="${HF_ENDPOINT:-https://hf-mirror.com}/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin"
 WHISPER_GGUF_FILE="whisper-tiny-q5_1.gguf"
 
 download_whisper() {
