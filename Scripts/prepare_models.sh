@@ -152,7 +152,7 @@ download_e5() {
     [ "$MODE" = "verify" ] && { log_error "Missing: $emb"; log_error "gate-reason: missing-e5"; return 1; }
 
     log_info "  Downloading from $E5_REPO @ $E5_REVISION ..."
-    HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" E5_REPO="$E5_REPO" E5_REVISION="$E5_REVISION" python3 -c "
+    HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}" MODELS_DIR="$MODELS_DIR" E5_REPO="$E5_REPO" E5_REVISION="$E5_REVISION" python3 -c "
 import os, shutil, sys
 from huggingface_hub import snapshot_download
 target = os.environ['MODELS_DIR']
@@ -189,7 +189,7 @@ sys.exit(0 if found else 1)
 # ==========================================
 # R-5.4 (2026-08-01): whisper tiny approved (~39MB GGUF). small stays as
 # challenger for later evaluation. Model artifact must match the decision.
-WHISPER_GGUF_URL="https://hf-mirror.com/ggml-org/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin"
+WHISPER_GGUF_URL="${HF_ENDPOINT:-https://hf-mirror.com}/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin"
 WHISPER_GGUF_FILE="whisper-tiny-q5_1.gguf"
 
 download_whisper() {
@@ -226,7 +226,7 @@ download_siglip2() {
     # WP7: checkpoint 为转换源工件，驻留 PinnedModels/（资源目录外的同名
     # tokenizer.json 会与 E5 资源冲突——Multiple commands produce tokenizer.json）
     local ckpt="$PROJECT_ROOT/PinnedModels/siglip2-base-patch32-256"
-    if [ -d "$ckpt" ] && [ "$MODE" != "generate" ]; then
+    if [ -f "$ckpt/model.safetensors" ] && [ "$MODE" != "generate" ]; then
         log_info "  Already present — verifying checksum"
         verify_or_record "$ckpt/model.safetensors" || return 1
         return 0
@@ -236,7 +236,7 @@ download_siglip2() {
 
     log_warn "  SigLIP2 is a conversion source (R-3.2). Core ML conversion required before production use."
     log_info "  Downloading from $SIGLIP2_REPO @ $SIGLIP2_REVISION ..."
-    HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" SIGLIP2_REPO="$SIGLIP2_REPO" SIGLIP2_REVISION="$SIGLIP2_REVISION" python3 -c "
+    HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}" PROJECT_ROOT="$PROJECT_ROOT" MODELS_DIR="$MODELS_DIR" SIGLIP2_REPO="$SIGLIP2_REPO" SIGLIP2_REVISION="$SIGLIP2_REVISION" python3 -c "
 import os, shutil, sys
 from huggingface_hub import snapshot_download
 target = os.environ['MODELS_DIR']

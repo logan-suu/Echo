@@ -89,7 +89,10 @@ public nonisolated struct SigLIP2Tokenizer: Sendable {
 
     /// 内容编码：归一化 → BPE → 词表/byte fallback。
     nonisolated func encodeContent(_ text: String) -> [Int32] {
-        let normalized = text.replacingOccurrences(of: " ", with: "\u{2581}")
+        // SigLIP2 contract: fold case before BPE. The Gemma vocab carries
+        // lowercase word forms; capitalized inputs split into rare subword
+        // fragments whose embeddings break cross-modal alignment.
+        let normalized = text.lowercased().replacingOccurrences(of: " ", with: "\u{2581}")
         let symbols = bpe(normalized.unicodeScalars.map { String($0) })
         var ids: [Int32] = []
         ids.reserveCapacity(symbols.count)
@@ -122,7 +125,7 @@ public nonisolated struct SigLIP2Tokenizer: Sendable {
                 }
             }
             guard bestIndex >= 0 else { break }
-            symbols[bestIndex] = symbols[bestIndex] + symbols[bestIndex + 1]
+            symbols[bestIndex] += symbols[bestIndex + 1]
             symbols.remove(at: bestIndex + 1)
         }
         return symbols

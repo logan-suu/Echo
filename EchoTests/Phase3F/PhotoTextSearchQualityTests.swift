@@ -89,6 +89,10 @@ struct PhotoTextSearchQualityTests {
 // MARK: - WP7 Steps 2a-2d：synthetic 拒绝 + 路由 digest 预检
 
 extension PhotoTextSearchQualityTests {
+    private static func textTowerMLModelCAvailable() -> Bool {
+        Bundle.main.url(forResource: "SigLIP2TextBasePatch32", withExtension: "mlmodelc") != nil
+    }
+
 
     @Test("Harness rejects synthetic fixtures (WP7 step 2a/2b)")
     func testHarnessRejectsSyntheticVectors() throws {
@@ -296,7 +300,8 @@ extension PhotoTextSearchQualityTests {
         #expect(ids.count == SigLIP2Tokenizer.maxLength)
     }
 
-    @Test("SigLIP2 text tower real inference on simulator (WP4 5c/5d)")
+    @Test("SigLIP2 text tower real inference on simulator (WP4 5c/5d)",
+          .enabled(if: textTowerMLModelCAvailable()))
     func testSigLIP2TextTowerRealInference() async throws {
         let embedder = SigLIP2TextEmbedder()
         let vector = try await embedder.embedVisionQuery(
@@ -325,12 +330,15 @@ extension PhotoTextSearchQualityTests {
             memoryId: memID, sourceLocator: "PHAsset/ui-map",
             canonicalText: "red flower", sourceType: "photo"
         )
-        // 双通道 rank-1 = RRF 理论最大（2 × 1/61）→ 归一化后应为 1.0
+        // Match strength comes from the strongest channel's nativeScore
+        // (native semantic similarity). The RRF score only orders results and
+        // must not leak into the displayed percentage — it is rank-based and
+        // would render an identical sequence for every query.
         let fused = FusedSearchResult(
             memory: memory, rrfScore: 0.0328,
             provenance: [
                 ChannelRankProvenance(channel: .textDense, rank: 1, generationID: "text_dense/e5-v1", vectorID: memID, nativeScore: nil),
-                ChannelRankProvenance(channel: .visionDense, rank: 1, generationID: "vision_dense/siglip2-v1", vectorID: memID, nativeScore: nil),
+                ChannelRankProvenance(channel: .visionDense, rank: 2, generationID: "vision_dense/siglip2-v1", vectorID: memID, nativeScore: 0.1534),
             ],
             routeSnapshotID: "r-ui"
         )
@@ -338,7 +346,10 @@ extension PhotoTextSearchQualityTests {
         #expect(model.id == memID)
         #expect(model.assetId == "PHAsset/ui-map")
         #expect(model.sourceType == "photo")
-        #expect(model.cosineSimilarity == 1.0, "RRF score must normalize to relative match strength (theoretical max)")
+        // SigLIP2 logistic calibration: 0.1534 native cosine maps to ~0.82
+        // (strong-match band), keeping noise results near the low end.
+        #expect(abs(model.cosineSimilarity - 0.821) < 0.01,
+                "match strength must carry the strongest channel's native similarity, SigLIP2-calibrated")
         #expect(model.originalText == "red flower")
     }
 }
@@ -347,7 +358,8 @@ extension PhotoTextSearchQualityTests {
 
 extension PhotoTextSearchQualityTests {
 
-    @Test("E2E smoke: real image → vision ingest → text query → multichannel hit (闭环验证)")
+    @Test("E2E smoke: real image → vision ingest → text query → multichannel hit (闭环验证)",
+          .enabled(if: textTowerMLModelCAvailable()))
     @MainActor
     func testEndToEndImageSemanticSmoke() async throws {
         let db = DatabaseManager.shared
@@ -408,10 +420,16 @@ extension PhotoTextSearchQualityTests {
             query: "quarterly report meeting", k: 10, traceID: "t-e2e-search"
         )
 
-        // 闭环断言：摄入的图片经文字查询命中，provenance 含视觉通道
+        // Closed-loop assertions: the ingested image must be retrievable by text
+        // query with visionDense provenance. Prior E2E runs ingest the same
+        // fixture image (identical content -> identical vector -> tied score),
+        // so assert membership in top-K rather than a strict rank-1 position.
         #expect(!fused.isEmpty, "E2E: the ingested image must be retrievable by text query")
-        #expect(fused.first?.memory.memoryId == memID, "top fused result must be the ingested photo")
-        #expect(fused.first?.provenance.contains(where: { $0.channel == .visionDense }) == true,
+        let hitRank = fused.firstIndex { $0.memory.memoryId == memID }
+        #expect(hitRank != nil, "the ingested photo must appear in top-K results")
+        // Provenance must be checked on the matched result (hitRank), not
+        // fused.first — the photo is not guaranteed rank-1 after top-K relaxation.
+        #expect(hitRank.map { fused[$0].provenance.contains(where: { $0.channel == .visionDense }) } == true,
                 "hit must carry visionDense provenance")
     }
 }
@@ -434,5 +452,42 @@ extension PhotoTextSearchQualityTests {
         #expect(model.title == "red flower", "canonical text becomes the title")
         #expect(model.originalText == "red flower")
         #expect(model.sourceType == "photo")
+    }
+}
+
+// MARK: - Tokenizer case-folding contract
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("Tokenizer: capitalized queries fold to the same encoding as lowercase")
+    func testTokenizerCaseFolding() throws {
+        let tokenizerURL = Self.repoRoot.appendingPathComponent("Echo/Resources/Models/siglip2-tokenizer.json")
+        let tokenizer = try SigLIP2Tokenizer(tokenizerJSON: try Data(contentsOf: tokenizerURL))
+        #expect(tokenizer.encode("Waterfall") == tokenizer.encode("waterfall"))
+        #expect(tokenizer.encode("Quarterly Report") == tokenizer.encode("quarterly report"))
+    }
+}
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("mapFused: cross-channel comparison happens after per-channel calibration")
+    @MainActor
+    func testMapFusedCrossChannelCalibration() {
+        let memID = UUID()
+        let memory = Memory(
+            memoryId: memID, sourceLocator: "PHAsset/cross-channel",
+            canonicalText: "red flower", sourceType: "photo"
+        )
+        let fused = FusedSearchResult(
+            memory: memory, rrfScore: 0.041,
+            provenance: [
+                ChannelRankProvenance(channel: .textDense, rank: 1, generationID: "text_dense/e5-v1", vectorID: memID, nativeScore: 0.55),
+                ChannelRankProvenance(channel: .visionDense, rank: 2, generationID: "vision_dense/siglip2-v1", vectorID: memID, nativeScore: 0.1534),
+            ],
+            routeSnapshotID: "r-ui"
+        )
+        let model = SearchViewModel.mapFused(fused)
+        #expect(abs(model.cosineSimilarity - 0.821) < 0.01,
+                "calibrated SigLIP2 match (~0.82) must outrank the raw E5 score (0.55)")
     }
 }

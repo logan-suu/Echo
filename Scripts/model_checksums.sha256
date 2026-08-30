@@ -1,12 +1,14 @@
+#   bash Scripts/prepare_models.sh --generate-checksums
+# 3F.3b (2026-08-09): whisper.cpp 参考转写音频 + runtime 依赖文件（ADR-009 决策 2 登记）
 # Echo Model SHA256 Checksum Manifest (R-4.2 reproducible delivery)
 # Format: <sha256>  <filename>
 # Generated from verified local artifacts (2026-08-06). Regenerate with:
-#   bash Scripts/prepare_models.sh --generate-checksums
+59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e  jfk.wav
+7d241bb3becad218f211f480487f491df4f8c0a472ecf7afdec5615815a301f1  model.safetensors
+818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7  whisper-tiny-q5_1.gguf
+8311a1a016001b0df4e7d68e94749958049534a6e767fa228a6db655a86e1884  SigLIP2TextBasePatch32.mlmodelc
+94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d  ThirdParty/whisper.cpp/LICENSE
 af2f01cb5f0cbf22832c9cec2881ea730df4eb65ecd20334245cf823edca11b9  Manifest.json
 cd98e5698b201ba914efb8c18b6709fa8735ab71dcad8d2b431e52e8bf68d932  tokenizer.json
-818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7  whisper-tiny-q5_1.gguf
-7d241bb3becad218f211f480487f491df4f8c0a472ecf7afdec5615815a301f1  model.safetensors
 d22d85e6bc99cd118b47773afe19101724ab514329ae42f62ca4e59ff2805eb1
-# 3F.3b (2026-08-09): whisper.cpp 参考转写音频 + runtime 依赖文件（ADR-009 决策 2 登记）
-59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e  jfk.wav
-94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d  ThirdParty/whisper.cpp/LICENSE
+d22d85e6bc99cd118b47773afe19101724ab514329ae42f62ca4e59ff2805eb1  SigLIP2BasePatch32.mlmodelc

@@ -5746,6 +5746,70 @@
           }
         }
       }
+    },
+    "Importing photos…": {
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing photos…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入照片…"
+          }
+        }
+      }
+    },
+    "%@ items indexed — tap to re-sync": {
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ items indexed — tap to re-sync"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 项已索引 — 轻点以重新同步"
+          }
+        }
+      }
+    },
+    "%lld items indexed — tap to re-sync": {
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items indexed — tap to re-sync"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项已索引 — 轻点以重新同步"
+          }
+        }
+      }
+    },
+    "Not authorized — tap to grant access": {
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not authorized — tap to grant access"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未授权 — 轻点以授权访问"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
