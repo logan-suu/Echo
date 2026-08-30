@@ -89,6 +89,10 @@ struct PhotoTextSearchQualityTests {
 // MARK: - WP7 Steps 2a-2d：synthetic 拒绝 + 路由 digest 预检
 
 extension PhotoTextSearchQualityTests {
+    private static func textTowerMLModelCAvailable() -> Bool {
+        Bundle.main.url(forResource: "SigLIP2TextBasePatch32", withExtension: "mlmodelc") != nil
+    }
+
 
     @Test("Harness rejects synthetic fixtures (WP7 step 2a/2b)")
     func testHarnessRejectsSyntheticVectors() throws {
@@ -296,7 +300,8 @@ extension PhotoTextSearchQualityTests {
         #expect(ids.count == SigLIP2Tokenizer.maxLength)
     }
 
-    @Test("SigLIP2 text tower real inference on simulator (WP4 5c/5d)")
+    @Test("SigLIP2 text tower real inference on simulator (WP4 5c/5d)",
+          .enabled(if: textTowerMLModelCAvailable()))
     func testSigLIP2TextTowerRealInference() async throws {
         let embedder = SigLIP2TextEmbedder()
         let vector = try await embedder.embedVisionQuery(
@@ -353,7 +358,8 @@ extension PhotoTextSearchQualityTests {
 
 extension PhotoTextSearchQualityTests {
 
-    @Test("E2E smoke: real image → vision ingest → text query → multichannel hit (闭环验证)")
+    @Test("E2E smoke: real image → vision ingest → text query → multichannel hit (闭环验证)",
+          .enabled(if: textTowerMLModelCAvailable()))
     @MainActor
     func testEndToEndImageSemanticSmoke() async throws {
         let db = DatabaseManager.shared
