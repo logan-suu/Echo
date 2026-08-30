@@ -421,7 +421,9 @@ extension PhotoTextSearchQualityTests {
         #expect(!fused.isEmpty, "E2E: the ingested image must be retrievable by text query")
         let hitRank = fused.firstIndex { $0.memory.memoryId == memID }
         #expect(hitRank != nil, "the ingested photo must appear in top-K results")
-        #expect(fused.first?.provenance.contains(where: { $0.channel == .visionDense }) == true,
+        // Provenance must be checked on the matched result (hitRank), not
+        // fused.first — the photo is not guaranteed rank-1 after top-K relaxation.
+        #expect(hitRank.map { fused[$0].provenance.contains(where: { $0.channel == .visionDense }) } == true,
                 "hit must carry visionDense provenance")
     }
 }
