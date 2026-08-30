@@ -19,6 +19,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # ═══════════════════════════════════════════════════════════
   # Job 1: Build + Lint + Test + Coverage
@@ -256,6 +259,8 @@ jobs:
       - name: Run tests with coverage
         run: |
           set -o pipefail
+          # DEF-64-004: XCUITest fixtures fail identically on local and CI
+          # (pre-existing, unrelated to PR code); triage is a separate round.
           xcodebuild test \
             -project Echo.xcodeproj \
             -scheme Echo \
@@ -265,8 +270,6 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             -parallel-testing-enabled NO \
             -skip-testing:EchoTests/ModelBundleTests \
-            # DEF-64-004: XCUITest fixtures fail identically on local and CI
-            # (pre-existing, unrelated to PR code); triage is a separate round.
             -skip-testing:EchoUITests \
             2>&1 | tee test.log
         env:
