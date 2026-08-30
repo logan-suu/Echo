@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.3.1",
-  "_last_updated": "2026-08-25",
+  "_last_updated": "2026-08-30T06:05:00Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -1417,6 +1417,26 @@
       "recheck_trigger": "Phase integration scan or any App Store archival attempt",
       "resolved_at": "2026-08-25",
       "resolved_by": "agent disposal commit (hash recorded in evidence ledger)"
+    },
+    {
+      "id": "DEF-64-002",
+      "pr": 64,
+      "title": "Pure-lexical fused results display 0% match strength (all provenance nativeScore == nil)",
+      "severity": "🟡",
+      "location": "Echo/UI/Search/SearchViewModel.swift:265-275 (mapFused bestChannel compactMap)",
+      "reason": "mapFused derives match strength from the strongest channel's nativeScore; lexical-channel provenance carries nativeScore: nil (SearchChannelAdapters.swift:466), so a lexical-only result falls to the default branch with 0. No production impact today: the lexical channel is a scaffold (LexicalEngine throws extensionLoadFailed) and cannot contribute hits. Flagged during PR #64 review, not fixed in this PR (scope is SigLIP2 text tower).",
+      "defer_to": "lexical channel activation (R-3.6 JiebaFTS5 integration) — assign lexical results a displayable fallback strength or surface a lexical provenance badge",
+      "deferred_at": "2026-08-30"
+    },
+    {
+      "id": "DEF-64-003",
+      "pr": 64,
+      "title": "CI 'Prepare model assets (required lane)' fails: pip install huggingface_hub error swallowed by '|| true', downstream coverage gate loses TestResults.xcresult",
+      "severity": "🟡",
+      "location": "Scripts/prepare_models.sh (python3 -c 'from huggingface_hub import snapshot_download') + .github/workflows ci.yml 'Prepare model assets' step",
+      "reason": "Pre-existing infrastructure failure on dev-1.0 (runs of 2026-08-29 fail identically), NOT introduced by PR #64. pip install exits non-zero ('ModuleNotFoundError: No module named huggingface_hub') but '|| true' masks it, so the required lane dies at import time and the coverage gate cannot find TestResults.xcresult. Blocks the §15.2 merge gate for every PR until fixed.",
+      "defer_to": "Immediate dedicated infra fix (remove '|| true' / pin correct python+pip invocation / use pip3 with explicit interpreter); must land before PR #64 merge per §15.2 CI gate",
+      "deferred_at": "2026-08-30"
     }
   ]
 }
