@@ -325,12 +325,15 @@ extension PhotoTextSearchQualityTests {
             memoryId: memID, sourceLocator: "PHAsset/ui-map",
             canonicalText: "red flower", sourceType: "photo"
         )
-        // 双通道 rank-1 = RRF 理论最大（2 × 1/61）→ 归一化后应为 1.0
+        // Match strength comes from the strongest channel's nativeScore
+        // (native semantic similarity). The RRF score only orders results and
+        // must not leak into the displayed percentage — it is rank-based and
+        // would render an identical sequence for every query.
         let fused = FusedSearchResult(
             memory: memory, rrfScore: 0.0328,
             provenance: [
                 ChannelRankProvenance(channel: .textDense, rank: 1, generationID: "text_dense/e5-v1", vectorID: memID, nativeScore: nil),
-                ChannelRankProvenance(channel: .visionDense, rank: 1, generationID: "vision_dense/siglip2-v1", vectorID: memID, nativeScore: nil),
+                ChannelRankProvenance(channel: .visionDense, rank: 2, generationID: "vision_dense/siglip2-v1", vectorID: memID, nativeScore: 0.1534),
             ],
             routeSnapshotID: "r-ui"
         )
@@ -338,7 +341,10 @@ extension PhotoTextSearchQualityTests {
         #expect(model.id == memID)
         #expect(model.assetId == "PHAsset/ui-map")
         #expect(model.sourceType == "photo")
-        #expect(model.cosineSimilarity == 1.0, "RRF score must normalize to relative match strength (theoretical max)")
+        // SigLIP2 logistic calibration: 0.1534 native cosine maps to ~0.82
+        // (strong-match band), keeping noise results near the low end.
+        #expect(abs(model.cosineSimilarity - 0.821) < 0.01,
+                "match strength must carry the strongest channel's native similarity, SigLIP2-calibrated")
         #expect(model.originalText == "red flower")
     }
 }

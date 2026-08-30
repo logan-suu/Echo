@@ -243,16 +243,36 @@ final class SearchViewModel {
 
     /// 提交搜索查询。
     ///
+    /// SigLIP2 match-band calibration. Sigmoid-loss cosines live in a narrow
+    /// band (measured on the pinned checkpoint: noise floor ~0.03, weak
+    /// ~0.05, strong semantic match ~0.12-0.15 for waterfall/flower/
+    /// quarterly-report fixtures). Logistic mapping centered on the
+    /// match/noise boundary (0.10) pushes strong matches into the 60-85%
+    /// band and suppresses noise to 10-20%; the fixed curve keeps
+    /// cross-query distribution differences visible. Other channels (E5
+    /// etc.) already span 0-1 and pass through uncalibrated.
+    private static let siglip2MatchCenter: Float = 0.10
+    private static let siglip2MatchSteepness: Float = 0.035
+
+    private static func calibratedMatch(_ cosine: Float) -> Float {
+        let x = Double((cosine - siglip2MatchCenter) / siglip2MatchSteepness)
+        return Float(1.0 / (1.0 + Foundation.exp(-x)))
+    }
+
     /// WP4 route ENABLED：FusedSearchResult → UI 模型映射（多通道路径采用）。
-    /// cosineSimilarity 字段承载 RRF 融合分数（展示适配待 UI 侧跟进）。
+    /// cosineSimilarity 承载最强通道的原生语义相似度；RRF 分数仅决定排序
+    /// （rank-based），若用于展示会产生与查询无关的恒定百分比序列。
     static func mapFused(_ result: FusedSearchResult) -> SearchResultModel {
-        // 经 SearchResultItem 中转复用 init(from:) 的全字段映射。
-        // RRF 分数归一化到 0~1（相对理论最大：贡献通道数 × 1/(rrfK+1)），
-        // 使 UI 的 match 百分比保持「相对匹配强度」语义。
-        let theoreticalMax = Double(result.provenance.count) / 61.0
-        let normalized = theoreticalMax > 0
-            ? min(1.0, result.rrfScore / theoreticalMax)
-            : 0.0
+        let bestChannel = result.provenance
+            .compactMap { prov in prov.nativeScore.map { (prov.channel, $0) } }
+            .max { $0.1 < $1.1 }
+        let matchStrength: Float
+        switch bestChannel?.0 {
+        case .visionDense?:
+            matchStrength = calibratedMatch(bestChannel?.1 ?? 0)
+        default:
+            matchStrength = min(1.0, bestChannel?.1 ?? 0)
+        }
         let item = SearchResultItem(
             id: result.memory.memoryId,
             assetId: result.memory.sourceLocator,
@@ -260,7 +280,7 @@ final class SearchViewModel {
             timestamp: result.memory.createdAt.timeIntervalSince1970,
             originalText: result.memory.canonicalText,
             sourceLanguage: nil,
-            cosineSimilarity: Float(normalized)
+            cosineSimilarity: matchStrength
         )
         return SearchResultModel(from: item)
     }
