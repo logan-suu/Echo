@@ -1436,6 +1436,19 @@
       "location": "Scripts/prepare_models.sh (python3 -c 'from huggingface_hub import snapshot_download') + .github/workflows ci.yml 'Prepare model assets' step",
       "reason": "Pre-existing infrastructure failure on dev-1.0 (runs of 2026-08-29 fail identically), NOT introduced by PR #64. pip install exits non-zero ('ModuleNotFoundError: No module named huggingface_hub') but '|| true' masks it, so the required lane dies at import time and the coverage gate cannot find TestResults.xcresult. Blocks the §15.2 merge gate for every PR until fixed.",
       "defer_to": "Immediate dedicated infra fix (remove '|| true' / pin correct python+pip invocation / use pip3 with explicit interpreter); must land before PR #64 merge per §15.2 CI gate",
+      "deferred_at": "2026-08-30",
+      "status": "resolved",
+      "resolved_at": "2026-08-30",
+      "resolution": "Root causes fixed and verified on CI: PEP 668 (setup-python), mirror metadata (official endpoint), PROJECT_ROOT export, presence-check tightening, hub bump, whisper source switch. Prepare lane and Static Analysis now pass; localization gate debt also fixed."
+    },
+    {
+      "id": "DEF-64-004",
+      "pr": 64,
+      "title": "XCUITest fixtures failing identically on local and CI (BackgroundTaskPanelUITests, OnboardingUITests)",
+      "severity": "🟡",
+      "location": "EchoUITests/BackgroundTaskPanelUITests.swift, EchoUITests/OnboardingUITests.swift",
+      "reason": "Pre-existing failures unrelated to PR #64 changes (panel fixture chain). The CI test lane is reaching these tests for the first time ever; needs a dedicated triage round rather than blocking this PR.",
+      "defer_to": "Dedicated UI-test triage round after PR #64 merge",
       "deferred_at": "2026-08-30"
     }
   ]
