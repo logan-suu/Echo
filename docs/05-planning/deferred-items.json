@@ -1426,7 +1426,8 @@
       "location": "Echo/UI/Search/SearchViewModel.swift:265-275 (mapFused bestChannel compactMap)",
       "reason": "mapFused derives match strength from the strongest channel's nativeScore; lexical-channel provenance carries nativeScore: nil (SearchChannelAdapters.swift:466), so a lexical-only result falls to the default branch with 0. No production impact today: the lexical channel is a scaffold (LexicalEngine throws extensionLoadFailed) and cannot contribute hits. Flagged during PR #64 review, not fixed in this PR (scope is SigLIP2 text tower).",
       "defer_to": "lexical channel activation (R-3.6 JiebaFTS5 integration) — assign lexical results a displayable fallback strength or surface a lexical provenance badge",
-      "deferred_at": "2026-08-30"
+      "deferred_at": "2026-08-30",
+      "last_checked_at": "2026-08-30T17:02:15Z"
     },
     {
       "id": "DEF-64-003",
@@ -1439,7 +1440,8 @@
       "deferred_at": "2026-08-30",
       "status": "resolved",
       "resolved_at": "2026-08-30",
-      "resolution": "Root causes fixed and verified on CI: PEP 668 (setup-python), mirror metadata (official endpoint), PROJECT_ROOT export, presence-check tightening, hub bump, whisper source switch. Prepare lane and Static Analysis now pass; localization gate debt also fixed."
+      "resolution": "Root causes fixed and verified on CI: PEP 668 (setup-python), mirror metadata (official endpoint), PROJECT_ROOT export, presence-check tightening, hub bump, whisper source switch. Prepare lane and Static Analysis now pass; localization gate debt also fixed.",
+      "last_checked_at": "2026-08-30T17:02:15Z"
     },
     {
       "id": "DEF-64-004",
@@ -1449,7 +1451,8 @@
       "location": "EchoUITests/BackgroundTaskPanelUITests.swift, EchoUITests/OnboardingUITests.swift",
       "reason": "Pre-existing failures unrelated to PR #64 changes (panel fixture chain). The CI test lane is reaching these tests for the first time ever; needs a dedicated triage round rather than blocking this PR.",
       "defer_to": "Dedicated UI-test triage round after PR #64 merge",
-      "deferred_at": "2026-08-30"
+      "deferred_at": "2026-08-30",
+      "last_checked_at": "2026-08-30T17:02:15Z"
     },
     {
       "id": "DEF-64-005",
@@ -1459,7 +1462,8 @@
       "location": "EchoTests/Phase3F/3F.7_DeviceMigrationTests.swift:309",
       "reason": "Pre-existing failure locally and on CI, unrelated to PR #64 (audit contentHash pipeline vs migration test expectation). Marked withKnownIssue; needs a dedicated root-cause round on the audit writer.",
       "defer_to": "Dedicated audit-pipeline triage round after PR #64 merge",
-      "deferred_at": "2026-08-30"
+      "deferred_at": "2026-08-30",
+      "last_checked_at": "2026-08-30T17:02:15Z"
     },
     {
       "id": "DEF-64-006",
@@ -1469,7 +1473,8 @@
       "location": "Echo/UI/Search/SearchViewModel.swift:274-278",
       "reason": "mapFused stores the calibrated display score in SearchResultItem.cosineSimilarity; recordLike/recordDislike forward it to FeedbackPipeline where the raw native cosine is contractually required (similarity thresholds). Fix requires a SearchResultItem contract change touching fixtures — dedicated round.",
       "defer_to": "Feedback-contract round after PR #64 merge",
-      "deferred_at": "2026-08-30"
+      "deferred_at": "2026-08-30",
+      "last_checked_at": "2026-08-30T17:02:15Z"
     },
     {
       "id": "DEF-64-007",
@@ -1479,7 +1484,8 @@
       "location": "PhotoTextSearchIdentityTests (subjectHash, Consent purge), PhotoTextSearchIntegrationTests (ambiguous RRF)",
       "reason": "These tests pass in isolated local runs but fail in the CI full-suite run (1233 tests) — shared DatabaseManager state/order coupling surfaced by the first-ever full CI run. Marked withKnownIssue; needs a dedicated test-isolation round.",
       "defer_to": "Dedicated test-isolation triage round after PR #64 merge",
-      "deferred_at": "2026-08-30"
+      "deferred_at": "2026-08-30",
+      "last_checked_at": "2026-08-30T17:02:15Z"
     }
   ]
 }
