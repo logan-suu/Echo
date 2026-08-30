@@ -226,7 +226,7 @@ download_siglip2() {
     # WP7: checkpoint 为转换源工件，驻留 PinnedModels/（资源目录外的同名
     # tokenizer.json 会与 E5 资源冲突——Multiple commands produce tokenizer.json）
     local ckpt="$PROJECT_ROOT/PinnedModels/siglip2-base-patch32-256"
-    if [ -d "$ckpt" ] && [ "$MODE" != "generate" ]; then
+    if [ -f "$ckpt/model.safetensors" ] && [ "$MODE" != "generate" ]; then
         log_info "  Already present — verifying checksum"
         verify_or_record "$ckpt/model.safetensors" || return 1
         return 0

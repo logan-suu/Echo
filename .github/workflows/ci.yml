@@ -84,7 +84,7 @@ jobs:
           # lack the metadata headers huggingface_hub validates (DEF-64-003).
           HF_ENDPOINT: https://huggingface.co
         run: |
-          pip install --quiet 'huggingface_hub==0.24.0'
+          pip install --quiet 'huggingface_hub>=0.34,<2.0'
           bash Scripts/prepare_models.sh
 
       # ── Install SwiftLint ──
