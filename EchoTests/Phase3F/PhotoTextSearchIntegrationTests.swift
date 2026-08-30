@@ -13,7 +13,8 @@ import Testing
 @testable import Echo
 
 /// WP4 生产多通道查询集成测试。
-@Suite("PhotoTextSearchIntegration")
+@Suite("PhotoTextSearchIntegration",
+       .disabled(if: ProcessInfo.processInfo.environment["ECHO_SKIP_FULL_SUITE"] != nil))
 struct PhotoTextSearchIntegrationTests {
 
     // MARK: - WP4 Step 0a/0b: 十二值契约 nonisolated 表测试
