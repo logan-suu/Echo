@@ -152,7 +152,7 @@ download_e5() {
     [ "$MODE" = "verify" ] && { log_error "Missing: $emb"; log_error "gate-reason: missing-e5"; return 1; }
 
     log_info "  Downloading from $E5_REPO @ $E5_REVISION ..."
-    HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" E5_REPO="$E5_REPO" E5_REVISION="$E5_REVISION" python3 -c "
+    HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}" MODELS_DIR="$MODELS_DIR" E5_REPO="$E5_REPO" E5_REVISION="$E5_REVISION" python3 -c "
 import os, shutil, sys
 from huggingface_hub import snapshot_download
 target = os.environ['MODELS_DIR']
@@ -236,7 +236,7 @@ download_siglip2() {
 
     log_warn "  SigLIP2 is a conversion source (R-3.2). Core ML conversion required before production use."
     log_info "  Downloading from $SIGLIP2_REPO @ $SIGLIP2_REVISION ..."
-    HF_ENDPOINT=https://hf-mirror.com MODELS_DIR="$MODELS_DIR" SIGLIP2_REPO="$SIGLIP2_REPO" SIGLIP2_REVISION="$SIGLIP2_REVISION" python3 -c "
+    HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}" MODELS_DIR="$MODELS_DIR" SIGLIP2_REPO="$SIGLIP2_REPO" SIGLIP2_REVISION="$SIGLIP2_REVISION" python3 -c "
 import os, shutil, sys
 from huggingface_hub import snapshot_download
 target = os.environ['MODELS_DIR']

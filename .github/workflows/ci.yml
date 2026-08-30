@@ -79,6 +79,10 @@ jobs:
       # missing-e5 | missing-vision | preparation-failure must each fail this
       # gate with its named reason while the mutation runner itself exits 0.
       - name: Prepare model assets (required lane)
+        env:
+          # Runners resolve huggingface.co directly; the mirror's responses
+          # lack the metadata headers huggingface_hub validates (DEF-64-003).
+          HF_ENDPOINT: https://huggingface.co
         run: |
           pip install --quiet 'huggingface_hub==0.24.0'
           bash Scripts/prepare_models.sh
