@@ -764,9 +764,11 @@ struct PhotoTextSearchIdentityTests {
 
         try await repo.purgeEverythingForConsent()
 
-        withKnownIssue {
-            #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a", routeSnapshotID: "snap-test")) == nil)
-            #expect(try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b", routeSnapshotID: "snap-test")) == nil)
+        let purgedA = try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "a", routeSnapshotID: "snap-test"))
+        let purgedB = try await cache.lookup(key: SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "b", routeSnapshotID: "snap-test"))
+        await withKnownIssue {
+            #expect(purgedA == nil)
+            #expect(purgedB == nil)
         }
         #expect(try await db.loadDeletionJournals(memoryId: m1).isEmpty)
         #expect(try await db.loadDeletionJournals(memoryId: m2).isEmpty)
