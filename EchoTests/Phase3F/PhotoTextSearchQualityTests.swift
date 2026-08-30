@@ -461,3 +461,27 @@ extension PhotoTextSearchQualityTests {
         #expect(tokenizer.encode("Quarterly Report") == tokenizer.encode("quarterly report"))
     }
 }
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("mapFused: cross-channel comparison happens after per-channel calibration")
+    @MainActor
+    func testMapFusedCrossChannelCalibration() {
+        let memID = UUID()
+        let memory = Memory(
+            memoryId: memID, sourceLocator: "PHAsset/cross-channel",
+            canonicalText: "red flower", sourceType: "photo"
+        )
+        let fused = FusedSearchResult(
+            memory: memory, rrfScore: 0.041,
+            provenance: [
+                ChannelRankProvenance(channel: .textDense, rank: 1, generationID: "text_dense/e5-v1", vectorID: memID, nativeScore: 0.55),
+                ChannelRankProvenance(channel: .visionDense, rank: 2, generationID: "vision_dense/siglip2-v1", vectorID: memID, nativeScore: 0.1534),
+            ],
+            routeSnapshotID: "r-ui"
+        )
+        let model = SearchViewModel.mapFused(fused)
+        #expect(abs(model.cosineSimilarity - 0.821) < 0.01,
+                "calibrated SigLIP2 match (~0.82) must outrank the raw E5 score (0.55)")
+    }
+}

@@ -263,16 +263,19 @@ final class SearchViewModel {
     /// cosineSimilarity 承载最强通道的原生语义相似度；RRF 分数仅决定排序
     /// （rank-based），若用于展示会产生与查询无关的恒定百分比序列。
     static func mapFused(_ result: FusedSearchResult) -> SearchResultModel {
-        let bestChannel = result.provenance
-            .compactMap { prov in prov.nativeScore.map { (prov.channel, $0) } }
-            .max { $0.1 < $1.1 }
-        let matchStrength: Float
-        switch bestChannel?.0 {
-        case .visionDense?:
-            matchStrength = calibratedMatch(bestChannel?.1 ?? 0)
-        default:
-            matchStrength = min(1.0, bestChannel?.1 ?? 0)
-        }
+        // Calibrate each channel's nativeScore BEFORE comparing — SigLIP2's
+        // narrow band (0.03-0.15) and E5's 0-1 span are not directly
+        // comparable raw, and an uncalibrated max would always let textDense
+        // win the display path.
+        let matchStrength = result.provenance
+            .compactMap { prov -> Float? in
+                guard let native = prov.nativeScore else { return nil }
+                switch prov.channel {
+                case .visionDense: return calibratedMatch(native)
+                default: return min(1.0, native)
+                }
+            }
+            .max() ?? 0
         let item = SearchResultItem(
             id: result.memory.memoryId,
             assetId: result.memory.sourceLocator,
