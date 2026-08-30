@@ -1450,6 +1450,16 @@
       "reason": "Pre-existing failures unrelated to PR #64 changes (panel fixture chain). The CI test lane is reaching these tests for the first time ever; needs a dedicated triage round rather than blocking this PR.",
       "defer_to": "Dedicated UI-test triage round after PR #64 merge",
       "deferred_at": "2026-08-30"
+    },
+    {
+      "id": "DEF-64-005",
+      "pr": 64,
+      "title": "SRC-007 AC-7: deviceMigrationCompleted audit contentHash nil",
+      "severity": "🟡",
+      "location": "EchoTests/Phase3F/3F.7_DeviceMigrationTests.swift:309",
+      "reason": "Pre-existing failure locally and on CI, unrelated to PR #64 (audit contentHash pipeline vs migration test expectation). Marked withKnownIssue; needs a dedicated root-cause round on the audit writer.",
+      "defer_to": "Dedicated audit-pipeline triage round after PR #64 merge",
+      "deferred_at": "2026-08-30"
     }
   ]
 }
