@@ -64,6 +64,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-models-
 
+      # ── Set up Python (prepare-models dependency) ──
+      # macOS runners ship a PEP 668 externally-managed system python where
+      # plain `pip install` is rejected; setup-python provides a portable
+      # interpreter so the dependency install actually succeeds.
+      - name: Set up Python for model preparation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       # ── Prepare model assets (R-4.3) ──
       # REQUIRED lane (WP1 steps 7b/7d/8b, root cause F): preparation failures
       # must FAIL CI. Mutation coverage: photo_search_ci_mutation.py --case
@@ -71,7 +80,7 @@ jobs:
       # gate with its named reason while the mutation runner itself exits 0.
       - name: Prepare model assets (required lane)
         run: |
-          pip install --quiet 'huggingface_hub==0.24.0' || true
+          pip install --quiet 'huggingface_hub==0.24.0'
           bash Scripts/prepare_models.sh
 
       # ── Install SwiftLint ──
