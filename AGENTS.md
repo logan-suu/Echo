@@ -1,15 +1,15 @@
-# Echo · 回响：OpenCode 协作开发规约
+# Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.29
-**生效日期**：2026-08-02  
-**适用对象**：所有参与 Echo 项目开发的 AI Agent（OpenCode 桌面版 / Codex / Cursor / Claude）及人类开发者  
+**版本**：v5.30
+**生效日期**：2026-08-30
+**适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
 **对应规格**：Echo v4.6 全量用户故事与验收标准规格书  
 **架构基准**：Cognitive Pipeline + Observable ViewModel + Actor Isolation  
 **任务追踪**：`docs/05-planning/task-status.json` 记录所有任务执行状态  
 **文档索引**：`docs/INDEX.md` 提供文档摘要与模块速查  
-**GitHub 自动化**：OpenCode 桌面版通过 GitHub API 自动创建 PR、添加评论、管理标签，合并操作需人类审批
+**GitHub 自动化**：Codex 通过已认证的 `gh` CLI 创建 PR、添加评论、管理标签；合并操作需人类审批
 
 ---
 
@@ -37,7 +37,7 @@
 
 ### 0.2 任务类型 → 文档快速索引（Agent 必读）
 
-**使用方式**：收到任务后，先判断任务类型，按下表确定应读取的文档和章节，使用 `read_file` 工具**只读取相关章节**（而非整篇文档）。如果发现信息不足，再按需扩展读取范围。
+**使用方式**：收到任务后，先判断任务类型，按下表确定应读取的文档和章节，并通过当前环境可用的只读文件工具**只读取相关章节**（而非整篇文档）。如果发现信息不足，再按需扩展读取范围。
 
 | 任务类型                  | 应读取的文档                                           | 重点章节/关键词                                    |
 | ------------------------- | ------------------------------------------------------ | -------------------------------------------------- |
@@ -66,7 +66,7 @@
 ### 0.3 Agent 文档读取规范
 
 1. **启动时**：Agent 自动加载本文件（`AGENTS.md`），并**必须**读取 `docs/INDEX.md` 以建立全局文档认知，同时读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json` 以确认当前任务状态与延期任务。
-2. **执行任务时**：根据 §0.2 的映射表确定需要读取的文档和章节，使用 `read_file` 工具的 `offset` 和 `limit` 参数精准读取。
+2. **执行任务时**：根据 §0.2 的映射表确定需要读取的文档和章节，通过当前环境可用的文件读取工具精准读取所需范围。
 3. **引用原文**：在回复中必须**逐字粘贴**相关 AC 原文或架构约束原文。
 4. **禁止推断**：严禁使用“根据常规做法，我认为应该...”之类的推断。如果文档描述模糊，Agent 必须停止编码并向人类提出澄清问题。
 
@@ -141,10 +141,10 @@ Echo 是一个 **本地优先、隐私可审计、完全离线可用** 的端侧
 
 | 工具                               | 用途                | 配置要求                            |
 | ---------------------------------- | ------------------- | ----------------------------------- |
-| OpenCode 桌面版 / Codex / Cursor   | 代码生成与编辑      | 自动加载 `AGENTS.md`                |
+| Codex / OpenCode / Cursor          | 代码生成与编辑      | 自动加载 `AGENTS.md`                |
 | SwiftLint                          | 静态分析            | 配置文件与 AGENTS.md 同步           |
-| GitHub API（通过 OpenCode 桌面版） | PR 管理、评论、标签 | OpenCode 桌面版 GitHub OAuth 登录   |
-| 本地文档（`docs/`）                | 规格读取            | Agent 通过 `read_file` 工具直接读取 |
+| GitHub CLI (`gh`)                  | PR 管理、评论、标签 | `gh auth status` 必须有效           |
+| 本地文档（`docs/`）                | 规格读取            | Agent 通过可用的只读文件工具读取    |
 
 ---
 
@@ -680,7 +680,7 @@ PR 合并前必须通过:
 | 约定项 | 值 | 说明 |
 |--------|-----|------|
 | **Language Server** | `sourcekit-lsp` (Xcode 自带) | Swift 官方 LSP，无需单独安装 |
-| **配置文件** | `.opencode/lsp.json` | 指定 `sourcekit-lsp` 优先级为 100 |
+| **解析方式** | `xcrun --find sourcekit-lsp` | 使用当前 Xcode toolchain 自带的 Language Server |
 | **编译数据库** | `buildServer.json` | 由 `xcode-build-server` 生成，SourceKit-LSP 通过此文件访问 Xcode DerivedData 索引 |
 
 **生成方式**：
@@ -866,7 +866,7 @@ flowchart TD
     D -->|否| E[等待依赖任务完成]
     D -->|是| F[标记任务为 in_progress]
     F --> G[Step 1: 查阅 §0.2 任务类型映射表]
-    G --> H[Step 2: 使用 read_file 读取相关章节]
+    G --> H[Step 2: 精准读取相关章节]
     H --> I[Step 3: 逐字粘贴 AC/规则原文]
     I --> J{文档有冲突/模糊?}
     J -->|是| K[进入文档问题处理流程]
@@ -940,7 +940,7 @@ flowchart TD
 - [ ] Error injection tests (L1~L4 full coverage)
 
 ### GitHub Automation
-- [ ] OpenCode Desktop logged in to GitHub
+- [ ] `gh auth status` reports a valid GitHub login
 - [ ] PR auto-requested specified reviewer
 - [ ] All CI checks triggered and awaiting results
 ```
@@ -1028,13 +1028,13 @@ stateDiagram-v2
 
 #### 第 1 步：查阅文档并引用原文
 
-根据任务类型查询 §0.2 映射表，使用 `read_file` 读取相关文档章节，在回复中**逐字粘贴**相关 AC 或规则原文。
+根据任务类型查询 §0.2 映射表，精准读取相关文档章节，在回复中**逐字粘贴**相关 AC 或规则原文。
 
 **若发现文档问题**（矛盾、模糊、不可测、依赖缺失、技术过时），Agent **必须暂停**并执行 §12.4 文档问题处理流程。
 
 #### 第 2 步：编写测试用例
 
-使用 `write_to_file` 在 `EchoTests/Phase{N}/` 中创建测试文件，命名格式：`[任务ID]_[功能名]Tests.swift`（如 `2.1_PrivacyActorTests.swift`），测试方法命名含 AC 编号（如 `test_AC1_ExcludedAssetsWriteCondition`）。
+使用当前环境的补丁编辑工具在 `EchoTests/Phase{N}/` 中创建测试文件，命名格式：`[任务ID]_[功能名]Tests.swift`（如 `2.1_PrivacyActorTests.swift`），测试方法命名含 AC 编号（如 `test_AC1_ExcludedAssetsWriteCondition`）。
 
 **测试文件存放规范**：每个阶段（Phase）的任务对应的测试文件必须存放在 `EchoTests/Phase{阶段编号}/` 目录下。例如 Phase 2 的测试文件统一放在 `EchoTests/Phase2/`。阶段集成测试文件命名：`EchoTests/Phase{阶段ID}/Phase{阶段ID}IntegrationTests.swift`。
 
@@ -1067,12 +1067,12 @@ Related: US-XXX"
 git push origin {branch_name}
 ```
 
-#### 第 7 步：自动创建 PR（OpenCode 桌面版自动化）
+#### 第 7 步：自动创建 PR（Codex + `gh`）
 
-OpenCode 桌面版自动执行以下操作：
+Codex 在 `gh auth status` 有效时执行以下操作：
 
-1. 使用 GitHub API 创建 PR，标题和描述遵循 §3.3 规范
-2. 自动请求配置的 reviewer（在桌面版设置中配置）
+1. 使用 `gh pr create` 创建 PR，标题和描述遵循 §3.3 规范
+2. 若任务或仓库文档明确给出 reviewer，使用 `gh pr edit --add-reviewer` 请求审查；不得猜测 reviewer
 3. 在 PR 描述中插入 AC 覆盖对照表
 4. 自动添加标签（如 `status:review`, `US-XXX`）
 5. 在 PR 中添加评论，包含：
@@ -1087,7 +1087,7 @@ Agent **必须等待**人类 reviewer 的批准。在等待期间：
 
 - Agent 不自动合并 PR
 - Agent 可以响应 PR 中的评论
-- Agent 可以在测试失败时自动推送修复（在桌面版中手动重新执行任务）
+- Agent 可以在测试失败时按当前任务授权推送修复；需要新指令时停止并等待用户继续
 
 #### 第 9 步：人类合并后更新状态
 
@@ -1203,7 +1203,7 @@ Agent 在创建或修改核心架构文件时，**必须在文件头部注入溯
 在编写任何业务代码之前，Agent 必须严格执行以下步骤：
 
 1. **查阅映射表**：根据任务类型查阅 §0.2 的任务类型 → 文档快速索引
-2. **读取原文**：使用 `read_file` 工具读取对应文档章节
+2. **读取原文**：使用当前环境可用的只读文件工具读取对应文档章节
 3. **原文引用**：在回复中**逐字粘贴**本次涉及的 AC 原文或架构约束原文
 4. **禁止推断**：严禁使用“根据常规做法，我认为应该...”之类的推断
 
@@ -1260,9 +1260,9 @@ ADR 存入 `docs/decisions/`，Agent 在遇到相关上下文时自动加载。
 
 ---
 
-## 15. GitHub 自动化操作规约（OpenCode 桌面版专用）
+## 15. GitHub 自动化操作规约（Codex + `gh`）
 
-> **核心原则**：OpenCode 桌面版通过 GitHub API 自动化执行常规 GitHub 操作以提升效率，但**合并操作必须由人类手动执行**，确保代码质量和安全性。
+> **核心原则**：Codex 通过已认证的 `gh` CLI 自动化执行常规 GitHub 操作，但**合并操作必须由人类手动执行**，确保代码质量和安全性。若 `gh auth status` 无效，Agent 必须停止外部 GitHub 写操作并要求人类重新认证。
 
 ### 15.1 操作权限矩阵
 
@@ -1272,7 +1272,7 @@ ADR 存入 `docs/decisions/`，Agent 在遇到相关上下文时自动加载。
 | **提交代码**     | 任务状态变为 `review`      | ❌ 自动           | Commit message 遵循 §3.2 规范           |
 | **创建 PR**      | 任务状态变为 `review`      | ❌ 自动           | PR 标题和描述遵循 §3.3 规范；**PR base 必须为 `dev-1.0`，禁止直接向 `main` 发起 PR** |
 | **添加 PR 评论** | 任务状态变更 / CI 完成     | ❌ 自动           | 用于通知、状态更新、测试结果            |
-| **请求 PR 审查** | PR 创建后                  | ❌ 自动           | 自动请求桌面版设置中配置的 reviewer     |
+| **请求 PR 审查** | PR 创建后                  | ❌ 自动           | 仅请求任务或仓库文档明确给出的 reviewer |
 | **添加 PR 标签** | PR 创建 / 状态变更         | ❌ 自动           | 如 `status:review`, `US-XXX`, `phase-2` |
 | **更新 PR 描述** | 文档/代码变更后            | ❌ 自动           | 同步更新 AC 覆盖表                      |
 | **更新任务状态** | PR 事件触发                | ❌ 自动           | 同步更新 task-status.json               |
@@ -1283,7 +1283,7 @@ ADR 存入 `docs/decisions/`，Agent 在遇到相关上下文时自动加载。
 
 ### 15.2 合并前强制门禁
 
-OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行合并前，必须确认以下所有条件：
+Codex **在任何情况下都不得自动合并 PR**。人类执行合并前，必须确认以下所有条件：
 
 1. ✅ 所有 CI 检查通过（单元测试、集成测试、SwiftLint、覆盖率）
 2. ✅ `task-status.json` 中对应任务状态为 `review`
@@ -1300,15 +1300,15 @@ OpenCode 桌面版**在任何情况下都不得自动合并 PR**。人类执行�
   - 文档变更摘要（如有）
 - **任务状态变更时**：自动在 PR 中添加状态更新评论
 - **文档同步完成时**：自动在 PR 中添加“文档已同步”评论
-- **CI 完成时**：自动更新 PR 中的检查状态（桌面版需手动刷新或触发）
+- **CI 完成时**：使用 `gh pr checks` 读取并报告检查状态
 
 ### 15.4 异常处理
 
-| 异常场景            | OpenCode 桌面版行为            | 人类介入方式                     |
+| 异常场景            | Codex 行为                      | 人类介入方式                     |
 | ------------------- | ------------------------------ | -------------------------------- |
 | **CI 失败**         | 在 PR 中评论失败原因，等待修复 | 查看失败日志，指导修复           |
 | **合并冲突**        | 在 PR 中标记冲突，不自动解决   | 手动解决冲突或指示 Agent 处理    |
-| **权限不足**        | 记录错误，通知人类             | 检查 GitHub OAuth 登录状态和权限 |
+| **权限不足**        | 记录错误，通知人类             | 运行 `gh auth login -h github.com` |
 | **reviewer 未响应** | 24 小时后自动提醒              | 手动联系 reviewer 或更换         |
 | **PR 长时间未合并** | 每周提醒一次                   | 评估是否合并或关闭               |
 
@@ -1407,29 +1407,29 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 
 长任务（build、test、XCUITest）通过 `TaskQueueActor` 串行入队，进度通过 `ProgressActor` 持久化到 SQLite TaskProgress 表。
 
-### 17.5 Phase 3 UI 专用命令
+### 17.5 Phase 3 UI 专用 Skills
 
-| 命令 | 用途 | 存在 |
+| Skill | 用途 | 存在 |
 |------|------|:---:|
-| `/ui-bootstrap-build-echo <task-id>` | Phase 3 UI 实现入口（完整流水线 → 双设备 Live Sim Review：17 Pro iOS 26 + 16 Pro iOS 18） | ✅ 已物化 |
-| `/ui-status-echo` | 只读双状态查询 | ✅ 已物化 |
-| `/ui-retry-echo <task-id>` | 受限阶段重试 | ✅ 已物化 |
+| `$ui-bootstrap-build-echo <task-id>` | Phase 3 UI 实现入口（完整流水线 → 双设备 Live Sim Review：17 Pro iOS 26 + 16 Pro iOS 18） | ✅ 已物化 |
+| `$ui-status-echo` | 只读双状态查询 | ✅ 已物化 |
+| `$ui-retry-echo <task-id>` | 受限阶段重试 | ✅ 已物化 |
 
-**现有命令适配**：`/init-session-echo`（UI 分支：只读初始化不选任务）、`/next-task-echo`（UI handoff：只建立 `selected` checkpoint）。
+**现有 skill 适配**：`$init-session-echo`（UI 分支：只读初始化不选任务）、`$next-task-echo`（UI handoff：只建立 `selected` checkpoint）。
 
-**禁止**：`/do-task-echo` 对 Phase 3 UI 任务无效。Phase 3 UI 任务必须通过 `/ui-bootstrap-build-echo` 执行。
+**禁止**：`$do-task-echo` 对 Phase 3 UI 任务无效。Phase 3 UI 任务必须通过 `$ui-bootstrap-build-echo` 执行。
 
-### 17.6 推荐三命令序列
+### 17.6 推荐三-Skill 序列
 
 ```
-/init-session-echo → /next-task-echo → /ui-bootstrap-build-echo <task-id>
+$init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 ```
 
-跳过前两步时可直接调用 `/ui-bootstrap-build-echo <ready-task-id>`（direct fallback）。
+跳过前两步时可直接调用 `$ui-bootstrap-build-echo <ready-task-id>`（direct fallback）。
 
 ### 17.7 关键禁止项
 
-- ❌ **禁止自动 commit/push/PR**：Git 交付必须由用户明确调用适配后的 `/commit-pr-echo` 触发
+- ❌ **禁止自动 commit/push/PR**：Git 交付必须由用户明确调用适配后的 `$commit-pr-echo` 触发
 - ❌ **禁止生成 screenshot/video**：视觉审批只通过双设备 Live Simulator Review（iPhone 17 Pro iOS 26 + iPhone 16 Pro iOS 18）
 - ❌ **禁止在 Focus/Task surfaces 使用 masonry**
 - ❌ **禁止修改 Core、数据模型、迁移、签名或 acceptance policy**
@@ -1500,3 +1500,4 @@ UI 只能通过 **`@MainActor @Observable` 薄适配器** 消费 Core 能力。�
 | v5.27 | 2026-08-12 | 3F.10 i18n/accessibility/errors 交付：新增统一语言中心（LanguageCenter，US-DIS-001 一键 UI+AI 语言）与 Localizable.xcstrings 双语目录（336 keys）；§7.3 新增 `.languageUnified`/`.backgroundTaskUIAccessed`/`.degradationWarning` 审计事件（DECISION-1）；新增 `.migration` PrivacyOperation（DEF-59-004）；SystemMonitor 低电量/热降级运行时接线。同步修订规格书、双语言/避坑文档、ADR-011 与 README。 | AI 架构师 |
 | v5.28 | 2026-08-12 | 3F.11 发布门禁交付：每目标发布合规校验器（`Scripts/validate_release_compliance.py`，ADR-014 §决策-3：可执行 app/extension target 全发现，Echo + EchoShareExtension 逐 target 网络/SDK/secret/entitlement/privacy-manifest/required-reason API/purpose-string 报告）；`PrivacyInfo.xcprivacy` ×2 + `NSHealthUpdateUsageDescription`；`Release.xcconfig`（pbxproj baseConfigurationReference）；`coverage_gate.py` 修复 xccov `--files` 选项移除；no-fixture 生产 E2E 与 Phase 3F 集成测试；CHANGELOG、App Store 隐私披露与 release checklist。本版本不记录 merge SHA、不解锁 Phase 4（`3F.finalize` 由人类合并后触发）。 | AI 架构师 |
 | v5.29 | 2026-08-15 | 新增 `docs/06-troubleshooting/` 疑难杂症问题文件夹（架构性限制/难解问题定位与根因分析），首个文档记录照片文本搜索跨模态对齐缺失（US-RET-003/US-ING-004 Impossible 的 v1 限制）。同步：§0.1 文档目录新增疑难杂症行；§0.2 任务映射表新增「疑难杂症/架构限制定位」行；docs/INDEX.md 注册新文件夹。 | AI 架构师 |
+| v5.30 | 2026-08-30 | 将 Agent 执行层从 OpenCode 迁移到 Codex：新增 `.codex/config.toml` 完整加载大型 `AGENTS.md`；将 17 个自定义命令物化为 `.agents/skills/*/SKILL.md`；GitHub 自动化切换为 `gh` CLI；现行命令调用切换为 `$skill-name`。保留 `.opencode/` 作为迁移期回滚源。 | Codex |

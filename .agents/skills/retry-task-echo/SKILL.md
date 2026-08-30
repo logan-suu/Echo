@@ -1,0 +1,60 @@
+---
+name: retry-task-echo
+description: "重试当前被阻断（blocked）或指定的 L2 失败任务，恢复开发流程"
+---
+
+> Codex migration: This is a repository-scoped native skill. Follow the
+> repository `AGENTS.md` as the authority. Treat any remaining GitHub API
+> wording as the equivalent `gh` CLI operation supported by the current
+> environment. Never weaken human-only approval, PR merge, branch retention,
+> privacy, or release gates. If `gh auth status` is invalid, stop external
+> GitHub mutations and ask the user to re-authenticate.
+
+
+## 🔄 重试任务
+
+请按 Echo 项目 AGENTS.md 的错误处理契约（§4.4）和任务执行流程执行：
+
+### 第一步：定位目标任务
+1. 读取 `docs/05-planning/task-status.json` 和 `docs/05-planning/deferred-items.json`。
+2. 如果用户指定了任务 ID（如 2.1），则锁定该任务。
+3. 如果未指定，则查找第一个 `status: "blocked"` 的任务。
+4. **phase `"3"` UI 任务重定向**：如果目标任务属于 phase `"3"`（`tasks` 数组包含关系确定，且非其 `integration_task_id`；**不得**捕获 phase `"3F"` 任务），**输出**并退出：
+   ```
+   ⚠️ Phase 3 UI 任务请使用专用重试命令：
+   $ui-retry-echo [任务ID]
+   ```
+5. **延期任务检查**：如果目标任务 ID 出现在 `deferred-items.json` 的 `deferred_to_phase_*` 数组中，阻断并提示：「该任务已被延期到后续 Phase，当前无法重试。请等待 blocker 消除。」
+5. 输出该任务的 ID、标题和阻断原因（如果有记录）。
+5. 输出该任务的 ID、标题和阻断原因（如果有记录）。
+6. **如果目标任务属于 phase `"3"` UI 且未在上一步重定向**：同步骤 4 处理。
+7. **如果没有找到 blocked 任务**：
+   - 输出：“✅ 当前没有被阻断的任务。”
+   - 列出当前所有 `in_progress` 和 `ready` 的任务状态。
+   - 询问用户是否要执行 `next-task-echo` 继续开发。
+
+### 第二步：检查可恢复条件
+1. 确认阻断原因属于 **L2 可恢复** 范畴（如磁盘不足、权限临时拒绝）。
+2. 如果是 L3 阻断（数据库损坏、模型加载失败）：
+   - 提示用户需要手动修复环境（如重启 Xcode/重置模拟器）。
+   - **不要**自动重试，输出“请修复后重新执行 `retry-task-echo`”。
+   - 直接退出。
+3. 如果判断为 L2 可恢复：
+   - 向用户输出：`检测到 L2 阻断：[错误原因]。请确认环境已修复（如磁盘空间已释放）。`
+   - **等待用户明确回复“已修复”或“继续”**。
+   - 仅在收到用户确认后，才将任务状态从 `blocked` 更新为 `in_progress`。
+
+### 第三步：重新执行任务
+1. 查阅 `AGENTS.md` §0.2，读取该任务对应的规格文档。
+2. 检查是否有未完成的测试或代码。
+3. 继续执行 TDD 流程（写测试 -> 实现 -> 运行测试）。
+4. **如果执行成功**：
+   - 调用 `PendingOpsActor.cleanup(operationId:)`，从 PendingOperations 表中移除该记录。
+5. 如果失败，分析新的错误日志。
+6. **如果重试后仍然失败**（相同错误且次数 ≥ 3）：
+   - 建议标记为 L3 阻断。
+   - 输出诊断建议，询问用户是否继续重试或标记为 `blocked`。
+
+### 第四步：交付
+1. 任务完成后，更新 `task-status.json` 为 `review`。
+2. 提示用户执行 `commit-pr-echo` 提交代码。

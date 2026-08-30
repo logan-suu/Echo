@@ -47,7 +47,7 @@
   1. 确认 Xcode 26.5 为当前 `xcode-select`
   2. `xcrun --find mcpbridge` 返回实际路径
   3. Xcode Intelligence 设置允许外部 Agent
-  4. OpenCode MCP 配置连接成功
+  4. Codex 环境可调用预期工具，或 CLI + XCTest fallback 可用
   5. 最小 read/build/test smoke test
   6. 通过则记录 `mcpbridge` 为候选，失败则 CLI + XCTest fallback
 
@@ -82,7 +82,7 @@
 | Inventory | 首次 bootstrap 对话记录 / `.ui-automation/` |
 | Migration map | `.ui-automation/state.json` `migrationMapHash` |
 | 保护路径清单 | `docs/ui/architecture.md` §4 |
-| 命令兼容性清单 | `docs/ui/automation-workflow.md`、`.opencode/commands/` |
+| Skill 兼容性清单 | `docs/ui/automation-workflow.md`、`.agents/skills/` |
 | Build log | 开发机本地 / CI artifact |
 
 ---
