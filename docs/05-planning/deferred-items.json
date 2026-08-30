@@ -1460,6 +1460,16 @@
       "reason": "Pre-existing failure locally and on CI, unrelated to PR #64 (audit contentHash pipeline vs migration test expectation). Marked withKnownIssue; needs a dedicated root-cause round on the audit writer.",
       "defer_to": "Dedicated audit-pipeline triage round after PR #64 merge",
       "deferred_at": "2026-08-30"
+    },
+    {
+      "id": "DEF-64-006",
+      "pr": 64,
+      "title": "FeedbackPipeline receives calibrated score instead of raw cosine",
+      "severity": "🟠",
+      "location": "Echo/UI/Search/SearchViewModel.swift:274-278",
+      "reason": "mapFused stores the calibrated display score in SearchResultItem.cosineSimilarity; recordLike/recordDislike forward it to FeedbackPipeline where the raw native cosine is contractually required (similarity thresholds). Fix requires a SearchResultItem contract change touching fixtures — dedicated round.",
+      "defer_to": "Feedback-contract round after PR #64 merge",
+      "deferred_at": "2026-08-30"
     }
   ]
 }
