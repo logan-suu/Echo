@@ -269,13 +269,15 @@ class _TextSelfAttention(nn.Module):
         self.head_dim = TEXT_HIDDEN // TEXT_HEADS
         self.scale = self.head_dim ** -0.5
 
-    def forward(self, x, bias):
+    def forward(self, x, bias=None):
         B, S, _H = x.shape
         hd = self.head_dim
         q = self.q_proj(x).view(B, S, TEXT_HEADS, hd).transpose(1, 2)
         k = self.k_proj(x).view(B, S, TEXT_HEADS, hd).transpose(1, 2)
         v = self.v_proj(x).view(B, S, TEXT_HEADS, hd).transpose(1, 2)
-        scores = (q @ k.transpose(-2, -1)) * self.scale + bias
+        scores = (q @ k.transpose(-2, -1)) * self.scale
+        if bias is not None:
+            scores = scores + bias
         attn = F.softmax(scores, dim=-1) @ v
         attn = attn.transpose(1, 2).reshape(B, S, TEXT_HIDDEN)
         return self.out_proj(attn)
@@ -308,7 +310,7 @@ class _TextLayer(nn.Module):
         self.ln2.bias = nn.Parameter(sd[p + "layer_norm2.bias"])
         self.mlp = _TextMLP(sd, p + "mlp.")
 
-    def forward(self, x, bias):
+    def forward(self, x, bias=None):
         x = x + self.attn(self.ln1(x), bias)
         x = x + self.mlp(self.ln2(x))
         return x
@@ -317,9 +319,11 @@ class _TextLayer(nn.Module):
 class SigLIP2TextEncoder(nn.Module):
     """Paired text tower replicating HF SiglipTextTransformer semantics.
 
-    Bidirectional attention (NO causal mask, unlike CLIP); padding positions
-    masked via additive bias; final LayerNorm then LAST-position pooling
-    (documented HF behavior: may be a padding position) then head projection.
+    Bidirectional attention (NO causal mask, unlike CLIP). Official SigLIP2
+    inference applies NO attention mask (the HF tokenizer returns none), so
+    pad positions participate unmasked; final LayerNorm then LAST-position
+    pooling (documented HF behavior: may be a padding position) then head
+    projection.
     """
 
     def __init__(self, sd: dict):
@@ -342,14 +346,17 @@ class SigLIP2TextEncoder(nn.Module):
 
     def forward(self, input_ids):
         ids = input_ids.to(torch.long)
-        mask = (ids != TEXT_PAD_ID).to(torch.float32)
-        bias = ((1.0 - mask) * TEXT_MASK_SENTINEL)[:, None, None, :]
+        # Official SigLIP2 inference passes NO attention mask (the HF tokenizer
+        # returns none). Masking pad keys here collapses text embeddings to
+        # noise: masked -> flat cos band ~0.03 vs image tower, unmasked ->
+        # real semantic discrimination (empirically verified vs HF).
         x = self.token_embedding(ids) + self.position_embedding.weight[: ids.shape[1]][None]
         for layer in self.layers:
-            x = layer(x, bias)
+            x = layer(x)
         x = self.final_layer_norm(x)
         pooled = x[:, -1, :]
-        # 与图像塔共享归一化契约：Core ML 输出即单位向量（交接计划 §6 验收）
+        # Shared normalization contract with the image tower: Core ML output
+        # is a unit vector (handover plan §6 acceptance).
         return F.normalize(self.head(pooled), p=2, dim=-1)
 
 

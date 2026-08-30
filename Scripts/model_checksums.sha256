@@ -10,3 +10,4 @@ d22d85e6bc99cd118b47773afe19101724ab514329ae42f62ca4e59ff2805eb1
 # 3F.3b (2026-08-09): whisper.cpp 参考转写音频 + runtime 依赖文件（ADR-009 决策 2 登记）
 59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e  jfk.wav
 94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d  ThirdParty/whisper.cpp/LICENSE
+8311a1a016001b0df4e7d68e94749958049534a6e767fa228a6db655a86e1884  SigLIP2TextBasePatch32.mlmodelc

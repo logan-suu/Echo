@@ -408,9 +408,13 @@ extension PhotoTextSearchQualityTests {
             query: "quarterly report meeting", k: 10, traceID: "t-e2e-search"
         )
 
-        // 闭环断言：摄入的图片经文字查询命中，provenance 含视觉通道
+        // Closed-loop assertions: the ingested image must be retrievable by text
+        // query with visionDense provenance. Prior E2E runs ingest the same
+        // fixture image (identical content -> identical vector -> tied score),
+        // so assert membership in top-K rather than a strict rank-1 position.
         #expect(!fused.isEmpty, "E2E: the ingested image must be retrievable by text query")
-        #expect(fused.first?.memory.memoryId == memID, "top fused result must be the ingested photo")
+        let hitRank = fused.firstIndex { $0.memory.memoryId == memID }
+        #expect(hitRank != nil, "the ingested photo must appear in top-K results")
         #expect(fused.first?.provenance.contains(where: { $0.channel == .visionDense }) == true,
                 "hit must carry visionDense provenance")
     }
@@ -434,5 +438,18 @@ extension PhotoTextSearchQualityTests {
         #expect(model.title == "red flower", "canonical text becomes the title")
         #expect(model.originalText == "red flower")
         #expect(model.sourceType == "photo")
+    }
+}
+
+// MARK: - Tokenizer case-folding contract
+
+extension PhotoTextSearchQualityTests {
+
+    @Test("Tokenizer: capitalized queries fold to the same encoding as lowercase")
+    func testTokenizerCaseFolding() throws {
+        let tokenizerURL = Self.repoRoot.appendingPathComponent("Echo/Resources/Models/siglip2-tokenizer.json")
+        let tokenizer = try SigLIP2Tokenizer(tokenizerJSON: try Data(contentsOf: tokenizerURL))
+        #expect(tokenizer.encode("Waterfall") == tokenizer.encode("waterfall"))
+        #expect(tokenizer.encode("Quarterly Report") == tokenizer.encode("quarterly report"))
     }
 }
