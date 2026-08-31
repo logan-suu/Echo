@@ -266,6 +266,9 @@ final class MemoryDetailViewModel {
     /// 当前活跃的加载 Task
     private var loadTask: Task<Void, Never>?
 
+    /// The production identifier retained for an explicit user retry.
+    private var requestedMemoryID: UUID?
+
     /// UI 切片模式模拟记忆源 — fixture 注入
     private var stubMemory: MemoryDetailModel?
 
@@ -362,6 +365,7 @@ final class MemoryDetailViewModel {
         guard viewState != .loading else { return }
 
         loadTask?.cancel()
+        requestedMemoryID = memoryId
 
         // Set loading synchronously (AGENTS.md §8.1: first line of action)
         viewState = .loading
@@ -441,6 +445,7 @@ final class MemoryDetailViewModel {
     ///
     /// - Parameter model: MemoryDetailModel（来自 fixture loader）
     func loadPreloaded(_ model: MemoryDetailModel) {
+        requestedMemoryID = nil
         isFixtureBacked = true
         stubMemory = model
         memory = model
@@ -696,6 +701,9 @@ final class MemoryDetailViewModel {
         guard memory != nil else {
             if let stub = stubMemory {
                 loadPreloaded(stub)
+            } else if let requestedMemoryID {
+                viewState = .idle
+                load(memoryId: requestedMemoryID)
             } else {
                 viewState = .idle
             }

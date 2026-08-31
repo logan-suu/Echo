@@ -23,6 +23,18 @@ import SwiftUI
 @MainActor
 struct CreationViewModelTests {
 
+    private func awaitGenerationSettled(
+        _ vm: CreationViewModel,
+        timeout: Duration = .seconds(2)
+    ) async -> CreationViewModel.ViewState {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline, vm.viewState == .generating {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return vm.viewState
+    }
+
     // MARK: - US-SYN-003 AC-1: Template selection
 
     @Test("US-SYN-003 AC-1: template selection stores selection in idle state")
@@ -73,9 +85,9 @@ struct CreationViewModelTests {
         vm.selectTemplate(.letter)
 
         vm.generate()
-        await Task.yield()
+        let settled = await awaitGenerationSettled(vm)
 
-        #expect(vm.viewState == .generated)
+        #expect(settled == .generated)
         #expect(vm.creation?.selectedTemplate == .letter)
         #expect(vm.creation?.paragraphs.allSatisfy { $0.citation?.hasSource == true } == true)
     }

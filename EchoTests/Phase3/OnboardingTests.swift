@@ -340,6 +340,27 @@ struct OnboardingTests {
         #expect(vm.viewState == .completed)
     }
 
+    @Test("Production loading fails closed when no model loader is available")
+    func test_productionModelLoadWithoutLoaderFailsClosed() async {
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0)
+        vm.start()
+        vm.acceptPrivacy()
+        for index in vm.permissionSteps.indices {
+            #expect(vm.viewState == .permissions(index))
+            vm.denyPermission()
+            vm.skipPermission()
+        }
+        #expect(vm.viewState == .language)
+
+        vm.beginLoad()
+        let settled = await awaitSettled(vm)
+
+        #expect(settled == .modelLoadFailed)
+        #expect(vm.isFixtureBacked == false)
+        #expect(vm.modelLoadProgress.failedCount == ModelLoaderActor.ModelType.allCases.count)
+        #expect(vm.modelLoadProgress.items.allSatisfy { $0.state == .failed })
+    }
+
     @Test("Reset keeps welcome state after cancelling model loading")
     func test_modelLoadCancellationCannotOverwriteReset() async {
         let vm = OnboardingViewModel(loadDelayNanoseconds: 40_000_000)

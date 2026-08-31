@@ -340,6 +340,24 @@ struct MemoryDetailViewModelTests {
         #expect(vm.viewState == .completed)
     }
 
+    @Test("AC: production retry reloads the originally requested memory ID")
+    func productionRetryReloadsRequestedMemoryID() async {
+        let vm = MemoryDetailViewModel()
+        vm.load(memoryId: UUID())
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(vm.viewState == .error(.l2Recoverable(
+            message: "Unable to load this memory. Please try again."
+        )))
+
+        vm.retry()
+
+        #expect(vm.viewState == .loading)
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(vm.viewState == .error(.l2Recoverable(
+            message: "Unable to load this memory. Please try again."
+        )))
+    }
+
     // MARK: - Regression: Tab switch preserves detail (2026-08-02)
 
     @Test("onDisappear preserves completed detail (tab switch keeps content)")

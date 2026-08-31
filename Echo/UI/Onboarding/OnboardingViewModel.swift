@@ -527,7 +527,7 @@ final class OnboardingViewModel {
                 let result: ModelLoaderActor.ModelLoadState
                 if let modelLoader = self.modelLoader {
                     result = await modelLoader.loadModel(modelType)
-                } else {
+                } else if self.isFixtureBacked {
                     let delay = self.loadDelayNanoseconds / UInt64(max(models.count, 1))
                     do {
                         try await Task.sleep(nanoseconds: delay)
@@ -535,6 +535,11 @@ final class OnboardingViewModel {
                         return
                     }
                     result = .loaded
+                } else {
+                    result = .failed(.modelNotFound(
+                        modelName: modelType.modelName,
+                        resourceName: modelType.resourceIdentifier
+                    ))
                 }
 
                 guard !Task.isCancelled else { return }
