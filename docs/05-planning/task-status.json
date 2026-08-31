@@ -1603,11 +1603,11 @@
           },
           "post_delivery_prs": [
             {
-              "number": null,
-              "url": null,
+              "number": 65,
+              "url": "https://github.com/logan-suu/Echo/pull/65",
               "head": "fix/production-real-data-wiring-US-SYS-001",
               "base": "dev-1.0",
-              "created_at": null,
+              "created_at": "2026-08-31T11:58:57Z",
               "kind": "post-delivery real-data wiring fix",
               "status": "review",
               "stories": [
