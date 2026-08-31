@@ -57,16 +57,20 @@ public struct PhotoSearchSliceRegistry {
 /// 质量门禁前提：任何 typed 失败都阻断后续质量测量（步骤 7a 的前置）。
 public struct RealPhotoSearchEvaluationHarness {
     public struct Fixture: Sendable, Equatable {
-        public nonisolated let id: String
-        public nonisolated let file: String
-        public nonisolated let sha256: String
-        public nonisolated let license: String
-        public nonisolated let rights: String
+        nonisolated public let id: String
+        nonisolated public let file: String
+        nonisolated public let sha256: String
+        nonisolated public let license: String
+        nonisolated public let rights: String
         /// synthetic 标记——true 的 fixture 不具备参与质量测量资格（real-artifact-only）
-        public nonisolated let synthetic: Bool
+        nonisolated public let synthetic: Bool
 
-        public nonisolated init(
-            id: String, file: String, sha256: String, license: String, rights: String,
+        nonisolated public init(
+            id: String,
+            file: String,
+            sha256: String,
+            license: String,
+            rights: String,
             synthetic: Bool = false
         ) {
             self.id = id
@@ -78,7 +82,7 @@ public struct RealPhotoSearchEvaluationHarness {
         }
     }
 
-    public nonisolated let fixtures: [Fixture]
+    nonisolated public let fixtures: [Fixture]
 
     /// 从 manifest JSON 构造（fixtures 数组必填且非空）。
     public init(manifestData: Data) throws {

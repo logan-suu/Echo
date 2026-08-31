@@ -651,11 +651,11 @@ extension PhotoTextSearchIntegrationTests {
             memory: memory,
             representations: [
                 Representation(representationId: textVecID, memoryId: memID, modality: .textDense, preprocessVersion: "e5-v1", contentHash: "sha256:wp4-t"),
-                Representation(representationId: visVecID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "sha256:wp4-v")
+                Representation(representationId: visVecID, memoryId: memID, modality: .visionDense, preprocessVersion: "siglip2-v1", contentHash: "sha256:wp4-v"),
             ],
             vectorsByGeneration: [
                 genText: [CanonicalVectorEntry(id: textVecID, vector: Array(repeating: 0.5, count: 384))],
-                genVis: [CanonicalVectorEntry(id: visVecID, vector: Array(repeating: 0.25, count: 768))]
+                genVis: [CanonicalVectorEntry(id: visVecID, vector: Array(repeating: 0.25, count: 768))],
             ],
             traceID: "t-wp4-orch"
         )
@@ -676,7 +676,7 @@ extension PhotoTextSearchIntegrationTests {
                     channel: .visionDense,
                     hits: [RawChannelHit(channel: .visionDense, vectorID: visVecID, rank: 1, nativeScore: nil, generationID: genVis)],
                     elapsedMs: 1
-                ))
+                )),
             ],
             repo: repo,
             query: "red flower",
@@ -766,11 +766,13 @@ extension PhotoTextSearchIntegrationTests {
             locale: "en-US",
             k: 10,
             traceID: "t-wp4-entry",
-            adapters: [WP4CannedChannel(channel: .textDense, outcome: .success(
-                channel: .textDense,
-                hits: [RawChannelHit(channel: .textDense, vectorID: vecID, rank: 1, nativeScore: nil, generationID: genText)],
-                elapsedMs: 1
-            ))]
+            adapters: [
+                WP4CannedChannel(channel: .textDense, outcome: .success(
+                    channel: .textDense,
+                    hits: [RawChannelHit(channel: .textDense, vectorID: vecID, rank: 1, nativeScore: nil, generationID: genText)],
+                    elapsedMs: 1
+                )),
+            ]
         )
 
         #expect(results.count == 1, "single dense hit must produce one fused result")

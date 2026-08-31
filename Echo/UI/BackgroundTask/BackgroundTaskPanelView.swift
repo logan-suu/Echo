@@ -52,7 +52,14 @@ struct BackgroundTaskPanelView: View {
     /// 自动隐藏调度 Task — 绑定视图生命周期（onDisappear 取消，W-4）
     @State private var autoHideTask: Task<Void, Never>?
 
-    init(viewModel: BackgroundTaskViewModel = BackgroundTaskViewModel(), onDismiss: (() -> Void)? = nil) {
+    init(
+        viewModel: BackgroundTaskViewModel = BackgroundTaskViewModel(
+            progressActor: .shared,
+            auditWriter: .shared,
+            taskQueue: .shared
+        ),
+        onDismiss: (() -> Void)? = nil
+    ) {
         _viewModel = State(initialValue: viewModel)
         self.onDismiss = onDismiss
     }

@@ -80,12 +80,16 @@ public enum EmbedderError: Error, LocalizedError, Sendable {
         switch self {
         case .assetUnavailable(let assetId):
             return "PHAsset unavailable: \(assetId)"
+
         case .modelNotLoaded:
             return "Vision model not loaded — 请在「设置」中重试模型加载"
+
         case .inferenceFailed(let error):
             return "CLIP inference failed: \(error.localizedDescription)"
+
         case .preprocessingFailed(let reason):
             return "Image preprocessing failed: \(reason)"
+
         case .dimensionMismatch(let expected, let got):
             return "Output dimension mismatch: expected \(expected), got \(got)"
         }
@@ -94,12 +98,12 @@ public enum EmbedderError: Error, LocalizedError, Sendable {
 
 // MARK: - Stub Embedder
 
+#if DEBUG
 /// Stub 嵌入服务 — 返回固定零向量或指定向量，用于 Pipeline 测试。
 ///
 /// 该实现不依赖 Core ML 或 PHPhotoLibrary，纯逻辑验证 IngestPipeline 流程正确性。
 /// 真实视觉推理由 `SigLIP2Embedder`（R-3.2，Core ML 转换后）实现。
 public actor StubEmbedder: EmbedderProtocol {
-
     /// 每次 `embedImage()` 调用的返回值（测试可控）
     private var nextEmbedding: [Float]
     /// 是否在下一次调用时抛出错误（测试可控）
@@ -154,3 +158,4 @@ public actor StubEmbedder: EmbedderProtocol {
         return nextEmbedding
     }
 }
+#endif

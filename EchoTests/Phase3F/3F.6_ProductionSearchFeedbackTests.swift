@@ -69,7 +69,7 @@ public struct StableSubjectiveScorer: SubjectiveScorer {
         self.score = score
     }
 
-    public nonisolated func subjectiveMatchScore(text: String) async throws -> Float {
+    nonisolated public func subjectiveMatchScore(text: String) async throws -> Float {
         score
     }
 }
@@ -347,7 +347,7 @@ struct ProductionSearchFeedbackTests {
         #expect(itemX.assetId == "note-x")
         #expect(itemX.originalText == "text channel hit")
         #expect(itemX.sourceType == "note")
-        #expect(items.first(where: { $0.id == y })?.assetId == "note-y")
+        #expect(items.first { $0.id == y }?.assetId == "note-y")
     }
 
     @Test("RRF: doc present in both channels at rank 1 ranks above single-channel rank 1")

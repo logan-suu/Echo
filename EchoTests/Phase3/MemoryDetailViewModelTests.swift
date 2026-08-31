@@ -44,9 +44,11 @@ struct MemoryDetailViewModelTests {
     @Test("AC: idle → loading → completed via load(memoryId:)")
     func loadTransitionsToCompleted() async {
         let vm = MemoryDetailViewModel()
+        #expect(vm.isFixtureBacked == false)
         vm.loadPreloaded(MemoryDetailFixtureLoader.load("memory-detail-loaded")!)
         #expect(vm.viewState == .completed)
         #expect(vm.memory != nil)
+        #expect(vm.isFixtureBacked == true)
     }
 
     @Test("AC: load without fixture resolves to L2 error")

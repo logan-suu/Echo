@@ -99,9 +99,11 @@ final class CreationViewModel {
     /// Prompt 编辑器 Sheet 是否呈现
     var isPromptEditorPresented: Bool = false
     /// Prompt 草稿编辑文本
-    var promptDraftText: String = CreationFixtureLoader.defaultPromptDraft
+    var promptDraftText: String = CreationPromptDefaults.defaultDraft
     /// 当前生效的 Prompt 草稿（确认后更新）
-    private(set) var confirmedPrompt: String = CreationFixtureLoader.defaultPromptDraft
+    private(set) var confirmedPrompt: String = CreationPromptDefaults.defaultDraft
+    /// True only after an explicit Preview/test/XCUITest fixture injection.
+    private(set) var isFixtureBacked = false
 
     // MARK: - Export / Share State (US-SYN-003 AC-3, US-SYN-004 AC-4)
 
@@ -125,7 +127,7 @@ final class CreationViewModel {
     private var saveTask: Task<Void, Never>?
     /// UI 切片模式模拟创作源 — fixture 注入
     private var stubCreation: CreationModel?
-    /// 生产创作管线 (ADR-013 决策 3: grounded creation) — 3F.9 接线；nil = 运行时未落地 → fixture/错误路径
+    /// Production creation pipeline. A missing runtime must fail closed and never load fixture output.
     private let creativePipeline: CreativePipeline?
     /// 创作源记忆（grounded 输入，经检索结果映射）— 3F.9 生产路径
     private var sourceMemories: [CreativeSource] = []
@@ -146,8 +148,8 @@ final class CreationViewModel {
 
     /// 生成内容 — 设置 state = .generating，完成后进入 generated/empty/error。
     ///
-    /// 生产路径 (3F.9): 配置了 CreativePipeline 时经 grounded 生成（ADR-013 决策 3，
-    /// 检索源记忆 → LLM 合成 → 溯源锚点）；未配置时走 fixture 模拟（UI 切片确定性路径）。
+    /// Production uses grounded generation through CreativePipeline. Fixture output is
+    /// available only after explicit Preview/test injection.
     func generate() {
         guard viewState == .idle, selectedTemplate != nil else { return }
 
@@ -161,30 +163,24 @@ final class CreationViewModel {
 
             // 生产路径: grounded generation (ADR-013 决策 3)
             if let pipeline = self.creativePipeline, let template = self.selectedTemplate {
+                self.isFixtureBacked = false
                 await self.generateViaPipeline(pipeline, template: template)
                 return
             }
-
-            // 短暂模拟生成以展示 generating 态
-            try? await Task.sleep(nanoseconds: 400_000_000)
 
             guard !Task.isCancelled else {
                 self.viewState = .idle
                 return
             }
 
-            // 优先使用注入的 stub；否则按已选模板加载确定性 fixture
-            // （Live Sim Review / XCUITest 从 MemoryDetail 导航路径的确定性生成）
-            if let stub = self.stubCreation {
+            // Explicit Preview/test injection may regenerate its deterministic model.
+            if self.isFixtureBacked, let stub = self.stubCreation {
                 self.creation = stub
                 self.viewState = (stub.emptyReason != nil) ? .empty : .generated
-            } else if let template = self.selectedTemplate,
-                      let model = CreationFixtureLoader.load(for: template) {
-                self.creation = model
-                self.viewState = .generated
             } else {
+                self.creation = nil
                 self.viewState = .error(.l2Recoverable(
-                    message: "Generation is currently unavailable. Please try again."
+                    message: "Offline generation runtime is not available. Please try again."
                 ))
             }
         }
@@ -355,7 +351,7 @@ final class CreationViewModel {
 
     /// 重置为默认 Prompt (AC-6)。
     func resetPrompt() {
-        confirmedPrompt = CreationFixtureLoader.defaultPromptDraft
+        confirmedPrompt = CreationPromptDefaults.defaultDraft
         promptDraftText = confirmedPrompt
         isPromptEditorPresented = false
     }
@@ -369,6 +365,7 @@ final class CreationViewModel {
 
     /// 预加载确定性创作结果（Preview / 测试 / XCUITest fixture 注入）。
     func loadPreloaded(_ model: CreationModel) {
+        isFixtureBacked = true
         stubCreation = model
         creation = model
         selectedTemplate = model.selectedTemplate

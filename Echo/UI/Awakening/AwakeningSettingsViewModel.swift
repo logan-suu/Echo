@@ -8,7 +8,8 @@
 // AC 覆盖: US-AWK-001 AC-5 ✅ (位置权限静默禁用/重开), AC-6 ✅ (审计 record 触发 UI),
 //            US-AWK-002 AC-1 ✅ (每日 9:00 推送开关/控制), AC-4 ✅ (无匹配时不推送指示),
 //            US-AWK-003 AC-1 ✅ (HealthKit 权限开关), AC-5 ✅ (审计记录查看入口)
-// Legend: ✅ implemented (UI slice/fixture) | 🔶 stub (entry point, Core integration deferred to Phase 3.9)
+// Runtime status: system permissions/regions are live. Preference toggles fail visibly until a
+// production awakening-preference boundary exists; deterministic mutation is fixture-only.
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相), echo-memory-canvas apple-native 基础
@@ -17,6 +18,7 @@
 
 import SwiftUI
 import Foundation
+import UIKit
 
 // MARK: - Awakening Permission Info
 
@@ -81,6 +83,7 @@ final class AwakeningSettingsViewModel {
 
     var state: State = .idle
     var notificationAuthStep: NotificationAuthStep = .idle
+    private(set) var isFixtureBacked = false
 
     var showGeofenceDetail: GeofenceInfo?
     private var loadTask: Task<Void, Never>?
@@ -105,16 +108,20 @@ final class AwakeningSettingsViewModel {
         self.notificationScheduler = notificationScheduler
     }
 
+    deinit {}
+
     func loadSettings() async {
         state = .loading
         do {
             // 3F.8: 有 live 适配器时读取真实系统状态，否则回退 fixture（Preview/测试）
             if let data = await loadLiveData() {
+                isFixtureBacked = false
                 state = .completed(data)
                 return
             }
             try await Task.sleep(nanoseconds: 300_000_000)
             let data = try fixtureLoader.loadSettings()
+            isFixtureBacked = true
             state = .completed(data)
         } catch {
             state = .error(.l2Recoverable(error.localizedDescription))
@@ -139,8 +146,11 @@ final class AwakeningSettingsViewModel {
             )
         } else {
             notification = AwakeningPermissionInfo(
-                identifier: "notification", displayName: "Notifications", systemImage: "bell.fill",
-                isGranted: false, isDeniedPermanently: false,
+                identifier: "notification",
+                displayName: "Notifications",
+                systemImage: "bell.fill",
+                isGranted: false,
+                isDeniedPermanently: false,
                 description: "Allow Echo to send you awakening notifications when memories surface."
             )
         }
@@ -159,8 +169,11 @@ final class AwakeningSettingsViewModel {
             )
         } else {
             location = AwakeningPermissionInfo(
-                identifier: "location", displayName: "Location", systemImage: "location.fill",
-                isGranted: false, isDeniedPermanently: false,
+                identifier: "location",
+                displayName: "Location",
+                systemImage: "location.fill",
+                isGranted: false,
+                isDeniedPermanently: false,
                 description: "Location access enables geofence-based memory delivery."
             )
         }
@@ -178,8 +191,11 @@ final class AwakeningSettingsViewModel {
             )
         } else {
             health = AwakeningPermissionInfo(
-                identifier: "health", displayName: "Health", systemImage: "heart.fill",
-                isGranted: false, isDeniedPermanently: false,
+                identifier: "health",
+                displayName: "Health",
+                systemImage: "heart.fill",
+                isGranted: false,
+                isDeniedPermanently: false,
                 description: "Health data access enables mood-based memory delivery."
             )
         }
@@ -217,6 +233,12 @@ final class AwakeningSettingsViewModel {
 
     func toggleGeofenceAwakening(_ enabled: Bool) {
         guard case .completed(var data) = state else { return }
+        guard isFixtureBacked else {
+            state = .error(.l2Recoverable(
+                "Geofence awakening settings are unavailable because no production preference boundary is connected."
+            ))
+            return
+        }
         data = AwakeningSettingsData(
             notificationPermission: data.notificationPermission,
             locationPermission: data.locationPermission,
@@ -233,6 +255,12 @@ final class AwakeningSettingsViewModel {
 
     func toggleEmotionAwakening(_ enabled: Bool) {
         guard case .completed(var data) = state else { return }
+        guard isFixtureBacked else {
+            state = .error(.l2Recoverable(
+                "Emotion awakening settings are unavailable because no production preference boundary is connected."
+            ))
+            return
+        }
         data = AwakeningSettingsData(
             notificationPermission: data.notificationPermission,
             locationPermission: data.locationPermission,
@@ -249,6 +277,12 @@ final class AwakeningSettingsViewModel {
 
     func toggleAnniversaryAwakening(_ enabled: Bool) {
         guard case .completed(var data) = state else { return }
+        guard isFixtureBacked else {
+            state = .error(.l2Recoverable(
+                "Anniversary awakening settings are unavailable because no production preference boundary is connected."
+            ))
+            return
+        }
         data = AwakeningSettingsData(
             notificationPermission: data.notificationPermission,
             locationPermission: data.locationPermission,
@@ -270,15 +304,15 @@ final class AwakeningSettingsViewModel {
             let auth = await notificationScheduler.requestAuthorization()
             notificationAuthStep = (auth == .authorized) ? .granted : .denied
         } else {
-            // fixture/preview 回退（无 live 适配器时保持确定性行为）
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            notificationAuthStep = .granted
+            // Missing system wiring must not masquerade as granted authorization.
+            notificationAuthStep = .denied
         }
         await loadSettings()
     }
 
     func openSystemSettings() {
-        // 🔮 Phase 3.9: Core URL.systemSettings for Notification/Location/Health
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     func showGeofenceDetails(_ geofence: GeofenceInfo) {

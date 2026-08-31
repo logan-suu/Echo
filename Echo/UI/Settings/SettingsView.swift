@@ -7,13 +7,12 @@
 //            §10.1.3 (空态), §11 (Toast/Banner)
 //            docs/ui/architecture.md §2 (单向数据流), §3 (组件边界)
 // 任务: 3.4 - SettingsView + SettingsViewModel
-// AC 覆盖: US-SRC-004 AC-1/AC-2 ✅, US-SRC-008 AC-1 ✅ / AC-5 🔶 (sub-page deferred to 3.9),
-//            US-SRC-009 AC-1/AC-2 ✅, US-PRV-002 AC-1 🔶 (sub-page deferred to 3.9),
-//            US-PRV-003 AC-1 ✅ / AC-2 🔶 (stub, deferred to 3.9), US-RES-004 AC-2/AC-7 ✅,
+// Runtime status: the main overview and supported destructive actions use live services.
+// Placeholder sub-pages and unavailable service boundaries are labeled/fail visibly rather than
+// presenting fixture-backed success in production.
 //            US-SET-002 AC-1/AC-3 ✅, US-SET-003 AC-1/AC-3 ✅,
 //            US-SET-004 AC-1 ✅ / AC-2 🔶 (sub-page deferred to 3.9),
 //            US-FBK-002 AC-5 ✅, US-PRV-005 AC-1/AC-2/AC-4 ✅
-// Legend: ✅ implemented | 🔶 stub/skeleton (entry point exists, detail deferred) | 🔮 planned future phase
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable), echo-memory-canvas apple-native 基础,
 //           Task surface family (Form/List, 禁止 masonry), §2.3 (semantic colors),
 //           §2.4 (SF Symbols), §2.5 (可访问性)
@@ -45,7 +44,6 @@ import SwiftUI
 /// - Account: 删除数据 + 冷却期 (US-PRV-005)
 /// - About: 永久保留策略 (US-SET-002)
 struct SettingsView: View {
-
     @State private var viewModel: SettingsViewModel
 
     /// 注入或默认构造 ViewModel；State 首次构建后复用同一实例（Nitpick：避免默认参数每次重建 VM）。
@@ -79,10 +77,13 @@ struct SettingsView: View {
         switch viewModel.state {
         case .idle, .loading:
             loadingView
+
         case .completed(let sections):
             settingsForm(sections)
+
         case .error(let level):
             errorView(level)
+
         case .cancelled:
             cancelledView
         }
@@ -253,7 +254,10 @@ struct SettingsView: View {
                 .accessibilityLabel("Photo import error")
             }
 
-            Toggle(isOn: $viewModel.isSyncingEnabled) {
+            Toggle(isOn: Binding(
+                get: { viewModel.isSyncingEnabled },
+                set: { viewModel.toggleSync($0) }
+            )) {
                 Label {
                     Text("Background Auto Sync")
                         .font(.body)
@@ -266,7 +270,10 @@ struct SettingsView: View {
             .accessibilityLabel("Background Auto Sync")
             .accessibilityHint("When enabled, new data will be automatically synced in the background")
 
-            Toggle(isOn: $viewModel.isPeriodicScanEnabled) {
+            Toggle(isOn: Binding(
+                get: { viewModel.isPeriodicScanEnabled },
+                set: { viewModel.togglePeriodicScan($0) }
+            )) {
                 Label {
                     Text("Periodic Scan for Missing Data")
                         .font(.body)
@@ -289,6 +296,7 @@ struct SettingsView: View {
         switch level {
         case .l1Transient:
             return EchoStrings.tr("settings.photo.import.unavailable")
+
         case .l2Recoverable(let message), .l3Blocking(let message), .l4Conflict(let message):
             return message
         }
@@ -371,9 +379,9 @@ struct SettingsView: View {
             NavigationLink {
                 // 3F.11 fix: 生产注入 live 系统适配器 — 真实权限状态 + 真实通知授权（ADR-012 决策-2/3）
                 AwakeningSettingsView(viewModel: AwakeningSettingsViewModel(
-                    locationProvider: AppComposition.shared.productionLocationProvider,
-                    healthStore: AppComposition.shared.productionHealthStore,
-                    notificationScheduler: AppComposition.shared.productionNotificationScheduler
+                    locationProvider: AppComposition.shared.productionLocationProvider ?? CoreLocationProvider(),
+                    healthStore: AppComposition.shared.productionHealthStore ?? RealHealthStore(),
+                    notificationScheduler: AppComposition.shared.productionNotificationScheduler ?? LocalNotificationAdapter()
                 ))
             } label: {
                 Label {

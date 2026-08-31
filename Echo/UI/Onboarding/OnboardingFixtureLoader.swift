@@ -1,6 +1,6 @@
 // ==========================================
 // 文件: OnboardingFixtureLoader.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8/3.9.
+// i18n: User-facing literals are backed by Localizable.xcstrings (zh-Hans + en-US).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-PRV-008 (PIPL 隐私同意 AC-1~3),
 //            US-SRC-001 AC-6 (首次授权 iCloud 下载提示 + Open Settings),
 //            US-SYN-001 AC-2 (语言选择 + 繁体映射提示)
@@ -10,7 +10,7 @@
 // 任务: 3.11 - 引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载
 // AC 覆盖: US-PRV-008 AC-1 ✅ (隐私摘要), AC-2 ✅ (目的/方式/种类/保留期限/本地处理声明),
 //          AC-3 ✅ (同意/拒绝同等醒目), US-SRC-001 AC-6 ✅ (iCloud 提示 + Open Settings),
-//          US-SYN-001 AC-2 ✅ (zh-Hans/en-US 选择 + 映射提示), 首次模型加载进度 ✅ (fixture)
+//          US-SYN-001 AC-2 ✅ (zh-Hans/en-US 选择 + 映射提示), 首次模型加载进度 ✅ (4 模型确定性 fixture)
 //          契约 fixture IDs: onboarding-welcome / onboarding-privacy-consent / onboarding-permissions /
 //                            onboarding-permission-denied / onboarding-language /
 //                            onboarding-model-loading / onboarding-completed / onboarding-declined
@@ -182,56 +182,24 @@ enum OnboardingFixtureLoader {
 
     /// PIPL 隐私政策摘要 — 目的/方式/种类/保留期限/本地处理声明 (US-PRV-008 AC-2)
     static var privacySummary: String {
-        "Echo processes your photos, videos, notes, and voice memos locally on your device to build a searchable personal memory index.\n\n"
-        + "Purpose: To let you search, recall, and awaken memories from your own content.\n"
-        + "Methods: All processing happens on-device using local AI models.\n"
-        + "Data types: Media assets and transcripts you share with Echo.\n"
-        + "Retention: Your data is kept until you delete it or remove it from Echo.\n"
-        + "Local processing: Your data never leaves this device and is never uploaded."
+        OnboardingContentDefaults.privacySummary
     }
 
     /// 权限拒绝提示 (US-SRC-001 AC-6 情境下照片被拒)
     static var deniedMessage: String {
-        "Without photo access, Echo cannot index your images and videos. You can still use Echo with notes and voice memos."
+        OnboardingContentDefaults.deniedMessage
     }
 
     /// 权限序列 — 照片→通知→位置→健康 (echo-memory-canvas §15.4)
     static var permissionSteps: [OnboardingPermission] {
-        [
-            OnboardingPermission(
-                id: "photos",
-                title: "Photos",
-                purpose: "Echo reads your photo library locally to index and search images and videos.",
-                systemImage: "photo.on.rectangle.angled",
-                icloudHint: "For complete memories, set iCloud Photos to 'Download and Keep Originals' or download before using Echo. Optimized storage may not be recognizable.",
-                openSettingsLabel: "Open Settings"
-            ),
-            OnboardingPermission(
-                id: "notifications",
-                title: "Notifications",
-                purpose: "Echo sends local reminders to surface your memories at the right moment.",
-                systemImage: "bell.badge"
-            ),
-            OnboardingPermission(
-                id: "location",
-                title: "Location",
-                purpose: "Echo can wake with memories tied to where you are.",
-                systemImage: "location"
-            ),
-            OnboardingPermission(
-                id: "health",
-                title: "Health",
-                purpose: "Echo reads health context to enrich memory awakening. Raw values are not stored.",
-                systemImage: "heart"
-            ),
-        ]
+        OnboardingContentDefaults.permissionSteps
     }
 
     /// 支持的语言 (US-SYN-001 AC-2)
     static let supportedLanguages: [String] = ["zh-Hans", "en-US"]
 
     /// 繁体/方言映射提示 (US-SYN-001 AC-2) — 首次启动提示一次
-    static let mappingHint: String = "Echo currently supports Simplified Chinese and English only. It will display in Simplified Chinese."
+    static let mappingHint: String = OnboardingContentDefaults.mappingHint
 }
 
 /// 确定性引导流程 fixture 载荷 — 由 fixture loader 返回，驱动引导步骤状态。

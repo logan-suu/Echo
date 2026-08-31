@@ -171,10 +171,12 @@ struct PhotoTextSearchIdentityTests {
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-photo", canonicalText: nil, sourceType: "photo"),
             representations: [rep],
-            vectorsByGeneration: [generationID: [
-                CanonicalVectorEntry(id: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
-                                     vector: [Float](repeating: 0.25, count: 384))
-            ]],
+            vectorsByGeneration: [
+                generationID: [
+                    CanonicalVectorEntry(id: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
+                                         vector: [Float](repeating: 0.25, count: 384)),
+                ],
+            ],
             traceID: "t-wp3-1a"
         )
 
@@ -211,9 +213,11 @@ struct PhotoTextSearchIdentityTests {
         _ = try await repo.commit(
             memory: Memory(memoryId: parentMemoryId, sourceLocator: "PHAsset/wp3-video", canonicalText: nil, sourceType: "video"),
             representations: [rep],
-            vectorsByGeneration: [generationID: [
-                CanonicalVectorEntry(id: frameRepID, vector: [Float](repeating: 0.5, count: 384))
-            ]],
+            vectorsByGeneration: [
+                generationID: [
+                    CanonicalVectorEntry(id: frameRepID, vector: [Float](repeating: 0.5, count: 384)),
+                ],
+            ],
             traceID: "t-wp3-1c"
         )
 
@@ -681,12 +685,16 @@ struct PhotoTextSearchIdentityTests {
         let repID = CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId)
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-residue", canonicalText: "residue probe", sourceType: "photo"),
-            representations: [Representation(representationId: repID, memoryId: memoryId,
-                                             modality: .visionDense, preprocessVersion: "siglip2-v1",
-                                             contentHash: "h-residue")],
-            vectorsByGeneration: [generationID: [
-                CanonicalVectorEntry(id: repID, vector: [Float](repeating: 0.25, count: 384))
-            ]],
+            representations: [
+                Representation(representationId: repID, memoryId: memoryId,
+                               modality: .visionDense, preprocessVersion: "siglip2-v1",
+                               contentHash: "h-residue"),
+            ],
+            vectorsByGeneration: [
+                generationID: [
+                    CanonicalVectorEntry(id: repID, vector: [Float](repeating: 0.25, count: 384)),
+                ],
+            ],
             traceID: "t-wp3-residue"
         )
         try await privacyWriteSeed(db: db, memoryId: memoryId)
@@ -706,7 +714,7 @@ struct PhotoTextSearchIdentityTests {
                 sql: sql,
                 bindings: bind.map { [.text($0.uuidString)] } ?? []
             )
-            return rows?.first?["c"]?.intValue.map({ Int($0) }) ?? -1
+            return rows?.first?["c"]?.intValue.map { Int($0) } ?? -1
         }
         #expect(await countRows("SELECT COUNT(*) AS c FROM Memory WHERE memoryId = ?", memoryId) == 0)
         #expect(await countRows("SELECT COUNT(*) AS c FROM Representation WHERE memoryId = ?", memoryId) == 0)

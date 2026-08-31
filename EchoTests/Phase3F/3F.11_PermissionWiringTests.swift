@@ -346,13 +346,13 @@ struct PermissionWiringTests {
         #expect(vm.notificationAuthStep == .denied)
     }
 
-    @Test("requestNotificationPermission without live scheduler keeps fallback behavior")
-    func notificationFallback() async throws {
-        let vm = AwakeningSettingsViewModel()  // 无 adapter（fixture/preview 模式）
+    @Test("requestNotificationPermission without live scheduler fails closed")
+    func notificationMissingBoundary() async throws {
+        let vm = AwakeningSettingsViewModel()
 
         await vm.requestNotificationPermission()
 
-        #expect(vm.notificationAuthStep == .granted)
+        #expect(vm.notificationAuthStep == .denied)
     }
 
     // ══════════════════════════════════════════════════════════════

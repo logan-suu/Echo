@@ -133,8 +133,12 @@ extension PhotoTextSearchQualityTests {
 extension PhotoTextSearchQualityTests {
 
     nonisolated private static func evalCase(
-        _ id: String, locale: String = "en-US", expected: UUID?, ranks: [UUID],
-        active: Int = 4, total: Int = 4
+        _ id: String,
+        locale: String = "en-US",
+        expected: UUID?,
+        ranks: [UUID],
+        active: Int = 4,
+        total: Int = 4
     ) -> PhotoSearchEvaluationCase {
         PhotoSearchEvaluationCase(
             queryID: id, locale: locale, expectedMemoryID: expected,
@@ -162,14 +166,14 @@ extension PhotoTextSearchQualityTests {
             locale: "en-US", cases: knownCases + noMatchCases
         )
         // R@1 = 1/3（q1）；R@5 = 2/3（q1,q2）；R@10 = 2/3
-        #expect(abs(report.recallAt1 - 1.0/3.0) < 1e-9)
-        #expect(abs(report.recallAt5 - 2.0/3.0) < 1e-9)
-        #expect(abs(report.recallAt10 - 2.0/3.0) < 1e-9)
+        #expect(abs(report.recallAt1 - 1.0 / 3.0) < 1e-9)
+        #expect(abs(report.recallAt5 - 2.0 / 3.0) < 1e-9)
+        #expect(abs(report.recallAt10 - 2.0 / 3.0) < 1e-9)
         // nDCG@10 = (1 + 1/log2(4) + 0)/3 = (1 + 0.5)/3
-        #expect(abs(report.ndcgAt10 - 1.5/3.0) < 1e-9)
+        #expect(abs(report.ndcgAt10 - 1.5 / 3.0) < 1e-9)
         // MRR@10 = (1 + 1/3 + 0)/3（known-item-only）
         #expect(report.mrrAt10 != nil)
-        #expect(abs((report.mrrAt10 ?? 0) - (4.0/3.0)/3.0) < 1e-9)
+        #expect(abs((report.mrrAt10 ?? 0) - (4.0 / 3.0) / 3.0) < 1e-9)
         // no-match 正确率 = 1/2
         #expect(abs(report.noMatchCorrectRate - 0.5) < 1e-9)
         // partial-channel：全部 4/4 无降级 → 0
@@ -261,7 +265,7 @@ extension PhotoTextSearchQualityTests {
                 rankedIDs: hit ? [UUID()] : [],
                 activeChannelCount: 1,
                 totalChannelCount: 1
-            )
+            ),
         ])
         let report = PhotoSearchQualityMetrics.report(
             locale: document?.locale ?? "en-US", cases: registry.cases(for: .ocr)
@@ -429,7 +433,7 @@ extension PhotoTextSearchQualityTests {
         #expect(hitRank != nil, "the ingested photo must appear in top-K results")
         // Provenance must be checked on the matched result (hitRank), not
         // fused.first — the photo is not guaranteed rank-1 after top-K relaxation.
-        #expect(hitRank.map { fused[$0].provenance.contains(where: { $0.channel == .visionDense }) } == true,
+        #expect(hitRank.map { fused[$0].provenance.contains { $0.channel == .visionDense } } == true,
                 "hit must carry visionDense provenance")
     }
 }

@@ -145,8 +145,10 @@ extension PhotoTextSearchOCRTests {
     func testOCRNormalizationProducesApprovedText() async throws {
         let folded = VisionPhotoOCRService.normalizedText(
             from: ["  Quarterly   Report ", "Due\tFriday"],
-            boxes: [CGRect(x: 0, y: 0.6, width: 0.5, height: 0.1),
-                    CGRect(x: 0, y: 0.2, width: 0.5, height: 0.1)]
+            boxes: [
+                CGRect(x: 0, y: 0.6, width: 0.5, height: 0.1),
+                CGRect(x: 0, y: 0.2, width: 0.5, height: 0.1),
+            ]
         )
         #expect(folded == "Quarterly Report\nDue Friday")
     }

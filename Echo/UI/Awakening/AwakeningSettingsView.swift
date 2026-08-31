@@ -27,7 +27,11 @@ struct AwakeningSettingsView: View {
     /// 注入或默认构造 ViewModel；State 首次构建后复用同一实例。
     /// 3F.11 fix: 生产路径由 SettingsView 注入 live 系统适配器（真实权限状态，ADR-012 决策-2/3）。
     init(viewModel: AwakeningSettingsViewModel? = nil) {
-        _viewModel = State(initialValue: viewModel ?? AwakeningSettingsViewModel())
+        _viewModel = State(initialValue: viewModel ?? AwakeningSettingsViewModel(
+            locationProvider: CoreLocationProvider(),
+            healthStore: RealHealthStore(),
+            notificationScheduler: LocalNotificationAdapter()
+        ))
     }
 
     var body: some View {
@@ -44,10 +48,13 @@ struct AwakeningSettingsView: View {
         switch viewModel.state {
         case .idle, .loading:
             loadingView
+
         case .completed(let data):
             settingsForm(data)
+
         case .error(let level):
             errorView(level)
+
         case .cancelled:
             cancelledView
         }
@@ -94,10 +101,13 @@ struct AwakeningSettingsView: View {
         switch level {
         case .l1Transient:
             return "A temporary issue occurred. Please wait and try again."
+
         case .l2Recoverable(let msg):
             return msg
+
         case .l3Blocking(let msg):
             return msg
+
         case .l4Conflict(let msg):
             return msg
         }
@@ -171,12 +181,15 @@ struct AwakeningSettingsView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
                 .tint(Color.accentColor)
+
             case .requesting:
                 ProgressView()
                     .controlSize(.small)
+
             case .granted:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.accentColor)
+
             case .denied:
                 Button("Open Settings") {
                     viewModel.openSystemSettings()

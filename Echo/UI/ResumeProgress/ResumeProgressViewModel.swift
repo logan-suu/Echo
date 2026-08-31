@@ -6,9 +6,8 @@
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surface — Alert/confirmationDialog),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.7 - 断点续传集成到长任务
-// AC 覆盖: US-SYS-001 AC-3 🔶 (取消后弹窗询问继续/重新开始 — UI 切片, Core 检测延后 Phase 3.9),
-//          AC-4 🔶 (继续保留进度/重新开始清除进度 意图映射 — UI 切片, Core 读写延后 Phase 3.9),
-//          🔮 ProgressActor/TaskQueueActor 真实读写 + 审计 (Phase 3.9 Core 集成)
+// AC coverage: pending progress is read from ProgressActor in production. Continue/restart
+// fail visibly until Core exposes a task reconstruction/launcher boundary; fixtures remain test-only.
 //          (2026-08-02 PR review W-2: checkDelayNanoseconds 注入; W-3: 文案统一英文; W-4: progressActor 未接线占位 DEF-42-001)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约), §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
@@ -117,6 +116,8 @@ final class ResumeProgressViewModel {
 
     /// UI 切片模式 fixture 注入源
     private var stubFixture: ResumeProgressFixture?
+    /// Distinguishes explicit Preview/test state from progress loaded from SQLite.
+    private var isFixtureBacked = false
 
     /// 模拟加载失败标记（fixture 驱动 error 态）
     private var simulateError = false
@@ -156,14 +157,27 @@ final class ResumeProgressViewModel {
             guard let self else { return }
 
             do {
-                // 🔮 Phase 3.9+: 通过 ProgressActor.hasPendingProgress(taskType:) / load(taskId:)
-                // 读取 SQLite TaskProgress 记录 (架构文档 §6.2)。当前 UI 切片在 Preview/测试中
-                // 通过 loadFixture 注入确定性数据。
                 if self.simulateError || self.stubFixture?.loadError == true {
                     throw ResumeProgressError.checkFailed
                 }
 
-                // 模拟检查延迟 — 可注入 (W-2), 测试注入 0 使异步转换可 await
+                if let progressActor = self.progressActor {
+                    let pending = try await progressActor.loadAll()
+                        .filter { $0.taskType == taskType }
+                        .max { $0.updatedAt < $1.updatedAt }
+                    guard !Task.isCancelled else {
+                        self.viewState = .idle
+                        return
+                    }
+                    if let pending {
+                        self.presentPrompt(pending, fixtureBacked: false)
+                    } else {
+                        self.viewState = .none
+                    }
+                    return
+                }
+
+                // Explicit fixtures retain a controllable delay for deterministic UI tests.
                 try await Task.sleep(nanoseconds: checkDelayNanoseconds)
 
                 guard !Task.isCancelled else {
@@ -171,11 +185,18 @@ final class ResumeProgressViewModel {
                     return
                 }
 
-                if let progress = self.stubFixture?.pendingProgress {
-                    self.presentPrompt(progress)
-                } else {
-                    self.viewState = .none
+                if let fixture = self.stubFixture {
+                    if let progress = fixture.pendingProgress {
+                        self.presentPrompt(progress, fixtureBacked: true)
+                    } else {
+                        self.viewState = .none
+                    }
+                    return
                 }
+
+                self.viewState = .error(.l2Recoverable(
+                    message: "Saved progress storage is not available."
+                ))
             } catch is CancellationError {
                 self.viewState = .idle
             } catch {
@@ -192,10 +213,17 @@ final class ResumeProgressViewModel {
 
     /// 用户选择"继续" — 从保存的进度恢复（US-SYS-001 AC-3）。
     ///
-    /// 🔮 Phase 3.9: 转发 TaskQueueActor.resume(taskId:)（Core 串行队列）。
-    /// 当前为 UI 切片状态更新（fixture 切片模式）。
+    /// Fixture journeys record the deterministic choice. Production fails visibly because a
+    /// persisted TaskProgress row cannot reconstruct the original queued job by itself.
     func continueTask() {
         guard case .prompt(let progress) = viewState else { return }
+        guard isFixtureBacked else {
+            isPromptPresented = false
+            viewState = .error(.l2Recoverable(
+                message: "Task continuation is unavailable because no production task reconstruction boundary is connected."
+            ))
+            return
+        }
         lastResumeTarget = progress
         isPromptPresented = false
         viewState = .resumed
@@ -203,10 +231,17 @@ final class ResumeProgressViewModel {
 
     /// 用户选择"重新开始" — 清除进度后从头开始（US-SYS-001 AC-4）。
     ///
-    /// 🔮 Phase 3.9: 调用 ProgressActor.delete(taskId:) + 启动新任务（清除 stale 记录）。
-    /// 当前为 UI 切片状态更新（fixture 切片模式）。
+    /// Fixture journeys record the deterministic choice. Production fails visibly until the
+    /// originating feature supplies a real task launcher; it does not report a fake restart.
     func restartTask() {
         guard case .prompt(let progress) = viewState else { return }
+        guard isFixtureBacked else {
+            isPromptPresented = false
+            viewState = .error(.l2Recoverable(
+                message: "Task restart is unavailable because no production task launcher is connected."
+            ))
+            return
+        }
         lastResumeTarget = progress
         isPromptPresented = false
         viewState = .restarted
@@ -238,6 +273,7 @@ final class ResumeProgressViewModel {
         isPromptPresented = false
         currentTaskType = nil
         stubFixture = nil
+        isFixtureBacked = false
         simulateError = false
     }
 
@@ -248,6 +284,11 @@ final class ResumeProgressViewModel {
     /// 非 private：Preview / 单元测试通过 fixture 钩子注入已发现的进度以驱动 prompt 态
     /// （等价于检查完成路径，与 ``BackgroundTaskViewModel.loadPreloadedTasks`` 同模式）。
     func presentPrompt(_ progress: TaskProgress) {
+        presentPrompt(progress, fixtureBacked: true)
+    }
+
+    private func presentPrompt(_ progress: TaskProgress, fixtureBacked: Bool) {
+        isFixtureBacked = fixtureBacked
         viewState = .prompt(progress)
         isPromptPresented = true
     }
@@ -259,6 +300,7 @@ final class ResumeProgressViewModel {
     /// - Parameter fixtureID: resume-progress-pending | resume-progress-none | resume-progress-error
     func loadFixture(_ fixtureID: String) {
         stubFixture = ResumeProgressFixtureLoader.load(fixtureID)
+        isFixtureBacked = true
         simulateError = false
     }
 

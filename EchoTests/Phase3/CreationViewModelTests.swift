@@ -41,6 +41,20 @@ struct CreationViewModelTests {
         #expect(vm.selectedTemplate == .letter)
     }
 
+    @Test("ADR-007: missing production creation runtime never falls back to fixture content")
+    func missingRuntimeDoesNotGenerateFixtureContent() async {
+        let vm = CreationViewModel()
+        vm.selectTemplate(.letter)
+
+        vm.generate()
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
+        #expect(vm.creation == nil)
+        #expect(vm.viewState == .error(.l2Recoverable(
+            message: "Offline generation runtime is not available. Please try again."
+        )))
+    }
+
     // MARK: - US-SYN-003 AC-2: Generation with citation anchors
 
     @Test("US-SYN-003 AC-2: generated fixture preserves citation anchors")
@@ -176,7 +190,7 @@ struct CreationViewModelTests {
         vm.promptDraftText = "   "
         vm.confirmPrompt()
         #expect(vm.isPromptEditorPresented == true)
-        #expect(vm.confirmedPrompt == CreationFixtureLoader.defaultPromptDraft)
+        #expect(vm.confirmedPrompt == CreationPromptDefaults.defaultDraft)
     }
 
     // MARK: - US-SYN-005 AC-6: Reset to default prompt
@@ -189,7 +203,7 @@ struct CreationViewModelTests {
         #expect(vm.confirmedPrompt == "Custom draft")
 
         vm.resetPrompt()
-        #expect(vm.confirmedPrompt == CreationFixtureLoader.defaultPromptDraft)
+        #expect(vm.confirmedPrompt == CreationPromptDefaults.defaultDraft)
         #expect(vm.isPromptEditorPresented == false)
     }
 

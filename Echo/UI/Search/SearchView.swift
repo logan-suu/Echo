@@ -178,11 +178,11 @@ struct SearchView: View {
 
     /// 点击结果卡片 → 记忆详情（US-RET-001 结果展示 / 3.3 详情页）。
     ///
-    /// UI 切片模式：按 `result.id` 匹配确定性详情 fixture（MemoryDetailFixtureLoader），
-    /// 命中则预加载详情 ViewModel；未命中走生产路径 `MemoryDetailView(memoryId:)`
-    /// （Phase 3.9 由 Core 按 memoryId 拉取）。
+    /// Explicit fixture journeys may resolve a deterministic detail fixture. Production
+    /// results always navigate through the live canonical repository.
     private func openDetail(for result: SearchResultModel) {
-        if let model = MemoryDetailFixtureLoader.load(memoryID: result.id) {
+        if viewModel.isFixtureBacked,
+           let model = MemoryDetailFixtureLoader.load(memoryID: result.id) {
             let vm = MemoryDetailViewModel()
             vm.loadPreloaded(model)
             detailViewModel = vm

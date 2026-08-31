@@ -191,16 +191,20 @@ extension PhotoTextSearchContractsTests {
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-nil", sourceType: "photo")
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp1-nil", canonicalText: nil, sourceType: "photo"),
-            representations: [Representation(
-                representationId: representationID,
-                memoryId: memoryId,
-                modality: .visionDense,
-                preprocessVersion: "siglip2-v1",
-                contentHash: "hash-nil"
-            )],
-            vectorsByGeneration: ["text_dense/e5-v1": [
-                CanonicalVectorEntry(id: representationID, vector: [Float](repeating: 0.25, count: 384))
-            ]],
+            representations: [
+                Representation(
+                    representationId: representationID,
+                    memoryId: memoryId,
+                    modality: .visionDense,
+                    preprocessVersion: "siglip2-v1",
+                    contentHash: "hash-nil"
+                ),
+            ],
+            vectorsByGeneration: [
+                "text_dense/e5-v1": [
+                    CanonicalVectorEntry(id: representationID, vector: [Float](repeating: 0.25, count: 384)),
+                ],
+            ],
             traceID: "t-wp1-3a"
         )
         let result = try await repo.mapVectorID(representationID, generationID: generationID)
@@ -220,16 +224,20 @@ extension PhotoTextSearchContractsTests {
         let exifPayload = Data("{\"EXIF\":{\"Orientation\":6}}".utf8)
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp1-exif", canonicalText: nil, sourceType: "photo"),
-            representations: [Representation(
-                representationId: representationID,
-                memoryId: memoryId,
-                modality: .visionDense,
-                preprocessVersion: "siglip2-v1",
-                contentHash: "hash-exif"
-            )],
-            vectorsByGeneration: ["text_dense/e5-v1": [
-                CanonicalVectorEntry(id: representationID, vector: [Float](repeating: 0.5, count: 384), metadata: exifPayload)
-            ]],
+            representations: [
+                Representation(
+                    representationId: representationID,
+                    memoryId: memoryId,
+                    modality: .visionDense,
+                    preprocessVersion: "siglip2-v1",
+                    contentHash: "hash-exif"
+                ),
+            ],
+            vectorsByGeneration: [
+                "text_dense/e5-v1": [
+                    CanonicalVectorEntry(id: representationID, vector: [Float](repeating: 0.5, count: 384), metadata: exifPayload),
+                ],
+            ],
             traceID: "t-wp1-3c"
         )
         let result = try await repo.mapVectorID(representationID, generationID: generationID)
@@ -332,13 +340,15 @@ extension PhotoTextSearchContractsTests {
         let memoryId = CanonicalMemoryRepositoryActor.deterministicID(sourceLocator: "PHAsset/wp1-4c", sourceType: "photo")
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp1-4c", canonicalText: nil, sourceType: "photo"),
-            representations: [Representation(
-                representationId: representationID,
-                memoryId: memoryId,
-                modality: .visionDense,
-                preprocessVersion: "siglip2-v1",
-                contentHash: "hash-4c"
-            )],
+            representations: [
+                Representation(
+                    representationId: representationID,
+                    memoryId: memoryId,
+                    modality: .visionDense,
+                    preprocessVersion: "siglip2-v1",
+                    contentHash: "hash-4c"
+                ),
+            ],
             vectorsByGeneration: [:],
             traceID: "t-wp1-4c"
         )

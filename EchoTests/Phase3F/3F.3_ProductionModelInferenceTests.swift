@@ -79,7 +79,7 @@ struct E5TokenizerTests {
         let tokenizer = try makeTokenizer()
         let pieces = tokenizer.tokenizePieces("今天天气很好")
         #expect(pieces.count >= 3, "Chinese sentence must tokenize into multiple pieces, got \(pieces)")
-        #expect(!pieces.contains(where: { $0.contains("今天天气很好") }),
+        #expect(!pieces.contains { $0.contains("今天天气很好") },
                 "Whole-sentence unknown collapse is forbidden")
     }
 

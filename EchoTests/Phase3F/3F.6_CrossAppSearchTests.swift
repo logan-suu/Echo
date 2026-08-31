@@ -100,7 +100,7 @@ public actor ThrowingSpyProvider: CrossAppSourceProvider {
     }
 
     /// 非隔离 witness：仅记录调用并抛错，不触碰隔离状态（R-007 安全）。
-    public nonisolated func search(
+    nonisolated public func search(
         query: String,
         window: ClosedRange<Date>?
     ) async throws -> [CrossAppSourceResult] {
@@ -119,7 +119,7 @@ public actor RecordingSourceProvider: CrossAppSourceProvider {
         self.results = results
     }
 
-    public nonisolated func search(
+    nonisolated public func search(
         query: String,
         window: ClosedRange<Date>?
     ) async throws -> [CrossAppSourceResult] {
@@ -142,7 +142,7 @@ public actor DeterministicSubjectiveScorer: SubjectiveScorer {
         self.defaultScore = defaultScore
     }
 
-    public nonisolated func subjectiveMatchScore(text: String) async throws -> Float {
+    nonisolated public func subjectiveMatchScore(text: String) async throws -> Float {
         let lowered = text.lowercased()
         let matches = keywordScores.compactMap { keyword, score -> Float? in
             lowered.contains(keyword) ? score : nil
@@ -592,4 +592,3 @@ struct CrossAppSearchTests {
         #expect(transcribed == "fixture transcript")
     }
 }
-

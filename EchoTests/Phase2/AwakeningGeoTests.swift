@@ -220,7 +220,7 @@ struct AwakeningGeoTests {
             SearchResultItem(id: UUID(), assetId: "a2", sourceType: "photo",
                              timestamp: Date().timeIntervalSince1970, cosineSimilarity: 0.5),
             SearchResultItem(id: UUID(), assetId: "a3", sourceType: "photo",
-                             timestamp: Date().timeIntervalSince1970, cosineSimilarity: 0.69)
+                             timestamp: Date().timeIntervalSince1970, cosineSimilarity: 0.69),
         ]
 
         let filtered = await sut.filterByThreshold(allLow, threshold: 0.7)
@@ -237,7 +237,7 @@ struct AwakeningGeoTests {
             SearchResultItem(id: memoryId1, assetId: "card-asset-1", sourceType: "photo",
                              timestamp: Date().timeIntervalSince1970, cosineSimilarity: 0.85),
             SearchResultItem(id: memoryId2, assetId: "card-asset-2", sourceType: "text",
-                             timestamp: Date().timeIntervalSince1970, cosineSimilarity: 0.90)
+                             timestamp: Date().timeIntervalSince1970, cosineSimilarity: 0.90),
         ]
         let regionId = "ac4-test-\(UUID().uuidString)"
 

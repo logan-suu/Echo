@@ -57,8 +57,10 @@ public enum ASREngineError: Error, LocalizedError, Sendable, Equatable {
         switch self {
         case .modelNotLoaded:
             return "ASR model not loaded — 请在「设置」中重试模型加载"
+
         case .transcriptionFailed(let reason):
             return "Audio transcription failed: \(reason)"
+
         case .noSpeechDetected:
             return "No speech detected in audio track"
         }
@@ -67,12 +69,12 @@ public enum ASREngineError: Error, LocalizedError, Sendable, Equatable {
 
 // MARK: - Stub ASR Engine
 
+#if DEBUG
 /// Stub ASR 引擎 — 返回固定转写文本或指定文本，用于 Pipeline 测试。
 ///
 /// 该实现不依赖 Core ML 或 PHPhotoLibrary，纯逻辑验证 IngestPipeline 视频摄入流程正确性。
 /// 真实转写由 `WhisperASREngine` + `WhisperRuntimeBridge`（R-3.3，whisper.cpp 接入后）实现。
 public actor StubASREngine: ASREngineProtocol {
-
     /// 预设的转写文本（测试可控）
     private var nextTranscript: String
     /// 是否在下一次调用时抛出错误（测试可控）
@@ -115,3 +117,4 @@ public actor StubASREngine: ASREngineProtocol {
         return nextTranscript
     }
 }
+#endif

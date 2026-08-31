@@ -29,10 +29,11 @@ struct ModelLoaderActorTests {
 
     // MARK: - AC-1: Model File Resources Defined (Bundle-based, no network)
 
-    @Test("AC-1: modelTypes defines all 6 required models with bundle resource names")
-    func test_AC1_modelTypes_definesAllSixModels() {
+    @Test("AC-1: modelTypes defines all 4 bundled runtime models")
+    func test_AC1_modelTypes_definesAllBundledModels() {
         let models = ModelLoaderActor.ModelType.allCases
-        #expect(models.count == 3, "AC-1: Expected 3 model types (v6.0: E5/SigLIP2/Whisper)")
+        #expect(models.count == 4, "AC-1: Expected E5, SigLIP2 image, SigLIP2 text, and Whisper")
+        #expect(models.contains(.siglip2Text))
 
         // Verify each model type has a non-empty bundle resource name
         for modelType in models {
@@ -220,9 +221,9 @@ struct ModelLoaderActorTests {
 
     @Test("AC-6: ModelType is a fixed enum — no runtime model switching API")
     func test_AC6_modelTypesAreFixed() {
-        // ModelType is a fixed enum with exactly 3 cases (v6.0) — no dynamic model registry
+        // ModelType is a fixed enum with exactly 4 bundled runtime cases — no dynamic model registry
         let models = ModelLoaderActor.ModelType.allCases
-        #expect(models.count == 3)
+        #expect(models.count == 4)
         // No addModel/removeModel/switchModel API exists
         // Verified by: ModelType is an enum, not a protocol or class hierarchy
     }
@@ -302,11 +303,11 @@ struct ModelLoaderActorTests {
 
     // MARK: - Load All Models
 
-    @Test("loadAllModels returns results for all 3 model types")
-    func test_loadAllModels_returnsAllThree() async {
+    @Test("loadAllModels returns results for all 4 model types")
+    func test_loadAllModels_returnsAllBundledModels() async {
         let sut = makeSUT()
         let results = await sut.loadAllModels()
-        #expect(results.count == 3, "loadAllModels should return exactly 3 results")
+        #expect(results.count == 4, "loadAllModels should return exactly 4 results")
     }
 
     @Test("loadAllModels is idempotent — second call skips already-loaded/failed models")

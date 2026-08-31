@@ -6,7 +6,7 @@
 // AC 覆盖: US-DIS-002 AC-2 (cache-first + Apple Translation fallback), AC-3 (源语言检测不确定保留原文, ADR-005), AC-5 (缓存 TTL=7d)
 // 架构约束: 展示层服务 (非 Core, 见 docs/ui/architecture.md §5 允许内容);
 //           禁止云端翻译 API (R-001/R-005); 端侧翻译为首选 (双语言文档 §6.4);
-//           🔮 Phase 3.9: 接入 Apple Translation Framework + 术语表 JSON
+// Runtime: Apple Translation Framework + terminology-first mapping are connected in production.
 // 生成时间: 2026-08-02
 // ==========================================
 

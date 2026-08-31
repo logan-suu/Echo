@@ -43,7 +43,10 @@ struct AppRootView: View {
 
     /// Onboarding ViewModel - first-launch flow (Task 3.11).
     /// 3F.1 fix: inject composition.consentStore so Agree persists consent immediately (US-PRV-008 AC-4)
-    @State private var onboardingViewModel = OnboardingViewModel(consentStore: AppComposition.shared.consentStore)
+    @State private var onboardingViewModel = OnboardingViewModel(
+        consentStore: AppComposition.shared.consentStore,
+        modelLoader: AppComposition.shared.modelLoader
+    )
 
     /// Whether onboarding is presented (fullScreenCover, echo-memory-canvas §15.1)
     @State private var isOnboardingPresented = false
@@ -152,6 +155,14 @@ struct AppRootView: View {
     private func handleOnboardingCompleted() {
         Task {
             do {
+                if let language = onboardingViewModel.selectedLanguage {
+                    let selection: LanguageCenter.AppLanguageSelection = language == "zh-Hans" ? .zhHans : .enUS
+                    try await languageCenter.apply(
+                        selection,
+                        systemLanguage: LanguageCenter.systemLanguageIdentifier(),
+                        privacyActor: composition.privacyActor
+                    )
+                }
                 try await composition.acceptConsent(consentVersion: 1, policyVersion: 1)
             } catch {
                 // Never swallow: surface the failed consent save instead of proceeding silently
