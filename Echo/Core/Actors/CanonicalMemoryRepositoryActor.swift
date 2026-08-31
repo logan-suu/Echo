@@ -19,6 +19,8 @@
 // PR#57 review fix: W-03 新增 DEBUG-only .deleteFail 故障点 + CanonicalRepositoryError.deleteInjected，
 //                   供 SyncPipeline canonical 删除失败路径测试（D-005 不静默吞错）
 // PR#57 CodeRabbit fix: CR-11 新增 memoryNotFound/invalidMemoryID 显式错误（deleteMemory false 与非法 UUID 不再静默）
+// PR#65 review fix: resume deletion from the persisted phase, preserve exclusion intent,
+//                  and remove every representation vector plus IndexBuildItem residue.
 // ==========================================
 
 import Foundation
@@ -318,35 +320,39 @@ public actor CanonicalMemoryRepositoryActor {
         writeExcluded: Bool,
         traceID: String
     ) async throws -> Bool {
-        let memory = try await loadMemory(memoryId: memoryId)
-        guard memory != nil else { return false }
-
-        // D-005 (WP3 steps 3i-3t2): journal 驱动的可恢复删除阶段机。
-        // 固定 operationID ⇒ 故障重放幂等更新同一 journal 行。
         let operationID = "del-\(memoryId.uuidString.lowercased())"
         let subject = AuditSubject.memory(memoryId)
+        let existingJournal = try await db.loadDeletionJournals(memoryId: memoryId).first
+        let memory = try await loadMemory(memoryId: memoryId)
+        guard memory != nil || existingJournal != nil else { return false }
 
-        func advance(_ phase: MemoryDeletionPhase,
-                     vectors: [GenerationVectorIDs] = []) async throws {
-            let j = MemoryDeletionJournal(
+        let effectiveLocator = existingJournal?.sourceLocator ?? sourceLocator ?? memory?.sourceLocator
+        let effectiveType = existingJournal?.sourceType ?? sourceType ?? memory?.sourceType
+        let effectiveWriteExcluded = existingJournal?.writeExcluded ?? writeExcluded
+
+        var journal: MemoryDeletionJournal
+        if let existingJournal {
+            journal = existingJournal
+        } else {
+            let representations = try await loadRepresentations(memoryId: memoryId)
+            let vectorIDs = Array(Set([memoryId] + representations.map(\.representationId)))
+                .sorted { $0.uuidString < $1.uuidString }
+            let generations = try await generationRegistry.loadGenerations()
+            journal = MemoryDeletionJournal(
                 operationID: operationID,
                 memoryID: memoryId,
                 auditSubjectHash: subject.subjectHash,
                 traceID: traceID,
-                phase: phase,
-                vectorIDsByGeneration: vectors
+                phase: .planned,
+                vectorIDsByGeneration: generations.map {
+                    GenerationVectorIDs(generationID: $0.generationId, vectorIDs: vectorIDs)
+                },
+                sourceLocator: effectiveLocator,
+                sourceType: effectiveType,
+                writeExcluded: effectiveWriteExcluded
             )
-            try await db.upsertDeletionJournal(j)
+            try await db.upsertDeletionJournal(journal)
         }
-
-        // Phase: planned —— 先于一切副作用持久化
-        let generations = try await generationRegistry.loadGenerations()
-        try await advance(
-            .planned,
-            vectors: generations.map {
-                GenerationVectorIDs(generationID: $0.generationId, vectorIDs: [memoryId])
-            }
-        )
 
         #if DEBUG
         if fault == .deleteFail {
@@ -354,76 +360,89 @@ public actor CanonicalMemoryRepositoryActor {
         }
         #endif
 
-        // Stage 1: cache 失效（协作方经 configureDeletionCollaborators 注入；
-        // 未注入时跳过——单元夹具场景无 cache 可失效）
-        if let cache = deletionCacheActor {
-            _ = try await cache.invalidate(memoryID: memoryId)
+        if journal.phase.ordinal < MemoryDeletionPhase.cacheInvalidated.ordinal {
+            if let cache = deletionCacheActor {
+                _ = try await cache.invalidate(memoryID: memoryId)
+                #if DEBUG
+                if fault == .cacheInvalidation {
+                    throw CanonicalRepositoryError.deleteInjected
+                }
+                #endif
+            }
+            journal = try await advanceDeletionJournal(journal, to: .cacheInvalidated)
+        }
+
+        var diskCleanupFailed = false
+        if journal.phase.ordinal < MemoryDeletionPhase.vectorsDeleted.ordinal {
+            for plan in journal.vectorIDsByGeneration {
+                if let store = await generationRegistry.vectorStore(for: plan.generationID) {
+                    for vectorID in plan.vectorIDs {
+                        _ = await store.delete(id: vectorID)
+                    }
+                    do {
+                        try await generationRegistry.persistStore(generationId: plan.generationID)
+                    } catch {
+                        diskCleanupFailed = true
+                    }
+                } else {
+                    let url = await generationRegistry.storeFileURL(for: plan.generationID)
+                    guard FileManager.default.fileExists(atPath: url.path),
+                          let diskStore = try? VectorStoreActor.load(from: url) else { continue }
+                    for vectorID in plan.vectorIDs {
+                        _ = await diskStore.delete(id: vectorID)
+                    }
+                    do {
+                        try await diskStore.save(to: url)
+                    } catch {
+                        diskCleanupFailed = true
+                    }
+                }
+            }
             #if DEBUG
-            if fault == .cacheInvalidation {
+            if fault == .vectorDeletePersist {
                 throw CanonicalRepositoryError.deleteInjected
             }
             #endif
+            journal = try await advanceDeletionJournal(journal, to: .vectorsDeleted)
         }
-        try await advance(.cacheInvalidated)
 
-        // Stage 2: 全 generation 向量删除（内存实例 + 磁盘副本 F-1）
-        var diskCleanupFailed = false
-        for gen in generations {
-            let generationId = gen.generationId
-            if let store = await generationRegistry.vectorStore(for: generationId) {
-                _ = await store.delete(id: memoryId)
-                do {
-                    try await generationRegistry.persistStore(generationId: generationId)
-                } catch {
-                    diskCleanupFailed = true
-                }
-            } else {
-                let url = await generationRegistry.storeFileURL(for: generationId)
-                guard FileManager.default.fileExists(atPath: url.path),
-                      let diskStore = try? VectorStoreActor.load(from: url) else { continue }
-                _ = await diskStore.delete(id: memoryId)
-                do {
-                    try await diskStore.save(to: url)
-                } catch {
-                    diskCleanupFailed = true
-                }
+        if journal.phase.ordinal < MemoryDeletionPhase.auditPurged.ordinal {
+            _ = try await privacyActor.purgeAuditRecords(subject: subject, traceID: journal.traceID)
+            #if DEBUG
+            if fault == .auditPurge {
+                throw CanonicalRepositoryError.deleteInjected
             }
+            #endif
+            journal = try await advanceDeletionJournal(journal, to: .auditPurged)
         }
-        #if DEBUG
-        if fault == .vectorDeletePersist {
-            throw CanonicalRepositoryError.deleteInjected
-        }
-        #endif
-        try await advance(.vectorsDeleted)
 
-        // Stage 3: subject-linked audit purge（精确按 kind+subjectHash）
-        _ = try await privacyActor.purgeAuditRecords(subject: subject, traceID: traceID)
-        #if DEBUG
-        if fault == .auditPurge {
-            throw CanonicalRepositoryError.deleteInjected
+        if journal.phase.ordinal < MemoryDeletionPhase.canonicalDeleted.ordinal {
+            let storedRepresentationIDs = try await loadRepresentations(memoryId: memoryId)
+                .map(\.representationId)
+            let plannedVectorIDs = journal.vectorIDsByGeneration.flatMap(\.vectorIDs)
+            let representationIDs = Array(Set(storedRepresentationIDs + plannedVectorIDs))
+            let indexCleanup = representationIDs.map {
+                DatabaseManager.DBWrite(
+                    sql: "DELETE FROM IndexBuildItem WHERE representationId = ?",
+                    bindings: [.text($0.uuidString)]
+                )
+            }
+            try await db.executeTransaction(indexCleanup + [
+                .init(sql: "DELETE FROM MemoryFTS WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
+                .init(sql: "DELETE FROM translationCache WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
+                .init(sql: "DELETE FROM Memory WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
+            ])
+            #if DEBUG
+            if fault == .canonicalTransaction {
+                throw CanonicalRepositoryError.deleteInjected
+            }
+            #endif
+            journal = try await advanceDeletionJournal(journal, to: .canonicalDeleted)
         }
-        #endif
-        try await advance(.auditPurged)
 
-        // Stage 4: canonical transaction（canonical + FTS + translationCache 原子清除）
-        try await db.executeTransaction([
-            .init(sql: "DELETE FROM MemoryFTS WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
-            .init(sql: "DELETE FROM translationCache WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
-            .init(sql: "DELETE FROM Memory WHERE memoryId = ?", bindings: [.text(memoryId.uuidString)]),
-        ])
-        #if DEBUG
-        if fault == .canonicalTransaction {
-            throw CanonicalRepositoryError.deleteInjected
-        }
-        #endif
-        try await advance(.canonicalDeleted)
-
-        // ExcludedAssets 契约 (US-PRV-004 AC-2 / US-PRV-007 AC-2; CR-1 PR#56)
-        let effectiveLocator = sourceLocator ?? memory?.sourceLocator
-        let effectiveType = sourceType ?? memory?.sourceType
         var excludedActuallyWritten = false
-        if writeExcluded, let locator = effectiveLocator, let st = effectiveType {
-            try await excludedAssets.add(assetId: locator, sourceType: st, traceID: traceID)
+        if effectiveWriteExcluded, let locator = effectiveLocator, let st = effectiveType {
+            try await excludedAssets.add(assetId: locator, sourceType: st, traceID: journal.traceID)
             excludedActuallyWritten = true
         }
 
@@ -431,7 +450,7 @@ public actor CanonicalMemoryRepositoryActor {
         let policy = await privacyActor.getPolicy()
         try? await privacyActor.writeAuditLog(
             eventType: .memoryDeleted,
-            traceID: traceID,
+            traceID: journal.traceID,
             policyVersion: policy.policyVersion,
             success: true,
             sourceType: effectiveType,
@@ -440,9 +459,28 @@ public actor CanonicalMemoryRepositoryActor {
         )
 
         // Completed：journal 自移除（防 subject 经 journal 重引入）
-        try await advance(.completed)
+        journal = try await advanceDeletionJournal(journal, to: .completed)
         try await db.deleteDeletionJournal(operationID: operationID)
         return true
+    }
+
+    private func advanceDeletionJournal(
+        _ journal: MemoryDeletionJournal,
+        to phase: MemoryDeletionPhase
+    ) async throws -> MemoryDeletionJournal {
+        let updated = MemoryDeletionJournal(
+            operationID: journal.operationID,
+            memoryID: journal.memoryID,
+            auditSubjectHash: journal.auditSubjectHash,
+            traceID: journal.traceID,
+            phase: phase,
+            vectorIDsByGeneration: journal.vectorIDsByGeneration,
+            sourceLocator: journal.sourceLocator,
+            sourceType: journal.sourceType,
+            writeExcluded: journal.writeExcluded
+        )
+        try await db.upsertDeletionJournal(updated)
+        return updated
     }
 
     /// WP3 steps 5a-5f：consent revoke 三接通组合入口——

@@ -4,6 +4,7 @@
 //            AGENTS.md §5 (数据持久化契约)
 // 任务: 1.4 - 集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), R-007 (禁止 @unchecked Sendable)
+// AC 覆盖: D-005 deletion journal persists phase, vector plan, and exclusion intent.
 // 生成时间: 2026-07-04
 // ==========================================
 
@@ -181,9 +182,22 @@ public actor DatabaseManager {
                 traceID TEXT NOT NULL,
                 phase TEXT NOT NULL,
                 vectorIDsByGenerationJSON TEXT NOT NULL DEFAULT '[]',
+                sourceLocator TEXT,
+                sourceType TEXT,
+                writeExcluded INTEGER,
                 updatedAt REAL NOT NULL
             )
             """)
+        let deletionJournalColumns = try columnNames(in: "MemoryDeletionJournal")
+        if !deletionJournalColumns.contains("sourceLocator") {
+            try execute(sql: "ALTER TABLE MemoryDeletionJournal ADD COLUMN sourceLocator TEXT")
+        }
+        if !deletionJournalColumns.contains("sourceType") {
+            try execute(sql: "ALTER TABLE MemoryDeletionJournal ADD COLUMN sourceType TEXT")
+        }
+        if !deletionJournalColumns.contains("writeExcluded") {
+            try execute(sql: "ALTER TABLE MemoryDeletionJournal ADD COLUMN writeExcluded INTEGER")
+        }
         // UserPolicy persistence table
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS UserPolicyStore (
@@ -444,7 +458,7 @@ public actor DatabaseManager {
         let vecJSONData = try JSONEncoder().encode(journal.vectorIDsByGeneration)
         let vecJSON = String(data: vecJSONData, encoding: .utf8) ?? "[]"
         try executeWrite(
-            sql: "INSERT OR REPLACE INTO MemoryDeletionJournal (operationID, memoryId, auditSubjectHash, traceID, phase, vectorIDsByGenerationJSON, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            sql: "INSERT OR REPLACE INTO MemoryDeletionJournal (operationID, memoryId, auditSubjectHash, traceID, phase, vectorIDsByGenerationJSON, sourceLocator, sourceType, writeExcluded, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             bindings: [
                 .text(journal.operationID),
                 .text(journal.memoryID.uuidString),
@@ -452,6 +466,9 @@ public actor DatabaseManager {
                 .text(journal.traceID),
                 .text(journal.phase.rawValue),
                 .text(vecJSON),
+                journal.sourceLocator.map(DBBinding.text) ?? .null,
+                journal.sourceType.map(DBBinding.text) ?? .null,
+                journal.writeExcluded.map { .int($0 ? 1 : 0) } ?? .null,
                 .double(Date().timeIntervalSince1970),
             ]
         )
@@ -497,7 +514,10 @@ public actor DatabaseManager {
             auditSubjectHash: subjHash,
             traceID: traceID,
             phase: phase,
-            vectorIDsByGeneration: vectors
+            vectorIDsByGeneration: vectors,
+            sourceLocator: row["sourceLocator"]?.stringValue,
+            sourceType: row["sourceType"]?.stringValue,
+            writeExcluded: row["writeExcluded"]?.intValue.map { $0 != 0 }
         )
     }
 

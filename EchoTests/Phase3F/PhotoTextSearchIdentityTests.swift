@@ -603,7 +603,10 @@ struct PhotoTextSearchIdentityTests {
             auditSubjectHash: AuditSubject.memory(memoryId).subjectHash,
             traceID: "t-wp3-3j",
             phase: .vectorsDeleted,
-            vectorIDsByGeneration: genVecs
+            vectorIDsByGeneration: genVecs,
+            sourceLocator: "PHAsset/wp3-roundtrip",
+            sourceType: "photo",
+            writeExcluded: true
         )
         try await db.upsertDeletionJournal(journal)
 
@@ -614,6 +617,9 @@ struct PhotoTextSearchIdentityTests {
         #expect(restored.phase == .vectorsDeleted)
         #expect(restored.vectorIDsByGeneration.count == 2)
         #expect(restored.vectorIDsByGeneration[0].vectorIDs.count == 2)
+        #expect(restored.sourceLocator == "PHAsset/wp3-roundtrip")
+        #expect(restored.sourceType == "photo")
+        #expect(restored.writeExcluded == true)
 
         try await db.deleteDeletionJournal(operationID: "op-roundtrip")
         #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
@@ -670,6 +676,59 @@ struct PhotoTextSearchIdentityTests {
         #expect(rows.first?["c"]?.intValue == 0)
     }
 
+    @Test("Deletion recovery preserves the original exclusion intent")
+    func test_D005_DeletionRecoveryPreservesExclusionIntent() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let assetID = "PHAsset/wp3-exclusion-resume"
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(
+            sourceLocator: assetID,
+            sourceType: "photo"
+        )
+        let excludedAssets = ExcludedAssetsActor.shared
+        _ = try await excludedAssets.remove(assetId: assetID)
+        _ = try await repo.commit(
+            memory: Memory(
+                memoryId: memoryId,
+                sourceLocator: assetID,
+                canonicalText: nil,
+                sourceType: "photo"
+            ),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-exclusion-resume"
+        )
+
+        await repo.setFault(.canonicalTransaction)
+        do {
+            _ = try await repo.deleteMemory(
+                memoryId: memoryId,
+                sourceLocator: assetID,
+                sourceType: "photo",
+                writeExcluded: true,
+                traceID: "t-wp3-exclusion-resume"
+            )
+            Issue.record("expected canonical transaction fault")
+        } catch CanonicalRepositoryError.deleteInjected {
+            // Expected fault: the canonical transaction committed before the journal advanced.
+        } catch {
+            Issue.record("unexpected deletion error: \(error)")
+        }
+
+        await repo.setFault(nil)
+        _ = try await repo.deleteMemory(
+            memoryId: memoryId,
+            writeExcluded: false,
+            traceID: "t-wp3-exclusion-resume-retry"
+        )
+
+        #expect(try await excludedAssets.contains(assetId: assetID))
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+        _ = try await excludedAssets.remove(assetId: assetID)
+    }
+
 
     @Test("Deletion leaves zero residue across all stores (WP3 step 4 series)")
     func testDeletionLeavesZeroResidueAcrossAllStores() async throws {
@@ -682,7 +741,7 @@ struct PhotoTextSearchIdentityTests {
         let targetSubject = AuditSubject.memory(memoryId)
 
         // 全足迹种子：canonical text(FTS) + representation + vector + translationCache + IndexBuildItem + audit rows
-        let repID = CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId)
+        let repID = CanonicalMemoryRepositoryActor.ocrRepresentationID(memoryID: memoryId)
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-residue", canonicalText: "residue probe", sourceType: "photo"),
             representations: [
@@ -706,6 +765,8 @@ struct PhotoTextSearchIdentityTests {
             sql: "INSERT INTO IndexBuildItem (generationId, representationId, state) VALUES (?, ?, ?)",
             bindings: [.text(generationID), .text(repID.uuidString), .text("done")]
         )
+        let vectorStore = try #require(await repo.generationRegistry.vectorStore(for: generationID))
+        #expect(await vectorStore.allEntries().contains { $0.id == repID })
 
         _ = try await repo.deleteMemory(memoryId: memoryId, writeExcluded: false, traceID: "t-wp3-residue")
 
@@ -721,7 +782,7 @@ struct PhotoTextSearchIdentityTests {
         #expect(await countRows("SELECT COUNT(*) AS c FROM MemoryFTS WHERE memoryId = ?", memoryId) == 0)
         #expect(await countRows("SELECT COUNT(*) AS c FROM translationCache WHERE memoryId = ?", memoryId) == 0)
         #expect(await countRows("SELECT COUNT(*) AS c FROM IndexBuildItem WHERE representationId = ?", repID) == 0)
-        #expect(await countRows("SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?") == 0 || true)
+        #expect(!(await vectorStore.allEntries()).contains { $0.id == repID })
         let auditTargetRows = try? await db.executeQuery(
             sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?",
             bindings: [.text(targetSubject.subjectHash)]
