@@ -75,6 +75,18 @@ struct OnboardingTests {
         return vm.viewState
     }
 
+    /// Reaches the language step without enabling fixture mode.
+    private func enterProductionLanguageStep(_ vm: OnboardingViewModel) {
+        vm.start()
+        vm.acceptPrivacy()
+        for index in vm.permissionSteps.indices {
+            #expect(vm.viewState == .permissions(index))
+            vm.denyPermission()
+            vm.skipPermission()
+        }
+        #expect(vm.viewState == .language)
+    }
+
     /// Waits for an asynchronous permission request to leave its current step.
     private func awaitPermissionSettled(
         _ vm: OnboardingViewModel,
@@ -306,7 +318,7 @@ struct OnboardingTests {
     func test_modelLoadTracksEveryBundledModel() async {
         let loader = OnboardingModelLoaderStub()
         let vm = OnboardingViewModel(loadDelayNanoseconds: 0, modelLoader: loader)
-        vm.loadFixture("onboarding-language")
+        enterProductionLanguageStep(vm)
         vm.selectLanguage("en-US")
 
         vm.beginLoad()
@@ -325,7 +337,7 @@ struct OnboardingTests {
     func test_modelLoadTracksIndividualFailure() async {
         let loader = OnboardingModelLoaderStub(failedModel: .siglip2Text)
         let vm = OnboardingViewModel(loadDelayNanoseconds: 0, modelLoader: loader)
-        vm.loadFixture("onboarding-language")
+        enterProductionLanguageStep(vm)
         vm.selectLanguage("en-US")
 
         vm.beginLoad()
@@ -343,14 +355,7 @@ struct OnboardingTests {
     @Test("Production loading fails closed when no model loader is available")
     func test_productionModelLoadWithoutLoaderFailsClosed() async {
         let vm = OnboardingViewModel(loadDelayNanoseconds: 0)
-        vm.start()
-        vm.acceptPrivacy()
-        for index in vm.permissionSteps.indices {
-            #expect(vm.viewState == .permissions(index))
-            vm.denyPermission()
-            vm.skipPermission()
-        }
-        #expect(vm.viewState == .language)
+        enterProductionLanguageStep(vm)
 
         vm.beginLoad()
         let settled = await awaitSettled(vm)
@@ -359,6 +364,20 @@ struct OnboardingTests {
         #expect(vm.isFixtureBacked == false)
         #expect(vm.modelLoadProgress.failedCount == ModelLoaderActor.ModelType.allCases.count)
         #expect(vm.modelLoadProgress.items.allSatisfy { $0.state == .failed })
+    }
+
+    @Test("Fixture model loading never invokes an injected production loader")
+    func test_fixtureModelLoadTakesPrecedenceOverLoader() async {
+        let loader = OnboardingModelLoaderStub()
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0, modelLoader: loader)
+        vm.loadFixture("onboarding-language")
+
+        vm.beginLoad()
+        let settled = await awaitSettled(vm)
+
+        #expect(settled == .completed)
+        #expect(await loader.loadedModels().isEmpty)
+        #expect(vm.modelLoadProgress.items.allSatisfy { $0.state == .loaded })
     }
 
     @Test("Reset keeps welcome state after cancelling model loading")

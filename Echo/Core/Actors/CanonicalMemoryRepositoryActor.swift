@@ -21,6 +21,8 @@
 // PR#57 CodeRabbit fix: CR-11 新增 memoryNotFound/invalidMemoryID 显式错误（deleteMemory false 与非法 UUID 不再静默）
 // PR#65 review fix: resume deletion from the persisted phase, preserve exclusion intent,
 //                  and remove every representation vector plus IndexBuildItem residue.
+// PR#65 third review fix: vector persistence is a fail-stop phase boundary, and resumed
+//                        deletion removes the exact persisted journal operation.
 // ==========================================
 
 import Foundation
@@ -372,8 +374,8 @@ public actor CanonicalMemoryRepositoryActor {
             journal = try await advanceDeletionJournal(journal, to: .cacheInvalidated)
         }
 
-        var diskCleanupFailed = false
         if journal.phase.ordinal < MemoryDeletionPhase.vectorsDeleted.ordinal {
+            var vectorPersistenceError: Error?
             for plan in journal.vectorIDsByGeneration {
                 if let store = await generationRegistry.vectorStore(for: plan.generationID) {
                     for vectorID in plan.vectorIDs {
@@ -382,27 +384,32 @@ public actor CanonicalMemoryRepositoryActor {
                     do {
                         try await generationRegistry.persistStore(generationId: plan.generationID)
                     } catch {
-                        diskCleanupFailed = true
+                        vectorPersistenceError = vectorPersistenceError ?? error
                     }
                 } else {
                     let url = await generationRegistry.storeFileURL(for: plan.generationID)
-                    guard FileManager.default.fileExists(atPath: url.path),
-                          let diskStore = try? VectorStoreActor.load(from: url) else { continue }
-                    for vectorID in plan.vectorIDs {
-                        _ = await diskStore.delete(id: vectorID)
-                    }
+                    guard FileManager.default.fileExists(atPath: url.path) else { continue }
                     do {
+                        let diskStore = try VectorStoreActor.load(from: url)
+                        for vectorID in plan.vectorIDs {
+                            _ = await diskStore.delete(id: vectorID)
+                        }
                         try await diskStore.save(to: url)
                     } catch {
-                        diskCleanupFailed = true
+                        vectorPersistenceError = vectorPersistenceError ?? error
                     }
                 }
             }
             #if DEBUG
             if fault == .vectorDeletePersist {
-                throw CanonicalRepositoryError.deleteInjected
+                vectorPersistenceError = vectorPersistenceError ?? CanonicalRepositoryError.deleteInjected
             }
             #endif
+            // Durable vector cleanup is a phase boundary. Keep the journal at
+            // cacheInvalidated so the entire idempotent phase can be replayed.
+            if let vectorPersistenceError {
+                throw vectorPersistenceError
+            }
             journal = try await advanceDeletionJournal(journal, to: .vectorsDeleted)
         }
 
@@ -446,7 +453,7 @@ public actor CanonicalMemoryRepositoryActor {
             excludedActuallyWritten = true
         }
 
-        // 完成审计（不含 memory subject 明文；携带向量磁盘清理标记）
+        // 完成审计（不含 memory subject 明文）
         let policy = await privacyActor.getPolicy()
         try? await privacyActor.writeAuditLog(
             eventType: .memoryDeleted,
@@ -455,12 +462,12 @@ public actor CanonicalMemoryRepositoryActor {
             success: true,
             sourceType: effectiveType,
             excludedWritten: excludedActuallyWritten,
-            content: diskCleanupFailed ? "vectorDiskCleanupFailed=true" : nil
+            content: nil
         )
 
         // Completed：journal 自移除（防 subject 经 journal 重引入）
         journal = try await advanceDeletionJournal(journal, to: .completed)
-        try await db.deleteDeletionJournal(operationID: operationID)
+        try await db.deleteDeletionJournal(operationID: journal.operationID)
         return true
     }
 

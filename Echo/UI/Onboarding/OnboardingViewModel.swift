@@ -14,6 +14,7 @@
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约), §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
 // 生成时间: 2026-08-03, 2026-08-04 (Task 3F.1)
+// PR#65 third review fix: explicit fixture model loading takes precedence over live dependencies.
 // ==========================================
 
 import SwiftUI
@@ -525,9 +526,7 @@ final class OnboardingViewModel {
                 self.updateModel(at: index, state: .loading)
 
                 let result: ModelLoaderActor.ModelLoadState
-                if let modelLoader = self.modelLoader {
-                    result = await modelLoader.loadModel(modelType)
-                } else if self.isFixtureBacked {
+                if self.isFixtureBacked {
                     let delay = self.loadDelayNanoseconds / UInt64(max(models.count, 1))
                     do {
                         try await Task.sleep(nanoseconds: delay)
@@ -535,6 +534,8 @@ final class OnboardingViewModel {
                         return
                     }
                     result = .loaded
+                } else if let modelLoader = self.modelLoader {
+                    result = await modelLoader.loadModel(modelType)
                 } else {
                     result = .failed(.modelNotFound(
                         modelName: modelType.modelName,

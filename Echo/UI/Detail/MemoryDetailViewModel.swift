@@ -16,11 +16,26 @@
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
 // 生成时间: 2026-08-01
+// PR#65 third review fix: production loads clear stale fixture/content state and retry the
+//                        exact requested memory through an injectable repository boundary.
 // ==========================================
 
 import SwiftUI
 import Foundation
 import Photos
+
+protocol MemoryDetailRepository: Sendable {
+    func loadMemory(memoryId: UUID) async throws -> Memory?
+    func deleteMemory(
+        memoryId: UUID,
+        sourceLocator: String?,
+        sourceType: String?,
+        writeExcluded: Bool,
+        traceID: String
+    ) async throws -> Bool
+}
+
+extension CanonicalMemoryRepositoryActor: MemoryDetailRepository {}
 
 // MARK: - Memory Detail UI Model
 
@@ -283,7 +298,7 @@ final class MemoryDetailViewModel {
     /// WP7: 详情页媒体预览——PHAsset 图片本体（照片记忆展示生产接线）
     private(set) var photoImage: UIImage?
     /// WP7: canonical 仓库——生产 load 接线（route ENABLED 后详情真实加载）
-    private let canonicalRepository: CanonicalMemoryRepositoryActor?
+    private let canonicalRepository: (any MemoryDetailRepository)?
 
     // MARK: - Translation State (US-DIS-002)
 
@@ -307,7 +322,7 @@ final class MemoryDetailViewModel {
     init(
         translationService: any TranslationService = AppleTranslationService(),
         translationCache: any TranslationCaching = MemoryDetailViewModel.defaultPersistentCache(),
-        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
+        canonicalRepository: (any MemoryDetailRepository)? = nil
     ) {
         self.translationService = translationService
         self.translationCache = translationCache
@@ -366,6 +381,8 @@ final class MemoryDetailViewModel {
 
         loadTask?.cancel()
         requestedMemoryID = memoryId
+        memory = nil
+        stubMemory = nil
 
         // Set loading synchronously (AGENTS.md §8.1: first line of action)
         viewState = .loading
@@ -698,18 +715,16 @@ final class MemoryDetailViewModel {
 
     /// 重试加载 (L2 恢复路径)。
     func retry() {
-        guard memory != nil else {
-            if let stub = stubMemory {
-                loadPreloaded(stub)
-            } else if let requestedMemoryID {
-                viewState = .idle
-                load(memoryId: requestedMemoryID)
-            } else {
-                viewState = .idle
-            }
+        if isFixtureBacked, let stub = stubMemory {
+            loadPreloaded(stub)
             return
         }
-        viewState = .completed
+        if let requestedMemoryID {
+            viewState = .idle
+            load(memoryId: requestedMemoryID)
+            return
+        }
+        viewState = memory == nil ? .idle : .completed
     }
 
     /// 仅 Preview/调试使用 — 直接构造错误状态，不触发任何副作用。

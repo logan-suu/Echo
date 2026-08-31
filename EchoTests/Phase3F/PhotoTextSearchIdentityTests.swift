@@ -625,6 +625,105 @@ struct PhotoTextSearchIdentityTests {
         #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
     }
 
+extension PhotoTextSearchIdentityTests {
+
+    @Test("Deletion completion removes the exact resumed journal row")
+    func testDeletionCompletionRemovesResumedJournalOperationID() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(
+            sourceLocator: "PHAsset/wp3-resumed-operation",
+            sourceType: "photo"
+        )
+        _ = try await repo.commit(
+            memory: Memory(
+                memoryId: memoryId,
+                sourceLocator: "PHAsset/wp3-resumed-operation",
+                canonicalText: nil,
+                sourceType: "photo"
+            ),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-resumed-operation"
+        )
+        let resumedJournal = MemoryDeletionJournal(
+            operationID: "custom-resumed-operation",
+            memoryID: memoryId,
+            auditSubjectHash: AuditSubject.memory(memoryId).subjectHash,
+            traceID: "t-wp3-resumed-operation",
+            phase: .planned,
+            vectorIDsByGeneration: [],
+            sourceLocator: "PHAsset/wp3-resumed-operation",
+            sourceType: "photo",
+            writeExcluded: false
+        )
+        try await db.upsertDeletionJournal(resumedJournal)
+
+        _ = try await repo.deleteMemory(
+            memoryId: memoryId,
+            writeExcluded: false,
+            traceID: "ignored-on-resume"
+        )
+
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+    }
+
+    @Test("Vector persistence failure retains the journal and canonical memory")
+    func testVectorPersistenceFailureStopsDeletionBeforeLaterPhases() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(
+            sourceLocator: "PHAsset/wp3-vector-persist-failure",
+            sourceType: "photo"
+        )
+        _ = try await repo.commit(
+            memory: Memory(
+                memoryId: memoryId,
+                sourceLocator: "PHAsset/wp3-vector-persist-failure",
+                canonicalText: nil,
+                sourceType: "photo"
+            ),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-vector-persist-failure"
+        )
+
+        await repo.setFault(.vectorDeletePersist)
+        do {
+            _ = try await repo.deleteMemory(
+                memoryId: memoryId,
+                writeExcluded: false,
+                traceID: "t-wp3-vector-persist-failure"
+            )
+            Issue.record("Expected vector persistence failure")
+        } catch CanonicalRepositoryError.deleteInjected {
+            // Expected fail-stop boundary.
+        }
+
+        let journals = try await db.loadDeletionJournals(memoryId: memoryId)
+        let journal = try #require(journals.first)
+        #expect(journal.phase == .cacheInvalidated)
+        if case .none = try await repo.loadMemory(memoryId: memoryId) {
+            Issue.record("Canonical memory must remain while vector persistence is incomplete")
+        }
+
+        await repo.setFault(nil)
+        _ = try await repo.deleteMemory(
+            memoryId: memoryId,
+            writeExcluded: false,
+            traceID: "ignored-on-resume"
+        )
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+        if case .some = try await repo.loadMemory(memoryId: memoryId) {
+            Issue.record("Canonical memory must be removed after recovery completes")
+        }
+    }
+}
+
     // MARK: - WP3 Steps 3k/3m-3t2: 阶段机故障注入与幂等重放恢复
 
     @Test(
