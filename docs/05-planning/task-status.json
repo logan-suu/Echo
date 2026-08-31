@@ -1051,7 +1051,7 @@
             "真实 PhotoKit 与 Share Extension 输入、权限撤回、队列原子性和去重证据",
             "Privacy approver 对 App Group 最小数据边界签字"
           ],
-          "last_updated": "2026-08-07T03:22:45Z",
+          "last_updated": "2026-08-31T15:20:39Z",
           "notes": "✅ 3F.2 实现完成 (2026-08-05)。PhotoKitSourceAdapter (全授权状态处理 + MainActor.run SDK 边界 + 撤回停止读取 + dataSourceConnected 审计 + AC-6 仅本地已下载) + PhotoKitChangeObserver (批内去重 + SyncPipeline 窗口去重) + SharedImportEnvelope (ADR-008 §决策-3/4/7: App Group 最小字段 + 稳定 dedupeKey + 来源×内容组合校验) + SharedImportQueueActor (文件原子入队 + 去重 + begin/finish/rollback + recoverInterrupted 恰好一次) + EchoShareExtension target (ShareViewController 预览确认 + 拒绝不支持类型 + App Group 入队, 嵌入 Echo.app/PlugIns) + Echo.entitlements/EchoShareExtension.entitlements App Group group.com.echo.Echo + Echo-Info.plist (NSPhotoLibraryUsageDescription) + IngestPipeline.ingestShared/drainSharedImports (R-006 checkpoint + ExcludedAssets fail-closed + .shareExtensionImported hash-only 审计) + AppDelegate 来源装配 (deny-by-default gate)。测试：focused 29/29 (RealDataSourcesTests)，全量回归 785 tests / 86 suites 0 失败，Release 基线 simulateError 错误为 dev-1.0 既有（3F.1 已记录，非本任务引入），SwiftLint 0 serious。Privacy approver 对 App Group 最小数据边界尚未签字。\n[iOS 26 fix 2026-08-05] 双设备 Live Review 发现：iOS 26.5 点 Limit Access 后系统不再自动弹出照片选择器（iOS 18.2 仍自动弹）。修复：PhotoKitSourceAdapter.shouldPresentLimitedLibraryPicker()（limited + 0 张选中 + 未弹过 → true）+ AppDelegate didBecomeActive observer（#available(iOS 26, *) 门控，避免 iOS 18/19 叠弹）+ markLimitedLibraryPickerPresented 一次性标记。新增 4 用例，focused 33/33 通过。commit 43e3046 已 push PR #51，PR 描述已刷新。\n[Live Review 2026-08-05 补充] 双设备审核后修复 5 项：(1) iOS 26 limited 选择器主动弹出（presentLimitedLibraryPicker + #available(iOS 26,*) 门控，commit 43e3046）；(2) didBecomeActive 与 adapter 创建竞态 → 装配后补弹（commit 01fd70b）；(3) bootstrap 幂等 guard + deny-by-default 导致 fresh install observer 未注册 → awaitBootstrapCompletion + 等待 requiresConsent（commit 01fd70b）；(4) PhotosUI.framework 未链接 → presentLimitedLibraryPicker SIGABRT（unrecognized selector）→ pbxproj 链接修复（commit 516eb60）；(5) Share Extension 因缺 NSExtensionActivationRule 不显示于 Share Sheet → Info.plist 补全（commit 516eb60）。验证：双模拟器（17 Pro iOS 26.5 / 16 Pro iOS 18.2）Live 通过——授权弹窗/选择器时序、Share 摄入、跨设备 dedupeKey 稳定、队列恰好一次回滚（嵌入失败为 3F.3 前 stub 预期）。\n[pr-review 2026-08-05] 预审 6 项：无 🔴 红线违规。修复 4 项（commit 42d1f0a + 530b3be）：Issue-3 跨进程入队竞态（moveItem 目标已存在改判重复返回 false）+ 新增测试；Issue-4 drainSharedImports 入口 PrivacyCheckpoint 总闸（consent 门，逐封保留 per-source 校验）；Issue-5 证据索引 29→33 回刷；Issue-6 AGENTS.md §7.3 补录 .shareExtensionImported。延后 2 项写入 deferred-items.json：DEF-51-001（孤儿 VectorStoreActor → 3F.5 GenerationRegistry 重接，3F.3 模型就绪前保持 fail-closed）、DEF-51-002（语音临时 URL + ASR 契约语义不符 → 3F.3/3F.5，AC 表 voice 行降级 🔮）。全量回归 791 tests：27 失败为既有基线（Phase2 2.4/2.5 privacyDenied，3F.1 consent 门未适配旧测试，stash 对比确认非本 PR 引入）。focused 34/34 通过。\n✅ 合并完成：PR #51 merged by logan-suu at 2026-08-05T17:36:21Z (merge commit a39ba60)。DEF-51-001/002/003 已追踪于 deferred-items.json （DEF-51-001/003 → 3F.5 生产摄入时扫描，DEF-51-002 → 3F.3/3F.5 时扫描），本次合并未解决任何延期项。",
           "status_transitions": {
             "in_progress_at": "2026-08-05T03:02:00Z",
@@ -1138,7 +1138,10 @@
           "head": "fix/production-real-data-wiring-US-SYS-001",
           "base": "dev-1.0",
           "kind": "post-delivery model progress wiring fix",
-          "status": "review",
+          "status": "merged",
+          "merged_at": "2026-08-31T15:20:39Z",
+          "merge_commit": "bd18819bf2583cc8f6bd97e2759c2b96c3e923ae",
+          "merged_by": "logan-suu",
           "stories": [
             "US-RES-004"
           ]
@@ -1603,7 +1606,7 @@
             "Security, Privacy and Architecture approval records",
             "双设备 Live Simulator Review、AX tree、日志和无媒体 manifest"
           ],
-          "last_updated": "2026-08-31T14:48:00Z",
+          "last_updated": "2026-08-31T15:20:39Z",
           "notes": "✅ 3F.7 UI 到 Core 全域接线 (2026-08-11)。核心交付：DataOverviewService (US-SRC-009 live 值 + JSON 导出 + .dataOverviewAccessed 审计)、DeviceMigrationPackage/Service/Actor (ECHOMIG1 加密包 AES-GCM-256+HKDF-SHA256 + RFC 8785 JCS manifest + 精确 AAD + 逐块哈希 + fail-closed)、LiveAppAdapters (默认 live 接线)、SettingsViewModel live DataOverview 接线、SearchViewModel 默认 live pipeline、AuditEvent.dataOverviewAccessed。测试：4 新套件 35/35 (DeviceMigrationSecurity 17 + DeviceMigration 7 + DataOverview 6 + UIToCoreIntegration 5)，全量回归 995/995 0 失败，SwiftLint 0 errors。\n(2026-08-11 PR#59 审查修复) 🔴-1 merge 完整性校验改为逐条 ID 校验（test_AC4 断言 integrityCheckPassed）；🟡-2 SearchViewModel 单实例 live pipeline 缓存（follow-up 审计回归 + test）；🟡-3 默认 live 路径 FeedbackPipeline 接线（反馈落库 + test）；🟡-7 审计 method/batchPolicy 参数化（AC-7 test）；🟡-4 makeSearchPipeline 返回 optional，无路由显式 route-unavailable（test）；🟡-5/6 AGENTS.md §7.3/.§5.2 文档同步；DEF-59-01/02/03 记录于 deferred-items.json。3F.7 套件 39/39（+4），受影响的 SearchViewModel/ProductionSearchFeedback 60/60。\n(2026-08-11 CodeRabbit round) 7 inline comments + Minors/Nitpicks processed: CR-1 allBoth 保留两版本(派生ID)+删未用 ConflictResolution; CR-2 exportPackage PrivacyCheckpoint → DEF-59-004(PrivacyActor Files-外); CR-3 importPackage 返回 (manifest,payloads) 删 decryptManifestPlaintext; CR-4 传播 deleteMemory/excludedAssets.add 错误 + audit success=integrityPassed; CR-5 同上; CR-6 资源边界 maxPackageBytes/maxExpansionRatio/maxRecordCount/combined-size 强制; CR-7 live 授权(UserPolicy note/voice + PhotoKit photo/video)。Minors: LocalizedError+nonisolated、AC-6 原始字节断言、merge uniqueTarget 存活断言、wrong-magic dropFirst(8)、translationCacheBytes、DEF 三位数重命名、task-status branch→head。Nitpicks: loadUnaligned、route/embedder 解析一次、checkCancellation、makeActiveFeedbackPipeline、SettingsView init、search 主体去重。DEF-59-004/005/006/007 新增。3F.7 套件 43/43。\n(2026-08-11 pr-merge) PR #59 merged by human at 2026-08-11T11:42:18Z (merge commit 9c2eedf). Status review -> done. DEF-59-001~007 remain tracked (all 7 recorded). Cascade: 3F.8, 3F.9 flipped backlog -> ready per AGENTS.md §12.1. Phase 4 stays locked (entry_gate 3F.11 not done).\n(2026-08-31 PR#65 review) Five valid CodeRabbit findings fixed: TaskQueue pause state survives ProgressActor polling; cancelled detail/model-load tasks cannot overwrite terminal UI state; explicit background/resume/creation fixture journeys keep deterministic provenance; out-of-scope ASR/Embedder service changes removed. Creation and Onboarding UI regressions found by full-scheme review were corrected. No review finding was deferred.\n(2026-08-31 PR#65 deletion gate fix) D-005 journal now resumes from its persisted phase after canonical deletion, preserves the original ExcludedAssets intent, plans every representation vector ID across generations, and transactionally removes IndexBuildItem residue. Focused deletion recovery 3/3, affected identity/generation/migration suites 67/67, full scheme 1249 tests/151 suites passed with only 5 declared known issues; EchoUITests 44 executed, 1 consent-state skip, 0 failures; SwiftLint passed. No specification change was needed because §18 explicitly permits two-phase/compensating cross-store consistency.\n(2026-08-31 PR#65 second review) Three additional valid findings fixed: production detail retry retains and reloads the requested memory ID; missing production model-loader injection now fails all model rows closed instead of simulating success; Creation fixture generation test uses a bounded asynchronous wait. Affected suites 75/75 passed. Full scheme xcresult: 1,292 total, 1,287 passed, 4 expected failures, 1 consent-state skip, 0 failures. SwiftLint, static bans, and Release simulator build passed. No finding was deferred.",
           "pr": {
             "base": "dev-1.0",
@@ -1622,7 +1625,10 @@
               "base": "dev-1.0",
               "created_at": "2026-08-31T11:58:57Z",
               "kind": "post-delivery real-data wiring fix",
-              "status": "review",
+              "status": "merged",
+              "merged_at": "2026-08-31T15:20:39Z",
+              "merge_commit": "bd18819bf2583cc8f6bd97e2759c2b96c3e923ae",
+              "merged_by": "logan-suu",
               "stories": [
                 "US-SYS-001",
                 "US-RES-004",
