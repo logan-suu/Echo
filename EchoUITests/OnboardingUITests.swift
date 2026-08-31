@@ -59,8 +59,7 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(begin.isEnabled, "Continue should be enabled after language selection")
         begin.tap()
 
-        let progress = app.progressIndicators["onboarding-model-progress"]
-        XCTAssertTrue(progress.waitForExistence(timeout: 5), "Model progress indicator should appear")
+        assertModelLoadingStartedOrCompleted(in: app)
     }
 
     /// 引导 PIPL 拒绝分支 (US-PRV-008 AC-3): 拒绝 → declined 终态页 → Close 退出引导
@@ -136,7 +135,18 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(begin.isEnabled, "Continue should be enabled after selecting zh-Hans")
         begin.tap()
 
+        assertModelLoadingStartedOrCompleted(in: app)
+    }
+
+    /// Real bundled models may finish before XCTest returns from the tap's idle wait.
+    /// Either the loading surface or the completed app shell proves the action advanced.
+    @MainActor
+    private func assertModelLoadingStartedOrCompleted(in app: XCUIApplication) {
         let progress = app.progressIndicators["onboarding-model-progress"]
-        XCTAssertTrue(progress.waitForExistence(timeout: 5), "Model progress should appear")
+        let completedShell = app.tabBars.firstMatch
+        XCTAssertTrue(
+            progress.waitForExistence(timeout: 1) || completedShell.waitForExistence(timeout: 5),
+            "Model loading should start and onboarding should eventually complete"
+        )
     }
 }

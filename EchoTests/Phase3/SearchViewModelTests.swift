@@ -53,6 +53,7 @@ struct SearchViewModelTests {
         #expect(vm.results.isEmpty)
         #expect(vm.hasSearched == false)
         #expect(vm.query.isEmpty)
+        #expect(vm.isFixtureBacked == false)
     }
 
     @Test("loadPreloadedResults maps SearchResultItem to UI models")
@@ -74,6 +75,7 @@ struct SearchViewModelTests {
         #expect(vm.results[0].sourceType == "note")
         #expect(vm.results[0].summary == "昨晚在公园遇到一只橘猫")
         #expect(vm.results[0].similarityPercent == "87%")
+        #expect(vm.isFixtureBacked == true)
     }
 
     @Test("SearchResultModel summary falls back to type label for media")
@@ -107,6 +109,7 @@ struct SearchViewModelTests {
         #expect(vm.viewState == .idle)
         #expect(vm.results.isEmpty)
         #expect(vm.hasSearched == false)
+        #expect(vm.isFixtureBacked == false)
     }
 
     // MARK: - RET-006 AC-2/AC-4: Low confidence
@@ -184,8 +187,8 @@ struct SearchViewModelTests {
 
     // MARK: - State transitions (AGENTS.md §8.2)
 
-    @Test("submitQuery transitions idle → loading → completed")
-    func test_submitQuery_stateTransitions() async {
+    @Test("ADR-007: submitQuery without live dependencies fails closed")
+    func test_submitQuery_withoutDependenciesFailsClosed() async {
         let vm = SearchViewModel()
         #expect(vm.viewState == .idle)
 
@@ -193,11 +196,11 @@ struct SearchViewModelTests {
         #expect(vm.viewState == .loading)
         #expect(vm.query == "猫")
 
-        // Wait for 300ms loading simulation to complete
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        try? await Task.sleep(nanoseconds: 100_000_000)
 
-        #expect(vm.viewState == .completed)
-        #expect(vm.hasSearched == true)
+        #expect(vm.viewState == .error(.l3Blocking(message: "Search is currently unavailable")))
+        #expect(vm.hasSearched == false)
+        #expect(vm.isFixtureBacked == false)
     }
 
     @Test("submitQuery ignores empty and whitespace queries")
@@ -273,23 +276,24 @@ struct SearchViewModelTests {
         vm.submitQuery("猫")
         #expect(vm.viewState == .loading)
 
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        try? await Task.sleep(nanoseconds: 100_000_000)
 
         #expect(vm.viewState == .completed)
         #expect(vm.results.count == 2, "UI-slice search must keep stub results, not clear them")
+        #expect(vm.isFixtureBacked == true)
     }
 
-    @Test("submitQuery in UI-slice mode with no stub enters empty completed state")
-    func test_submitQuery_withoutStub_entersEmpty() async {
+    @Test("ADR-007: submitQuery without fixture or live pipeline reports unavailable")
+    func test_submitQuery_withoutStub_reportsUnavailable() async {
         let vm = SearchViewModel()
         vm.submitQuery("nothing")
         #expect(vm.viewState == .loading)
 
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        try? await Task.sleep(nanoseconds: 100_000_000)
 
-        #expect(vm.viewState == .completed)
+        #expect(vm.viewState == .error(.l3Blocking(message: "Search is currently unavailable")))
         #expect(vm.results.isEmpty)
-        #expect(vm.hasSearched == true)
+        #expect(vm.hasSearched == false)
     }
 
     // MARK: - ViewState Equatable

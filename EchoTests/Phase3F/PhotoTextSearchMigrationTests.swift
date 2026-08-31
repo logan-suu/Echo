@@ -341,15 +341,17 @@ extension PhotoTextSearchMigrationTests {
             snapshotID: "wp6-snap-1",
             schemaVersion: 1,
             routeVersion: 1,
-            channels: [ChannelRoute(
-                channel: .textDense,
-                generationID: "text_dense/e5-v1",
-                indexManifestID: nil,
-                queryModelManifestID: nil,
-                dimension: 384,
-                alignmentSpaceID: nil,
-                required: true
-            )],
+            channels: [
+                ChannelRoute(
+                    channel: .textDense,
+                    generationID: "text_dense/e5-v1",
+                    indexManifestID: nil,
+                    queryModelManifestID: nil,
+                    dimension: 384,
+                    alignmentSpaceID: nil,
+                    required: true
+                ),
+            ],
             fusion: policy,
             previousSnapshotID: nil,
             publishedAtEpochMilliseconds: 123,
@@ -886,11 +888,13 @@ extension PhotoTextSearchMigrationTests {
         let key = SearchCacheKey(policyVersion: 1, modelVersion: "m", queryHash: "q", routeSnapshotID: "r")
         try await cache.store(
             key: key,
-            result: CachedSearchResult(items: [SearchResultItem(
-                id: memoryID, assetId: "x", sourceType: "photo",
-                timestamp: Date().timeIntervalSince1970,
-                originalText: nil, sourceLanguage: nil, cosineSimilarity: 0.9
-            )])
+            result: CachedSearchResult(items: [
+                SearchResultItem(
+                    id: memoryID, assetId: "x", sourceType: "photo",
+                    timestamp: Date().timeIntervalSince1970,
+                    originalText: nil, sourceLanguage: nil, cosineSimilarity: 0.9
+                ),
+            ])
         )
 
         // 补偿（6d: subject-linked audit purge + cache 失效；不触碰活跃路由）

@@ -55,7 +55,6 @@ enum AppTab: String, CaseIterable, Sendable {
 @MainActor
 @Observable
 final class AppViewModel {
-
     // MARK: - Tab State
 
     /// 当前选中的标签页
@@ -97,6 +96,8 @@ final class AppViewModel {
         // 后续任务 (3.11 引导流程) 将通过 action 方法触发首次设置
     }
 
+    deinit {}
+
     // MARK: - Actions
 
     /// 切换标签页
@@ -112,7 +113,6 @@ final class AppViewModel {
 @MainActor
 @Observable
 final class LanguageCenter {
-
     enum AppLanguageSelection: String, CaseIterable, Sendable {
         case followSystem
         case zhHans
@@ -146,14 +146,17 @@ final class LanguageCenter {
             // US-DIS-001 AC-3: default follows the system language (non-zh/en systems → zh-Hans)
             resolvedLanguage = Self.resolve(.followSystem, systemLanguage: Self.systemLanguageIdentifier())
         }
-        // Test/fixture hook: `-ui-language zh-Hans|en-US` forces the resolved language for
-        // deterministic UI-test runs, overriding any persisted selection.
+        #if DEBUG
+        // Test-only hook for deterministic UI runs. It is not compiled into Release.
         let args = ProcessInfo.processInfo.arguments
         if let idx = args.firstIndex(of: "-ui-language"), idx + 1 < args.count,
            args[idx + 1] == "zh-Hans" || args[idx + 1] == "en-US" {
             resolvedLanguage = args[idx + 1]
         }
+        #endif
     }
+
+    deinit {}
 
     nonisolated static func systemLanguageIdentifier() -> String {
         Locale.current.identifier
@@ -204,8 +207,10 @@ final class LanguageCenter {
         switch selection {
         case .zhHans:
             return "zh-Hans"
+
         case .enUS:
             return "en-US"
+
         case .followSystem:
             return systemLanguage.lowercased().hasPrefix("en") ? "en-US" : "zh-Hans"
         }
@@ -233,7 +238,6 @@ final class LanguageCenter {
 /// Uses explicit .lproj bundle lookup: String(localized:locale:) only affects formatting,
 /// not localization choice, so the locale-specific sub-bundle is loaded directly.
 enum EchoStrings {
-
     nonisolated static func tr(_ key: String, locale: Locale) -> String {
         EchoLocalization.localized(key, locale: locale)
     }

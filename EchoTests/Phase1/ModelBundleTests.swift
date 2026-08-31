@@ -1,9 +1,10 @@
 // ==========================================
 // 文件: ModelBundleTests.swift
 // 对应规格: docs/02-architecture/技术选型文档.md v6.0 §1~3
-// 任务: 1.5 - 模型打包到 Bundle；3F.3 v6.0 三模型集 + SigLIP2 pending 转换
+// 任务: 1.5 - 模型打包到 Bundle；3F.3/WP4 v6.0 四模型运行时清单
 // AC 覆盖:
 //   - AC-VISION: SigLIP2-B/32 视觉（3F.3：转换源已登记，.mlmodelc pending）
+//   - AC-VISION-TEXT: SigLIP2-B/32 配对文本塔存在于 Bundle
 //   - AC-EMBED: multilingual-e5-small Core ML 模型存在于 Bundle
 //   - AC-ASR: Whisper tiny GGUF 存在于 Bundle
 //   - AC-NO-NETWORK: 所有模型通过 Bundle 加载 (R-005)
@@ -20,12 +21,12 @@ import Testing
 struct ExpectedModels {
     /// (name, bundleResourceName, extension, minBytes)
     ///
-    /// v6.0 生产模型集（3F.3，ADR-009）：E5 文本嵌入 + Whisper ASR 已打包随分发。
-    /// SigLIP2-B/32 视觉为转换源（model.safetensors，`pending-conversion-and-approval`），
-    /// .mlmodelc 生成后加入本清单（见 test_siglip2ConversionSourceRegistered）。
+    /// v6.0 生产模型集：E5、SigLIP2 图像塔、SigLIP2 配对文本塔、Whisper 均随 App 分发。
     /// MobileCLIP-B / SenseVoice 因许可问题退役，不再打包。
     static let all: [(String, String, String, Int)] = [
         ("multilingual-e5-small", "MultilingualE5Small", "mlmodelc", 10_000_000),
+        ("SigLIP2 image tower", "SigLIP2BasePatch32", "mlmodelc", 10_000_000),
+        ("SigLIP2 text tower", "SigLIP2TextBasePatch32", "mlmodelc", 10_000_000),
         ("Whisper tiny Q5_1", "whisper-tiny-q5_1", "gguf", 30_000_000),
     ]
 }
@@ -60,8 +61,8 @@ struct ModelBundleTests {
     }
 
     // 清单完整性（已打包工件数）
-    @Test func modelCountIsTwo() {
-        #expect(ExpectedModels.all.count == 2)
+    @Test func modelCountIsFour() {
+        #expect(ExpectedModels.all.count == 4)
     }
 
     // 3F.3 / ADR-009 决策 2: SigLIP2 转换源已在 model-manifest.json 登记为 pending-conversion

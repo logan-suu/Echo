@@ -221,6 +221,8 @@ final class HomeViewModel {
         self.cardRepository = cardRepository
     }
 
+    deinit {}
+
     // MARK: - Actions
 
     /// 加载唤醒卡片列表。
@@ -243,16 +245,13 @@ final class HomeViewModel {
             do {
                 // 3F.8: 从持久化卡片存储加载最近唤醒卡片（ADR-012 决策-5，重启去重后展示）
                 if let cardRepository {
-                    let cards = (try? await cardRepository.fetchRecent(limit: 20)) ?? []
+                    let cards = try await cardRepository.fetchRecent(limit: 20)
                     self.awakeningCards = cards.map(AwakeningCardModel.init)
                 } else if let pipeline = self.awakeningPipeline {
                     // Example: cards would be fetched from a local store
                     // let cards = await pipeline.fetchRecentCards()
                     _ = pipeline // Silenced for now; Phase 3.12+ wires the store
                 }
-
-                // 短暂模拟加载以展示骨架屏
-                try await Task.sleep(nanoseconds: 300_000_000)
 
                 guard !Task.isCancelled else {
                     self.viewState = .cancelled

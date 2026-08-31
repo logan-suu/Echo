@@ -13,6 +13,30 @@ import Testing
 import Foundation
 @testable import Echo
 
+private actor RecordingMemoryDetailRepository: MemoryDetailRepository {
+    private enum LoadFailure: Error { case unavailable }
+    private var requestedMemoryIDs: [UUID] = []
+
+    func loadMemory(memoryId: UUID) async throws -> Memory? {
+        requestedMemoryIDs.append(memoryId)
+        throw LoadFailure.unavailable
+    }
+
+    func deleteMemory(
+        memoryId: UUID,
+        sourceLocator: String?,
+        sourceType: String?,
+        writeExcluded: Bool,
+        traceID: String
+    ) async throws -> Bool {
+        false
+    }
+
+    func loadRequests() -> [UUID] {
+        requestedMemoryIDs
+    }
+}
+
 // MARK: - MemoryDetailViewModel Tests
 
 /// US-AWK-007 AC-1: 记忆详情页提供"编辑"入口，允许修改标题、描述、标签、时间戳。
@@ -39,14 +63,28 @@ struct MemoryDetailViewModelTests {
         )
     }
 
+    private func awaitLoadRequests(
+        _ repository: RecordingMemoryDetailRepository,
+        count: Int
+    ) async -> [UUID] {
+        for _ in 0..<100 {
+            let requests = await repository.loadRequests()
+            if requests.count >= count { return requests }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return await repository.loadRequests()
+    }
+
     // MARK: - State Transitions
 
     @Test("AC: idle → loading → completed via load(memoryId:)")
     func loadTransitionsToCompleted() async {
         let vm = MemoryDetailViewModel()
+        #expect(vm.isFixtureBacked == false)
         vm.loadPreloaded(MemoryDetailFixtureLoader.load("memory-detail-loaded")!)
         #expect(vm.viewState == .completed)
         #expect(vm.memory != nil)
+        #expect(vm.isFixtureBacked == true)
     }
 
     @Test("AC: load without fixture resolves to L2 error")
@@ -55,6 +93,18 @@ struct MemoryDetailViewModelTests {
         vm.load(memoryId: UUID())
         try? await Task.sleep(nanoseconds: 350_000_000)
         #expect(vm.viewState == .error(.l2Recoverable(message: "Unable to load this memory. Please try again.")))
+    }
+
+    @Test("Cancelled canonical load cannot overwrite the cancelled state")
+    func cancelledCanonicalLoadStaysCancelled() async throws {
+        try await DatabaseManager.shared.open()
+        let vm = MemoryDetailViewModel(canonicalRepository: CanonicalMemoryRepositoryActor.shared)
+
+        vm.load(memoryId: UUID())
+        vm.onDisappear()
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(vm.viewState == .cancelled)
     }
 
     // MARK: - US-DIS-002 Translation
@@ -324,6 +374,42 @@ struct MemoryDetailViewModelTests {
         #expect(vm.viewState == .error(.l2Recoverable(message: "Unable to load this memory. Please try again.")))
         vm.retry()
         #expect(vm.viewState == .completed)
+    }
+
+    @Test("AC: production retry reloads the originally requested memory ID")
+    func productionRetryReloadsRequestedMemoryID() async {
+        let repository = RecordingMemoryDetailRepository()
+        let memoryID = UUID()
+        let vm = MemoryDetailViewModel(canonicalRepository: repository)
+        vm.load(memoryId: memoryID)
+        _ = await awaitLoadRequests(repository, count: 1)
+        #expect(vm.viewState == .error(.l2Recoverable(
+            message: "Unable to load this memory. Please try again."
+        )))
+
+        vm.retry()
+
+        #expect(vm.viewState == .loading)
+        let requests = await awaitLoadRequests(repository, count: 2)
+        #expect(vm.viewState == .error(.l2Recoverable(
+            message: "Unable to load this memory. Please try again."
+        )))
+        #expect(requests == [memoryID, memoryID])
+    }
+
+    @Test("A production load clears stale fixture content before it starts")
+    func productionLoadClearsStaleFixtureContent() async {
+        let vm = makeLoadedVM()
+        #expect(vm.memory != nil)
+
+        vm.load(memoryId: UUID())
+
+        #expect(vm.memory == nil)
+        #expect(vm.isFixtureBacked == false)
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(vm.viewState == .error(.l2Recoverable(
+            message: "Unable to load this memory. Please try again."
+        )))
     }
 
     // MARK: - Regression: Tab switch preserves detail (2026-08-02)

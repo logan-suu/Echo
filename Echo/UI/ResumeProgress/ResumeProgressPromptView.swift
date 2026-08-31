@@ -8,8 +8,8 @@
 //            §11.2 (L1 Toast) / §12.1 (L3 全屏) / §10.1.3 (Task 空态)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
 // 任务: 3.7 - 断点续传集成到长任务
-// AC 覆盖: US-SYS-001 AC-3 🔶 (取消后弹窗询问 — 继续/重新开始, UI 切片), AC-4 🔶 (进度 X/Y 展示 + 决策映射),
-//          🔮 Core 读写 (ProgressActor.save/delete + TaskQueueActor.resume, Phase 3.9)
+// AC coverage: real ProgressActor detection and X/Y presentation. Continue/restart report an
+// explicit recoverable error until Core exposes task reconstruction; fixtures stay deterministic.
 //          (2026-08-02 PR review W-1: error 态改真实布局槽位, 不再依赖零高 frame 溢出; W-3: 弹窗文案统一英文)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统 confirmationDialog 容器

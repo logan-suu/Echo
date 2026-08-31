@@ -375,7 +375,7 @@ struct IngestPipelineTextTests {
             traceID: UUID().uuidString
         )
 
-        #expect(memory.originalText == "")
+        #expect(memory.originalText?.isEmpty == true)
         #expect(memory.sourceType == "voice")
     }
 

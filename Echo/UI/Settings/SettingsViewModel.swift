@@ -11,15 +11,15 @@
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.4 - SettingsView + SettingsViewModel
 //       3F.1 - 撤回同意/注销接线 (ADR-007 §决策-3, US-PRV-008 AC-5)
-// AC 覆盖: US-SRC-004 AC-1/AC-2 ✅ (数据源开关), US-SRC-008 AC-1 ✅ / AC-5/AC-6 🔶 (排除项管理入口, sub-page deferred to 3.9),
-//            US-SRC-009 AC-1/AC-2 ✅ (数据概览/模型状态), US-PRV-002 AC-1 🔶 (审计日志入口, sub-page deferred to 3.9),
-//            US-PRV-003 AC-1 ✅ / AC-2 🔶 (审计导出, stub deferred to 3.9), US-RES-004 AC-2/AC-7 ✅ (模型重试/降级),
+// Runtime status: data overview, authorization, model counts, feedback reset, consent revoke,
+// and auto-sync use live boundaries. Cache clear, audit export, periodic scan, and deletion
+// cooldown fail visibly until bounded production services exist; their rows are not completion evidence.
 //            US-SET-002 AC-1/AC-3 ✅ (永久保留), US-SET-003 AC-1/AC-3 ✅ (缓存清理/存储占用),
 //            US-SET-004 AC-1 ✅ / AC-2 🔶 (迁移指引, sub-page deferred to 3.9), US-FBK-002 AC-5 ✅ (清除所有反馈),
 //            US-PRV-005 AC-1/AC-2/AC-4 ✅ (冷却期 UI), US-PRV-008 AC-5 ✅ (撤回同意→注销清除),
 //            L1~L4 错误映射 ✅
 //            PR#59 CR-7: live 授权状态 — UserPolicy 驱动 note/voice, PhotoKit currentAccess 驱动 photo/video
-// Legend: ✅ implemented | 🔶 stub/skeleton (entry point exists, detail deferred to Phase 3.9) | 🔮 planned future phase
+// Fixture-backed settings are restricted to explicit Preview/test construction.
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相)
@@ -72,7 +72,6 @@ struct SettingsSections: Sendable, Equatable {
 @MainActor
 @Observable
 final class SettingsViewModel {
-
     enum State: Equatable, Sendable {
         case idle
         case loading
@@ -136,6 +135,8 @@ final class SettingsViewModel {
         self.languageCenter = languageCenter
     }
 
+    deinit {}
+
     // MARK: - Unified Language (US-DIS-001 / US-SET-001)
 
     var languageSelection: LanguageCenter.AppLanguageSelection {
@@ -161,6 +162,9 @@ final class SettingsViewModel {
         do {
             // 3F.7: live 数据概览（US-SRC-009）优先；无 service 时回退 fixture（Preview/旧测试）
             if let overview = dataOverviewService {
+                if let syncPipeline = composition?.productionSyncPipeline {
+                    isSyncingEnabled = syncPipeline.isAutoSyncEnabled
+                }
                 let snap = try await overview.snapshot()
                 // CR-7：live 授权状态 — policy 驱动 note/voice，PhotoKit 驱动 photo/video
                 let policy = await composition?.privacyActor.getPolicy()
@@ -204,10 +208,13 @@ final class SettingsViewModel {
             switch severity {
             case .l1Transient:
                 state = .error(.l1Transient)
+
             case .l2Recoverable:
                 state = .error(.l2Recoverable(messageKey))
+
             case .l3Blocking:
                 state = .error(.l3Blocking(messageKey))
+
             case .l4Conflict:
                 state = .error(.l4Conflict(messageKey))
             }
@@ -265,10 +272,13 @@ final class SettingsViewModel {
             switch severity {
             case .l1Transient:
                 photoImportState = .error(.l1Transient)
+
             case .l2Recoverable:
                 photoImportState = .error(.l2Recoverable(EchoStrings.tr(severity.userFacingMessageKey)))
+
             case .l3Blocking:
                 photoImportState = .error(.l3Blocking(EchoStrings.tr(severity.userFacingMessageKey)))
+
             case .l4Conflict:
                 photoImportState = .error(.l4Conflict(EchoStrings.tr(severity.userFacingMessageKey)))
             }
@@ -304,11 +314,20 @@ final class SettingsViewModel {
     }
 
     func toggleSync(_ enabled: Bool) {
+        guard let syncPipeline = composition?.productionSyncPipeline else {
+            state = .error(.l2Recoverable(
+                "Background sync settings are unavailable because the sync pipeline is not connected."
+            ))
+            return
+        }
+        syncPipeline.isAutoSyncEnabled = enabled
         isSyncingEnabled = enabled
     }
 
     func togglePeriodicScan(_ enabled: Bool) {
-        isPeriodicScanEnabled = enabled
+        state = .error(.l2Recoverable(
+            "Periodic scan settings are unavailable because no scheduler boundary is connected."
+        ))
     }
 
     func clearCache() {
@@ -317,12 +336,9 @@ final class SettingsViewModel {
 
     func confirmClearCache() async {
         showClearCacheConfirmation = false
-        do {
-            try await Task.sleep(nanoseconds: 500_000_000)
-            await loadSettings()
-        } catch {
-            state = .error(.l2Recoverable("Failed to clear cache"))
-        }
+        state = .error(.l2Recoverable(
+            "Cache clearing is unavailable because the production cache boundary is not connected."
+        ))
     }
 
     func resetAllFeedback() {
@@ -331,8 +347,13 @@ final class SettingsViewModel {
 
     func confirmResetFeedback() async {
         showResetFeedbackConfirmation = false
+        guard let composition else {
+            state = .error(.l2Recoverable("Feedback reset is unavailable"))
+            return
+        }
         do {
-            try await Task.sleep(nanoseconds: 500_000_000)
+            let pipeline = LiveAppAdapters.makeFeedbackPipeline(composition: composition)
+            try await pipeline.resetAllFeedback()
             await loadSettings()
         } catch {
             state = .error(.l2Recoverable("Failed to reset feedback"))
@@ -340,17 +361,17 @@ final class SettingsViewModel {
     }
 
     func exportAuditLog() {
-        showExportInProgress = true
+        showExportInProgress = false
+        state = .error(.l2Recoverable(
+            "Audit export is unavailable because the bounded export service is not connected."
+        ))
     }
 
     func startDeleteData() async {
         showDeleteDataConfirmation = false
-        do {
-            try await Task.sleep(nanoseconds: 500_000_000)
-            await loadSettings()
-        } catch {
-            state = .error(.l2Recoverable("Failed to start data deletion"))
-        }
+        state = .error(.l3Blocking(
+            "The 24-hour deletion cooling-period service is not available in this build."
+        ))
     }
 
     /// Request consent revocation (shows a second confirmation, US-PRV-008 AC-4/AC-5)
@@ -392,6 +413,8 @@ final class SettingsViewModel {
 final class SettingsFixtureLoader: Sendable {
     static let shared = SettingsFixtureLoader()
 
+    deinit {}
+
     func loadSettings() throws -> SettingsSections {
         SettingsSections(
             dataSources: [
@@ -400,7 +423,7 @@ final class SettingsFixtureLoader: Sendable {
                 DataSourceItem(id: "voice", displayName: "Voice Memos", systemImage: "waveform", isAuthorized: false, itemCount: 0),
             ],
             storage: StorageInfo(indexCount: 1247, vectorStoreSize: "42.3 MB", cacheSize: "8.1 MB", databaseSize: "5.2 MB"),
-            modelStatus: ModelStatusInfo(totalModels: 6, loadedCount: 6, failedCount: 0, notLoadedCount: 0, isDegraded: false),
+            modelStatus: ModelStatusInfo(totalModels: 4, loadedCount: 4, failedCount: 0, notLoadedCount: 0, isDegraded: false),
             excludedCount: 12,
             feedbackCount: 8,
             pendingOpsCount: 0

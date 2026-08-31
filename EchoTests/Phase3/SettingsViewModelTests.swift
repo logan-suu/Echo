@@ -29,8 +29,8 @@ struct SettingsViewModelTests {
         }
 
         #expect(sections.dataSources.count == 3)
-        #expect(sections.dataSources.first(where: { $0.id == "photo" })?.isAuthorized == true)
-        #expect(sections.dataSources.first(where: { $0.id == "photo" })?.itemCount == 1247)
+        #expect(sections.dataSources.first { $0.id == "photo" }?.isAuthorized == true)
+        #expect(sections.dataSources.first { $0.id == "photo" }?.itemCount == 1247)
         #expect(sections.storage.indexCount == 1247)
     }
 
@@ -59,8 +59,8 @@ struct SettingsViewModelTests {
         let vm = SettingsViewModel()
         await vm.loadSettings()
         guard case .completed(let sections) = vm.state else { Issue.record("Expected .completed"); return }
-        #expect(sections.modelStatus.totalModels == 6)
-        #expect(sections.modelStatus.loadedCount == 6)
+        #expect(sections.modelStatus.totalModels == 4)
+        #expect(sections.modelStatus.loadedCount == 4)
         #expect(sections.modelStatus.failedCount == 0)
         #expect(sections.modelStatus.isDegraded == false)
     }
@@ -124,22 +124,28 @@ struct SettingsViewModelTests {
         guard case .completed = vm.state else { Issue.record("Expected .completed after retry"); return }
     }
 
-    @Test func toggleSyncDefaultOn() async throws {
+    @Test func toggleSyncWithoutPipelineFailsClosed() async throws {
         let vm = SettingsViewModel()
         await vm.loadSettings()
         #expect(vm.isSyncingEnabled == true)
         vm.toggleSync(false)
-        #expect(vm.isSyncingEnabled == false)
-        vm.toggleSync(true)
         #expect(vm.isSyncingEnabled == true)
+        guard case .error(.l2Recoverable) = vm.state else {
+            Issue.record("Expected missing sync pipeline to fail closed")
+            return
+        }
     }
 
-    @Test func togglePeriodicScanDefaultOff() async throws {
+    @Test func togglePeriodicScanWithoutSchedulerFailsClosed() async throws {
         let vm = SettingsViewModel()
         await vm.loadSettings()
         #expect(vm.isPeriodicScanEnabled == false)
         vm.togglePeriodicScan(true)
-        #expect(vm.isPeriodicScanEnabled == true)
+        #expect(vm.isPeriodicScanEnabled == false)
+        guard case .error(.l2Recoverable) = vm.state else {
+            Issue.record("Expected missing periodic scheduler to fail closed")
+            return
+        }
     }
 
     @Test func initialStateIsIdle() {
@@ -154,12 +160,17 @@ struct SettingsViewModelTests {
         guard case .cancelled = vm.state else { Issue.record("Expected .cancelled"); return }
     }
 
-    @Test func exportAuditLogTriggersFlag() async throws {
+    @Test func exportAuditLogFailsClosedWithoutBoundedExporter() async throws {
         let vm = SettingsViewModel()
         await vm.loadSettings()
         #expect(vm.showExportInProgress == false)
         vm.exportAuditLog()
-        #expect(vm.showExportInProgress == true)
+        #expect(vm.showExportInProgress == false)
+        guard case .error(.l2Recoverable(let message)) = vm.state else {
+            Issue.record("Expected explicit unavailable error")
+            return
+        }
+        #expect(message.contains("unavailable"))
     }
 
     // MARK: - 3F.1: Revoke consent (US-PRV-008 AC-5, ADR-007 §决策-3)

@@ -50,7 +50,11 @@ struct HomeView: View {
 
     /// 后台任务面板 ViewModel — 由工具栏按钮展示 (US-SYS-001 AC-1 顶部状态栏入口)
     /// 3F.11 fix: 注入真实 ProgressActor — 面板读取 SQLite TaskProgress 实时进度（US-SYS-001 AC-2）
-    @State private var taskPanelViewModel = BackgroundTaskViewModel(progressActor: .shared)
+    @State private var taskPanelViewModel = BackgroundTaskViewModel(
+        progressActor: .shared,
+        auditWriter: .shared,
+        taskQueue: .shared
+    )
 
     /// 后台任务面板展示开关
     @State private var isTaskPanelPresented = false
@@ -66,18 +70,24 @@ struct HomeView: View {
     )
 
     /// 断点续传恢复提示 ViewModel — Live Sim Review fixture 注入 (Task 3.7)
-    @State private var resumeProgressViewModel = ResumeProgressViewModel()
+    @State private var resumeProgressViewModel = ResumeProgressViewModel(progressActor: .shared)
 
     /// 首次出现标记 — 控制 fixture 注入仅执行一次
     @State private var hasHandledLaunchArguments = false
 
-    init(viewModel: HomeViewModel = HomeViewModel()) {
-        self.viewModel = viewModel
+    init(viewModel: HomeViewModel? = nil) {
+        self.viewModel = viewModel ?? HomeViewModel(
+            cardRepository: AwakeningCardRepositoryActor()
+        )
     }
 
     /// 3F.11 fix: 面板关闭后重建时注入真实 ProgressActor（US-SYS-001 AC-2）
     private func makeTaskPanelViewModel() -> BackgroundTaskViewModel {
-        BackgroundTaskViewModel(progressActor: .shared)
+        BackgroundTaskViewModel(
+            progressActor: .shared,
+            auditWriter: .shared,
+            taskQueue: .shared
+        )
     }
 
     // MARK: - Body

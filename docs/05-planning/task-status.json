@@ -1129,9 +1129,22 @@
             "参考输出、损坏恢复与零网络证据"
           ],
           "last_updated": "2026-08-07T03:22:45Z",
-          "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. PR #52 review fixes (2026-08-06): CI skip for model-dependent suites, AC-8 audit wiring via PrivacyActor.writeAuditLog, dead-code removal, forced-unwrap guards. DEF-52-001 (LanguageAligner hardcoded strings) deferred to 3F.10. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json. PR #52 merged 2026-08-07.",
-          "pr": "https://github.com/logan-suu/Echo/pull/52",
-          "migrated_from": [
+      "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. PR #52 review fixes (2026-08-06): CI skip for model-dependent suites, AC-8 audit wiring via PrivacyActor.writeAuditLog, dead-code removal, forced-unwrap guards. DEF-52-001 (LanguageAligner hardcoded strings) deferred to 3F.10. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json. PR #52 merged 2026-08-07. PR #65 post-delivery review associates the ModelLoaderActor real multi-model progress wiring with the original 3F.3 model-runtime scope; out-of-scope ASR/Embedder service edits were removed during review.",
+      "pr": "https://github.com/logan-suu/Echo/pull/52",
+      "post_delivery_prs": [
+        {
+          "number": 65,
+          "url": "https://github.com/logan-suu/Echo/pull/65",
+          "head": "fix/production-real-data-wiring-US-SYS-001",
+          "base": "dev-1.0",
+          "kind": "post-delivery model progress wiring fix",
+          "status": "review",
+          "stories": [
+            "US-RES-004"
+          ]
+        }
+      ],
+      "migrated_from": [
             "4.21",
             "4.22"
           ]
@@ -1590,8 +1603,8 @@
             "Security, Privacy and Architecture approval records",
             "双设备 Live Simulator Review、AX tree、日志和无媒体 manifest"
           ],
-          "last_updated": "2026-08-11T11:45:00Z",
-          "notes": "✅ 3F.7 UI 到 Core 全域接线 (2026-08-11)。核心交付：DataOverviewService (US-SRC-009 live 值 + JSON 导出 + .dataOverviewAccessed 审计)、DeviceMigrationPackage/Service/Actor (ECHOMIG1 加密包 AES-GCM-256+HKDF-SHA256 + RFC 8785 JCS manifest + 精确 AAD + 逐块哈希 + fail-closed)、LiveAppAdapters (默认 live 接线)、SettingsViewModel live DataOverview 接线、SearchViewModel 默认 live pipeline、AuditEvent.dataOverviewAccessed。测试：4 新套件 35/35 (DeviceMigrationSecurity 17 + DeviceMigration 7 + DataOverview 6 + UIToCoreIntegration 5)，全量回归 995/995 0 失败，SwiftLint 0 errors。\n(2026-08-11 PR#59 审查修复) 🔴-1 merge 完整性校验改为逐条 ID 校验（test_AC4 断言 integrityCheckPassed）；🟡-2 SearchViewModel 单实例 live pipeline 缓存（follow-up 审计回归 + test）；🟡-3 默认 live 路径 FeedbackPipeline 接线（反馈落库 + test）；🟡-7 审计 method/batchPolicy 参数化（AC-7 test）；🟡-4 makeSearchPipeline 返回 optional，无路由显式 route-unavailable（test）；🟡-5/6 AGENTS.md §7.3/.§5.2 文档同步；DEF-59-01/02/03 记录于 deferred-items.json。3F.7 套件 39/39（+4），受影响的 SearchViewModel/ProductionSearchFeedback 60/60。\n(2026-08-11 CodeRabbit round) 7 inline comments + Minors/Nitpicks processed: CR-1 allBoth 保留两版本(派生ID)+删未用 ConflictResolution; CR-2 exportPackage PrivacyCheckpoint → DEF-59-004(PrivacyActor Files-外); CR-3 importPackage 返回 (manifest,payloads) 删 decryptManifestPlaintext; CR-4 传播 deleteMemory/excludedAssets.add 错误 + audit success=integrityPassed; CR-5 同上; CR-6 资源边界 maxPackageBytes/maxExpansionRatio/maxRecordCount/combined-size 强制; CR-7 live 授权(UserPolicy note/voice + PhotoKit photo/video)。Minors: LocalizedError+nonisolated、AC-6 原始字节断言、merge uniqueTarget 存活断言、wrong-magic dropFirst(8)、translationCacheBytes、DEF 三位数重命名、task-status branch→head。Nitpicks: loadUnaligned、route/embedder 解析一次、checkCancellation、makeActiveFeedbackPipeline、SettingsView init、search 主体去重。DEF-59-004/005/006/007 新增。3F.7 套件 43/43。\n(2026-08-11 pr-merge) PR #59 merged by human at 2026-08-11T11:42:18Z (merge commit 9c2eedf). Status review -> done. DEF-59-001~007 remain tracked (all 7 recorded). Cascade: 3F.8, 3F.9 flipped backlog -> ready per AGENTS.md §12.1. Phase 4 stays locked (entry_gate 3F.11 not done).",
+          "last_updated": "2026-08-31T14:48:00Z",
+          "notes": "✅ 3F.7 UI 到 Core 全域接线 (2026-08-11)。核心交付：DataOverviewService (US-SRC-009 live 值 + JSON 导出 + .dataOverviewAccessed 审计)、DeviceMigrationPackage/Service/Actor (ECHOMIG1 加密包 AES-GCM-256+HKDF-SHA256 + RFC 8785 JCS manifest + 精确 AAD + 逐块哈希 + fail-closed)、LiveAppAdapters (默认 live 接线)、SettingsViewModel live DataOverview 接线、SearchViewModel 默认 live pipeline、AuditEvent.dataOverviewAccessed。测试：4 新套件 35/35 (DeviceMigrationSecurity 17 + DeviceMigration 7 + DataOverview 6 + UIToCoreIntegration 5)，全量回归 995/995 0 失败，SwiftLint 0 errors。\n(2026-08-11 PR#59 审查修复) 🔴-1 merge 完整性校验改为逐条 ID 校验（test_AC4 断言 integrityCheckPassed）；🟡-2 SearchViewModel 单实例 live pipeline 缓存（follow-up 审计回归 + test）；🟡-3 默认 live 路径 FeedbackPipeline 接线（反馈落库 + test）；🟡-7 审计 method/batchPolicy 参数化（AC-7 test）；🟡-4 makeSearchPipeline 返回 optional，无路由显式 route-unavailable（test）；🟡-5/6 AGENTS.md §7.3/.§5.2 文档同步；DEF-59-01/02/03 记录于 deferred-items.json。3F.7 套件 39/39（+4），受影响的 SearchViewModel/ProductionSearchFeedback 60/60。\n(2026-08-11 CodeRabbit round) 7 inline comments + Minors/Nitpicks processed: CR-1 allBoth 保留两版本(派生ID)+删未用 ConflictResolution; CR-2 exportPackage PrivacyCheckpoint → DEF-59-004(PrivacyActor Files-外); CR-3 importPackage 返回 (manifest,payloads) 删 decryptManifestPlaintext; CR-4 传播 deleteMemory/excludedAssets.add 错误 + audit success=integrityPassed; CR-5 同上; CR-6 资源边界 maxPackageBytes/maxExpansionRatio/maxRecordCount/combined-size 强制; CR-7 live 授权(UserPolicy note/voice + PhotoKit photo/video)。Minors: LocalizedError+nonisolated、AC-6 原始字节断言、merge uniqueTarget 存活断言、wrong-magic dropFirst(8)、translationCacheBytes、DEF 三位数重命名、task-status branch→head。Nitpicks: loadUnaligned、route/embedder 解析一次、checkCancellation、makeActiveFeedbackPipeline、SettingsView init、search 主体去重。DEF-59-004/005/006/007 新增。3F.7 套件 43/43。\n(2026-08-11 pr-merge) PR #59 merged by human at 2026-08-11T11:42:18Z (merge commit 9c2eedf). Status review -> done. DEF-59-001~007 remain tracked (all 7 recorded). Cascade: 3F.8, 3F.9 flipped backlog -> ready per AGENTS.md §12.1. Phase 4 stays locked (entry_gate 3F.11 not done).\n(2026-08-31 PR#65 review) Five valid CodeRabbit findings fixed: TaskQueue pause state survives ProgressActor polling; cancelled detail/model-load tasks cannot overwrite terminal UI state; explicit background/resume/creation fixture journeys keep deterministic provenance; out-of-scope ASR/Embedder service changes removed. Creation and Onboarding UI regressions found by full-scheme review were corrected. No review finding was deferred.\n(2026-08-31 PR#65 deletion gate fix) D-005 journal now resumes from its persisted phase after canonical deletion, preserves the original ExcludedAssets intent, plans every representation vector ID across generations, and transactionally removes IndexBuildItem residue. Focused deletion recovery 3/3, affected identity/generation/migration suites 67/67, full scheme 1249 tests/151 suites passed with only 5 declared known issues; EchoUITests 44 executed, 1 consent-state skip, 0 failures; SwiftLint passed. No specification change was needed because §18 explicitly permits two-phase/compensating cross-store consistency.\n(2026-08-31 PR#65 second review) Three additional valid findings fixed: production detail retry retains and reloads the requested memory ID; missing production model-loader injection now fails all model rows closed instead of simulating success; Creation fixture generation test uses a bounded asynchronous wait. Affected suites 75/75 passed. Full scheme xcresult: 1,292 total, 1,287 passed, 4 expected failures, 1 consent-state skip, 0 failures. SwiftLint, static bans, and Release simulator build passed. No finding was deferred.",
           "pr": {
             "base": "dev-1.0",
             "head": "feature/phase3f-ui-core-wiring-3F.7",
@@ -1601,6 +1614,44 @@
             "merged_at": "2026-08-11T11:42:18Z",
             "merge_commit": "9c2eedfd983b3fd00d6263c036690e5778882dd3"
           },
+          "post_delivery_prs": [
+            {
+              "number": 65,
+              "url": "https://github.com/logan-suu/Echo/pull/65",
+              "head": "fix/production-real-data-wiring-US-SYS-001",
+              "base": "dev-1.0",
+              "created_at": "2026-08-31T11:58:57Z",
+              "kind": "post-delivery real-data wiring fix",
+              "status": "review",
+              "stories": [
+                "US-SYS-001",
+                "US-RES-004",
+                "US-PRV-001",
+                "US-AWK-001"
+              ],
+              "test_files": [
+                "EchoTests/Phase3/OnboardingTests.swift",
+                "EchoTests/Phase3/BackgroundTaskPanelTests.swift",
+                "EchoTests/Phase3/MemoryDetailViewModelTests.swift",
+                "EchoTests/Phase3/SettingsViewModelTests.swift",
+                "EchoTests/Phase3F/3F.11_PermissionWiringTests.swift",
+                "EchoTests/Phase3F/PhotoTextSearchIdentityTests.swift"
+              ],
+              "notes": "Third review round: all five remaining findings were verified as valid and fixed. Durable vector cleanup now fails before the vectorsDeleted phase, resumed deletion removes the exact persisted journal row, production detail reloads clear stale fixture/content and retry the same ID through a recording repository seam, and explicit onboarding fixtures take precedence over injected live model loading. No finding was deferred.",
+        "verification": [
+          "SwiftLint strict: 0 violations in configured scope and changed production Swift files",
+          "Focused model/permission/background/resume suites: 117/117 passed",
+          "PR review regression suites: 92/92 focused background/resume/detail/onboarding tests passed; CreationViewModel 19/19 and Onboarding 29/29 passed",
+          "Full EchoUITests bundle after review fixes: 44 executed, 1 consent-state skip, 0 failures",
+          "Full scheme after deletion and second-round review fixes: 1,292 total, 1,287 passed, 4 expected failures, 1 consent-state skip, 0 failures",
+          "Third review affected suites: 75/75 passed, including two newly discoverable deletion regression tests",
+          "PhotoTextSearchIdentity named suite: 17/17 passed",
+          "No-fixture production E2E: 1 passed, 1 skipped because consent was already persisted, 0 failed",
+                "Release simulator build: succeeded",
+                "Release compliance: Echo and EchoShareExtension clean"
+              ]
+            }
+          ],
           "status_transitions": {
             "merged_at": "2026-08-11T11:42:18Z"
           }

@@ -10,14 +10,14 @@ import Foundation
 
 /// 单查询评估输入（known-item：expectedMemoryID 非 nil；no-match：nil）
 public struct PhotoSearchEvaluationCase: Sendable, Equatable {
-    public nonisolated let queryID: String
-    public nonisolated let locale: String
-    public nonisolated let expectedMemoryID: UUID?
-    public nonisolated let rankedIDs: [UUID]
-    public nonisolated let activeChannelCount: Int
-    public nonisolated let totalChannelCount: Int
+    nonisolated public let queryID: String
+    nonisolated public let locale: String
+    nonisolated public let expectedMemoryID: UUID?
+    nonisolated public let rankedIDs: [UUID]
+    nonisolated public let activeChannelCount: Int
+    nonisolated public let totalChannelCount: Int
 
-    public nonisolated init(
+    nonisolated public init(
         queryID: String,
         locale: String,
         expectedMemoryID: UUID?,
@@ -36,16 +36,16 @@ public struct PhotoSearchEvaluationCase: Sendable, Equatable {
 
 /// 单语言质量报告（R@1/5/10、nDCG@10、MRR@10、no-match、partial-channel）
 public struct PhotoSearchLanguageReport: Sendable, Equatable {
-    public nonisolated let locale: String
-    public nonisolated let recallAt1: Double
-    public nonisolated let recallAt5: Double
-    public nonisolated let recallAt10: Double
-    public nonisolated let ndcgAt10: Double
+    nonisolated public let locale: String
+    nonisolated public let recallAt1: Double
+    nonisolated public let recallAt5: Double
+    nonisolated public let recallAt10: Double
+    nonisolated public let ndcgAt10: Double
     /// known-item-only；无 known-item 查询时为 nil（MRR@10 拒绝非 known-item 查询）
-    public nonisolated let mrrAt10: Double?
-    public nonisolated let noMatchCorrectRate: Double
-    public nonisolated let partialChannelRate: Double
-    public nonisolated let knownItemCount: Int
+    nonisolated public let mrrAt10: Double?
+    nonisolated public let noMatchCorrectRate: Double
+    nonisolated public let partialChannelRate: Double
+    nonisolated public let knownItemCount: Int
 }
 
 /// 质量指标纯函数计算层（WP7 步骤 3a-3f / 5a-5d / 6a-6h）。
@@ -56,7 +56,7 @@ public enum PhotoSearchQualityMetrics {
     }
 
     /// 单语言报告（步骤 3a-3b R@K / 3c-3d nDCG@10 / 3e-3f MRR@10 / 5a-5b no-match / 5c-5d partial-channel）
-    public nonisolated static func report(
+    nonisolated public static func report(
         locale: String, cases: [PhotoSearchEvaluationCase]
     ) -> PhotoSearchLanguageReport {
         let known = cases.filter { $0.expectedMemoryID != nil }
@@ -113,7 +113,7 @@ public enum PhotoSearchQualityMetrics {
     }
 
     /// macro average——双语报告逐指标均值（步骤 6e/6f；MRR 忽略 nil 语言）
-    public nonisolated static func macroAverage(
+    nonisolated public static func macroAverage(
         _ reports: [PhotoSearchLanguageReport]
     ) -> PhotoSearchLanguageReport? {
         guard !reports.isEmpty else { return nil }
@@ -137,7 +137,7 @@ public enum PhotoSearchQualityMetrics {
     }
 
     /// paired confidence interval——两语言 recall 差值的正态近似 95% CI（步骤 6g/6h）
-    public nonisolated static func pairedConfidenceInterval(
+    nonisolated public static func pairedConfidenceInterval(
         recallA: Double, sampleA: Int, recallB: Double, sampleB: Int
     ) -> (lower: Double, upper: Double)? {
         guard sampleA > 0, sampleB > 0 else { return nil }

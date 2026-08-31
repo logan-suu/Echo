@@ -360,7 +360,7 @@ struct AwakeningSystemAdaptersTests {
         let store = StubHealthStore()
         store.samples = [
             MinimizedHealthSample(timestamp: Date().timeIntervalSince1970 - 100, hrvValue: 20),
-            MinimizedHealthSample(timestamp: Date().timeIntervalSince1970 - 50, hrvValue: 25)
+            MinimizedHealthSample(timestamp: Date().timeIntervalSince1970 - 50, hrvValue: 25),
         ]
         let provider = HealthKitSystemProvider(store: store)
         let mood = await provider.inferMoodFromHRV()

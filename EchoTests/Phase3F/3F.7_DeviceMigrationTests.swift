@@ -307,7 +307,8 @@ struct DeviceMigrationTests {
         let match = entries.first { $0.traceID == traceID }
         #expect(match != nil)
         withKnownIssue {
-            #expect(match?.contentHash != nil)        }
+            #expect(match?.contentHash != nil)
+        }
         #expect(match?.success == true)
     }
 

@@ -9,7 +9,7 @@
 //           AC-6 (无模型切换), AC-7 (UI 功能受限提示),
 //           AC-8 (审计 .modelLoadFailed / .modelLoadRetrySuccess)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-005 (禁止网络下载),
-//           R-007 (禁止 @unchecked Sendable), ACT-005 (初始化器同步)
+//           R-007 (禁止 unchecked Sendable conformance), ACT-005 (初始化器同步)
 // 重要: 所有 struct stored/computed properties 必须 nonisolated（项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor）
 // 生成时间: 2026-07-05
 // ==========================================
@@ -25,7 +25,7 @@ import UIKit
 /// ## 设计原则
 /// - **仅本地加载**：所有模型从 `Bundle.main` 加载，不发起任何网络请求（R-005）
 /// - **仅手动重试**：无 Timer/DispatchQueue 自动重试，用户必须主动点击"重试加载"按钮（AC-3）
-/// - **固定模型集**：6 个模型类型由 `ModelType` 枚举固定，不可运行时切换（AC-6）
+/// - **固定模型集**：4 个模型类型由 `ModelType` 枚举固定，不可运行时切换（AC-6）
 /// - **失败兜底**：模型加载失败时，上层应使用 FTS5 关键词检索作为兜底（AC-5/MDL-005）
 ///
 /// ## Actor 隔离（AGENTS.md §4.2）
@@ -37,7 +37,6 @@ import UIKit
 /// - 加载失败 → `.modelLoadFailed`（含 modelName, error, recoveryMethod=systemSettings）
 /// - 手动重试成功 → `.modelLoadRetrySuccess`
 public actor ModelLoaderActor {
-
     // MARK: - Singleton
 
     public static let shared = ModelLoaderActor()
@@ -46,7 +45,7 @@ public actor ModelLoaderActor {
 
     /// Echo 内置的所有模型类型。
     ///
-    /// v6.0 生产模型集（3F.3，ADR-009）：E5 文本嵌入、SigLIP2 视觉嵌入、Whisper ASR。
+    /// v6.0 生产模型集：E5 文本嵌入、SigLIP2 图像塔、SigLIP2 文本塔、Whisper ASR。
     /// MobileCLIP-B（商业许可阻断）与 SenseVoice（FunASR 自定义条款）已退役移除。
     /// 与 `Scripts/prepare_models.sh` v6.0 与 `model-provenance-register.md` 保持一致。
     /// - 模型文件随 App 安装包分发（AC-1），运行时不可切换（AC-6）
@@ -56,22 +55,25 @@ public actor ModelLoaderActor {
         case multilingualE5Small
         /// SigLIP2-B/32 视觉嵌入（PyTorch 转换源 → Core ML，3F.3）
         case siglip2Vision
+        /// SigLIP2-B/32 配对文本塔（与图像塔共享 768d 对齐空间）
+        case siglip2Text
         /// Whisper tiny ASR（~39MB GGUF Q5_1，R-5.4 批准）
         case whisperTiny
 
         // MARK: Bundle Resource Info
 
         /// Bundle 中的资源名称（不含扩展名）
-        public nonisolated var resourceName: String {
+        nonisolated public var resourceName: String {
             switch self {
             case .multilingualE5Small: return "MultilingualE5Small"
             case .siglip2Vision:       return "SigLIP2BasePatch32"
+            case .siglip2Text:         return "SigLIP2TextBasePatch32"
             case .whisperTiny:         return "whisper-tiny-q5_1"
             }
         }
 
         /// 文件扩展名
-        public nonisolated var fileExtension: String {
+        nonisolated public var fileExtension: String {
             switch self {
             case .whisperTiny: return "gguf"
             default:           return "mlmodelc"
@@ -79,17 +81,17 @@ public actor ModelLoaderActor {
         }
 
         /// 完整的资源标识符（resourceName.extension）
-        public nonisolated var resourceIdentifier: String {
+        nonisolated public var resourceIdentifier: String {
             "\(resourceName).\(fileExtension)"
         }
 
         /// Bundle 中模型文件的 URL（AC-1: 仅本地 Bundle）
-        public nonisolated var bundleURL: URL? {
+        nonisolated public var bundleURL: URL? {
             Bundle.main.url(forResource: resourceName, withExtension: fileExtension)
         }
 
         /// 用于审计日志的模型名称（AC-8）
-        public nonisolated var modelName: String {
+        nonisolated public var modelName: String {
             resourceIdentifier
         }
     }
@@ -113,18 +115,19 @@ public actor ModelLoaderActor {
         ///
         /// TODO (Phase 3): 迁移到 String Catalog，提供 zh-Hans / en-US 双语言条目
         /// (AGENTS.md §6.2, §1.3: 语言策略 — 禁止硬编码字符串)
-        public nonisolated var description: String {
+        nonisolated public var description: String {
             switch self {
             case .notLoaded: return "未加载"
             case .loading:   return "加载中…"
             case .loaded:    return "已就绪"
+
             case .failed(let error):
                 return "加载失败: \(error.modelName)"
             }
         }
 
         /// 模型是否已成功加载
-        public nonisolated var isLoaded: Bool {
+        nonisolated public var isLoaded: Bool {
             if case .loaded = self { return true }
             return false
         }
@@ -135,37 +138,37 @@ public actor ModelLoaderActor {
     /// 所有模型的整体加载状态摘要（AC-7: UI 功能受限提示 / "修复"入口）
     public struct OverallStatus: Sendable {
         /// 模型总数
-        public nonisolated let allModelsCount: Int
+        nonisolated public let allModelsCount: Int
         /// 成功加载数
-        public nonisolated let loadedCount: Int
+        nonisolated public let loadedCount: Int
         /// 加载失败数
-        public nonisolated let failedCount: Int
+        nonisolated public let failedCount: Int
         /// 未加载数
-        public nonisolated let notLoadedCount: Int
+        nonisolated public let notLoadedCount: Int
         /// 各模型详细状态
-        public nonisolated let states: [ModelType: ModelLoadState]
+        nonisolated public let states: [ModelType: ModelLoadState]
 
         /// 是否所有模型均已成功加载
-        public nonisolated var allLoaded: Bool {
+        nonisolated public var allLoaded: Bool {
             loadedCount == allModelsCount
         }
 
         /// 是否有任何模型加载失败
-        public nonisolated var hasFailures: Bool {
+        nonisolated public var hasFailures: Bool {
             failedCount > 0
         }
 
         /// AC-7: 是否需要显示"功能受限"UI
-        public nonisolated var isDegraded: Bool {
+        nonisolated public var isDegraded: Bool {
             hasFailures && loadedCount > 0
         }
 
         /// AC-7: 是否完全不可用（需要引导修复）
-        public nonisolated var isUnavailable: Bool {
+        nonisolated public var isUnavailable: Bool {
             loadedCount == 0 && failedCount > 0
         }
 
-        public nonisolated init(
+        nonisolated public init(
             allModelsCount: Int,
             loadedCount: Int,
             failedCount: Int,
@@ -200,7 +203,7 @@ public actor ModelLoaderActor {
         // MARK: Error Properties
 
         /// 模型名称（AC-8: 审计日志必需）
-        public nonisolated var modelName: String {
+        nonisolated public var modelName: String {
             switch self {
             case .modelNotFound(let name, _):   return name
             case .loadFailed(let name, _, _):   return name
@@ -208,12 +211,12 @@ public actor ModelLoaderActor {
         }
 
         /// AC-2: 引导用户前往系统设置修复
-        public nonisolated var recoveryMethod: String {
+        nonisolated public var recoveryMethod: String {
             "systemSettings"
         }
 
         /// AC-8: 用于审计日志的模型名称标识
-        public nonisolated var auditModelName: String {
+        nonisolated public var auditModelName: String {
             modelName
         }
 
@@ -221,17 +224,18 @@ public actor ModelLoaderActor {
         ///
         /// TODO (Phase 3): 迁移到 String Catalog，提供 zh-Hans / en-US 双语言条目
         /// (AGENTS.md §6.2, §1.3)
-        public nonisolated var errorDescription: String? {
+        nonisolated public var errorDescription: String? {
             switch self {
             case .modelNotFound(let name, let resource):
                 return "模型文件缺失: \(name) (\(resource))。请前往「设置 > 通用 > iPhone 存储空间 > Echo」修复或重装 App。"
+
             case .loadFailed(let name, let resource, let error):
                 return "模型加载失败: \(name) (\(resource)) — \(error.localizedDescription)。请前往「设置 > 通用 > iPhone 存储空间 > Echo」修复或重装 App。"
             }
         }
 
         /// AC-7: 跳转系统设置的 URL
-        public static nonisolated var settingsRecoveryURL: URL? {
+        nonisolated public static var settingsRecoveryURL: URL? {
             URL(string: UIApplication.openSettingsURLString)
         }
     }
@@ -373,6 +377,7 @@ public actor ModelLoaderActor {
                 // Core ML compiled model — verify loadable (R-3.4: embedders load
                 // MLModel themselves via getModelBundleURL; MLModel is not Sendable)
                 _ = try await MLModel.load(contentsOf: bundleURL, configuration: MLModelConfiguration())
+
             case "gguf":
                 // GGUF model — verify file readability (R-3.3: whisper.cpp loads
                 // the GGUF file itself via getModelBundleURL)
@@ -383,6 +388,7 @@ public actor ModelLoaderActor {
                         userInfo: [NSLocalizedDescriptionKey: "GGUF file not readable at \(bundleURL.path)"]
                     )
                 }
+
             default:
                 throw NSError(
                     domain: "ModelLoaderActor",
@@ -393,7 +399,6 @@ public actor ModelLoaderActor {
 
             modelStates[modelType] = .loaded
             return .loaded
-
         } catch {
             let loadError = ModelLoadError.loadFailed(
                 modelName: modelType.modelName,
@@ -417,7 +422,7 @@ public actor ModelLoaderActor {
         }
     }
 
-    /// 加载所有 6 个模型（AC-1），返回各模型加载结果。
+    /// 加载全部 4 个已登记运行时模型（AC-1），返回各模型加载结果。
     ///
     /// 已有状态的模型（`.loaded` 或 `.failed`）将被跳过（幂等）。
     public func loadAllModels() async -> [ModelLoadState] {

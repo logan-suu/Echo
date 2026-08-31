@@ -16,6 +16,7 @@ import Testing
 import Foundation
 @testable import Echo
 
+@Suite("ResumeProgressPrompt", .serialized)
 @MainActor
 struct ResumeProgressPromptTests {
 
@@ -86,6 +87,18 @@ struct ResumeProgressPromptTests {
         let settled = await awaitSettled(vm)
         #expect(settled == .none)
         #expect(vm.isPromptPresented == false)
+    }
+
+    @Test("Explicit resume fixture precedes an injected live progress actor")
+    func test_AC3_fixturePrecedesLiveProgressActor() async {
+        let vm = ResumeProgressViewModel(progressActor: .shared, checkDelayNanoseconds: 0)
+        vm.loadFixture("resume-progress-pending")
+
+        vm.checkForPendingProgress(taskType: .fullIndex)
+        let settled = await awaitSettled(vm)
+        let expected = ResumeProgressFixtureLoader.load("resume-progress-pending").pendingProgress
+
+        #expect(settled == .prompt(expected!))
     }
 
     @Test("Continue after prompt maps to resumed with preserved progress")

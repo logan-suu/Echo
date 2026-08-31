@@ -174,7 +174,9 @@ struct AwakeningSettingsViewModelTests {
 
     @Test("requestNotificationPermission transitions to granted")
     func requestNotificationGrantsPermission() async {
-        let vm = AwakeningSettingsViewModel()
+        let scheduler = StubNotificationScheduler()
+        scheduler.authState = .authorized
+        let vm = AwakeningSettingsViewModel(notificationScheduler: scheduler)
         await vm.requestNotificationPermission()
         #expect(vm.notificationAuthStep == .granted)
     }

@@ -25,7 +25,7 @@ func makeTestExifJSON() -> Data {
         "GPSLongitude": 121.4737,
         "Make": "Apple",
         "Model": "iPhone 17 Pro",
-        "DateTimeOriginal": "2026-07-09T12:00:00Z"
+        "DateTimeOriginal": "2026-07-09T12:00:00Z",
     ]
     return try! JSONSerialization.data(withJSONObject: exif)
 }

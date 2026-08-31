@@ -48,6 +48,8 @@ struct MemoryDetailView: View {
     @State private var hasHandledLaunchArguments = false
     /// 是否进入 AI 创作结果页 (US-SYN-003, Task 3.9)
     @State private var isShowingCreation = false
+    /// Explicit fixture composition for the deterministic creation journey.
+    @State private var creationViewModel: CreationViewModel?
 
     init(viewModel: MemoryDetailViewModel = MemoryDetailViewModel()) {
         _viewModel = State(initialValue: viewModel)
@@ -102,7 +104,11 @@ struct MemoryDetailView: View {
         }
         // AI 创作结果页 (US-SYN-003, Task 3.9)
         .navigationDestination(isPresented: $isShowingCreation) {
-            CreationView()
+            if let creationViewModel {
+                CreationView(viewModel: creationViewModel)
+            } else {
+                CreationView()
+            }
         }
         // 删除确认弹窗 (US-PRV-004 AC-1)
         .confirmationDialog(
@@ -309,8 +315,12 @@ struct MemoryDetailView: View {
                 // grouped metadata
                 metadataGroup(memory)
 
-                // 创作展示 (US-SYN-002/003)
-                creationPreview
+                #if DEBUG
+                // Deterministic creation preview is restricted to explicit fixture journeys.
+                if viewModel.isFixtureBacked {
+                    creationPreview
+                }
+                #endif
 
                 // 删除入口 (US-PRV-004)
                 deleteSection
@@ -320,17 +330,13 @@ struct MemoryDetailView: View {
         .scrollContentBackground(.hidden)
     }
 
-    /// 媒体预览 — 按 sourceType 渲染确定性示例媒体 (Echo/Resources/MediaSamples/)。
-    ///
-    /// - photo → Image (示例图片)
-    /// - video_frame / video_audio → VideoPlayer (示例 MP4)
-    /// - voice → 音频播放 (示例 WAV)
+    /// Media preview. Production renders only media resolved from its source adapter;
+    /// bundled sample assets are restricted to explicit fixture journeys.
     /// - note → 无媒体（不渲染）
     @ViewBuilder
     private func mediaPreview(_ memory: MemoryDetailModel) -> some View {
         switch memory.mediaKind {
         case .image:
-            // WP7: PHAsset 真实图片优先（生产接线）；bundle 样本保留为 fallback
             if let uiImage = viewModel.photoImage {
                 Image(uiImage: uiImage)
                     .resizable()
@@ -338,7 +344,9 @@ struct MemoryDetailView: View {
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .accessibilityLabel("\(memory.title) photo")
-            } else if let name = memory.mediaAssetName, let uiImage = UIImage(named: name) {
+            } else if viewModel.isFixtureBacked,
+                      let name = memory.mediaAssetName,
+                      let uiImage = UIImage(named: name) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
@@ -348,7 +356,8 @@ struct MemoryDetailView: View {
             }
 
         case .video:
-            if let name = memory.mediaAssetName,
+            if viewModel.isFixtureBacked,
+               let name = memory.mediaAssetName,
                let url = Bundle.main.url(forResource: name, withExtension: "mp4") {
                 VideoPlayer(player: AVPlayer(url: url))
                     .frame(height: 240)
@@ -357,7 +366,8 @@ struct MemoryDetailView: View {
             }
 
         case .audio:
-            if let name = memory.mediaAssetName,
+            if viewModel.isFixtureBacked,
+               let name = memory.mediaAssetName,
                let url = Bundle.main.url(forResource: name, withExtension: "wav") {
                 AudioPlayerView(url: url, memoryTitle: memory.title)
             }
@@ -513,6 +523,7 @@ struct MemoryDetailView: View {
         .accessibilityLabel("Memory details: \(memory.sourceTypeLabel), \(memory.dateDescription), \(memory.sourceLanguage)")
     }
 
+    #if DEBUG
     // MARK: - Creation Preview (US-SYN-002/003)
 
     /// 创作展示区 — AI 生成内容预览 + 溯源锚点 (US-SYN-002/003)
@@ -555,6 +566,9 @@ struct MemoryDetailView: View {
 
             // 进入完整创作结果页 (US-SYN-003, Task 3.9)
             Button {
+                let fixtureViewModel = CreationViewModel()
+                fixtureViewModel.enableFixtureGeneration()
+                creationViewModel = fixtureViewModel
                 isShowingCreation = true
             } label: {
                 Label("Open full creation", systemImage: "arrow.up.right.square")
@@ -567,6 +581,7 @@ struct MemoryDetailView: View {
         .padding(14)
         .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
     }
+    #endif
 
     // MARK: - Delete Section (US-PRV-004)
 
@@ -794,6 +809,8 @@ final class AudioPlayerController: NSObject, AVAudioPlayerDelegate {
     private var player: AVAudioPlayer?
     /// 播放结束轮询任务（模拟器无声卡时 delegate 不触发，轮询兜底）
     private var monitorTask: Task<Void, Never>?
+
+    deinit {}
 
     /// 时长展示文本（未就绪时为 0:00）
     var durationText: String {

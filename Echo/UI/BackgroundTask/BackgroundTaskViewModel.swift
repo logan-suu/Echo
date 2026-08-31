@@ -8,8 +8,8 @@
 //       3F.10 - production audit wiring (US-SYS-001 AC-7: .backgroundTaskUIAccessed /
 //               .backgroundTaskInterrupted with action=pause/cancel + resumePoint) + localization
 // AC 覆盖: US-SYS-001 AC-1 ✅ (活跃任务列表展示), AC-2 ✅ (进度百分比/计数),
-//          AC-3 ✅ (暂停/取消交互, 🔮 Core TaskQueueActor 接入), AC-4 🔶 (SQLite TaskProgress 断点续传),
-//          AC-5 ✅ (无活跃任务自动隐藏), AC-6 🔮 (串行队列, Core 侧),
+//          AC-3 ✅ (pause/cancel forwarded to TaskQueueActor), AC-4 ✅ (SQLite TaskProgress read),
+//          AC-5 ✅ (auto-hide when inactive), AC-6 ✅ (Core serial queue),
 //          AC-7 ✅ (.backgroundTaskUIAccessed / .backgroundTaskInterrupted 审计)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           §4.2 (仅持有不可变引用), §5.4 (hash-only 审计),
@@ -130,20 +130,26 @@ final class BackgroundTaskViewModel {
 
     private let progressActor: ProgressActor?
     private let auditWriter: PrivacyActor?
+    private let taskQueue: TaskQueueActor?
     /// 实时轮询间隔（测试注入小值；3F.11 fix：面板读取真实 TaskProgress）
     private let pollIntervalNanoseconds: UInt64
 
     private var loadTask: Task<Void, Never>?
     private var stubTasks: [TaskProgress] = []
+    private var isFixtureBacked = false
     private var simulateError = false
 
     init(progressActor: ProgressActor? = nil,
          auditWriter: PrivacyActor? = nil,
+         taskQueue: TaskQueueActor? = nil,
          pollIntervalNanoseconds: UInt64 = 1_000_000_000) {
         self.progressActor = progressActor
         self.auditWriter = auditWriter
+        self.taskQueue = taskQueue
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
     }
+
+    deinit {}
 
     // MARK: - Computed Properties
 
@@ -181,13 +187,29 @@ final class BackgroundTaskViewModel {
                     throw BackgroundTaskError.loadFailed
                 }
 
+                if self.isFixtureBacked {
+                    self.tasks = self.stubTasks.map(BackgroundTaskModel.init)
+                    self.viewState = .completed
+                    return
+                }
+
                 if let progressActor = self.progressActor {
                     // 3F.11 fix: 真实 TaskProgress 实时轮询（US-SYS-001 AC-2）——面板打开期间
                     // 持续读取 SQLite TaskProgress；任务完成即消失（§4.5 完成即清理）。
                     while !Task.isCancelled {
-                        let rows = (try? await progressActor.loadAll()) ?? []
+                        let rows = try await progressActor.loadAll()
                         guard !Task.isCancelled else { return }
-                        self.tasks = rows.map(BackgroundTaskModel.init)
+                        var mappedTasks: [BackgroundTaskModel] = []
+                        mappedTasks.reserveCapacity(rows.count)
+                        for row in rows {
+                            var task = BackgroundTaskModel(from: row)
+                            if let taskQueue = self.taskQueue,
+                               await taskQueue.isPaused(taskId: row.taskId) {
+                                task.status = .paused
+                            }
+                            mappedTasks.append(task)
+                        }
+                        self.tasks = mappedTasks
                         self.viewState = .completed
                         try await Task.sleep(nanoseconds: self.pollIntervalNanoseconds)
                     }
@@ -224,6 +246,9 @@ final class BackgroundTaskViewModel {
     func pauseTask(_ taskId: String) {
         guard let idx = tasks.firstIndex(where: { $0.taskId == taskId }) else { return }
         tasks[idx].status = .paused
+        if let taskQueue {
+            Task { await taskQueue.pause(taskId: taskId) }
+        }
         writeAudit(event: .backgroundTaskInterrupted, action: "pause", resumePoint: tasks[idx].processedCount)
     }
 
@@ -231,6 +256,9 @@ final class BackgroundTaskViewModel {
         guard let idx = tasks.firstIndex(where: { $0.taskId == taskId }) else { return }
         guard tasks[idx].status == .paused else { return }
         tasks[idx].status = .running
+        if let taskQueue {
+            Task { await taskQueue.resume(taskId: taskId) }
+        }
     }
 
     func requestCancelTask(_ taskId: String) {
@@ -243,6 +271,9 @@ final class BackgroundTaskViewModel {
             return
         }
         let resumePoint = tasks[idx].processedCount
+        if let taskQueue {
+            Task { await taskQueue.cancel(taskId: taskId) }
+        }
         tasks[idx].status = .cancelled
         tasks.remove(at: idx)
         pendingCancelTaskId = nil
@@ -273,6 +304,7 @@ final class BackgroundTaskViewModel {
     // MARK: - Fixture Injection
 
     func loadPreloadedTasks(_ items: [TaskProgress]) {
+        isFixtureBacked = true
         stubTasks = items
         tasks = items.map(BackgroundTaskModel.init)
         viewState = .completed

@@ -45,6 +45,12 @@ enum CreationTemplate: String, CaseIterable, Sendable, Equatable {
     }
 }
 
+/// Production-owned default prompt text. Fixtures may reference this value, but the
+/// default app must not depend on a fixture loader for runtime configuration.
+enum CreationPromptDefaults {
+    static let defaultDraft = "You are Echo, a local AI memory assistant. Focus on recent queries and feelings."
+}
+
 /// 创作段落 — AI 生成文本 + 溯源锚点 (US-SYN-002/003 AC-2)。
 struct CreationParagraph: Sendable, Equatable, Identifiable {
     /// 段落唯一标识（确定性）
@@ -141,9 +147,7 @@ enum CreationFixtureLoader {
         ]
     }
 
-    /// 按模板加载确定性生成结果 — `generate()` 的 fixture 兜底 (Live Sim Review / XCUITest 确定性路径)。
-    ///
-    /// 未选择模板或无匹配模板时返回 nil（由 ViewModel 降级为 error）。
+    /// Returns deterministic template output for explicit Preview/test setup only.
     static func load(for template: CreationTemplate) -> CreationModel? {
         switch template {
         case .letter:   return generatedLetter
@@ -153,9 +157,9 @@ enum CreationFixtureLoader {
         }
     }
 
-    /// 默认 System Prompt 草稿 (US-SYN-005)。
+    /// Default system prompt draft used by deterministic fixtures (US-SYN-005).
     static var defaultPromptDraft: String {
-        "You are Echo, a local AI memory assistant. Focus on recent queries and feelings."
+        CreationPromptDefaults.defaultDraft
     }
 
     // MARK: - creation-idle

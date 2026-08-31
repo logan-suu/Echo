@@ -437,8 +437,8 @@ struct SearchWithFeedbackTests {
         // With feedback, memA (boosted by +0.5) may rank above memB
         // memA cosine ≈ 0.88²=0.77ish or just roughly aligned
         // The key assertion: feedbackAdjustment is populated and affects ranking
-        let aResult = results.first(where: { $0.id == memA })
-        let bResult = results.first(where: { $0.id == memB })
+        let aResult = results.first { $0.id == memA }
+        let bResult = results.first { $0.id == memB }
         #expect(aResult != nil, "Memory A should be in results")
         #expect(bResult != nil, "Memory B should be in results")
         #expect(aResult?.feedbackAdjustment != nil, "Memory A should have feedback adjustment")

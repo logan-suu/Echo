@@ -148,7 +148,7 @@ struct SigLIP2ReferenceVectorTests {
         let dict = try #require(dictOpt, "siglip2-reference-vectors.json invalid")
         let samplesOpt = dict["samples"] as? [[String: Any]]
         let samples = try #require(samplesOpt, "samples array missing from siglip2-reference-vectors.json")
-        let blueRefOpt = samples.first(where: { ($0["label"] as? String) == "solid_blue_256" })
+        let blueRefOpt = samples.first { ($0["label"] as? String) == "solid_blue_256" }
         let blueRef = try #require(blueRefOpt, "solid_blue_256 reference embedding missing - run Scripts/convert_siglip2.py first")
         let refEmbeddingOpt = blueRef["embedding"] as? [Double]
         let refEmbedding = try #require(refEmbeddingOpt, "solid_blue_256 reference embedding malformed")

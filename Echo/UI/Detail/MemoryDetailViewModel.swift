@@ -6,20 +6,36 @@
 //            docs/ui/echo-memory-canvas-style.md §3.2 (Focus surfaces — 单列 + grouped metadata),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.3 - MemoryDetailView + ViewModel + Edit + Conflict + Creation + Translation
-// AC 覆盖: US-AWK-007 AC-1 ✅ (编辑入口: 标题/描述/标签/时间戳), AC-4 ✅ (冲突解决 UI, 🔮 Core 写),
+// AC coverage: US-AWK-007 editing/conflict UI is fixture-only until a Core mutation boundary exists;
 //          US-DIS-002 AC-1 ✅ (展开详情触发), AC-2 ✅ (cache-first + TranslationService fallback),
 //          AC-3 ✅ (源语言检测不确定 <0.9 保留原文为主, ADR-005), AC-4 ✅ (原文/译文切换), AC-5 ✅ (缓存写入 TTL=7d),
-//          US-PRV-004 AC-1 ✅ (删除双选项弹窗, 🔮 Core 写),
+//          US-PRV-004 remove-from-Echo uses CanonicalMemoryRepositoryActor in production;
+//          original-source deletion fails visibly until a source deletion boundary exists,
 //          US-SYN-002 AC-1 ✅ (溯源锚点展示), US-SYN-003 AC-3 ✅ (创作预览/复制)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
 // 生成时间: 2026-08-01
+// PR#65 third review fix: production loads clear stale fixture/content state and retry the
+//                        exact requested memory through an injectable repository boundary.
 // ==========================================
 
 import SwiftUI
 import Foundation
 import Photos
+
+protocol MemoryDetailRepository: Sendable {
+    func loadMemory(memoryId: UUID) async throws -> Memory?
+    func deleteMemory(
+        memoryId: UUID,
+        sourceLocator: String?,
+        sourceType: String?,
+        writeExcluded: Bool,
+        traceID: String
+    ) async throws -> Bool
+}
+
+extension CanonicalMemoryRepositoryActor: MemoryDetailRepository {}
 
 // MARK: - Memory Detail UI Model
 
@@ -189,7 +205,8 @@ struct MemoryConflictModel: Sendable, Equatable {
 /// ## 职责 (docs/ui/architecture.md §7.1)
 /// - 状态映射: Memory/MemoryEntry → MemoryDetailModel
 /// - 错误映射: L1~L4 → error state
-/// - Intent 转发: 翻译/编辑/删除/冲突解决 → Core await 调用（🔮 Phase 3.9）
+/// - Intent forwarding: translation and remove-from-Echo use live boundaries; unsupported
+///   edit/conflict/original-source mutations fail visibly instead of reporting fake success.
 /// - 生命周期: Task 管理，View 消失时 cancel
 ///
 /// ## 状态流转 (AGENTS.md §8.2)
@@ -245,6 +262,8 @@ final class MemoryDetailViewModel {
     var showDeleteConfirmation: Bool = false
     /// 记忆已被移除标记 — 删除后显示移除成功空态 (US-PRV-004, PR #38 review fix)
     private(set) var hasRemovedMemory = false
+    /// True only after an explicit Preview/test/XCUITest fixture injection.
+    private(set) var isFixtureBacked = false
 
     // MARK: - Edit Form State (US-AWK-007 AC-1)
 
@@ -262,6 +281,9 @@ final class MemoryDetailViewModel {
     /// 当前活跃的加载 Task
     private var loadTask: Task<Void, Never>?
 
+    /// The production identifier retained for an explicit user retry.
+    private var requestedMemoryID: UUID?
+
     /// UI 切片模式模拟记忆源 — fixture 注入
     private var stubMemory: MemoryDetailModel?
 
@@ -276,7 +298,7 @@ final class MemoryDetailViewModel {
     /// WP7: 详情页媒体预览——PHAsset 图片本体（照片记忆展示生产接线）
     private(set) var photoImage: UIImage?
     /// WP7: canonical 仓库——生产 load 接线（route ENABLED 后详情真实加载）
-    private let canonicalRepository: CanonicalMemoryRepositoryActor?
+    private let canonicalRepository: (any MemoryDetailRepository)?
 
     // MARK: - Translation State (US-DIS-002)
 
@@ -300,12 +322,14 @@ final class MemoryDetailViewModel {
     init(
         translationService: any TranslationService = AppleTranslationService(),
         translationCache: any TranslationCaching = MemoryDetailViewModel.defaultPersistentCache(),
-        canonicalRepository: CanonicalMemoryRepositoryActor? = nil
+        canonicalRepository: (any MemoryDetailRepository)? = nil
     ) {
         self.translationService = translationService
         self.translationCache = translationCache
         self.canonicalRepository = canonicalRepository
     }
+
+    deinit {}
 
     /// 生产默认持久缓存目录 — Application Support 下 EchoTranslationCache。
     /// 展示层翻译缓存独立于 Core 存储，仅缓存译文（不重复持久化源文本）。
@@ -322,36 +346,50 @@ final class MemoryDetailViewModel {
     /// 加载指定记忆详情。
     ///
     /// 设置 state = .loading，加载完成后设置 .completed 或 .error。
-    /// 🔮 Phase 3.9+: 通过 Core 按 memoryId 拉取。当前 UI 切片通过 loadPreloaded 注入。
-    /// WP7: Memory → 详情模型生产映射（canonical 数据 → 展示字段）。
+    /// Production loads by memoryId from CanonicalMemoryRepositoryActor. Explicit fixtures use
+    /// loadPreloaded only in Debug previews/tests.
     static func makeDetailModel(from memory: Memory) -> MemoryDetailModel {
-        MemoryDetailModel(
+        let preferredLanguage = LanguageCenter.shared.resolvedLanguage
+        let sourceLanguage = GenerationRoutedChannelAdapter.detectLanguage(from: memory.canonicalText)
+            ?? preferredLanguage
+        return MemoryDetailModel(
             id: memory.memoryId,
             assetId: memory.sourceLocator,
             sourceType: memory.sourceType,
-            title: memory.canonicalText ?? "A photo memory",
+            title: memory.canonicalText ?? Self.sourceTitle(memory.sourceType),
             originalText: memory.canonicalText ?? "",
-            sourceLanguage: "en-US",
-            preferredLanguage: "en-US",
+            sourceLanguage: sourceLanguage,
+            preferredLanguage: preferredLanguage,
             timestamp: memory.createdAt,
             tags: [],
             userEdited: memory.userEdited
         )
     }
 
+    private static func sourceTitle(_ sourceType: String) -> String {
+        switch sourceType {
+        case "photo": "Photo"
+        case "video", "video_frame", "video_audio": "Video"
+        case "voice": "Voice Memo"
+        case "note": "Note"
+        default: "Memory"
+        }
+    }
+
     func load(memoryId: UUID) {
         guard viewState != .loading else { return }
 
         loadTask?.cancel()
+        requestedMemoryID = memoryId
+        memory = nil
+        stubMemory = nil
 
         // Set loading synchronously (AGENTS.md §8.1: first line of action)
         viewState = .loading
+        isFixtureBacked = false
 
         loadTask = Task { [weak self] in
             guard let self else { return }
-
-            // 短暂模拟加载以展示 loading 态
-            try? await Task.sleep(nanoseconds: 250_000_000)
 
             guard !Task.isCancelled else {
                 self.viewState = .cancelled
@@ -360,14 +398,34 @@ final class MemoryDetailViewModel {
 
             // WP7: 生产 load——canonical 仓库真实加载（route ENABLED 后详情接线）
             if let repo = canonicalRepository {
-                guard let memory = try? await repo.loadMemory(memoryId: memoryId) else {
+                do {
+                    guard let memory = try await repo.loadMemory(memoryId: memoryId) else {
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
+                        self.viewState = .error(.l2Recoverable(
+                            message: "This memory is no longer available."
+                        ))
+                        return
+                    }
+                    guard !Task.isCancelled else {
+                        self.viewState = .cancelled
+                        return
+                    }
+                    self.memory = Self.makeDetailModel(from: memory)
+                    self.viewState = .completed
+                } catch is CancellationError {
+                    self.viewState = .cancelled
+                } catch {
+                    guard !Task.isCancelled else {
+                        self.viewState = .cancelled
+                        return
+                    }
                     self.viewState = .error(.l2Recoverable(
                         message: "Unable to load this memory. Please try again."
                     ))
-                    return
                 }
-                self.memory = Self.makeDetailModel(from: memory)
-                self.viewState = .completed
                 return
             }
 
@@ -384,7 +442,7 @@ final class MemoryDetailViewModel {
 
     /// WP7: PHAsset 图片本体加载——详情页媒体预览生产接线。
     /// 本地仅提取（isNetworkAccessAllowed=false，与摄入策略一致）；无资产静默跳过。
-    public func loadPhotoImage(assetId: String) {
+    func loadPhotoImage(assetId: String) {
         guard photoImage == nil,
               let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else { return }
         let options = PHImageRequestOptions()
@@ -404,6 +462,8 @@ final class MemoryDetailViewModel {
     ///
     /// - Parameter model: MemoryDetailModel（来自 fixture loader）
     func loadPreloaded(_ model: MemoryDetailModel) {
+        requestedMemoryID = nil
+        isFixtureBacked = true
         stubMemory = model
         memory = model
         viewState = .completed
@@ -519,10 +579,18 @@ final class MemoryDetailViewModel {
 
     /// 保存编辑 (US-AWK-007 AC-2)。
     ///
-    /// 更新本地展示模型（userEdited=true），重新向量化 🔮 Phase 3.9。
-    /// 若编辑期间外部数据源变更（conflict 被置位），阻止保存。
+    /// Fixture previews may mutate their local display copy. Production fails visibly until
+    /// the canonical repository exposes an edit/re-index transaction boundary.
     func saveEdit() {
         guard var current = memory else { return }
+
+        guard isFixtureBacked else {
+            isEditing = false
+            viewState = .error(.l2Recoverable(
+                message: "Editing is unavailable because the production memory update boundary is not connected."
+            ))
+            return
+        }
 
         // AC-4: 编辑期间外部变更 → 阻止保存（由 SyncPipeline 检测时置位 conflict）
         if current.conflict != nil {
@@ -553,14 +621,52 @@ final class MemoryDetailViewModel {
 
     /// 选择"仅从 Echo 移除" (US-PRV-004 AC-2)。
     ///
-    /// 保留原始文件，写入 ExcludedAssets（🔮 Phase 3.9 Core 写路径）。
+    /// Production delegates the transaction to CanonicalMemoryRepositoryActor, which removes
+    /// canonical/vector/cache data and writes ExcludedAssets atomically for this user action.
     func removeFromEcho() {
         showDeleteConfirmation = false
-        // 🔮 Phase 3.9+: 调用 ExcludedAssetsActor 写入 + 事务性清除记忆副本
-        // 当前 UI 切片仅完成交互语义，展示已移除状态
-        hasRemovedMemory = true
-        viewState = .idle
-        memory = nil
+        guard let current = memory else { return }
+
+        if isFixtureBacked {
+            hasRemovedMemory = true
+            viewState = .idle
+            memory = nil
+            return
+        }
+
+        guard let canonicalRepository else {
+            viewState = .error(.l3Blocking(
+                message: "Memory removal is unavailable because storage is not connected."
+            ))
+            return
+        }
+
+        viewState = .loading
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let deleted = try await canonicalRepository.deleteMemory(
+                    memoryId: current.id,
+                    sourceLocator: current.assetId,
+                    sourceType: current.sourceType,
+                    writeExcluded: true,
+                    traceID: UUID().uuidString
+                )
+                guard deleted else {
+                    self.viewState = .error(.l2Recoverable(
+                        message: "This memory is no longer available."
+                    ))
+                    return
+                }
+                self.hasRemovedMemory = true
+                self.memory = nil
+                self.viewState = .idle
+            } catch {
+                self.viewState = .error(.l2Recoverable(
+                    message: "Unable to remove this memory. Please try again."
+                ))
+            }
+        }
     }
 
     /// 选择"同时删除原始文件" (US-PRV-004 AC-3)。
@@ -568,7 +674,12 @@ final class MemoryDetailViewModel {
     /// 调用系统 API 删除原始文件，级联清除 Echo 数据，不写入 ExcludedAssets。
     func deleteOriginal() {
         showDeleteConfirmation = false
-        // 🔮 Phase 3.9+: 调用系统删除 API + 级联清除
+        guard isFixtureBacked else {
+            viewState = .error(.l3Blocking(
+                message: "Original-file deletion is unavailable because the source deletion boundary is not connected."
+            ))
+            return
+        }
         hasRemovedMemory = true
         viewState = .idle
         memory = nil
@@ -579,6 +690,13 @@ final class MemoryDetailViewModel {
     /// - keep: 保留用户编辑（.local）或使用外部版本（.external）
     func resolveConflict(keep: ConflictResolution) {
         guard var current = memory, let conflict = current.conflict else { return }
+
+        guard isFixtureBacked else {
+            viewState = .error(.l2Recoverable(
+                message: "Conflict resolution is unavailable because the production update boundary is not connected."
+            ))
+            return
+        }
 
         switch keep {
         case .local:
@@ -597,15 +715,16 @@ final class MemoryDetailViewModel {
 
     /// 重试加载 (L2 恢复路径)。
     func retry() {
-        guard memory != nil else {
-            if let stub = stubMemory {
-                loadPreloaded(stub)
-            } else {
-                viewState = .idle
-            }
+        if isFixtureBacked, let stub = stubMemory {
+            loadPreloaded(stub)
             return
         }
-        viewState = .completed
+        if let requestedMemoryID {
+            viewState = .idle
+            load(memoryId: requestedMemoryID)
+            return
+        }
+        viewState = memory == nil ? .idle : .completed
     }
 
     /// 仅 Preview/调试使用 — 直接构造错误状态，不触发任何副作用。

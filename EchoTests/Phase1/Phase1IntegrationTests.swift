@@ -576,9 +576,9 @@ struct Phase1IntegrationTests {
         func test_batchIngestAndSearch() async throws {
             let store = VectorStoreActor(dimension: 4)
             let entries: [(vector: [Float], id: UUID, metadata: Data?)] = [
-                ([0.9, 0.0, 0.0, 0.0], UUID(), "first".data(using: .utf8)),
-                ([0.0, 0.9, 0.0, 0.0], UUID(), "second".data(using: .utf8)),
-                ([0.0, 0.0, 0.9, 0.0], UUID(), "third".data(using: .utf8)),
+                ([0.9, 0.0, 0.0, 0.0], UUID(), Data("first".utf8)),
+                ([0.0, 0.9, 0.0, 0.0], UUID(), Data("second".utf8)),
+                ([0.0, 0.0, 0.9, 0.0], UUID(), Data("third".utf8)),
             ]
             try await store.batchIngest(entries)
             let count = await store.liveCount
@@ -612,6 +612,7 @@ struct Phase1IntegrationTests {
                 case .dimensionMismatch(let expected, let got):
                     #expect(expected == 4)
                     #expect(got == 2)
+
                 default:
                     Issue.record("Unexpected error type: \(error)")
                 }
@@ -806,11 +807,10 @@ struct Phase1IntegrationTests {
             let excludedIds = Set(excludedItems.map { $0.assetId })
             let results = await store.search(
                 query: [1.0, 0.0, 0.0, 0.0],
-                k: 2,
-                filter: { candidateId in
-                    !excludedIds.contains(candidateId.uuidString)
-                }
-            )
+                k: 2
+            ) { candidateId in
+                !excludedIds.contains(candidateId.uuidString)
+            }
             #expect(results.count == 1)
             #expect(results.first?.id == id1)
         }

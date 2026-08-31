@@ -179,6 +179,8 @@ final class SearchViewModel {
     private(set) var feedbackStates: [UUID: FeedbackState] = [:]
     /// 是否已执行过搜索（区分 idle 空态与 completed 空态）
     private(set) var hasSearched: Bool = false
+    /// True only after an explicit Preview/test/XCUITest fixture injection.
+    private(set) var isFixtureBacked = false
 
     // MARK: - Dependencies (Immutable Actor References)
 
@@ -217,6 +219,8 @@ final class SearchViewModel {
         self.feedbackPipeline = feedbackPipeline
         self.composition = composition
     }
+
+    deinit {}
 
     /// 解析（并缓存）生产 live SearchPipeline — 仅首次经 composition 解析，之后复用同一实例。
     /// 单实例复用是 follow-up 查询跟踪（US-RET-005 AC-4 lastSearchTraceID/lastSearchQuery）
@@ -326,6 +330,7 @@ final class SearchViewModel {
                 }
 
                 if let pipeline {
+                    self.isFixtureBacked = false
                     // WP4 route ENABLED：queryFactory 注入的 pipeline 走多通道 typed 路径
                     // （原生载荷 + canonical RRF + provenance）；否则 legacy 仅文本路径。
                     if pipeline.supportsTypedSearch {
@@ -351,14 +356,13 @@ final class SearchViewModel {
                         }
                         self.results = items.map(SearchResultModel.init)
                     }
-                } else {
-                    // 无 Pipeline（测试/Preview fixture 模式）：返回 fixture 注入的 stub 结果
-                    try await Task.sleep(nanoseconds: 300_000_000)
-                    guard !Task.isCancelled else {
-                        self.viewState = .cancelled
-                        return
-                    }
+                } else if self.isFixtureBacked {
+                    // Deterministic results are allowed only after explicit fixture injection.
                     self.results = self.stubResults.map(SearchResultModel.init)
+                } else {
+                    // A missing production dependency must never masquerade as an empty search.
+                    self.viewState = .error(.l3Blocking(message: "Search is currently unavailable"))
+                    return
                 }
 
                 self.hasSearched = true
@@ -387,6 +391,7 @@ final class SearchViewModel {
         switch searchError.errorLevel {
         case 3:
             return .error(.l3Blocking(message: searchError.errorDescription ?? "Unable to continue"))
+
         default:
             return .error(.l2Recoverable(message: searchError.errorDescription ?? "Search failed. Please try again."))
         }
@@ -406,6 +411,7 @@ final class SearchViewModel {
     ///
     /// - Parameter items: SearchResultItem 数组（来自 fixture loader）
     func loadPreloadedResults(_ items: [SearchResultItem]) {
+        isFixtureBacked = true
         stubResults = items
         results = items.map(SearchResultModel.init)
         hasSearched = true
@@ -418,6 +424,7 @@ final class SearchViewModel {
         results = []
         feedbackStates = [:]
         hasSearched = false
+        isFixtureBacked = false
         viewState = .idle
     }
 

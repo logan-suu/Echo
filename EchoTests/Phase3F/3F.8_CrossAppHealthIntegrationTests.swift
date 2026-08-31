@@ -48,7 +48,7 @@ struct CrossAppHealthIntegrationTests {
         let now = Date().timeIntervalSince1970
         store.samples = [
             MinimizedHealthSample(timestamp: now - 3600, hrvValue: 40),
-            MinimizedHealthSample(timestamp: now, hrvValue: 80)
+            MinimizedHealthSample(timestamp: now, hrvValue: 80),
         ]
         let provider = HealthKitSystemProvider(store: store)
 
@@ -96,7 +96,7 @@ struct CrossAppHealthIntegrationTests {
         let store = CrossAppStubHealthStore()
         store.samples = [
             MinimizedHealthSample(timestamp: Date().timeIntervalSince1970 - 300, hrvValue: 35),
-            MinimizedHealthSample(timestamp: Date().timeIntervalSince1970 - 200, hrvValue: 65)
+            MinimizedHealthSample(timestamp: Date().timeIntervalSince1970 - 200, hrvValue: 65),
         ]
         let provider = HealthKitSystemProvider(store: store)
         let results = try await provider.search(query: "运动照片", window: nil)
@@ -240,7 +240,7 @@ final class StubMemoryProvider: CrossAppSourceProvider, @unchecked Sendable {
                 timestamp: Date().timeIntervalSince1970 - 60,
                 snippet: "失眠日记",
                 matchScore: 0.85
-            )
+            ),
         ]
     }
 }

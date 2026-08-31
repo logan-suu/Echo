@@ -7,7 +7,7 @@
 // 任务: 3.11 - 引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载
 // AC 覆盖: US-PRV-008 AC-1 ✅ (隐私摘要), AC-2 ✅ (摘要含目的/方式/种类/保留期限/本地处理声明),
 //          AC-3 ✅ (同意/拒绝同等醒目 — 状态流转), US-SRC-001 AC-6 ✅ (iCloud 提示数据 + Open Settings 意图),
-//          US-SYN-001 AC-2 ✅ (zh-Hans/en-US 选择 + 映射提示), 首次模型加载 ✅ (determinate 进度 → completed)
+//          US-SYN-001 AC-2 ✅ (zh-Hans/en-US 选择 + 映射提示), 首次模型加载 ✅ (4 模型真实逐项进度 → completed)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约 — 不保存第二份领域真相)
 // 生成时间: 2026-08-03
@@ -16,6 +16,41 @@
 import Testing
 import Foundation
 @testable import Echo
+
+private actor OnboardingModelLoaderStub: OnboardingModelLoading {
+    private let failedModel: ModelLoaderActor.ModelType?
+    private var calls: [ModelLoaderActor.ModelType] = []
+
+    init(failedModel: ModelLoaderActor.ModelType? = nil) {
+        self.failedModel = failedModel
+    }
+
+    func loadModel(_ modelType: ModelLoaderActor.ModelType) async -> ModelLoaderActor.ModelLoadState {
+        calls.append(modelType)
+        if modelType == failedModel {
+            return .failed(.modelNotFound(
+                modelName: modelType.modelName,
+                resourceName: modelType.resourceIdentifier
+            ))
+        }
+        return .loaded
+    }
+
+    func loadedModels() -> [ModelLoaderActor.ModelType] {
+        calls
+    }
+}
+
+@MainActor
+private final class OnboardingPermissionRequesterStub: OnboardingPermissionRequesting {
+    private(set) var requestedIDs: [String] = []
+    var granted = true
+
+    func request(_ permission: OnboardingPermission) async -> Bool {
+        requestedIDs.append(permission.id)
+        return granted
+    }
+}
 
 @MainActor
 struct OnboardingTests {
@@ -36,6 +71,32 @@ struct OnboardingTests {
                 continue
             }
             return vm.viewState
+        }
+        return vm.viewState
+    }
+
+    /// Reaches the language step without enabling fixture mode.
+    private func enterProductionLanguageStep(_ vm: OnboardingViewModel) {
+        vm.start()
+        vm.acceptPrivacy()
+        for index in vm.permissionSteps.indices {
+            #expect(vm.viewState == .permissions(index))
+            vm.denyPermission()
+            vm.skipPermission()
+        }
+        #expect(vm.viewState == .language)
+    }
+
+    /// Waits for an asynchronous permission request to leave its current step.
+    private func awaitPermissionSettled(
+        _ vm: OnboardingViewModel,
+        from index: Int,
+        timeout: Duration = .seconds(2)
+    ) async -> OnboardingViewModel.ViewState {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline, vm.viewState == .permissions(index) {
+            try? await Task.sleep(for: .milliseconds(5))
         }
         return vm.viewState
     }
@@ -88,6 +149,42 @@ struct OnboardingTests {
     }
 
     // MARK: - Permission sequence (echo-memory-canvas §15.4)
+
+    @Test("Production onboarding owns the four real permission steps without loading a fixture")
+    func test_productionPermissionStepsAreAvailable() {
+        let vm = OnboardingViewModel()
+        #expect(vm.permissionSteps.map(\.id) == ["photos", "notifications", "location", "health"])
+        #expect(vm.privacySummary.contains("Local processing"))
+    }
+
+    @Test("Allow invokes the real permission boundary before advancing")
+    func test_allowInvokesPermissionBoundary() async {
+        let requester = OnboardingPermissionRequesterStub()
+        let vm = OnboardingViewModel(permissionRequester: requester)
+        vm.start()
+        vm.acceptPrivacy()
+
+        vm.allowPermission()
+        let settled = await awaitPermissionSettled(vm, from: 0)
+
+        #expect(requester.requestedIDs == ["photos"])
+        #expect(settled == .permissions(1))
+    }
+
+    @Test("Denied system permission enters the denied state instead of pretending success")
+    func test_deniedSystemPermissionIsVisible() async {
+        let requester = OnboardingPermissionRequesterStub()
+        requester.granted = false
+        let vm = OnboardingViewModel(permissionRequester: requester)
+        vm.start()
+        vm.acceptPrivacy()
+
+        vm.allowPermission()
+        let settled = await awaitPermissionSettled(vm, from: 0)
+
+        #expect(requester.requestedIDs == ["photos"])
+        #expect(settled == .permissionDenied(0))
+    }
 
     @Test("Permission steps advance photos→notifications→location→health→language")
     func test_permissionSequenceAdvances() {
@@ -191,7 +288,10 @@ struct OnboardingTests {
         // AC-1: preferredLanguage auto-syncs from Locale — no manual selection required
         #expect(vm.selectedLanguage != nil, "Default language should be applied from Locale")
         vm.beginLoad()
-        #expect(vm.viewState == .modelLoading(0.0))
+        guard case .modelLoading = vm.viewState else {
+            Issue.record("Expected modelLoading")
+            return
+        }
 
         let settled = await awaitSettled(vm)
         #expect(settled == .completed)
@@ -205,10 +305,93 @@ struct OnboardingTests {
         vm.loadFixture("onboarding-language")
         vm.selectLanguage("en-US")
         vm.beginLoad()
-        #expect(vm.viewState == .modelLoading(0.0))
+        guard case .modelLoading = vm.viewState else {
+            Issue.record("Expected modelLoading")
+            return
+        }
 
         let settled = await awaitSettled(vm)
         #expect(settled == .completed)
+    }
+
+    @Test("Production loading reports real progress for every bundled model")
+    func test_modelLoadTracksEveryBundledModel() async {
+        let loader = OnboardingModelLoaderStub()
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0, modelLoader: loader)
+        enterProductionLanguageStep(vm)
+        vm.selectLanguage("en-US")
+
+        vm.beginLoad()
+        let settled = await awaitSettled(vm)
+
+        #expect(settled == .completed)
+        #expect(await loader.loadedModels() == ModelLoaderActor.ModelType.allCases)
+        #expect(vm.modelLoadProgress.items.count == 4)
+        #expect(vm.modelLoadProgress.completedCount == 4)
+        #expect(vm.modelLoadProgress.failedCount == 0)
+        #expect(vm.modelLoadProgress.fractionCompleted == 1.0)
+        #expect(vm.modelLoadProgress.items.allSatisfy { $0.state == .loaded })
+    }
+
+    @Test("Production loading preserves an individual model failure in progress")
+    func test_modelLoadTracksIndividualFailure() async {
+        let loader = OnboardingModelLoaderStub(failedModel: .siglip2Text)
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0, modelLoader: loader)
+        enterProductionLanguageStep(vm)
+        vm.selectLanguage("en-US")
+
+        vm.beginLoad()
+        let settled = await awaitSettled(vm)
+
+        #expect(settled == .modelLoadFailed)
+        #expect(vm.modelLoadProgress.completedCount == 4)
+        #expect(vm.modelLoadProgress.failedCount == 1)
+        #expect(vm.modelLoadProgress.items.first { $0.modelType == .siglip2Text }?.state == .failed)
+
+        vm.continueWithLimitedFeatures()
+        #expect(vm.viewState == .completed)
+    }
+
+    @Test("Production loading fails closed when no model loader is available")
+    func test_productionModelLoadWithoutLoaderFailsClosed() async {
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0)
+        enterProductionLanguageStep(vm)
+
+        vm.beginLoad()
+        let settled = await awaitSettled(vm)
+
+        #expect(settled == .modelLoadFailed)
+        #expect(vm.isFixtureBacked == false)
+        #expect(vm.modelLoadProgress.failedCount == ModelLoaderActor.ModelType.allCases.count)
+        #expect(vm.modelLoadProgress.items.allSatisfy { $0.state == .failed })
+    }
+
+    @Test("Fixture model loading never invokes an injected production loader")
+    func test_fixtureModelLoadTakesPrecedenceOverLoader() async {
+        let loader = OnboardingModelLoaderStub()
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 0, modelLoader: loader)
+        vm.loadFixture("onboarding-language")
+
+        vm.beginLoad()
+        let settled = await awaitSettled(vm)
+
+        #expect(settled == .completed)
+        #expect(await loader.loadedModels().isEmpty)
+        #expect(vm.modelLoadProgress.items.allSatisfy { $0.state == .loaded })
+    }
+
+    @Test("Reset keeps welcome state after cancelling model loading")
+    func test_modelLoadCancellationCannotOverwriteReset() async {
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 40_000_000)
+        vm.loadFixture("onboarding-language")
+        vm.selectLanguage("en-US")
+
+        vm.beginLoad()
+        vm.reset()
+        try? await Task.sleep(for: .milliseconds(80))
+
+        #expect(vm.viewState == .welcome)
+        #expect(vm.modelLoadProgress == .initial)
     }
 
     @Test("Declined fixture shows declined state (US-PRV-008 AC-3)")
@@ -224,7 +407,7 @@ struct OnboardingTests {
         vm.loadFixture("onboarding-permissions")
         vm.reset()
         #expect(vm.viewState == .welcome)
-        #expect(vm.permissionSteps.isEmpty)
+        #expect(vm.permissionSteps.count == 4)
         #expect(vm.selectedLanguage == nil)
     }
 
@@ -270,20 +453,17 @@ struct OnboardingTests {
         #expect(await store.hasConsented() == false)
     }
 
-    @Test("acceptPrivacy with empty permissionSteps skips to language (production path, no fixture)")
-    func test_3f1_acceptPrivacy_emptyPermissionSteps_skipsToLanguage() {
-        // 复现生产装配路径: 无 loadFixture → permissionSteps 保持为空 (AppRootView 生产构造)
+    @Test("acceptPrivacy uses production permission steps without fixture injection")
+    func test_3f1_acceptPrivacy_usesProductionPermissionSteps() {
         let vm = OnboardingViewModel()
         vm.start()
         #expect(vm.viewState == .privacyConsent)
-        #expect(vm.permissionSteps.isEmpty)
+        #expect(vm.permissionSteps.count == 4)
 
         vm.acceptPrivacy()
 
-        // 空 permissionSteps 时跳过 permissions 页，避免 TabView 渲染 EmptyView 卡死引导流程
-        #expect(vm.viewState == .language)
-        // 跨页跳转不依赖 onAppear：默认语言必须在 acceptPrivacy 内显式初始化，Continue 才能启用
-        #expect(vm.selectedLanguage != nil)
+        #expect(vm.viewState == .permissions(0))
+        #expect(vm.selectedLanguage == nil)
     }
 
     @Test("acceptPrivacy with non-empty permissionSteps still advances to permissions (fixture path)")

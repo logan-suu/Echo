@@ -399,7 +399,16 @@ struct Phase2IntegrationTests {
             await stubEmbedder.setNextEmbedding(makePhase2DirectionalVector(direction: 1.0))
             let fresh = AwakeningPipeline(privacyActor: PrivacyActor.shared, searchPipeline: searchPipeline, stateStore: GeofenceStateStore())
             let r = await fresh.handleGeofenceEnter(regionId: "lake", traceID: "gm")
-            switch r { case .processed(let c): #expect(!c.memoryIds.isEmpty); case .noMemories: break; default: Issue.record("Unexpected: \(r)") }
+            switch r {
+            case .processed(let card):
+                #expect(!card.memoryIds.isEmpty)
+
+            case .noMemories:
+                break
+
+            default:
+                Issue.record("Unexpected: \(r)")
+            }
         }
     }
 
@@ -576,7 +585,7 @@ struct Phase2IntegrationTests {
             // Exclude by vector store UUID string (same as assetId in metadata)
             try await excludedAssets.add(assetId: id2String, sourceType: "text")
             let eids = Set(try await excludedAssets.listAll().map(\.assetId))
-            let r = await vectorStore.search(query: makePhase2DirectionalVector(direction: 1.0), k: 2, filter: { !eids.contains($0.uuidString) })
+            let r = await vectorStore.search(query: makePhase2DirectionalVector(direction: 1.0), k: 2) { !eids.contains($0.uuidString) }
             #expect(r.contains { $0.id == id1 })
             #expect(!r.contains { $0.id == id2 })
         }

@@ -175,7 +175,7 @@ struct ExcludedAssetsActorPhase2Tests {
         try await sut.batchRestore(sourceType: "photo", traceID: "trace-batch-audit")
 
         let logs = try await privacyActor.fetchAuditLogs(eventType: .excludedBatchRestored)
-        #expect(logs.contains(where: { $0.traceID == "trace-batch-audit" && $0.affectedCount == 2 }))
+        #expect(logs.contains { $0.traceID == "trace-batch-audit" && $0.affectedCount == 2 })
     }
 
     @Test("batchRestore is idempotent - second call returns 0")
@@ -197,7 +197,7 @@ struct ExcludedAssetsActorPhase2Tests {
         #expect(try await sut.contains(assetId: "asset-001") == false)
 
         let logs = try await privacyActor.fetchAuditLogs(eventType: .excludedAutoCleaned)
-        #expect(logs.contains(where: { $0.traceID == "trace-cleanup-1" && $0.affectedCount == 1 }))
+        #expect(logs.contains { $0.traceID == "trace-cleanup-1" && $0.affectedCount == 1 })
     }
 
     @Test("cleanupInvalidRecord is no-op if asset not in table")

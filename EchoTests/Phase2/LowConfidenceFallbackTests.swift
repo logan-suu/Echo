@@ -294,7 +294,7 @@ struct LowConfidenceFallbackTests {
 /// 规则: alignmentScore < 0.6 → lowConfidence=true + fallbackReason
 /// 当 alignmentScore 为 nil（Phase 2: Cross-Encoder 未集成）→ 不标记
 /// 此为 SearchPipeline 内部逻辑的单元测试版
-fileprivate func markLowConfidence(_ item: SearchResultItem) -> SearchResultItem {
+private func markLowConfidence(_ item: SearchResultItem) -> SearchResultItem {
     if let score = item.alignmentScore, score < 0.6 {
         return SearchResultItem(
             id: item.id,

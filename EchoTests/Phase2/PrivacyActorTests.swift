@@ -206,7 +206,7 @@ struct PrivacyActorTests {
         )
 
         let logs = try await sut.fetchAuditLogs(limit: 1)
-        let entry = logs.first(where: { $0.traceID == traceID })
+        let entry = logs.first { $0.traceID == traceID }
         #expect(entry != nil)
         #expect(entry?.eventType == .memoryIngested)
         #expect(entry?.policyVersion == 2)
@@ -381,7 +381,7 @@ struct PrivacyActorTests {
         )
 
         let logs = try await sut.fetchAuditLogs(eventType: .reauthorized)
-        let entry = logs.first(where: { $0.traceID == traceID })
+        let entry = logs.first { $0.traceID == traceID }
         #expect(entry != nil, "AC-6: recordReauthorization 应写入审计日志")
         #expect(entry?.sourceType == "photo")
         #expect(entry?.excludedWritten == true, "AC-6: excludedBatchRestored 应记录到审计日志")
@@ -396,7 +396,7 @@ struct PrivacyActorTests {
         )
 
         let logs = try await sut.fetchAuditLogs(eventType: .permissionChanged)
-        let entry = logs.first(where: { $0.traceID == traceID })
+        let entry = logs.first { $0.traceID == traceID }
         #expect(entry != nil, "AC-6: recordPermissionChanged 应写入审计日志")
         #expect(entry?.sourceType == "calendar")
         #expect(entry?.success == true)

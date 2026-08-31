@@ -171,10 +171,12 @@ struct PhotoTextSearchIdentityTests {
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-photo", canonicalText: nil, sourceType: "photo"),
             representations: [rep],
-            vectorsByGeneration: [generationID: [
-                CanonicalVectorEntry(id: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
-                                     vector: [Float](repeating: 0.25, count: 384))
-            ]],
+            vectorsByGeneration: [
+                generationID: [
+                    CanonicalVectorEntry(id: CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId),
+                                         vector: [Float](repeating: 0.25, count: 384)),
+                ],
+            ],
             traceID: "t-wp3-1a"
         )
 
@@ -211,9 +213,11 @@ struct PhotoTextSearchIdentityTests {
         _ = try await repo.commit(
             memory: Memory(memoryId: parentMemoryId, sourceLocator: "PHAsset/wp3-video", canonicalText: nil, sourceType: "video"),
             representations: [rep],
-            vectorsByGeneration: [generationID: [
-                CanonicalVectorEntry(id: frameRepID, vector: [Float](repeating: 0.5, count: 384))
-            ]],
+            vectorsByGeneration: [
+                generationID: [
+                    CanonicalVectorEntry(id: frameRepID, vector: [Float](repeating: 0.5, count: 384)),
+                ],
+            ],
             traceID: "t-wp3-1c"
         )
 
@@ -599,7 +603,10 @@ struct PhotoTextSearchIdentityTests {
             auditSubjectHash: AuditSubject.memory(memoryId).subjectHash,
             traceID: "t-wp3-3j",
             phase: .vectorsDeleted,
-            vectorIDsByGeneration: genVecs
+            vectorIDsByGeneration: genVecs,
+            sourceLocator: "PHAsset/wp3-roundtrip",
+            sourceType: "photo",
+            writeExcluded: true
         )
         try await db.upsertDeletionJournal(journal)
 
@@ -610,10 +617,112 @@ struct PhotoTextSearchIdentityTests {
         #expect(restored.phase == .vectorsDeleted)
         #expect(restored.vectorIDsByGeneration.count == 2)
         #expect(restored.vectorIDsByGeneration[0].vectorIDs.count == 2)
+        #expect(restored.sourceLocator == "PHAsset/wp3-roundtrip")
+        #expect(restored.sourceType == "photo")
+        #expect(restored.writeExcluded == true)
 
         try await db.deleteDeletionJournal(operationID: "op-roundtrip")
         #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
     }
+
+extension PhotoTextSearchIdentityTests {
+
+    @Test("Deletion completion removes the exact resumed journal row")
+    func testDeletionCompletionRemovesResumedJournalOperationID() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(
+            sourceLocator: "PHAsset/wp3-resumed-operation",
+            sourceType: "photo"
+        )
+        _ = try await repo.commit(
+            memory: Memory(
+                memoryId: memoryId,
+                sourceLocator: "PHAsset/wp3-resumed-operation",
+                canonicalText: nil,
+                sourceType: "photo"
+            ),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-resumed-operation"
+        )
+        let resumedJournal = MemoryDeletionJournal(
+            operationID: "custom-resumed-operation",
+            memoryID: memoryId,
+            auditSubjectHash: AuditSubject.memory(memoryId).subjectHash,
+            traceID: "t-wp3-resumed-operation",
+            phase: .planned,
+            vectorIDsByGeneration: [],
+            sourceLocator: "PHAsset/wp3-resumed-operation",
+            sourceType: "photo",
+            writeExcluded: false
+        )
+        try await db.upsertDeletionJournal(resumedJournal)
+
+        _ = try await repo.deleteMemory(
+            memoryId: memoryId,
+            writeExcluded: false,
+            traceID: "ignored-on-resume"
+        )
+
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+    }
+
+    @Test("Vector persistence failure retains the journal and canonical memory")
+    func testVectorPersistenceFailureStopsDeletionBeforeLaterPhases() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(
+            sourceLocator: "PHAsset/wp3-vector-persist-failure",
+            sourceType: "photo"
+        )
+        _ = try await repo.commit(
+            memory: Memory(
+                memoryId: memoryId,
+                sourceLocator: "PHAsset/wp3-vector-persist-failure",
+                canonicalText: nil,
+                sourceType: "photo"
+            ),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-vector-persist-failure"
+        )
+
+        await repo.setFault(.vectorDeletePersist)
+        do {
+            _ = try await repo.deleteMemory(
+                memoryId: memoryId,
+                writeExcluded: false,
+                traceID: "t-wp3-vector-persist-failure"
+            )
+            Issue.record("Expected vector persistence failure")
+        } catch CanonicalRepositoryError.deleteInjected {
+            // Expected fail-stop boundary.
+        }
+
+        let journals = try await db.loadDeletionJournals(memoryId: memoryId)
+        let journal = try #require(journals.first)
+        #expect(journal.phase == .cacheInvalidated)
+        if case .none = try await repo.loadMemory(memoryId: memoryId) {
+            Issue.record("Canonical memory must remain while vector persistence is incomplete")
+        }
+
+        await repo.setFault(nil)
+        _ = try await repo.deleteMemory(
+            memoryId: memoryId,
+            writeExcluded: false,
+            traceID: "ignored-on-resume"
+        )
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+        if case .some = try await repo.loadMemory(memoryId: memoryId) {
+            Issue.record("Canonical memory must be removed after recovery completes")
+        }
+    }
+}
 
     // MARK: - WP3 Steps 3k/3m-3t2: 阶段机故障注入与幂等重放恢复
 
@@ -666,6 +775,59 @@ struct PhotoTextSearchIdentityTests {
         #expect(rows.first?["c"]?.intValue == 0)
     }
 
+    @Test("Deletion recovery preserves the original exclusion intent")
+    func test_D005_DeletionRecoveryPreservesExclusionIntent() async throws {
+        let db = DatabaseManager.shared
+        try await db.open()
+        try await db.execute(sql: "DELETE FROM MemoryDeletionJournal")
+        let repo = try await CanonicalMappingFixtures.prepare()
+        let assetID = "PHAsset/wp3-exclusion-resume"
+        let memoryId = CanonicalMemoryRepositoryActor.deterministicID(
+            sourceLocator: assetID,
+            sourceType: "photo"
+        )
+        let excludedAssets = ExcludedAssetsActor.shared
+        _ = try await excludedAssets.remove(assetId: assetID)
+        _ = try await repo.commit(
+            memory: Memory(
+                memoryId: memoryId,
+                sourceLocator: assetID,
+                canonicalText: nil,
+                sourceType: "photo"
+            ),
+            representations: [],
+            vectorsByGeneration: [:],
+            traceID: "t-wp3-exclusion-resume"
+        )
+
+        await repo.setFault(.canonicalTransaction)
+        do {
+            _ = try await repo.deleteMemory(
+                memoryId: memoryId,
+                sourceLocator: assetID,
+                sourceType: "photo",
+                writeExcluded: true,
+                traceID: "t-wp3-exclusion-resume"
+            )
+            Issue.record("expected canonical transaction fault")
+        } catch CanonicalRepositoryError.deleteInjected {
+            // Expected fault: the canonical transaction committed before the journal advanced.
+        } catch {
+            Issue.record("unexpected deletion error: \(error)")
+        }
+
+        await repo.setFault(nil)
+        _ = try await repo.deleteMemory(
+            memoryId: memoryId,
+            writeExcluded: false,
+            traceID: "t-wp3-exclusion-resume-retry"
+        )
+
+        #expect(try await excludedAssets.contains(assetId: assetID))
+        #expect(try await db.loadDeletionJournals(memoryId: memoryId).isEmpty)
+        _ = try await excludedAssets.remove(assetId: assetID)
+    }
+
 
     @Test("Deletion leaves zero residue across all stores (WP3 step 4 series)")
     func testDeletionLeavesZeroResidueAcrossAllStores() async throws {
@@ -678,15 +840,19 @@ struct PhotoTextSearchIdentityTests {
         let targetSubject = AuditSubject.memory(memoryId)
 
         // 全足迹种子：canonical text(FTS) + representation + vector + translationCache + IndexBuildItem + audit rows
-        let repID = CanonicalMemoryRepositoryActor.photoRepresentationID(memoryID: memoryId)
+        let repID = CanonicalMemoryRepositoryActor.ocrRepresentationID(memoryID: memoryId)
         _ = try await repo.commit(
             memory: Memory(memoryId: memoryId, sourceLocator: "PHAsset/wp3-residue", canonicalText: "residue probe", sourceType: "photo"),
-            representations: [Representation(representationId: repID, memoryId: memoryId,
-                                             modality: .visionDense, preprocessVersion: "siglip2-v1",
-                                             contentHash: "h-residue")],
-            vectorsByGeneration: [generationID: [
-                CanonicalVectorEntry(id: repID, vector: [Float](repeating: 0.25, count: 384))
-            ]],
+            representations: [
+                Representation(representationId: repID, memoryId: memoryId,
+                               modality: .visionDense, preprocessVersion: "siglip2-v1",
+                               contentHash: "h-residue"),
+            ],
+            vectorsByGeneration: [
+                generationID: [
+                    CanonicalVectorEntry(id: repID, vector: [Float](repeating: 0.25, count: 384)),
+                ],
+            ],
             traceID: "t-wp3-residue"
         )
         try await privacyWriteSeed(db: db, memoryId: memoryId)
@@ -698,6 +864,8 @@ struct PhotoTextSearchIdentityTests {
             sql: "INSERT INTO IndexBuildItem (generationId, representationId, state) VALUES (?, ?, ?)",
             bindings: [.text(generationID), .text(repID.uuidString), .text("done")]
         )
+        let vectorStore = try #require(await repo.generationRegistry.vectorStore(for: generationID))
+        #expect(await vectorStore.allEntries().contains { $0.id == repID })
 
         _ = try await repo.deleteMemory(memoryId: memoryId, writeExcluded: false, traceID: "t-wp3-residue")
 
@@ -706,14 +874,14 @@ struct PhotoTextSearchIdentityTests {
                 sql: sql,
                 bindings: bind.map { [.text($0.uuidString)] } ?? []
             )
-            return rows?.first?["c"]?.intValue.map({ Int($0) }) ?? -1
+            return rows?.first?["c"]?.intValue.map { Int($0) } ?? -1
         }
         #expect(await countRows("SELECT COUNT(*) AS c FROM Memory WHERE memoryId = ?", memoryId) == 0)
         #expect(await countRows("SELECT COUNT(*) AS c FROM Representation WHERE memoryId = ?", memoryId) == 0)
         #expect(await countRows("SELECT COUNT(*) AS c FROM MemoryFTS WHERE memoryId = ?", memoryId) == 0)
         #expect(await countRows("SELECT COUNT(*) AS c FROM translationCache WHERE memoryId = ?", memoryId) == 0)
         #expect(await countRows("SELECT COUNT(*) AS c FROM IndexBuildItem WHERE representationId = ?", repID) == 0)
-        #expect(await countRows("SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?") == 0 || true)
+        #expect(!(await vectorStore.allEntries()).contains { $0.id == repID })
         let auditTargetRows = try? await db.executeQuery(
             sql: "SELECT COUNT(*) AS c FROM AuditLog WHERE subjectHash = ?",
             bindings: [.text(targetSubject.subjectHash)]

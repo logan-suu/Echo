@@ -1,6 +1,6 @@
 // ==========================================
 // 文件: OnboardingView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8/3.9.
+// i18n: User-facing literals are backed by Localizable.xcstrings (zh-Hans + en-US).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-PRV-008 (PIPL 隐私同意 AC-1~3),
 //            US-SRC-001 AC-6 (首次授权 iCloud 下载提示 + Open Settings),
 //            US-SYN-001 AC-2 (语言选择 + 繁体映射提示)
@@ -12,7 +12,7 @@
 // AC 覆盖: US-PRV-008 AC-1 ✅ (隐私摘要展示), AC-2 ✅ (摘要含目的/方式/种类/保留期限/本地处理声明),
 //          AC-3 ✅ (同意/拒绝同等醒目 + declined 终态页 Close 退出, PR #45 review P0-2 修复),
 //          US-SRC-001 AC-6 ✅ (iCloud 提示 + Open Settings 按钮), US-SYN-001 AC-2 ✅ (zh-Hans/en-US Picker + 映射提示),
-//          首次模型加载 ✅ (determinate ProgressView)
+//          首次模型加载 ✅ (4 个真实模型逐项状态 + determinate 总进度)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统容器 + SF Symbols + Dynamic Type
 // 生成时间: 2026-08-03
@@ -35,7 +35,8 @@ import SwiftUI
 /// - permissions(index): 权限过渡页 + iCloud 提示 (照片) (§15.4, US-SRC-001 AC-6)
 /// - permissionDenied(index): 拒绝提示 + Open Settings / Skip (US-SRC-001 AC-6)
 /// - language: 系统 Picker zh-Hans/en-US (US-SYN-001 AC-2)
-/// - modelLoading(progress): determinate 进度条 (首次模型加载, §15.6)
+/// - modelLoading: 4 个已登记模型的逐项状态 + determinate 总进度 (§15.6)
+/// - modelLoadFailed: 手动重试或降级继续（US-RES-004）
 /// - completed / declined: 终态
 ///
 /// ## 数据流 (docs/ui/architecture.md §2.1)
@@ -89,7 +90,7 @@ struct OnboardingView: View {
                 case .privacyConsent: return "privacyConsent"
                 case .permissions, .permissionDenied: return "permissions"
                 case .language: return "language"
-                case .modelLoading, .completed: return "modelLoading"
+                case .modelLoading, .modelLoadFailed, .completed: return "modelLoading"
                 case .declined: return "declined"
                 }
             },
@@ -256,6 +257,7 @@ struct OnboardingView: View {
                         .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(viewModel.permissionRequestInFlight)
                 .accessibilityIdentifier("onboarding-permission-allow")
                 .accessibilityHint(String(format: EchoStrings.tr("Allow %@ access"), EchoStrings.tr(permission.title)))
 
@@ -400,7 +402,7 @@ struct OnboardingView: View {
             // 繁体/方言映射提示 (US-SYN-001 AC-2) — 首次提示一次
             if viewModel.mappingHintVisible {
                 Label {
-                    Text(OnboardingFixtureLoader.mappingHint)
+                    Text(OnboardingContentDefaults.mappingHint)
                         .font(.callout)
                 } icon: {
                     Image(systemName: "info.circle")
@@ -444,10 +446,11 @@ struct OnboardingView: View {
 
     // MARK: - Step 5: Model Loading (§15.6)
 
-    /// Step 5 首次模型加载页 — determinate 进度条 (首次模型加载进度)。
+    /// Step 5 首次模型加载页 — 逐模型状态 + determinate 总进度。
     @ViewBuilder
     private var modelLoadingPage: some View {
-        if case .modelLoading(let progress) = viewModel.viewState {
+        if viewModel.viewState == .modelLoading || viewModel.viewState == .modelLoadFailed {
+            let progress = viewModel.modelLoadProgress
             VStack(spacing: 20) {
                 Spacer()
 
@@ -459,21 +462,109 @@ struct OnboardingView: View {
                 Text("Loading models…")
                     .font(.headline)
 
-                // determinate 进度 (echo-memory-canvas §10.2)
-                ProgressView(value: progress)
+                VStack(spacing: 10) {
+                    ForEach(progress.items) { item in
+                        modelStatusRow(item)
+                    }
+                }
+                .padding(.horizontal, 24)
+
+                // Determinate overall progress derived from completed real load attempts.
+                ProgressView(value: progress.fractionCompleted)
                     .progressViewStyle(.linear)
                     .tint(Color.accentColor)
                     .padding(.horizontal, 40)
                     .accessibilityIdentifier("onboarding-model-progress")
+                    .accessibilityValue(OnboardingViewModel.progressPercentText(progress.fractionCompleted))
 
-                Text(OnboardingViewModel.progressPercentText(progress))
+                Text(OnboardingViewModel.progressPercentText(progress.fractionCompleted))
                     .font(.caption)
                     .foregroundStyle(Color.secondary)
+
+                if viewModel.viewState == .modelLoadFailed {
+                    Text("Some models failed to load. Basic keyword search is still available.")
+                        .font(.callout)
+                        .foregroundStyle(Color.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+
+                    Button("Retry model load") {
+                        viewModel.retryModelLoad()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("onboarding-model-retry")
+
+                    Button("Continue Anyway") {
+                        viewModel.continueWithLimitedFeatures()
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("onboarding-model-continue-limited")
+                }
 
                 Spacer()
             }
         } else {
             EmptyView()
+        }
+    }
+
+    private func modelStatusRow(_ item: OnboardingModelLoadProgress.Item) -> some View {
+        HStack(spacing: 12) {
+            modelStatusIcon(item.state)
+                .frame(width: 22)
+                .accessibilityHidden(true)
+
+            Text(verbatim: item.displayName)
+                .font(.body)
+
+            Spacer()
+
+            modelStatusText(item.state)
+                .font(.caption)
+                .foregroundStyle(item.state == .failed ? Color.red : Color.secondary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("onboarding-model-\(item.modelType.rawValue)")
+    }
+
+    @ViewBuilder
+    private func modelStatusIcon(_ state: OnboardingModelLoadProgress.Item.State) -> some View {
+        switch state {
+        case .pending:
+            Image(systemName: "circle")
+                .foregroundStyle(Color.secondary)
+
+        case .loading:
+            ProgressView()
+                .controlSize(.small)
+
+        case .loaded:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.green)
+
+        case .failed:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Color.red)
+        }
+    }
+
+    @ViewBuilder
+    private func modelStatusText(_ state: OnboardingModelLoadProgress.Item.State) -> some View {
+        switch state {
+        case .pending:
+            Text("Waiting")
+
+        case .loading:
+            Text("Loading")
+
+        case .loaded:
+            Text("Ready")
+
+        case .failed:
+            Text("Failed")
         }
     }
 
