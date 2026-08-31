@@ -185,11 +185,27 @@ enum State {
 | 属性 | Discovery | Focus | Task |
 |------|-----------|-------|------|
 | 适用场景 | Home/Search | Memory detail/translation | Settings/errors/permissions |
-| 布局 | masonry（条件）| 单列+metadata | Form/List/Sheet/Alert |
-| Masonry | ✅ 条件触发 | ❌ 禁止 | ❌ 禁止 |
+| 布局 | rich-data 默认 adaptive masonry；低数据/AX 回退单列 | 单列+metadata | Form/List/Sheet/Alert |
+| Masonry | ✅ 达到 Surface 真实内容阈值时默认；稳定语义顺序 | ❌ 禁止 | ❌ 禁止 |
 | 参考章节 | style §3.1, §5, §6 | style §3.2, §7.1 | style §3.3, §7.2 |
 
 每个 Surface View 头部必须声明 family 归属。交叉引用：`echo-memory-canvas-style.md`。
+
+### 8.1 平衡画布组合边界
+
+- `HomeViewModel` 只提供来自 live adapter 的稳定、有序 section/card 值类型；View 根据契约阈值决定 masonry 或单列呈现，不重新推导领域排序。
+- Home 的 `empty`、`lowData`、`richData` 是展示状态映射，不是第二份记忆数据库状态；阈值输入来自真实可见记忆数量。
+- Search 保留 SearchPipeline 的相关度顺序；masonry 装箱不得改变该语义顺序或反馈绑定的 `memoryId`。
+- Home 与 Search 共用 Memory Card 协议；卡片打开后路由到 Focus surface，详情页不得继承 masonry。
+- ProgressActor/TaskQueueActor、离线、降级和权限状态仍通过独立 runtime adapter 注入，不得混入布局计算。
+
+### 8.2 全 App Profile 应用
+
+- 所有 Surface View 必须引用 `designProfileId = echo-memory-canvas`，不允许功能域自行定义平行的 color/type/spacing/radius/motion 系统。
+- 共享视觉 primitives 由 UI Component 层提供：Memory Card、section header、metadata group、status presentation、primary/secondary action；功能域只组合，不复制样式常量。
+- Discovery/Focus/Task 的布局策略分别独立，但消费相同 token 与组件语义。Focus/Task 禁止 masonry 不代表可以保留与平衡画布无关的旧视觉皮肤。
+- AppShell 统一 NavigationStack/TabView、toolbar 与页面背景；各功能域不得自定义一套 tab、back、search 或 modal chrome。
+- 4.0 只交付共享 DesignProfile/component 与 AppShell；4.0a 覆盖 Home/Search，4.0b 覆盖 Detail/Creation/Translation，4.0c 覆盖 Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress。4.2/4.7/4.14 通过逐 Surface contract audit 证明任务族合并后没有遗漏。
 
 ---
 

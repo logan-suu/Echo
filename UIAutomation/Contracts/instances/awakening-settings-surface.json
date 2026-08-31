@@ -1,4 +1,5 @@
 {
+  "designProfileId": "echo-memory-canvas",
   "surfaceId": "awakening-settings",
   "surfaceFamily": "task",
   "container": "NavigationStack + Form",

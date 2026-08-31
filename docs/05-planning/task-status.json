@@ -1,8 +1,8 @@
 {
-  "version": "1.0",
+  "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-30T17:02:06Z",
-  "current_phase": "3F",
+  "last_updated": "2026-08-31T17:22:09Z",
+  "current_phase": "4",
   "phase_order": [
     "1",
     "2",
@@ -24,7 +24,7 @@
         {
           "id": "1.1",
           "title": "创建 Xcode 项目，配置 Swift 6 并发严格模式",
-          "story": null,
+          "story": "US-DIS-004",
           "status": "done",
           "merged_at": "2026-07-04T07:28:00Z",
           "documents_required": [
@@ -824,13 +824,24 @@
     {
       "id": "3F",
       "name": "功能完成与生产集成",
-      "status": "in_progress",
+      "status": "done",
       "previous_phase_id": "3",
       "next_phase_id": "4",
       "integration_task_id": "3F.11",
-      "integration_test": "pending",
+      "integration_test": "passed",
       "integration_test_file": "EchoTests/Phase3F/Phase3FIntegrationTests.swift",
-      "last_updated": "2026-08-11T11:45:00Z",
+      "last_updated": "2026-08-31T15:42:40Z",
+      "finalizer": {
+        "id": "3F.finalize",
+        "status": "done",
+        "triggered_at": "2026-08-31T15:42:40Z",
+        "triggered_by": "Human product owner",
+        "pr": 63,
+        "merge_commit": "18784ea426d411ab539c5bd9c0eecd4548ae7e7a",
+        "merged_at": "2026-08-26T03:25:13Z",
+        "merged_by": "logan-suu",
+        "branch_preserved": true
+      },
       "tasks": [
         {
           "id": "3F.0",
@@ -858,6 +869,7 @@
           },
           "documents_required": [
             "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
             "README.md",
             "docs/INDEX.md",
             "docs/01-spec/用户故事与验收标准规格书.md",
@@ -1949,7 +1961,7 @@
             "3F.11",
             "US-SRC-010"
           ],
-          "status": "review",
+          "status": "done",
           "owner": {
             "implementation": "Release Quality Lead",
             "approver": "Release Manager and Privacy Engineering Lead"
@@ -1993,15 +2005,15 @@
           ],
           "test_file": "EchoTests/Phase3F/Phase3FIntegrationTests.swift",
           "acceptance_evidence": [
-            "全部 Release、测试、coverage、模型、隐私、合规、签名与 no-fixture E2E 预合并证据",
+            "功能闭环、Release build、基线 coverage、模型、隐私、per-target 合规与 no-fixture E2E 预合并证据",
             "US-SRC-010 no-fixture search-to-HealthKit E2E",
             "Echo and EchoShareExtension per-target security/compliance reports",
             "3F.7 migration-security per-test revalidation and Security/Privacy/Architecture approver record",
-            "P0=0、P1=0 与 Release Manager/Privacy gate approver 签字",
+            "功能闭环范围内 P0=0、P1=0；最终发布资格、受控签名与 95% 覆盖率转由 Phase 4 验证",
             "不包含 merge SHA 或 Phase 4 已解锁声明的 pre-merge evidence index"
           ],
-          "last_updated": "2026-08-12T13:30:00Z",
-          "notes": "Finalizes pre-merge evidence only; a human-triggered finalizer records merge SHA and unlocks Phase 4.",
+          "last_updated": "2026-08-31T15:42:40Z",
+          "notes": "Human accepted the implemented production loop as the Phase 3F completion boundary on 2026-08-31. PR #63 had already been human-merged on 2026-08-26. Phase 4 owns release qualification that was not honestly completed by the 3F.11 evidence: global coverage >=95%, controlled signing/archive/export, final App Icon, Golden quality, performance, final RC and TestFlight. This completion does not claim those release gates passed.",
           "pr": {
             "number": 63,
             "url": "https://github.com/logan-suu/Echo/pull/63",
@@ -2011,23 +2023,218 @@
           },
           "status_transitions": {
             "in_progress_at": "2026-08-12T13:10:00Z",
-            "review_at": "2026-08-12T13:30:00Z"
-          }
+            "review_at": "2026-08-12T13:30:00Z",
+            "merged_at": "2026-08-26T03:25:13Z",
+            "done_at": "2026-08-31T15:42:40Z"
+          },
+          "merged_at": "2026-08-26T03:25:13Z",
+          "merge_commit": "18784ea426d411ab539c5bd9c0eecd4548ae7e7a",
+          "merged_by": "logan-suu"
         }
       ]
     },
     {
       "id": "4",
       "name": "质量保障与发布准备",
-      "status": "not_started",
+      "status": "in_progress",
       "previous_phase_id": "3F",
       "next_phase_id": "5",
       "integration_task_id": "4.14",
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
       "entry_gate": "3F.11",
-      "last_updated": "2026-08-04T13:52:40Z",
+      "last_updated": "2026-08-31T17:22:09Z",
       "tasks": [
+        {
+          "id": "4.0",
+          "title": "平衡画布设计系统与 AppShell 基础",
+          "story": null,
+          "owner": "iOS Design Systems Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
+            "UIAutomation/Contracts/schemas/design-profile-v1.json",
+            "UIAutomation/Contracts/schemas/surface-v1.json",
+            "UIAutomation/Policies/acceptance-policy.json",
+            "docs/05-planning/开发计划安排文档.md",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "ready",
+          "dependencies": [
+            "3F.11"
+          ],
+          "test_file": "EchoTests/Phase4/4.0_BalancedCanvasFoundationTests.swift",
+          "surface_families": [
+            "discovery",
+            "focus",
+            "task"
+          ],
+          "ui_scope": [
+            "AppShell",
+            "SharedComponents"
+          ],
+          "implementation_constraints": [
+            "只建立 echo-memory-canvas DesignProfile、共享 typography/color/spacing/radius/container/status/action/motion primitives 与 Apple 原生 AppShell，不修改任何领域行为",
+            "共享组件必须通过语义 token 和系统 Dynamic Type 构建，禁止为各功能域暴露任意样式开关或复制常量",
+            "NavigationStack、TabView、toolbar、search 与 modal chrome 保持 Apple 原生；不创建 Pinterest 风格的自定义系统 chrome",
+            "本任务不改造 Home/Search/Focus/Task 具体页面；页面族分别由 4.0a/4.0b/4.0c 消费基础"
+          ],
+          "acceptance_evidence": [
+            "DesignProfile schema/instance 与 acceptance policy 可解析且版本一致",
+            "共享 token/component API 覆盖 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action 与 Reduce Motion",
+            "AppShell 在 iPhone 17 Pro iOS 26.5 与 iPhone 16 Pro iOS 18.x 保持系统导航、Tab、toolbar 与 modal 行为",
+            "基础组件具有 Dynamic Type、VoiceOver、increased contrast、Reduce Motion 与 zh-Hans/en-US 自动化测试"
+          ],
+          "last_updated": "2026-08-31T17:22:09Z",
+          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c."
+        },
+        {
+          "id": "4.0a",
+          "title": "Discovery 平衡画布：Home 与 Search 真实数据",
+          "story": [
+            "US-AWK-002",
+            "US-AWK-005",
+            "US-RET-001",
+            "US-RES-001",
+            "US-SYS-001"
+          ],
+          "owner": "iOS Product Experience Lead",
+          "documents_required": [
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
+            "UIAutomation/Contracts/instances/home-discovery-surface.json",
+            "UIAutomation/Contracts/instances/search-surface.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0"
+          ],
+          "test_file": "EchoTests/Phase4/4.0a_DiscoveryBalancedCanvasTests.swift",
+          "surface_family": "discovery",
+          "ui_scope": [
+            "Home",
+            "Search"
+          ],
+          "implementation_constraints": [
+            "默认 App 路径只能消费 live adapters、AwakeningCardRepositoryActor、真实记忆索引与 ProgressActor/TaskQueueActor 进度，不得用 fixture、Preview 或静态示例填充内容",
+            "Home 在 20+ 真实记忆、单区块至少 6 张卡片、默认 Dynamic Type 与足够宽度时默认双列 adaptive masonry；低数据/AX/窄宽/长文本回退单列",
+            "Search 在至少 6 个适合扫描的结果时使用同一画布语法；masonry 装箱不得改变 SearchPipeline 相关度顺序或反馈 memoryId 绑定",
+            "建议问题只能来自当前生产检索能力与真实可用筛选维度"
+          ],
+          "acceptance_evidence": [
+            "Home 0 / 1~19 / 20+ 三档真实数据状态，无 fixture 补位",
+            "Search <6 / >=6、长文本与 Accessibility Dynamic Type 的确定性布局切换",
+            "卡片保留稳定 memoryId、source identity、时间/地点 metadata 与 Focus 跳转",
+            "双语、VoiceOver 语义顺序、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
+          ],
+          "last_updated": "2026-08-31T17:22:09Z"
+        },
+        {
+          "id": "4.0b",
+          "title": "Focus 平衡画布：Detail、Creation 与 Translation",
+          "story": [
+            "US-AWK-007",
+            "US-DIS-002",
+            "US-PRV-004",
+            "US-SYN-002",
+            "US-SYN-003",
+            "US-SYN-004"
+          ],
+          "owner": "iOS Content Experience Lead",
+          "documents_required": [
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
+            "UIAutomation/Contracts/instances/memory-detail-surface.json",
+            "UIAutomation/Contracts/instances/creation-surface.json",
+            "UIAutomation/Contracts/instances/translation-surface.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0"
+          ],
+          "test_file": "EchoTests/Phase4/4.0b_FocusBalancedCanvasTests.swift",
+          "surface_family": "focus",
+          "ui_scope": [
+            "Detail",
+            "Creation",
+            "Translation"
+          ],
+          "implementation_constraints": [
+            "使用共享 profile 的单列主媒体/正文、引用卡片与 grouped metadata；masonry 始终禁止",
+            "不得改变编辑、删除、翻译、创作、引用溯源或导出的现有领域行为",
+            "真实媒体比例、长文本、译文/原文关系和引用锚点优先于视觉密度"
+          ],
+          "acceptance_evidence": [
+            "Detail、Creation、Translation 全部引用 echo-memory-canvas profile 且无独立旧皮肤",
+            "跨 Discovery → Focus 导航视觉连续，返回栈和 memoryId 不变",
+            "长文本、媒体 fit、引用锚点、翻译切换、编辑/删除确认行为无回归",
+            "双语、Dynamic Type、VoiceOver、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
+          ],
+          "last_updated": "2026-08-31T17:22:09Z"
+        },
+        {
+          "id": "4.0c",
+          "title": "Task 平衡画布：设置、引导与运行状态页面",
+          "story": [
+            "US-DIS-001",
+            "US-PRV-008",
+            "US-RES-001",
+            "US-RES-004",
+            "US-SET-001",
+            "US-SYS-001"
+          ],
+          "owner": "iOS System Experience Lead",
+          "documents_required": [
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
+            "UIAutomation/Contracts/instances/settings-surface.json",
+            "UIAutomation/Contracts/instances/onboarding-surface.json",
+            "UIAutomation/Contracts/instances/awakening-settings-surface.json",
+            "UIAutomation/Contracts/instances/background-tasks-surface.json",
+            "UIAutomation/Contracts/instances/degradation-banner-surface.json",
+            "UIAutomation/Contracts/instances/resume-progress-surface.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0"
+          ],
+          "test_file": "EchoTests/Phase4/4.0c_TaskBalancedCanvasTests.swift",
+          "surface_family": "task",
+          "ui_scope": [
+            "Settings",
+            "Onboarding",
+            "Awakening",
+            "BackgroundTask",
+            "Degradation",
+            "ResumeProgress"
+          ],
+          "implementation_constraints": [
+            "使用共享 grouped background、section header、状态图标、圆角、accent 与动作层级；masonry 始终禁止",
+            "继续使用 Form/List/Sheet/Alert/confirmationDialog 和系统权限交互，不创建自定义任务 chrome",
+            "不得改变同意、授权、模型加载、后台任务、错误恢复、迁移或删除的真实状态与副作用"
+          ],
+          "acceptance_evidence": [
+            "六个 Task 功能域全部引用 echo-memory-canvas profile 且使用一致状态/动作组件",
+            "引导权限与真实多模型进度、后台任务暂停/取消/恢复、L1~L4 与设置行为无回归",
+            "空态、加载、错误、权限受限、destructive confirmation 的语义层级一致",
+            "双语、Dynamic Type、VoiceOver、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
+          ],
+          "last_updated": "2026-08-31T17:22:09Z"
+        },
         {
           "id": "4.1",
           "title": "Golden Dataset 与反馈排序质量验收",
@@ -2050,9 +2257,10 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/双语言实现说明文档.md",
             "docs/05-planning/开发计划安排文档.md",
+            "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "3F.11"
           ],
@@ -2067,7 +2275,8 @@
           "migrated_from": [
             "4.1",
             "4.7"
-          ]
+          ],
+          "last_updated": "2026-08-31T15:42:40Z"
         },
         {
           "id": "4.2",
@@ -2124,22 +2333,28 @@
             "docs/02-architecture/架构设计文档.md",
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/05-planning/phase3f-evidence-index.md",
+            "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
           "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "4.0a",
+            "4.0b",
+            "4.0c"
           ],
           "test_file": "EchoTests/Phase4/AllPipelinesTests.swift",
           "acceptance_evidence": [
             "默认 App 无 -ui-fixture 参数的来源、摄入、检索、反馈、编辑、删除、唤醒、翻译和创作全链路通过记录",
+            "Home 0/1~19/20+ live-data 状态与 Search <6/>=6 结果布局路径的 no-fixture 端到端记录",
+            "12 个 UI 功能域在默认 App 路径使用同一 design profile 且跨 Surface 导航不出现视觉系统切换的端到端记录",
             "真实 PhotoKit 与 Share Extension 输入的 traceID 贯穿 PrivacyCheckpoint、SQLite、generation route 和审计日志",
             "进程终止后重启恢复 active route、任务进度、翻译缓存和用户策略的日志",
             "Release simulator 与 CODE_SIGNING_ALLOWED=NO device build 均为 exit code 0"
           ],
           "migrated_from": [
             "4.2"
-          ]
+          ],
+          "last_updated": "2026-08-31T16:18:55Z"
         },
         {
           "id": "4.3",
@@ -2153,23 +2368,29 @@
           "documents_required": [
             "docs/02-architecture/技术选型文档.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/testing-and-artifacts.md",
             "docs/05-planning/开发计划安排文档.md",
             "docs/05-planning/task-status.json"
           ],
           "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "4.0a",
+            "4.0b"
           ],
           "test_file": "EchoTests/Phase4/BenchmarkTests.swift",
           "acceptance_evidence": [
             "检索 P95 < 200ms 的原始样本与汇总报告",
             "峰值内存 < 1.5GB 的 Instruments allocation 记录",
             "摄入、索引构建、检索和唤醒的 CPU、energy、thermal 指标记录",
-            "基准设备、系统版本、数据规模、模型 revision 和重复次数清单"
+            "基准设备、系统版本、数据规模、模型 revision 和重复次数清单",
+            "Home 冷启动、今日回响查询和 20+ 双列平衡画布滚动的 launch/hitch/内存证据",
+            "Search 6+ 结果 adaptive masonry 与 Focus 详情往返不发生可见重排或滚动 hitch 的证据"
           ],
           "migrated_from": [
             "4.3"
-          ]
+          ],
+          "last_updated": "2026-08-31T16:18:55Z"
         },
         {
           "id": "4.4",
@@ -2186,11 +2407,12 @@
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
           "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "4.0c"
           ],
           "test_file": "EchoTests/Phase4/DegradationRecoveryTests.swift",
           "acceptance_evidence": [
@@ -2202,11 +2424,12 @@
           "migrated_from": [
             "4.4",
             "4.5"
-          ]
+          ],
+          "last_updated": "2026-08-31T16:18:55Z"
         },
         {
           "id": "4.5",
-          "title": "ExcludedAssets 边界场景测试",
+          "title": "数据删除与 ExcludedAssets 边界验收",
           "story": [
             "US-PRV-001",
             "US-PRV-004",
@@ -2219,9 +2442,10 @@
             "AGENTS.md",
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "3F.11"
           ],
@@ -2230,11 +2454,13 @@
             "仅用户主动选择仅从 Echo 移除时写入 ExcludedAssets 的全写路径测试",
             "系统自动删除和原始文件级联删除不写入 ExcludedAssets 的负向测试",
             "级联删除同步清理无效排除记录的事务故障注入结果",
-            "重新授权一键恢复和手动恢复前原始文件存在性检查的 UI 与审计证据"
+            "重新授权一键恢复和手动恢复前原始文件存在性检查的 UI 与审计证据",
+            "同意撤回与 D-005 全域清除使用无 suspension-point 交错风险的原子数据库边界"
           ],
           "migrated_from": [
             "4.6"
-          ]
+          ],
+          "last_updated": "2026-08-31T15:42:40Z"
         },
         {
           "id": "4.6",
@@ -2246,13 +2472,16 @@
           "documents_required": [
             "AGENTS.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/05-planning/deferred-items.json",
             "docs/05-planning/phase3f-release-checklist.md",
             "docs/05-planning/phase3f-evidence-index.md",
             "docs/05-planning/task-status.json"
           ],
           "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "4.0a",
+            "4.0b",
+            "4.0c"
           ],
           "test_file": "EchoTests/Phase4/QualityGateTests.swift",
           "acceptance_evidence": [
@@ -2261,7 +2490,8 @@
             "SwiftLint 0 violations 且 strict concurrency 0 warnings 的命令输出",
             "Combine、Task.detached、@unchecked Sendable、nonisolated(unsafe)、网络下载和明文审计内容扫描均为 0 命中"
           ],
-          "migrated_from": []
+          "migrated_from": [],
+          "last_updated": "2026-08-31T16:18:55Z"
         },
         {
           "id": "4.7",
@@ -2281,21 +2511,29 @@
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/03-implementation/双语言实现说明文档.md",
+            "docs/ui/echo-memory-canvas-style.md",
             "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/home-discovery-surface.json",
+            "UIAutomation/Contracts/instances/search-surface.json",
             "docs/05-planning/task-status.json"
           ],
           "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "4.0a",
+            "4.0b",
+            "4.0c"
           ],
           "test_file": "EchoTests/Phase4/LocalizationAccessibilityTests.swift",
           "acceptance_evidence": [
             "String Catalog 的 zh-Hans 与 en-US 可见文案覆盖率均为 100%",
             "源语言不确定、译文缓存七天、跨重启和 preferredLanguage 对齐的测试结果",
             "iPhone 17 Pro iOS 26.5 与 iPhone 16 Pro iOS 18.x 的 AX tree 和 Live Simulator Review manifest",
-            "Dynamic Type、VoiceOver announcement 和颜色对比度 >= 4.5:1 的验收记录"
+            "Dynamic Type、VoiceOver announcement 和颜色对比度 >= 4.5:1 的验收记录",
+            "Home rich-data 与 Search 6+ 结果在默认字号呈现双列；Accessibility Dynamic Type、窄宽度和长文本状态确定性回退单列，reading order 保持语义顺序",
+            "全 App 12 个功能域共享 typography、accent、spacing、radii、container hierarchy、status/action components 与 motion，同时各自保持正确 Discovery/Focus/Task 布局的验收记录"
           ],
-          "migrated_from": []
+          "migrated_from": [],
+          "last_updated": "2026-08-31T16:18:55Z"
         },
         {
           "id": "4.8",
@@ -2313,23 +2551,35 @@
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/03-implementation/双语言实现说明文档.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/ui/README.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/home-discovery-surface.json",
+            "UIAutomation/Contracts/instances/search-surface.json",
+            "UIAutomation/Policies/acceptance-policy.json",
             "docs/05-planning/开发计划安排文档.md",
             "docs/05-planning/task-status.json"
           ],
           "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "4.0a",
+            "4.0b",
+            "4.0c"
           ],
           "test_file": null,
           "acceptance_evidence": [
             "README、INDEX、规格、架构、技术选型、数据流、双语言、避坑和开发计划互链检查清单",
             "文档中的版本、平台、模型 revision、门禁阈值和任务 ID 与已发布配置一致的审计结果",
             "所有已解决 deferred 条目的 resolution_evidence 索引",
-            "所有外部可见发布文案为英文且项目文档允许中文或双语的检查结果"
+            "所有外部可见发布文案为英文且项目文档允许中文或双语的检查结果",
+            "方案 B 平衡画布在规格、架构、Surface Contracts、acceptance policy 与发布说明中的阈值和边界一致性审计",
+            "所有 UI Surface Contract 均引用 echo-memory-canvas DesignProfile，且没有功能域保留第二套旧视觉系统的审计结果"
           ],
           "migrated_from": [
             "4.8"
-          ]
+          ],
+          "last_updated": "2026-08-31T16:18:55Z"
         },
         {
           "id": "4.9",
@@ -2347,11 +2597,12 @@
             "AGENTS.md",
             "README.md",
             "docs/decisions/ADR-014-release-compliance-boundary.md",
+            "docs/05-planning/deferred-items.json",
             "docs/05-planning/phase3f-release-checklist.md",
             "docs/05-planning/phase3f-evidence-index.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "3F.11"
           ],
@@ -2362,7 +2613,8 @@
             "模型 artifact revision、SHA-256、license 和 SBOM 的一一对应清单",
             "Release 包零运行时下载、零分析 SDK、零用户数据外传的网络与依赖扫描报告"
           ],
-          "migrated_from": []
+          "migrated_from": [],
+          "last_updated": "2026-08-31T15:42:40Z"
         },
         {
           "id": "4.10",
@@ -2372,6 +2624,7 @@
           ],
           "owner": "Release Manager",
           "documents_required": [
+            "docs/05-planning/deferred-items.json",
             "docs/05-planning/phase3f-release-checklist.md",
             "docs/05-planning/phase3f-evidence-index.md",
             "docs/05-planning/开发计划安排文档.md",
@@ -2379,6 +2632,10 @@
           ],
           "status": "backlog",
           "dependencies": [
+            "4.0",
+            "4.0a",
+            "4.0b",
+            "4.0c",
             "4.1",
             "4.2",
             "4.3",
@@ -2394,9 +2651,15 @@
             "唯一 RC build number、marketing version、Git commit 和 archive SHA-256 的不可变记录",
             "4.1 至 4.9 均为 done 且证据链接可访问的 gate checklist",
             "P0=0、P1=0 和所有 v1 范围变更均有批准记录的缺陷清单",
+            "DEF-001（Widget/Live Activity）与 DEF-002（Siri/App Intents）已有明确的 v1 实现任务，或由产品负责人批准移出 v1 并同步规格/故事矩阵",
             "Release Manager 对指定 RC 可进入 TestFlight 的签字记录"
           ],
-          "migrated_from": []
+          "blockers": [
+            "DEF-001",
+            "DEF-002"
+          ],
+          "migrated_from": [],
+          "last_updated": "2026-08-31T16:18:55Z"
         },
         {
           "id": "4.11",
@@ -2498,6 +2761,10 @@
           ],
           "status": "backlog",
           "dependencies": [
+            "4.0",
+            "4.0a",
+            "4.0b",
+            "4.0c",
             "4.1",
             "4.2",
             "4.3",
@@ -2522,7 +2789,8 @@
           ],
           "migrated_from": [
             "4.11"
-          ]
+          ],
+          "last_updated": "2026-08-31T16:18:55Z"
         }
       ]
     },
@@ -2534,8 +2802,8 @@
       "next_phase_id": null,
       "integration_task_id": "5.11",
       "integration_test": "pending",
-      "integration_test_file": null,
-      "last_updated": "2026-08-04T13:52:40Z",
+      "integration_test_file": "EchoTests/Phase5/Phase5IntegrationTests.swift",
+      "last_updated": "2026-08-31T15:42:40Z",
       "tasks": [
         {
           "id": "5.1",
@@ -2551,7 +2819,7 @@
         },
         {
           "id": "5.2",
-          "title": "Eagle AI 集成：以图搜图功能",
+          "title": "Eagle AI 方案评估：离线以图搜图参考原型",
           "story": null,
           "status": "ready",
           "last_updated": "2026-07-12T10:45:00Z",
@@ -2575,13 +2843,14 @@
         },
         {
           "id": "5.4",
-          "title": "MCP + Notion 工作流验证（已不适用，标记为可跳过）",
+          "title": "MCP + Notion 工作流验证（已退役）",
           "story": null,
-          "status": "ready",
-          "last_updated": "2026-07-12T10:45:00Z",
+          "status": "done",
+          "last_updated": "2026-08-31T15:42:40Z",
           "documents_required": [],
           "dependencies": [],
-          "test_file": null
+          "test_file": null,
+          "resolution": "Removed from Echo delivery scope because the repository migrated to local docs and Codex-native skills; no product code or production dependency was delivered."
         },
         {
           "id": "5.6",
@@ -2589,7 +2858,7 @@
           "story": null,
           "status": "ready",
           "dependencies": [],
-          "test_file": "EchoTests/Phase4/PPOCRv6ChallengeTests.swift",
+          "test_file": "EchoTests/Phase5/PPOCRv6ChallengeTests.swift",
           "notes": "R-3.9 挑战者赛道。对照 Apple Vision OCR，评估中文场景增益",
           "migrated_from": [
             "4.12"
@@ -2602,7 +2871,7 @@
           "story": null,
           "status": "ready",
           "dependencies": [],
-          "test_file": "EchoTests/Phase4/BilingualRerankerTests.swift",
+          "test_file": "EchoTests/Phase5/BilingualRerankerTests.swift",
           "notes": "R-3.9 挑战者赛道。训练样本全部自有或已授权，固定 shape Core ML 转换，12-24 候选重排 P95 达标",
           "migrated_from": [
             "4.13"
@@ -2615,7 +2884,7 @@
           "story": null,
           "status": "ready",
           "dependencies": [],
-          "test_file": "EchoTests/Phase4/Qwen3EmbeddingChallengeTests.swift",
+          "test_file": "EchoTests/Phase5/Qwen3EmbeddingChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.8 冲突未落地）。门禁：法律（Apache-2.0 SBOM）+ 质量（同集对 E5 增益）+ 设备（MLX 实机）+ 迁移。",
           "migrated_from": [
             "4.23"
@@ -2628,7 +2897,7 @@
           "story": null,
           "status": "ready",
           "dependencies": [],
-          "test_file": "EchoTests/Phase4/EmbeddingGemmaChallengeTests.swift",
+          "test_file": "EchoTests/Phase5/EmbeddingGemmaChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.9 冲突未落地）。门禁：法律（gated terms 下游义务）+ 质量 + 设备 + 迁移。",
           "migrated_from": [
             "4.24"
@@ -2641,7 +2910,7 @@
           "story": null,
           "status": "ready",
           "dependencies": [],
-          "test_file": "EchoTests/Phase4/WhisperKitChallengeTests.swift",
+          "test_file": "EchoTests/Phase5/WhisperKitChallengeTests.swift",
           "notes": "R-3.9 挑战者（补建，原 4.11 冲突未落地）。对照 whisper.cpp 路线，评估 Core ML runtime 性能差异。",
           "migrated_from": [
             "4.25"
@@ -2658,14 +2927,13 @@
             "5.1",
             "5.2",
             "5.3",
-            "5.4",
             "5.6",
             "5.7",
             "5.8",
             "5.9",
             "5.10"
           ],
-          "test_file": null,
+          "test_file": "EchoTests/Phase5/Phase5IntegrationTests.swift",
           "migrated_from": [
             "5.5"
           ]
@@ -2673,7 +2941,100 @@
       ]
     }
   ],
-  "documentation_conflicts": [],
+  "documentation_conflicts": [
+    {
+      "id": "DOC-20260831-3F11-PHASE4-BOUNDARY",
+      "status": "resolved",
+      "detected_at": "2026-08-31T15:42:40Z",
+      "resolved_at": "2026-08-31T15:42:40Z",
+      "decision_maker": "Human product owner",
+      "decision": "Accept the implemented production loop as completion of 3F.11 and move unproven release qualification to Phase 4 without claiming those gates passed.",
+      "reason": "The old plan duplicated release qualification across 3F.11 and Phase 4 while PR #63 evidence only proved the functional loop, baseline coverage, unsigned Release builds and per-target compliance.",
+      "affected_documents": [
+        "docs/05-planning/task-status.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/phase3f-execution-plan.md",
+        "docs/05-planning/phase3f-evidence-index.md",
+        "docs/05-planning/deferred-items.json"
+      ]
+    },
+    {
+      "id": "DOC-20260831-HOME-REAL-DATA-DISCOVERY",
+      "status": "resolved",
+      "detected_at": "2026-08-31T16:18:55Z",
+      "resolved_at": "2026-08-31T16:18:55Z",
+      "decision_maker": "Human product owner",
+      "decision": "Add task 4.0 for an Ask Echo + Today Echo + lightweight memory canvas Home, with data-volume-adaptive composition and no fixture fallback on the production path.",
+      "reason": "The existing Home is technically wired but does not provide enough useful content. Hiding unavailable sections and composing only real memories preserves Echo's truthfulness and local-first contract.",
+      "affected_documents": [
+        "docs/05-planning/task-status.json",
+        "docs/05-planning/开发计划安排文档.md"
+      ]
+    },
+    {
+      "id": "DOC-20260831-BALANCED-CANVAS",
+      "status": "resolved",
+      "detected_at": "2026-08-31T16:57:35Z",
+      "resolved_at": "2026-08-31T16:57:35Z",
+      "decision_maker": "Human product owner",
+      "selected_option": "B",
+      "decision": "Adopt Balanced Canvas as Echo's single visual direction and expand task 4.0 to implement it consistently across Home and Search: approximately 60% Pinterest-inspired content organization on Discovery surfaces with an Apple-native app shell and unchanged Focus/Task patterns.",
+      "reason": "This gives Home and Search a recognizably visual, continuous discovery rhythm while preserving Echo's platform-native interaction, accessibility, privacy and task-completion boundaries.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/架构设计文档.md",
+        "docs/ui/README.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/instances/home-discovery-surface.json",
+        "UIAutomation/Contracts/instances/search-surface.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260831-APP-WIDE-BALANCED-CANVAS",
+      "status": "resolved",
+      "detected_at": "2026-08-31T17:10:38Z",
+      "resolved_at": "2026-08-31T17:10:38Z",
+      "decision_maker": "Human product owner",
+      "selected_option": "B-app-wide",
+      "decision": "Apply Balanced Canvas consistently across every Echo page, not only Home. Discovery, Focus and Task retain different information architectures but must share one visual profile and component/token language.",
+      "reason": "A Home-only restyle would create a visible identity break when navigating to Search, Detail, Settings, onboarding and operational surfaces.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/ui/README.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/schemas/design-profile-v1.json",
+        "UIAutomation/Contracts/schemas/surface-v1.json",
+        "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
+        "UIAutomation/Contracts/instances/*-surface.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260831-SPLIT-TASK-4-0",
+      "status": "resolved",
+      "detected_at": "2026-08-31T17:22:09Z",
+      "resolved_at": "2026-08-31T17:22:09Z",
+      "decision_maker": "Human product owner",
+      "decision": "Split the oversized app-wide task into 4.0 foundation/AppShell, 4.0a Discovery, 4.0b Focus and 4.0c Task surfaces. The three surface tasks may proceed in parallel after 4.0.",
+      "reason": "The previous 4.0 mixed shared design-system work, live Home/Search composition and nine other feature domains into one implementation and review unit, making TDD, ownership, Live Simulator Review and rollback unnecessarily broad.",
+      "affected_documents": [
+        "docs/05-planning/task-status.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/ui/README.md"
+      ]
+    }
+  ],
   "decisions": [
     {
       "id": "DOC-SYNC-20260704-001",

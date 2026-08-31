@@ -1,0 +1,49 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/design-profile/v1",
+  "profileId": "echo-memory-canvas",
+  "version": "1.1.0",
+  "baseProfile": "apple-native",
+  "approvalRecord": {
+    "decision": "Option B — Balanced Canvas, app-wide",
+    "approvedBy": "Human product owner",
+    "approvedAt": "2026-08-31",
+    "scope": "All Echo UI domains"
+  },
+  "globalVisualLanguage": {
+    "typography": "System Dynamic Type hierarchy",
+    "colors": "Semantic system colors with one warm restrained accent",
+    "spacing": "8/12/16/20pt responsive cadence",
+    "radii": "Shared context-mapped image, card and grouped-container radii",
+    "containers": "Clear primary content, lightweight section headers, secondary metadata and restrained material",
+    "symbols": "Semantic SF Symbols",
+    "motion": "System motion with Reduce Motion fallback",
+    "actions": "Shared primary, secondary, destructive and recovery hierarchy",
+    "appShell": "Apple-native NavigationStack, TabView, toolbar, search and modal behavior"
+  },
+  "surfaceFamilyRules": {
+    "discovery": "Image-forward balanced canvas; rich-data adaptive masonry with deterministic single-column fallback",
+    "focus": "Single-column primary media or text with shared cards and grouped metadata; masonry forbidden",
+    "task": "Apple-native Form/List/Sheet/Alert with shared grouped surfaces, status presentation and actions; masonry forbidden"
+  },
+  "coveredDomains": [
+    "AppShell",
+    "Home",
+    "Search",
+    "Detail",
+    "Settings",
+    "Onboarding",
+    "Awakening",
+    "BackgroundTask",
+    "Creation",
+    "Degradation",
+    "ResumeProgress",
+    "Translation"
+  ],
+  "prohibited": [
+    "A second visual token system in any feature domain",
+    "Masonry on Focus or Task surfaces",
+    "Custom replacement for Apple-native navigation, search or task controls",
+    "Pinterest name, trademarks, brand colors, copy, controls or recognizable trade dress",
+    "Fixture or preview content on the production path"
+  ]
+}

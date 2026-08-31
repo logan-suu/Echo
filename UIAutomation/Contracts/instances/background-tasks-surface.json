@@ -1,5 +1,6 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "designProfileId": "echo-memory-canvas",
   "surfaceId": "background-tasks",
   "surfaceFamily": "task",
   "responsibility": "Render the real-time background task status panel: active task list with determinate progress, pause/cancel per task, empty auto-hide, and load error recovery (US-SYS-001)",

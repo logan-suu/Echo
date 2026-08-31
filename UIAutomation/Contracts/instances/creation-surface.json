@@ -1,5 +1,6 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "designProfileId": "echo-memory-canvas",
   "surfaceId": "creation",
   "surfaceFamily": "focus",
   "responsibility": "AI creation generation result page: template selection (US-SYN-003), generated content preview with citation anchors (AC-3 preview), copy, export PDF/Markdown, save-to-Apple-Notes with L2 error handling (AC-4/AC-5); narrative report share/export/print (US-SYN-004 AC-4); editable personal prompt draft confirm/reset (US-SYN-005 AC-4)",

@@ -2,7 +2,7 @@
 
 > **责任**：告诉 Agent 针对 UI 任务读取哪份文档，而不是让 Agent 重读 bootstrap 全文
 > **无需读取本文全文**：按任务选择下表对应文档即可
-> **最后同步 bootstrap**：2026-07-25
+> **最后同步**：2026-08-31，方案 B「平衡画布」
 
 ---
 
@@ -24,6 +24,10 @@
 |------|----------|
 | Phase 3 UI 实现（3.1–3.9） | `echo-memory-canvas-style.md` + `architecture.md` |
 | Phase 3F UI 任务（3F.7–3F.10） | `echo-memory-canvas-style.md` + `architecture.md` + `automation-workflow.md`（按 canonical plan §7 + §6.2.2 执行；checklist 含双设备 Live Sim Review 与 §4.6.7–4.6.10 UIAutomation 契约） |
+| Phase 4 共享视觉基础（4.0） | `echo-memory-canvas-style.md` + `architecture.md` + DesignProfile/Surface schemas + acceptance policy |
+| Phase 4 Discovery（4.0a） | style + architecture + testing + Home/Search Surface Contracts |
+| Phase 4 Focus（4.0b） | style + architecture + testing + Detail/Creation/Translation Surface Contracts |
+| Phase 4 Task（4.0c） | style + architecture + testing + Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress Surface Contracts |
 | UI 测试 | `testing-and-artifacts.md` |
 | UI 交付 | `automation-workflow.md`（§批准点 — 含 UI 审查指南：页面清单/导航路径/未实现说明） |
 | 首次 bootstrap | `echo-readiness.md` + `automation-workflow.md` |
@@ -38,6 +42,7 @@ UI bootstrap skill 流水线（`$init-session-echo`、`$next-task-echo`、`$ui-b
 - **UI 模式匹配精确 `"3"`**：`init-session-echo` / `next-task-echo` 的 UI 分支仅在 `current_phase == "3"`（精确字符串匹配）时进入 UI handoff/bootstrap 模式；`current_phase == "3F"` 时命令按通用流程运行，UI 模式不自动触发
 - **全部 Phase 3F 任务按 canonical plan §7 + §6.2.2 协议执行**：Phase 3F 的 UI 任务（3F.7 UI→Core 全域接线、3F.8 Awakening 与 system adapters、3F.9 Apple Translation 与 grounded creation、3F.10 i18n/accessibility/errors）与其余 3F 任务一样走任务清单 → §6.2.2 单脚本交付 → PR → 人类合并，checklist 额外含双设备 Live Simulator Review、AX tree、无媒体 manifest 与 UIAutomation Contracts/Fixtures（§4.6.7–4.6.10）。`$ui-bootstrap-build-echo` 为 Phase 3 专用（校验 `current_phase == "3"` 精确匹配），**不适用于 Phase 3F**
 - **UI 工作延续同一设计 profile 与规则**：Phase 3F UI 工作继续使用已批准的 `echo-memory-canvas` 设计配置与本文档目录全部规则（双设备 Live Simulator Review、无媒体 manifest `visualMediaCaptured: false`）；`3F.0` 人类合并后，standing authority 允许在任务穷尽式 Files 清单内修改 UI-adjacent Core 接线文件
+- **2026-08-31 视觉决策（补充）**：方案 B「平衡画布」是全 App 唯一视觉方向。Home/Search 在丰富真实内容时默认 adaptive masonry；Focus/Task 保留其原生信息架构但必须使用相同 token、容器、组件语义与 motion，不允许保留另一套旧皮肤。
 - 详见 `command-compatibility.md`
 
 ---
