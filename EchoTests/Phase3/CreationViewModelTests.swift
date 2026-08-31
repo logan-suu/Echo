@@ -66,6 +66,20 @@ struct CreationViewModelTests {
         #expect(vm.creation?.paragraphs.allSatisfy { $0.citation?.hasSource == true } == true)
     }
 
+    @Test("Explicit fixture journey generates the selected deterministic template")
+    func explicitFixtureJourneyGeneratesSelectedTemplate() async {
+        let vm = CreationViewModel()
+        vm.enableFixtureGeneration()
+        vm.selectTemplate(.letter)
+
+        vm.generate()
+        await Task.yield()
+
+        #expect(vm.viewState == .generated)
+        #expect(vm.creation?.selectedTemplate == .letter)
+        #expect(vm.creation?.paragraphs.allSatisfy { $0.citation?.hasSource == true } == true)
+    }
+
     // MARK: - US-SYN-003 AC-3: Preview / Copy / Export
 
     @Test("US-SYN-003 AC-3: copy writes plain text to pasteboard")

@@ -173,10 +173,17 @@ final class CreationViewModel {
                 return
             }
 
-            // Explicit Preview/test injection may regenerate its deterministic model.
-            if self.isFixtureBacked, let stub = self.stubCreation {
-                self.creation = stub
-                self.viewState = (stub.emptyReason != nil) ? .empty : .generated
+            // Explicit Preview/test injection may regenerate deterministic output.
+            if self.isFixtureBacked, let template = self.selectedTemplate {
+                guard let model = self.stubCreation ?? CreationFixtureLoader.load(for: template) else {
+                    self.creation = nil
+                    self.viewState = .error(.l2Recoverable(
+                        message: "Generation is currently unavailable. Please try again."
+                    ))
+                    return
+                }
+                self.creation = model
+                self.viewState = model.emptyReason != nil ? .empty : .generated
             } else {
                 self.creation = nil
                 self.viewState = .error(.l2Recoverable(
@@ -362,6 +369,15 @@ final class CreationViewModel {
     }
 
     // MARK: - Fixture Injection
+
+    /// Enables deterministic generation only for an explicit Preview/test journey.
+    /// Production composition never calls this method and therefore remains fail-closed.
+    func enableFixtureGeneration() {
+        isFixtureBacked = true
+        stubCreation = nil
+        creation = nil
+        viewState = .idle
+    }
 
     /// 预加载确定性创作结果（Preview / 测试 / XCUITest fixture 注入）。
     func loadPreloaded(_ model: CreationModel) {

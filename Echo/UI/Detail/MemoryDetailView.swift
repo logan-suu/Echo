@@ -48,6 +48,8 @@ struct MemoryDetailView: View {
     @State private var hasHandledLaunchArguments = false
     /// 是否进入 AI 创作结果页 (US-SYN-003, Task 3.9)
     @State private var isShowingCreation = false
+    /// Explicit fixture composition for the deterministic creation journey.
+    @State private var creationViewModel: CreationViewModel?
 
     init(viewModel: MemoryDetailViewModel = MemoryDetailViewModel()) {
         _viewModel = State(initialValue: viewModel)
@@ -102,7 +104,11 @@ struct MemoryDetailView: View {
         }
         // AI 创作结果页 (US-SYN-003, Task 3.9)
         .navigationDestination(isPresented: $isShowingCreation) {
-            CreationView()
+            if let creationViewModel {
+                CreationView(viewModel: creationViewModel)
+            } else {
+                CreationView()
+            }
         }
         // 删除确认弹窗 (US-PRV-004 AC-1)
         .confirmationDialog(
@@ -560,6 +566,9 @@ struct MemoryDetailView: View {
 
             // 进入完整创作结果页 (US-SYN-003, Task 3.9)
             Button {
+                let fixtureViewModel = CreationViewModel()
+                fixtureViewModel.enableFixtureGeneration()
+                creationViewModel = fixtureViewModel
                 isShowingCreation = true
             } label: {
                 Label("Open full creation", systemImage: "arrow.up.right.square")

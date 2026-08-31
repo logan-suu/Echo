@@ -14,6 +14,7 @@ import Testing
 import Foundation
 @testable import Echo
 
+@Suite("BackgroundTaskPanel", .serialized)
 @MainActor
 struct BackgroundTaskPanelTests {
 
@@ -134,6 +135,31 @@ struct BackgroundTaskPanelTests {
         #expect(vm.hasActiveTasks == false)
     }
 
+    @Test("AC-3 live polling preserves the TaskQueue paused state")
+    func test_AC3_livePollingPreservesPausedState() async throws {
+        let taskId = "review-paused-task"
+        let progressActor = ProgressActor.shared
+        let taskQueue = TaskQueueActor(progressActor: progressActor)
+        try await DatabaseManager.shared.open()
+        _ = try? await progressActor.delete(taskId: taskId)
+        try await progressActor.save(progress: makeTaskProgress(taskId: taskId))
+        await taskQueue.pause(taskId: taskId)
+
+        let vm = BackgroundTaskViewModel(
+            progressActor: progressActor,
+            taskQueue: taskQueue,
+            pollIntervalNanoseconds: 5_000_000
+        )
+        vm.openPanel()
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(vm.tasks.first { $0.taskId == taskId }?.status == .paused)
+
+        vm.closePanel()
+        await taskQueue.resume(taskId: taskId)
+        _ = try await progressActor.delete(taskId: taskId)
+    }
+
     @Test("resumeTask resumes a paused task")
     func test_AC3_resumeTask() {
         let vm = BackgroundTaskViewModel()
@@ -230,6 +256,23 @@ struct BackgroundTaskPanelTests {
         #expect(items.count == 2)
         #expect(items[0].taskType == .dataSourceSync)
         #expect(items[1].taskType == .fullIndex)
+    }
+
+    @Test("Explicit fixture remains authoritative when live actors are injected")
+    func test_fixturePrecedesLiveProgressActor() async {
+        let vm = BackgroundTaskViewModel(
+            progressActor: .shared,
+            auditWriter: .shared,
+            taskQueue: .shared,
+            pollIntervalNanoseconds: 5_000_000
+        )
+        let items = BackgroundTaskFixtureLoader.load("background-tasks-loaded")
+        vm.loadPreloadedTasks(items)
+        vm.openPanel()
+        try? await Task.sleep(for: .milliseconds(20))
+
+        #expect(vm.tasks.map(\.taskId) == items.map(\.taskId))
+        vm.closePanel()
     }
 
     @Test("Fixture loader returns empty for empty fixture")

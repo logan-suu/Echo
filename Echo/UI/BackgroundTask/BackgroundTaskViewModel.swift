@@ -136,6 +136,7 @@ final class BackgroundTaskViewModel {
 
     private var loadTask: Task<Void, Never>?
     private var stubTasks: [TaskProgress] = []
+    private var isFixtureBacked = false
     private var simulateError = false
 
     init(progressActor: ProgressActor? = nil,
@@ -186,13 +187,29 @@ final class BackgroundTaskViewModel {
                     throw BackgroundTaskError.loadFailed
                 }
 
+                if self.isFixtureBacked {
+                    self.tasks = self.stubTasks.map(BackgroundTaskModel.init)
+                    self.viewState = .completed
+                    return
+                }
+
                 if let progressActor = self.progressActor {
                     // 3F.11 fix: 真实 TaskProgress 实时轮询（US-SYS-001 AC-2）——面板打开期间
                     // 持续读取 SQLite TaskProgress；任务完成即消失（§4.5 完成即清理）。
                     while !Task.isCancelled {
                         let rows = try await progressActor.loadAll()
                         guard !Task.isCancelled else { return }
-                        self.tasks = rows.map(BackgroundTaskModel.init)
+                        var mappedTasks: [BackgroundTaskModel] = []
+                        mappedTasks.reserveCapacity(rows.count)
+                        for row in rows {
+                            var task = BackgroundTaskModel(from: row)
+                            if let taskQueue = self.taskQueue,
+                               await taskQueue.isPaused(taskId: row.taskId) {
+                                task.status = .paused
+                            }
+                            mappedTasks.append(task)
+                        }
+                        self.tasks = mappedTasks
                         self.viewState = .completed
                         try await Task.sleep(nanoseconds: self.pollIntervalNanoseconds)
                     }
@@ -287,6 +304,7 @@ final class BackgroundTaskViewModel {
     // MARK: - Fixture Injection
 
     func loadPreloadedTasks(_ items: [TaskProgress]) {
+        isFixtureBacked = true
         stubTasks = items
         tasks = items.map(BackgroundTaskModel.init)
         viewState = .completed

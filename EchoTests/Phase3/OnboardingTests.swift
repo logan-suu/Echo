@@ -75,6 +75,20 @@ struct OnboardingTests {
         return vm.viewState
     }
 
+    /// Waits for an asynchronous permission request to leave its current step.
+    private func awaitPermissionSettled(
+        _ vm: OnboardingViewModel,
+        from index: Int,
+        timeout: Duration = .seconds(2)
+    ) async -> OnboardingViewModel.ViewState {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline, vm.viewState == .permissions(index) {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return vm.viewState
+    }
+
     // MARK: - US-PRV-008 AC-1/AC-2: Privacy summary content
 
     @Test("Welcome fixture shows welcome state and steps are available")
@@ -139,10 +153,10 @@ struct OnboardingTests {
         vm.acceptPrivacy()
 
         vm.allowPermission()
-        try? await Task.sleep(for: .milliseconds(20))
+        let settled = await awaitPermissionSettled(vm, from: 0)
 
         #expect(requester.requestedIDs == ["photos"])
-        #expect(vm.viewState == .permissions(1))
+        #expect(settled == .permissions(1))
     }
 
     @Test("Denied system permission enters the denied state instead of pretending success")
@@ -154,10 +168,10 @@ struct OnboardingTests {
         vm.acceptPrivacy()
 
         vm.allowPermission()
-        try? await Task.sleep(for: .milliseconds(20))
+        let settled = await awaitPermissionSettled(vm, from: 0)
 
         #expect(requester.requestedIDs == ["photos"])
-        #expect(vm.viewState == .permissionDenied(0))
+        #expect(settled == .permissionDenied(0))
     }
 
     @Test("Permission steps advance photos→notifications→location→health→language")
@@ -324,6 +338,20 @@ struct OnboardingTests {
 
         vm.continueWithLimitedFeatures()
         #expect(vm.viewState == .completed)
+    }
+
+    @Test("Reset keeps welcome state after cancelling model loading")
+    func test_modelLoadCancellationCannotOverwriteReset() async {
+        let vm = OnboardingViewModel(loadDelayNanoseconds: 40_000_000)
+        vm.loadFixture("onboarding-language")
+        vm.selectLanguage("en-US")
+
+        vm.beginLoad()
+        vm.reset()
+        try? await Task.sleep(for: .milliseconds(80))
+
+        #expect(vm.viewState == .welcome)
+        #expect(vm.modelLoadProgress == .initial)
     }
 
     @Test("Declined fixture shows declined state (US-PRV-008 AC-3)")

@@ -550,6 +550,7 @@ final class OnboardingViewModel {
                 }
             }
             await Task.yield()
+            guard !Task.isCancelled else { return }
             self.viewState = self.modelLoadProgress.failedCount == 0 ? .completed : .modelLoadFailed
         }
     }

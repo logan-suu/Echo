@@ -59,6 +59,18 @@ struct MemoryDetailViewModelTests {
         #expect(vm.viewState == .error(.l2Recoverable(message: "Unable to load this memory. Please try again.")))
     }
 
+    @Test("Cancelled canonical load cannot overwrite the cancelled state")
+    func cancelledCanonicalLoadStaysCancelled() async throws {
+        try await DatabaseManager.shared.open()
+        let vm = MemoryDetailViewModel(canonicalRepository: .shared)
+
+        vm.load(memoryId: UUID())
+        vm.onDisappear()
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(vm.viewState == .cancelled)
+    }
+
     // MARK: - US-DIS-002 Translation
 
     @Test("US-DIS-002 AC-4: toggleTranslation flips visibility only when locale differs")

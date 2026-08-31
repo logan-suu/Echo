@@ -161,6 +161,15 @@ final class ResumeProgressViewModel {
                     throw ResumeProgressError.checkFailed
                 }
 
+                if self.isFixtureBacked, let fixture = self.stubFixture {
+                    if let progress = fixture.pendingProgress {
+                        self.presentPrompt(progress, fixtureBacked: true)
+                    } else {
+                        self.viewState = .none
+                    }
+                    return
+                }
+
                 if let progressActor = self.progressActor {
                     let pending = try await progressActor.loadAll()
                         .filter { $0.taskType == taskType }
@@ -182,15 +191,6 @@ final class ResumeProgressViewModel {
 
                 guard !Task.isCancelled else {
                     self.viewState = .idle
-                    return
-                }
-
-                if let fixture = self.stubFixture {
-                    if let progress = fixture.pendingProgress {
-                        self.presentPrompt(progress, fixtureBacked: true)
-                    } else {
-                        self.viewState = .none
-                    }
                     return
                 }
 

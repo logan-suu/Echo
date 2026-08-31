@@ -379,14 +379,28 @@ final class MemoryDetailViewModel {
             if let repo = canonicalRepository {
                 do {
                     guard let memory = try await repo.loadMemory(memoryId: memoryId) else {
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
                         self.viewState = .error(.l2Recoverable(
                             message: "This memory is no longer available."
                         ))
                         return
                     }
+                    guard !Task.isCancelled else {
+                        self.viewState = .cancelled
+                        return
+                    }
                     self.memory = Self.makeDetailModel(from: memory)
                     self.viewState = .completed
+                } catch is CancellationError {
+                    self.viewState = .cancelled
                 } catch {
+                    guard !Task.isCancelled else {
+                        self.viewState = .cancelled
+                        return
+                    }
                     self.viewState = .error(.l2Recoverable(
                         message: "Unable to load this memory. Please try again."
                     ))
