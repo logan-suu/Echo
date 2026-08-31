@@ -1,5 +1,6 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "designProfileId": "echo-memory-canvas",
   "surfaceId": "translation",
   "surfaceFamily": "focus",
   "responsibility": "On-demand translation of a non-preferred-language memory: original/translation toggle (US-DIS-002 AC-4), cache-first lookup via TranslationCache TTL=7d (AC-2/AC-5), Apple Translation fallback with LanguageAvailability check (unsupported pair → unavailable, keep original + language label, ADR-013 decision 1), source-language detection uncertainty keeps original + language label (AC-3, ADR-005), only triggered on detail expansion (AC-1)",

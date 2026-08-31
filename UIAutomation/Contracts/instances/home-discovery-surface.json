@@ -1,0 +1,37 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "designProfileId": "echo-memory-canvas",
+  "surfaceId": "home-discovery",
+  "surfaceFamily": "discovery",
+  "responsibility": "Render the live-data Ask Echo, Today Echo, recent imports, real collections and active background-task status using the approved balanced-canvas direction",
+  "inputs": {
+    "visibleMemoryCount": "Count of real memories visible under current policy",
+    "todayEcho": "Optional real date/anniversary match from AwakeningCardRepositoryActor",
+    "recentImports": "Stable ordered live memory card values",
+    "collections": "Real metadata-derived topic or time collections; absent when unsupported",
+    "runtimeStatus": "Live progress, offline and degradation state"
+  },
+  "outputs": {
+    "visibleContent": "Ask Echo followed by available Today Echo, recent imports, collections and active task status",
+    "interactionTargets": "askEcho, memoryCard, collection, backgroundTaskStatus, permissionOrImportAction",
+    "accessibilityTree": "Stable semantic section/card order independent of masonry packing"
+  },
+  "systemContainer": "TabView + NavigationStack + ScrollView with system navigation and search behavior",
+  "layoutMode": "adaptive_masonry",
+  "masonryEnabled": true,
+  "fallbackConditions": [
+    "visibleMemoryCount is below 20",
+    "Section has fewer than 6 real displayable cards",
+    "Accessibility Dynamic Type (.accessibility1+)",
+    "Available width cannot fit two 152pt cards plus gutter",
+    "Long text or critical media requires continuous reading or safe fit"
+  ],
+  "states": [
+    "empty",
+    "lowData",
+    "richData",
+    "degraded",
+    "activeBackgroundTask"
+  ],
+  "version": "1.0.0"
+}

@@ -1,5 +1,6 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "designProfileId": "echo-memory-canvas",
   "surfaceId": "memory-detail",
   "surfaceFamily": "focus",
   "responsibility": "Render a single memory detail with content, grouped metadata, on-demand translation toggle (US-DIS-002), edit entry (US-AWK-007), L4 conflict resolution, deletion confirmation (US-PRV-004), and creation preview/save with citation anchors (US-SYN-002/003/004)",

@@ -939,7 +939,7 @@ Resolved in this PR (deferred-items.json tracking_status=resolved, resolved_at=2
 ## Entry: 3F.11 — Production E2E 与 Phase 4 准入门禁
 
 ## Phase 3F Task Evidence
-- Task / commit / branch / PR: `test/phase3f-production-gate-3F.11` — pre-merge gate evidence (no merge SHA; populated by human-triggered `3F.finalize` after merge)
+- Task / commit / branch / PR: `test/phase3f-production-gate-3F.11` / PR #63 — pre-merge evidence below is preserved; post-merge evidence was appended by human-triggered `3F.finalize`
 - Registered worktree path / ownership / clean rebase result: n/a — 3F.1~3F.11 use plain branches in the main repo per human approval 2026-08-04 (AGENTS.md §17.9); record branch + clean base instead
 - Bootstrap authorization actor / UTC time / docs-only scope (3F.0 only): n/a
 - Pre-delivery task status and transition evidence: 3F.11 ready → in_progress (2026-08-12T13:10:00Z, task-status.json); pre-merge review on delivery
@@ -953,6 +953,8 @@ Resolved in this PR (deferred-items.json tracking_status=resolved, resolved_at=2
 - Files and documentation changed: Scripts/validate_release_compliance.py (+tests), Echo/Config/PrivacyInfo.xcprivacy, EchoShareExtension/PrivacyInfo.xcprivacy, Echo/Config/Echo-Info.plist (NSHealthUpdateUsageDescription), Echo/Config/Release.xcconfig (+pbxproj baseConfigurationReference), EchoTests/Phase3F/Phase3FIntegrationTests.swift, EchoUITests/Phase3FProductionE2ETests.swift, Scripts/coverage_gate.py (xccov `--files` fix), .github/workflows/ci.yml (compliance gate), Echo/Assets.xcassets/AppIcon.appiconset (AppIcon.png + Contents.json), CHANGELOG.md, docs/05-planning/app-store-privacy-disclosure.md, docs/05-planning/phase3f-release-checklist.md, docs/05-planning/task-status.json, docs/05-planning/phase3f-evidence-index.md, AGENTS.md, README.md
 - Deferred items closed or created, with evidence links: no new deferred items created in this PR; open gating items tracked for finalizer/Phase 4 (DEF-38-003 coverage 95% restore, DEF-50-001 atomic purge, DEF-55-*, DEF-56-007/008/009, DEF-57-002/003, DEF-58-*, DEF-59-001/002/003/005/006/007, DEF-60-002)
 - Known risks that do not weaken an in-scope gate: E2E no-fixture journey drives the production onboarding gate (result depends on simulator consent state — idempotent assertions handle ready vs documented unavailable states); app icon is a generated placeholder pending final design asset; Release signing/archive evidence requires the controlled release credentials environment (ADR-014 §决策-4) and is recorded at finalizer time
+- Post-merge evidence: PR `https://github.com/logan-suu/Echo/pull/63`; state `MERGED`; base `dev-1.0`; head `test/phase3f-production-gate-3F.11`; merged head / immutable merge commit `18784ea426d411ab539c5bd9c0eecd4548ae7e7a`; merged by `logan-suu` at `2026-08-26T03:25:13Z`; commit verified reachable from `dev-1.0`
+- Completion boundary decision: human product owner accepted the implemented basic production loop on `2026-08-31`; global coverage `>=95%`, controlled signing/archive/export, final App Icon, Golden/performance, final RC and TestFlight remain Phase 4 qualification work and are not claimed by this entry
 
 <!-- PR-BODY:3F.11:START -->
 ## Overview
@@ -1029,7 +1031,7 @@ DEF-60-002.
 
 - **id:** `3F.finalize`
 - **title:** `Record 3F.11 merge and unlock Phase 4`
-- **status before trigger:** `blocked_on_human_merge`
+- **status:** `done`
 - **owner:** Release Manager
 - **approver:** Human merge actor and Product and Architecture Lead
 - **documents_required:** `docs/05-planning/task-status.json`; `docs/05-planning/phase3f-evidence-index.md`; `docs/05-planning/phase3f-execution-plan.md`; `docs/05-planning/开发计划安排文档.md`
@@ -1037,4 +1039,15 @@ DEF-60-002.
 - **acceptance_evidence:** 3F.11 PR URL; merge commit SHA reachable from `dev-1.0`; merged head and base identities; finalizer actor/time; Phase 4 ready-task diff; evidence-index link; proof that no branch was deleted
 - **prohibited:** running before merge, accepting a PR head SHA as merge SHA, changing gate results, fabricating post-merge evidence, starting Phase 4 implementation in the finalizer change
 
-This entry is a human-triggered post-merge finalizer record (`§10.1`). It has no `§11.1` PR-body marker pair. It is populated only by the human-triggered finalizer after the `3F.11` PR is merged; until then it remains `blocked_on_human_merge` with no merge SHA, no `done` status and no Phase 4 unlock.
+This entry is the human-triggered post-merge finalizer record (`§10.1`). It has no `§11.1` PR-body marker pair.
+
+- **triggered_at:** `2026-08-31T15:42:40Z`
+- **triggered_by:** Human product owner in the active Echo task
+- **PR:** `https://github.com/logan-suu/Echo/pull/63`
+- **merge actor / time:** `logan-suu` / `2026-08-26T03:25:13Z`
+- **merged head / merge commit:** `18784ea426d411ab539c5bd9c0eecd4548ae7e7a`
+- **base:** `dev-1.0`
+- **reachability:** `git merge-base --is-ancestor 18784ea426d411ab539c5bd9c0eecd4548ae7e7a dev-1.0` → exit 0
+- **ledger result:** `3F.11` done; Phase 3F integration passed and phase done; `current_phase` = `"4"`; Phase 4 status in_progress; `4.1`~`4.9` ready; `4.10`~`4.14` backlog
+- **scope truth:** Phase 3F completion means the basic production loop and baseline gate evidence passed. Phase 4 retains unproven release qualification; no missing release evidence was fabricated or retroactively marked passed.
+- **branch preservation:** local and remote `test/phase3f-production-gate-3F.11` branches both remain present; no branch was deleted

@@ -4,7 +4,7 @@
 
 ## 目录约定
 
-- `schemas/` — JSON Schema 定义（Surface、State、Action、Journey、Fixture、Artifact、Approval）
+- `schemas/` — JSON Schema 定义（DesignProfile、Surface、State、Action、Journey、Fixture、Artifact、Approval）
 - `instances/` — 具体 surface 的契约实例（如 `home-surface.json`）
 
 ## 核心实体
@@ -29,6 +29,7 @@
 4. Adapter 映射必须可单元测试
 5. Journey 断言可观察结果，不断言 Core 私有实现
 6. Schema 变更使用显式版本
+7. 每个 Surface 必须声明 `designProfileId: echo-memory-canvas`；Focus/Task 的 no-masonry 只改变布局，不豁免全 App 视觉一致性
 
 ## 交叉引用
 

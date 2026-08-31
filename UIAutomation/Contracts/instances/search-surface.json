@@ -1,8 +1,9 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "designProfileId": "echo-memory-canvas",
   "surfaceId": "search-results",
   "surfaceFamily": "discovery",
-  "responsibility": "Render memory search query input, loading/empty/error states, result list with feedback buttons, and low-confidence banner (US-RET-001/006, US-FBK-001/003, US-SRC-005)",
+  "responsibility": "Render memory search query input, loading/empty/error states, balanced-canvas results with feedback buttons, and low-confidence banner (US-RET-001/006, US-FBK-001/003, US-SRC-005)",
   "inputs": {
     "query": "User search text",
     "results": "SearchResultItem[] mapped to UI models",
@@ -14,12 +15,14 @@
     "accessibilityTree": "Cards as combined accessibility elements with type/description/time"
   },
   "systemContainer": "NavigationStack (provided by AppRootView) + .searchable",
-  "layoutMode": "system_list",
-  "masonryEnabled": false,
+  "layoutMode": "adaptive_masonry",
+  "masonryEnabled": true,
   "fallbackConditions": [
     "Accessibility Dynamic Type (.accessibility1+)",
-    "Narrow width (compact size class)",
-    "Long text exceeding summary policy"
+    "Available width cannot fit two 152pt cards plus gutter",
+    "Fewer than 6 displayable results",
+    "Long text cards are the majority or exceed summary policy",
+    "Critical media cannot be safely cropped"
   ],
   "states": [
     "idle",

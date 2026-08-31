@@ -1,7 +1,7 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.30
-**生效日期**：2026-08-30
+**版本**：v5.32
+**生效日期**：2026-08-31
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -1371,8 +1371,9 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 |------|-----|
 | Profile ID | `echo-memory-canvas` |
 | Base | `apple-native`（系统组件、SF Symbols、系统字体、semantic colors、平台自适应、完整可访问性） |
-| 批准状态 | 用户已批准（记录于 `docs/ui/echo-memory-canvas-style.md`） |
-| 灵感来源 | Pinterest 仅启发 Discovery surfaces 的内容组织密度，**不是**产品依赖、品牌关系或复制 UI 的许可 |
+| 批准状态 | 用户已批准；2026-08-31 选择方案 B「平衡画布」（记录于 `docs/ui/echo-memory-canvas-style.md`） |
+| 风格强度 | 约 60% Pinterest-inspired 视觉身份 + 40% Apple 原生交互；适用于全 App，不是像素相似度目标 |
+| 灵感来源 | Pinterest 启发图片优先密度、非等高内容节奏与连续探索；Focus/Task 以同源 token、容器与 motion 保持一致，**不是**产品依赖、品牌关系或复制 UI 的许可 |
 
 ### 17.2 三类 Surface Family
 
@@ -1380,9 +1381,11 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 
 | Family | 布局 | Masonry | 适用场景 |
 |--------|------|:---:|------|
-| **Discovery** | Adaptive masonry 或卡片（条件启用） | ✅ 条件触发 | Home、Search、collection browsing |
+| **Discovery** | rich-data 默认 adaptive masonry；低数据/AX 回退单列 | ✅ 达到 Surface 真实内容阈值时默认 | Home、Search、collection browsing |
 | **Focus** | 沉浸式单列 + grouped metadata | ❌ 禁止 | Memory detail、media viewing、translation |
 | **Task** | Form、List、Sheet、Alert、Menu、Toolbar | ❌ 禁止 | Edit、settings、permissions、background tasks、errors、recovery |
+
+**方案 B 强制边界**：方案 B 适用于 AppShell、Home、Search、Detail、Settings、Onboarding、Awakening、BackgroundTask、Creation、Degradation、ResumeProgress、Translation 全部页面。Home 在 20+ 真实记忆且单区块至少 6 张可展示卡片、默认 Dynamic Type、宽度足够时默认双列；Search 在至少 6 个适合扫描的结果时采用同一画布语法。Focus/Task 不使用 masonry，但必须共享 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action components 与 motion。NavigationStack、TabView、搜索及系统任务交互保持 Apple 原生；禁止为增强 Pinterest 感复制品牌或自定义系统 chrome。
 
 ### 17.3 双状态模型
 
@@ -1501,3 +1504,5 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.28 | 2026-08-12 | 3F.11 发布门禁交付：每目标发布合规校验器（`Scripts/validate_release_compliance.py`，ADR-014 §决策-3：可执行 app/extension target 全发现，Echo + EchoShareExtension 逐 target 网络/SDK/secret/entitlement/privacy-manifest/required-reason API/purpose-string 报告）；`PrivacyInfo.xcprivacy` ×2 + `NSHealthUpdateUsageDescription`；`Release.xcconfig`（pbxproj baseConfigurationReference）；`coverage_gate.py` 修复 xccov `--files` 选项移除；no-fixture 生产 E2E 与 Phase 3F 集成测试；CHANGELOG、App Store 隐私披露与 release checklist。本版本不记录 merge SHA、不解锁 Phase 4（`3F.finalize` 由人类合并后触发）。 | AI 架构师 |
 | v5.29 | 2026-08-15 | 新增 `docs/06-troubleshooting/` 疑难杂症问题文件夹（架构性限制/难解问题定位与根因分析），首个文档记录照片文本搜索跨模态对齐缺失（US-RET-003/US-ING-004 Impossible 的 v1 限制）。同步：§0.1 文档目录新增疑难杂症行；§0.2 任务映射表新增「疑难杂症/架构限制定位」行；docs/INDEX.md 注册新文件夹。 | AI 架构师 |
 | v5.30 | 2026-08-30 | 将 Agent 执行层从 OpenCode 迁移到 Codex：新增 `.codex/config.toml` 完整加载大型 `AGENTS.md`；将 17 个自定义命令物化为 `.agents/skills/*/SKILL.md`；GitHub 自动化切换为 `gh` CLI；现行命令调用切换为 `$skill-name`。保留 `.opencode/` 作为迁移期回滚源。 | Codex |
+| v5.31 | 2026-08-31 | 用户批准方案 B「平衡画布」：rich-data Discovery 默认 adaptive masonry，明确 Home 20+/单区块 6 张与 Search 6 结果阈值、低数据/AX 单列回退、稳定语义顺序；Apple 原生 App Shell 与 Focus/Task no-masonry 边界保持不变。同步 UI 规格、架构、测试、Surface Contracts、acceptance policy 与 Phase 4 任务。 | Codex |
+| v5.32 | 2026-08-31 | 明确方案 B 为全 App 视觉身份：全部 12 个 UI 功能域必须共享 design profile、token、容器层级、状态/动作组件与 motion；Discovery/Focus/Task 保持各自信息架构，Focus/Task no-masonry 不再被解释为允许另一套旧视觉皮肤。4.0 扩展为全 App 视觉统一任务。 | Codex |

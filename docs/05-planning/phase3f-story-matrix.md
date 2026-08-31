@@ -4,6 +4,8 @@
 
 This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs/05-planning/phase3f-execution-plan.md`). It is read-only for 3F.1 through 3F.11; any scope change requires a human-approved scope PR.
 
+> **Post-3F handoff note (2026-08-31):** DEF-001 / US-AWK-004 and DEF-002 / US-AWK-006 remain unresolved product-scope decisions. They have no Phase 4 implementation task today, so `4.10` Release Candidate is blocked until approved implementation tasks exist or the stories are formally moved out of v1 with this matrix and the specification updated together.
+
 ## Ownership Repair (§4.2.1)
 
 | Story | Owner Task(s) | Disposition |

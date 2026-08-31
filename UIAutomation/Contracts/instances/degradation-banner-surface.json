@@ -1,4 +1,5 @@
 {
+  "designProfileId": "echo-memory-canvas",
   "contractVersion": "1.0.0",
   "surfaceId": "degradation-banner",
   "surfaceFamily": "task",

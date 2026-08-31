@@ -1,5 +1,6 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
+  "designProfileId": "echo-memory-canvas",
   "surfaceId": "resume-progress-prompt",
   "surfaceFamily": "task",
   "responsibility": "When a long-running task is (re)started and ProgressActor holds pending progress for its task type, prompt the user to continue from the saved progress or restart fresh (US-SYS-001 AC-3/AC-4; architecture doc §6.2; AGENTS.md §4.5)",

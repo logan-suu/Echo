@@ -3,7 +3,7 @@
 > **上游权威**：用户批准的 `echo-memory-canvas` 设计配置，扩展 `apple-native` 基础
 > **物化来源**：`Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范.md` §7
 > **不得覆盖**：Core 领域逻辑、数据库 schema、模型集成、隐私声明、CI 门禁
-> **最后同步**：2026-07-25 bootstrap 规范 §7 全文
+> **最后同步**：2026-08-31，用户批准方案 B「平衡画布」
 
 ---
 
@@ -11,8 +11,11 @@
 
 - **Profile ID**：`echo-memory-canvas`
 - **Base Profile**：`apple-native`
-- **批准状态**：用户已批准（记录于 bootstrap 规范 §7.1）
-- **额外灵感来源**：Pinterest 仅启发 Discovery surfaces 的内容组织密度与探索节奏；**不是**产品依赖、品牌关系或复制其 UI 的许可
+- **批准状态**：用户已批准；2026-08-31 进一步选择方案 B「平衡画布」作为唯一方向
+- **风格强度**：约 60% Pinterest-inspired 内容组织 + 40% Apple 原生交互；强度描述用于界定全 App 视觉身份，不是像素相似度目标
+- **全 App 范围**：所有页面必须体现同一平衡画布视觉语言；Discovery 表达最强，Focus/Task 通过共享 token、容器、媒体处理、层级与 motion 保持一致
+- **额外灵感来源**：Pinterest 启发图片优先密度、非等高内容节奏与连续探索；**不是**产品依赖、品牌关系或复制其 UI 的许可
+- **边界**：系统导航、Tab Bar、搜索行为、菜单、编辑、权限、错误与恢复继续使用 Apple 原生交互模式；一致不等于所有页面都使用 masonry
 
 ---
 
@@ -62,9 +65,12 @@
 ### 3.1 Discovery surfaces
 **适用场景**：Home、Search、collection browsing
 
-- 使用内容优先的 adaptive masonry 或内容卡片布局
+- **丰富真实内容状态默认使用双列 adaptive masonry**；非等高卡片由真实媒体比例和摘要长度驱动
+- Home 以 Ask Echo → 今日回响 → 最近导入 → 主题/时间集合构成连续发现画布；不可用区块直接隐藏
+- Search 在结果足以扫描且以图片/短摘要为主时使用同一画布语法，保持查询相关度的稳定语义顺序
+- 空数据、低数据、长文本与无障碍状态使用单列内容卡片或系统 List，不为维持瀑布流伪造内容
 - 布局服务于扫描、比较和发现，不改变系统导航、Tab、搜索、菜单或选择行为
-- **Masonry 启用条件**（见 §6.1）
+- **Masonry 默认与回退条件**（见 §6.1、§6.2）
 
 ### 3.2 Focus surfaces
 **适用场景**：Memory detail、media viewing、translation
@@ -84,9 +90,18 @@
 
 ### 3.4 Surface 契约强制
 每个 Surface 契约必须声明：
+- `designProfileId: echo-memory-canvas`
 - `surfaceFamily: discovery | focus | task`
 - 所选系统容器
 - 回退条件
+
+### 3.5 全 App 一致性契约
+
+- AppShell、Home、Search、Detail、Settings、Onboarding、Awakening、BackgroundTask、Creation、Degradation、ResumeProgress、Translation 全部属于同一 `echo-memory-canvas` profile
+- 所有页面共享系统 Dynamic Type 层级、warm restrained accent、8/12/16/20pt spacing cadence、语义化背景、统一圆角映射、SF Symbols 与 Reduce Motion 行为
+- 内容容器保持共同 DNA：清晰主内容、轻量 section header、次级 metadata、克制边框/材质；不得出现某个页面独有的第二套按钮、颜色、阴影或标题体系
+- 全局 App Shell 保持同一 NavigationStack/TabView 语义；页面差异只来自 surface family 的信息架构责任
+- Discovery 使用瀑布流表达探索；Focus 使用单列媒体与 grouped metadata 表达沉浸；Task 使用 grouped system containers 表达完成任务——三者视觉同源但布局不相同
 
 ---
 
@@ -124,7 +139,7 @@ cardRadius:  系统上下文映射（卡片容器）
 
 ### 4.4 Spacing Token
 ```
-compact:   8pt  — masonry gutter、图标间距
+compact:   8pt  — iPhone masonry gutter、图标间距
 normal:    12pt — 卡片内边距
 grouped:   16pt — metadata 分组
 section:   20pt — Form/List section 周边
@@ -199,16 +214,20 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 ## 6. 响应式、排序与可访问性规则
 
 ### 6.1 Masonry 启用条件
-**仅 Discovery surfaces** 满足以下全部条件时使用 adaptive masonry：
+**仅 Discovery surfaces** 满足以下全部条件时默认使用 adaptive masonry：
 - Regular Dynamic Type（非 accessibility sizes）
-- 足够宽的宽度（compact → 单列，regular → 两列+）
-- 卡片内容简单，适合视觉扫描
-- iPad 根据可用宽度、split view 和内容复杂度选择列数
+- 可用内容宽度可容纳至少两张最小宽度为 152pt 的卡片及 gutter；不得仅以 horizontal size class 判定
+- 当前区块达到其 Surface 契约声明的真实内容阈值，且卡片具有稳定 ID 与 aspect ratio metadata
+- 卡片以媒体、短摘要或可独立理解的记忆单元为主，适合视觉扫描
+- Home：总记忆数达到 20 条后才进入 rich-data 画布；单个瀑布流区块至少有 6 张真实可展示卡片
+- Search：至少 6 个可展示结果且长文本卡片不占多数；否则维持相关度优先的单列结果
+- iPhone 默认两列；iPad 根据可用宽度、Split View 和 152pt 最小卡宽自适应为 2~5 列
 
 ### 6.2 单列/List 回退（必须）
 以下任一条件触发回退到单列卡片或系统 List：
 - Accessibility Dynamic Type（`.accessibility1` 及以上）
-- 窄宽度（compact size class）
+- 可用内容宽度无法容纳两张 152pt 卡片及 gutter
+- 未达到 Surface 的真实内容阈值
 - 长文本（超出摘要策略）
 - 复杂语义（需要连续阅读顺序）
 - 关键图片无法安全裁切
@@ -229,17 +248,30 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 - 不得用无限文本撑开破坏扫描
 - 达到摘要边界时提供明确的完整内容入口和辅助技术语义
 
+### 6.6 平衡画布的视觉节奏
+- 第一屏优先出现 Ask Echo 和最多一个有真实匹配的重点「今日回响」入口，不使用静态 hero 补位
+- 画布通过 4:5、1:1、3:4 等真实或安全裁切比例形成节奏，不使用随机高度
+- 图片优先但不图片独占：语音、视频、短文本和混合记忆继续使用各自 Card variant
+- section header 保持轻量；不把筛选 chip、悬浮按钮或装饰徽章堆叠成第二套导航
+- 卡片点击进入 Focus surface，进入详情后立即恢复单列阅读语法
+
 ---
 
 ## 7. Focus 与 Task 的共享表达
 
 ### 7.1 Focus surfaces
 - 单列内容流、系统 back 行为、可预测 toolbar、grouped metadata
+- 主媒体沿用 Memory Card 的真实比例、圆角和来源 metadata；进入详情后扩大为阅读/观看主内容，而不是换一套视觉语言
+- metadata group 使用与 Discovery 卡片一致的背景、间距、圆角和 warm accent，但不拆成瀑布流
+- Creation 与 Translation 延续相同标题层级、引用卡片和内容容器，不使用独立的“工具型”皮肤
 - 媒体沉浸不隐藏必要的可访问退出路径
 - 翻译同时保留原文与译文关系
 
 ### 7.2 Task surfaces
 - Form/List section、系统 disclosure、toggle、picker、progress、sheet、alert、confirmation
+- Settings、Onboarding、Awakening、BackgroundTask、Degradation 与 ResumeProgress 使用同一 grouped background、section header、状态图标、圆角映射和 accent
+- 权限、加载、空态、错误和恢复组件共享相同的图标—标题—说明—主要动作层级，状态颜色只表达语义，不创建页面品牌色
+- Onboarding 可使用更宽松的留白和单一重点插图/符号，但字体、按钮、进度、卡片和后续 App 保持同源
 - 错误与恢复明确说明：发生了什么、可执行动作、结果
 - 不伪装成内容卡片瀑布流
 
@@ -247,13 +279,15 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 通过共享 token 和行为达成一致，不来自把同一布局套到所有页面：
 - Typography、semantic colors、warm restrained accent、radii、spacing
 - Materials、metadata hierarchy、SF Symbols、system motion
+- 相同语义使用相同组件：Memory Card、section header、status presentation、primary/secondary action、metadata group
+- 页面级验收必须同时检查“符合 family 布局”与“符合全 App profile”；只满足其中之一不算通过
 
 ---
 
 ## 8. 明确禁止项
 
 1. ❌ 在 edit、settings、permissions、background tasks、errors、recovery、memory detail、media viewing 或 translation 上使用 masonry
-2. ❌ 制作 Pinterest-heavy 的自定义导航栏、Tab Bar、搜索框、筛选控件、按钮、手势或转场
+2. ❌ 为增强 Pinterest 感而自定义导航栏、Tab Bar、搜索行为、按钮、手势或转场；方案 B 的强度来自内容画布，不来自复制 chrome
 3. ❌ 复制 Pinterest 名称、商标、图标、品牌色、文案、布局细节或可识别 trade dress
 4. ❌ 硬编码只适用于单一设备、系统版本或外观的尺寸、颜色、列数和卡片高度
 5. ❌ 用固定卡片高度裁切正文、Dynamic Type 内容或本地化文本
@@ -269,6 +303,7 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 | `echo-memory-canvas` 设计配置 | 用户 | 2026-07-25 | bootstrap 规范 §7 |
 | `apple-native` 基础 | 用户 | 2026-07-25 | bootstrap 规范 §7.1 |
 | Discovery/Focus/Task 三类映射 | 用户 | 2026-07-25 | bootstrap 规范 §7.2 |
+| 方案 B「平衡画布」（约 60% Pinterest-inspired，仅覆盖 Discovery） | 用户 | 2026-08-31 | 当前产品决策 |
 
 > 若要改变 profile、Apple 原生基础或三类 surface 映射，必须修订本文和 `docs/ui/echo-memory-canvas-style.md` 并重新获得用户批准。
 
@@ -460,9 +495,10 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 
 > **重要声明**：仅受 Pinterest 内容组织密度启发，**绝不复制**其品牌、颜色、字体、导航或控件。
 
-- 两列自适应瀑布流（条件满足 §6.1 时）
-- iPhone 每屏 4-6 张 / iPad 8-12 张
-- 大图卡片与文字卡片交错排列形成扫描韵律
+- 丰富真实内容状态默认采用两列自适应瀑布流（条件与回退见 §6.1、§6.2）
+- iPhone 首屏目标可扫描 4~6 张卡片；iPad 根据宽度显示 8~12 张，但不得为命中数量目标裁切正文或伪造卡片
+- 大图、短文本、语音和视频卡片按真实内容比例交错，形成可预测的扫描韵律
+- Home 与 Search 共享 Card 语法、gutter、metadata hierarchy 和 Focus 跳转，不各自创造第二套视觉系统
 
 ### 17.2 卡片交互
 - 长按：contextMenu（查看详情/标记问题/分享/移出 Echo）

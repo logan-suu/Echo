@@ -21,8 +21,9 @@
 | 可访问性 | 自动 audit、稳定 ID、关键标签 | audit、语义证据 + 人工记录 |
 | 视觉 | 双设备 Live Sim Review（变更 surface） | 结构化检查，不保存媒体 |
 | 安全 | artifact secret/PII 扫描 | 依赖、权限、telemetry 复核 |
-| Masonry | 受影响 surface 的列数验证 + 回退检查 | 全部 Discovery surface 的 masonry 行为（启用/回退/列数/Dynamic Type 响应） |
+| Masonry | 受影响 surface 的 rich-data 默认双列 + 低数据/AX 回退检查 | 全部 Discovery surface 的阈值、启用/回退、列数、稳定顺序与 Dynamic Type 响应 |
 | Surface Family | 受影响 surface 的 family 规则验证（禁止 Focus/Task 使用 masonry） | 全部 surface 的 family 规则全量验证 |
+| Visual Profile | 受影响 surface 的共享 token/component 与 App Shell 一致性 | 全 App 逐 Surface `echo-memory-canvas` 一致性审计 |
 
 ---
 
@@ -47,8 +48,10 @@
 ### 2.3 View 与组件测试
 - 每个关键 state 有具名 Preview
 - 验证 Dynamic Type、主题、长文本、空内容和可访问性语义
-- Discovery 验证 masonry 启用条件、稳定排序与单列/List 回退
+- Discovery 验证 rich-data 状态默认 masonry、稳定语义排序、真实 aspect ratio 和低数据/AX 单列回退
 - Focus 与 Task 验证不存在 masonry
+- 所有 Surface 验证 `designProfileId=echo-memory-canvas`，并检查共享 typography、accent、spacing、radii、container hierarchy、status/action components 与 motion
+- 一致性测试不得把像素截图作为真相；使用 token/component 身份、accessibility tree、布局模式和双设备 Live Review 共同验收
 - Preview 是开发反馈，**不是**最终视觉审批渠道
 
 ### 2.4 Journey 测试
@@ -62,6 +65,9 @@
 - 自动化使用 accessibility tree、元素存在性、点击区域、文本截断审计
 - 自动 accessibility audit 不能替代 VoiceOver/Voice Control/Switch Control 专项检查
 - 最终视觉判断只通过 **Live Simulator Review（双设备）**（bootstrap 规范 §11.4）：iPhone 17 Pro (iOS 26.5) 主审查 + iPhone 16 Pro (iOS 18.x) 最低版本审查
+- Home 必须分别验收 0、1~19、20+ 三档真实数据状态；20+ 在默认 Dynamic Type 与足够宽度下应呈现双列平衡画布
+- Search 必须分别验收 `<6` 与 `>=6` 个可展示结果；后者仅在短摘要/媒体结果适合扫描时进入 masonry
+- VoiceOver reading order 必须与稳定语义数据顺序一致，不以视觉列位置作为断言
 
 ### 2.6 权限流程测试（Permission Flow Testing）
 - 系统权限对话框拒绝路径覆盖（相册、麦克风、语音、通知等）

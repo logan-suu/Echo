@@ -3,14 +3,16 @@
 对应规格: docs/decisions/ADR-014-release-compliance-boundary.md §决策-4/5 (发布制品与门禁阈值),
           docs/05-planning/phase3f-execution-plan.md §11.2 (3F.11 gate matrix)
 任务: 3F.11 - Production E2E 与 Phase 4 准入门禁
-状态: pre-merge review (仅预合并证据；merge SHA 与 Phase 4 解锁由人类 finalizer 记录)
+状态: Phase 3F functional gate finalized；Phase 4 release qualification open
 生成时间: 2026-08-12
 
-> 本 checklist 由 Release Quality Lead 在 3F.11 预合并阶段逐项填写，Release
-> Manager 与 Privacy Engineering Lead 审批。签名/归档相关证据仅在受控 release
-> 凭据环境产生（ADR-014 §决策-4）。
+> 本 checklist 保留 3F.11 预合并证据。PR #63 已于 2026-08-26 合并，
+> `3F.finalize` 于 2026-08-31 完成。未填写的签名/archive、最终 95% coverage、
+> Golden、性能与 RC 证据没有被追认为通过，分别由 Phase 4 的 4.1/4.3/4.6/4.9/4.10 负责。
 
 ## 1. 签名与归档 Approver 记录
+
+> 本节是 Phase 4 `4.9` 的阻断清单，不是 3F.finalize 的完成条件。
 
 | Field | Value | Status |
 | --- | --- | --- |
@@ -66,5 +68,6 @@ target；任何 target 被跳过即门禁失败（ADR-014 §决策-3）。
 
 **P0 = ____  P1 = ____**（3F.11 预合并必须 0/0）
 
-> ⚠️ 预合并阶段不得填写 merge SHA、不得声明 Phase 4 已解锁。人类合并 3F.11
-> 后，由 `3F.finalize` finalizer 记录 merge 证据并仅解锁 4.1~4.9。
+> ✅ `3F.finalize` 记录：PR #63，merge commit
+> `18784ea426d411ab539c5bd9c0eecd4548ae7e7a`，merged by `logan-suu` at
+> `2026-08-26T03:25:13Z`；Phase 4 已解锁 4.1~4.9，4.10~4.14 保持 backlog。

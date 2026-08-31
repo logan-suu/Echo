@@ -1,8 +1,8 @@
 {
   "$schema": "https://echo-ui-automation/schemas/policy/v1",
   "id": "acceptance-policy",
-  "version": "1.1.0",
-  "description": "Echo Phase 3 UI acceptance criteria and verification thresholds",
+  "version": "1.3.0",
+  "description": "Echo UI acceptance criteria, including the approved app-wide Balanced Canvas direction",
   "phase3f": {
     "note": "Phase 3F acceptance runs per task with the task's FOCUSED_SUITE plus cumulative EchoTests, Release simulator/device builds and static/privacy/model/compliance gates (execution plan §6.1). No existing threshold is lowered."
   },
@@ -18,7 +18,7 @@
       "build": { "mode": "affected", "threshold": "clean_build" },
       "state": { "mode": "affected", "threshold": "canonical_loaded_plus_related" },
       "journey": { "mode": "affected", "threshold": "key_paths_smoke" },
-      "device": { "mode": "fixed", "threshold": "one_mainstream_simulator" },
+      "device": { "mode": "fixed", "threshold": "iphone_17_pro_ios_26_5_plus_iphone_16_pro_ios_18_x" },
       "theme": { "mode": "affected", "threshold": "changed_themes_only" },
       "dynamicType": { "mode": "fixed", "threshold": "default_plus_one_accessibility" },
       "locale": { "mode": "fixed", "threshold": "default_locale" },
@@ -81,7 +81,9 @@
     "unit_tests": { "required": true, "coverage_threshold_pct": 95 },
     "xcuitest": { "required": true },
     "accessibility_audit": { "required": true },
-    "surface_family_rules": { "required": true, "description": "Discovery masonry conditions, Focus/Task no-masonry check" },
+    "surface_family_rules": { "required": true, "description": "Discovery rich-data defaults to adaptive masonry with low-data/accessibility fallback; Focus/Task remain no-masonry" },
+    "balanced_canvas": { "required": true, "description": "Home validates 0/1-19/20-plus states; Search validates below/at-least-6 displayable results; semantic order is stable" },
+    "app_wide_visual_profile": { "required": true, "description": "Every AppShell/Home/Search/Detail/Settings/Onboarding/Awakening/BackgroundTask/Creation/Degradation/ResumeProgress/Translation surface uses echo-memory-canvas shared tokens/components while preserving its family layout" },
     "visual_media_prohibition": { "required": true, "description": "No screenshot/screen-recording API calls permitted" }
   },
 
