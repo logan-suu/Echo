@@ -7,16 +7,19 @@
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.2 - SearchView + SearchViewModel + Feedback + Low-confidence banner + Scan results
 //       3F.7 - UI 到 Core 全域接线 (live pipeline 默认接线, PR#59)
+//       4.0a - live source resolution + deterministic Discovery presentation mapping
 // AC 覆盖: US-RET-001 AC-3 ✅ (结果展示, 字段映射) / 🔮 (pipeline 标记 Phase 3.9),
 //          US-RET-006 AC-1/AC-2/AC-4 ✅ (低置信度横幅 + 规格文案), US-FBK-001 AC-1 ✅ (👍/👎),
 //          US-FBK-003 AC-1 ✅ (Bad Case 标记), L1~L4 错误映射 ✅ (mapError, PR #37 review fix)
 //          PR#59 修复: 🟡-2 live pipeline 单实例缓存 (US-RET-005 follow-up 会话状态复用),
 //                      🟡-3 默认 live 路径 FeedbackPipeline 接线 (US-FBK-001/003 落库),
 //                      🟡-4 无路由 → 显式 route-unavailable (US-RET-008), 不再静默空结果
+//          4.0a: 保留 memoryId/相关度/跨语言/低置信度语义，fail-closed 过滤不可解析来源；
+//                PR #68 review fix: source resolution 后再次检查取消，禁止发布过期 completed 状态
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
-// 生成时间: 2026-08-01
+// 生成时间: 2026-08-01; 2026-09-01 (4.0a)
 // ==========================================
 
 import SwiftUI
@@ -52,6 +55,12 @@ struct SearchResultModel: Identifiable, Sendable, Equatable {
     let lowConfidence: Bool
     /// 低置信度原因
     let fallbackReason: String?
+    /// Discovery-only deterministic presentation classification.
+    let presentationKind: DiscoveryPresentationKind
+    /// Real media aspect ratio; nil for text-only cards.
+    let aspectRatio: CGFloat?
+    /// Real source location metadata when available.
+    let locationLabel: String?
 
     /// 从 Core ``SearchResultItem`` 映射。
     init(from item: SearchResultItem) {
@@ -66,6 +75,38 @@ struct SearchResultModel: Identifiable, Sendable, Equatable {
         self.alignmentScore = item.alignmentScore
         self.lowConfidence = item.lowConfidence
         self.fallbackReason = item.fallbackReason
+        self.presentationKind = DiscoveryPresentationRules.kind(
+            sourceType: item.sourceType,
+            sourceResolved: !item.assetId.isEmpty,
+            summary: item.originalText
+        )
+        self.aspectRatio = Self.isMedia(item.sourceType) ? 4.0 / 3.0 : nil
+        self.locationLabel = nil
+    }
+
+    /// Production mapping requires real source metadata and can fail closed.
+    init?(from item: SearchResultItem, metadata: DiscoverySourceMetadata?) {
+        guard let metadata else { return nil }
+        let mapped = DiscoveryPresentationMapper.mapSearchResults(
+            [item],
+            metadataBySourceLocator: [item.assetId: metadata]
+        )
+        guard let card = mapped.first else { return nil }
+
+        self.id = item.id
+        self.assetId = item.assetId
+        self.sourceType = item.sourceType
+        self.timestamp = item.timestamp
+        self.originalText = item.originalText
+        self.sourceLanguage = item.sourceLanguage
+        self.crossLanguageMatch = item.crossLanguageMatch
+        self.cosineSimilarity = item.cosineSimilarity
+        self.alignmentScore = item.alignmentScore
+        self.lowConfidence = item.lowConfidence
+        self.fallbackReason = item.fallbackReason
+        self.presentationKind = card.presentationKind
+        self.aspectRatio = card.aspectRatio
+        self.locationLabel = card.locationLabel
     }
 
     // MARK: - Presentation Helpers
@@ -107,6 +148,13 @@ struct SearchResultModel: Identifiable, Sendable, Equatable {
         let text = originalText ?? "a \(type.lowercased()) memory"
         return "\(type), \(text), \(dateDescription)"
     }
+
+    private static func isMedia(_ sourceType: String) -> Bool {
+        switch sourceType.lowercased() {
+        case "photo", "video", "video_frame": true
+        default: false
+        }
+    }
 }
 
 // MARK: - SearchViewModel
@@ -114,7 +162,7 @@ struct SearchResultModel: Identifiable, Sendable, Equatable {
 /// 检索视图 ViewModel — 搜索状态管理 + 反馈转发。
 ///
 /// ## Surface Family: Discovery
-/// - 布局: 系统 List（搜索结果是混合文本/图片内容，需阅读顺序 → §6.2 单列回退）
+/// - 布局: 由确定性 Discovery eligibility 在 adaptive masonry 与单列之间切换
 /// - 样式: echo-memory-canvas + apple-native 基础
 ///
 /// ## 职责 (docs/ui/architecture.md §7.1)
@@ -191,6 +239,8 @@ final class SearchViewModel {
     private let feedbackPipeline: FeedbackPipeline?
     /// 生产 composition — pipeline 未注入时解析 live 依赖（3F.7）
     private let composition: AppComposition?
+    /// Resolves source existence and real media dimensions for production results.
+    private let sourceResolver: any DiscoverySourceResolving
     /// 首次 live 解析后缓存的 SearchPipeline — 复用单实例，保证 follow-up 会话状态（US-RET-005）跨轮次保留
     private(set) var resolvedPipeline: SearchPipeline?
     /// 首次 live 解析后缓存的 FeedbackPipeline — 反馈转发（US-FBK-001/003）默认 live
@@ -213,11 +263,13 @@ final class SearchViewModel {
     init(
         searchPipeline: SearchPipeline? = nil,
         feedbackPipeline: FeedbackPipeline? = nil,
-        composition: AppComposition? = nil
+        composition: AppComposition? = nil,
+        sourceResolver: any DiscoverySourceResolving = LiveDiscoverySourceResolver()
     ) {
         self.searchPipeline = searchPipeline
         self.feedbackPipeline = feedbackPipeline
         self.composition = composition
+        self.sourceResolver = sourceResolver
     }
 
     deinit {}
@@ -267,6 +319,10 @@ final class SearchViewModel {
     /// cosineSimilarity 承载最强通道的原生语义相似度；RRF 分数仅决定排序
     /// （rank-based），若用于展示会产生与查询无关的恒定百分比序列。
     static func mapFused(_ result: FusedSearchResult) -> SearchResultModel {
+        SearchResultModel(from: mapFusedItem(result))
+    }
+
+    private static func mapFusedItem(_ result: FusedSearchResult) -> SearchResultItem {
         // Calibrate each channel's nativeScore BEFORE comparing — SigLIP2's
         // narrow band (0.03-0.15) and E5's 0-1 span are not directly
         // comparable raw, and an uncalibrated max would always let textDense
@@ -289,7 +345,7 @@ final class SearchViewModel {
             sourceLanguage: nil,
             cosineSimilarity: matchStrength
         )
-        return SearchResultModel(from: item)
+        return item
     }
 
     /// 设置 state = .loading，调用 SearchPipeline.search()，完成后设置 .completed 或 .error。
@@ -343,7 +399,14 @@ final class SearchViewModel {
                             self.viewState = .cancelled
                             return
                         }
-                        self.results = fused.map(Self.mapFused)
+                        let displayable = await self.mapDisplayable(
+                            fused.map(Self.mapFusedItem)
+                        )
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
+                        self.results = displayable
                     } else {
                         let items = try await pipeline.search(
                             query: self.query,
@@ -354,7 +417,12 @@ final class SearchViewModel {
                             self.viewState = .cancelled
                             return
                         }
-                        self.results = items.map(SearchResultModel.init)
+                        let displayable = await self.mapDisplayable(items)
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
+                        self.results = displayable
                     }
                 } else if self.isFixtureBacked {
                     // Deterministic results are allowed only after explicit fixture injection.
@@ -426,6 +494,27 @@ final class SearchViewModel {
         hasSearched = false
         isFixtureBacked = false
         viewState = .idle
+    }
+
+    func discoveryLayoutMode(environment: DiscoveryLayoutEnvironment) -> DiscoveryLayoutMode {
+        DiscoveryLayoutPolicy.searchMode(
+            presentationKinds: results.map(\.presentationKind),
+            environment: environment
+        )
+    }
+
+    private func mapDisplayable(_ items: [SearchResultItem]) async -> [SearchResultModel] {
+        let references = items.map {
+            DiscoverySourceReference(
+                sourceLocator: $0.assetId,
+                sourceType: $0.sourceType,
+                summary: $0.originalText
+            )
+        }
+        let metadata = await sourceResolver.resolve(references)
+        return items.compactMap { item in
+            SearchResultModel(from: item, metadata: metadata[item.assetId])
+        }
     }
 
     // MARK: - Feedback Intents (US-FBK-001 / US-FBK-003)

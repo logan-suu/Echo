@@ -441,16 +441,16 @@ struct PermissionWiringTests {
     }
 
     // ══════════════════════════════════════════════════════════════
-    // 6. UserPolicy 默认授权 thirdParty（US-SRC-003 分享不被隐私门禁拒绝）
+    // 6. UserPolicy defaults contain real sources only
     // ══════════════════════════════════════════════════════════════
 
-    @Test("UserPolicy default authorizes third-party share and search (US-SRC-003 / US-RET)")
-    func policyAuthorizesThirdPartyAndSearch() {
+    @Test("UserPolicy default authorizes third-party share without a search pseudo-source")
+    func policyAuthorizesThirdPartyRealSourceOnly() {
         let policy = UserPolicy()
         #expect(policy.authorizedSourceTypes.contains("thirdParty"),
                 "Files/Safari 等第三方分享产生的 sourceType 必须默认授权，否则 ingest 被隐私门禁拒绝")
-        #expect(policy.authorizedSourceTypes.contains("search"),
-                "搜索校验使用 sourceTypes=[\"search\"]，必须默认授权否则搜索被隐私门禁拒绝")
+        #expect(!policy.authorizedSourceTypes.contains("search"),
+                "Search is a PrivacyOperation, not a user-authorizable source type")
     }
 
     // ══════════════════════════════════════════════════════════════

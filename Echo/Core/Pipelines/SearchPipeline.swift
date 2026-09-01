@@ -10,6 +10,7 @@
 //        2.8 - 集成反馈到 SearchPipeline
 //        2.9 - 跨语言低置信度降级（US-RET-006）
 //        3F.6 - 跟进查询审计（US-RET-005 AC-4）+ 生产多通道检索（R-3.7/DEF-34-001）
+//        4.0a - Separate search operation checkpoint from source authorization
 // AC 覆盖: US-RET-001 AC-1 ✅ (余弦相似度), AC-3 ✅ (crossLanguageMatch标记), AC-4 ✅ (审计),
 //          AC-2 🔮 (Cross-Encoder, Phase 3), AC-5 🔮 (Recall@10, Golden Dataset Phase 3)
 //          US-RET-002 ✅ (中文→英文, 同 RET-001)
@@ -24,6 +25,7 @@
 //          AC-2 🔮 (UI提示文案, Phase 3 SearchView), AC-4 🔮 (不准确反馈按钮, Phase 3 SearchView)
 //          US-RET-005 AC-4 ✅ (followUpQuery 审计携带父 traceID, 2026-08-11 3F.6)
 //          DEF-34-001 ✅ (RRF 融合 + ID-keyed 元数据组装, 禁止 top-1 re-search, 2026-08-11 3F.6)
+//          US-PRV-001 AC-7 ✅ (legacy/typed 路径均按真实结果来源过滤, PR #68 review fix)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           AGENTS.md §5.3 (反馈存储契约),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
@@ -366,7 +368,7 @@ public actor SearchPipeline {
         let checkpoint = await privacyActor.validate(
             operation: .search,
             traceID: traceID,
-            sourceTypes: ["search"]
+            sourceTypes: []
         )
         guard checkpoint.isAllowed else {
             throw SearchError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
@@ -1016,7 +1018,7 @@ public actor SearchPipeline {
         let checkpoint = await privacyActor.validate(
             operation: .search,
             traceID: traceID,
-            sourceTypes: ["search"]
+            sourceTypes: []
         )
         guard checkpoint.isAllowed else {
             throw SearchError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
@@ -1042,7 +1044,7 @@ public actor SearchPipeline {
             resolvedAdapters = try Self.makeDefaultAdapters(route: resolvedRoute, registry: registry, repo: repo)
         }
 
-        return await Self.searchMultiChannelTyped(
+        let results = await Self.searchMultiChannelTyped(
             factory: factory,
             route: resolvedRoute,
             adapters: resolvedAdapters,
@@ -1053,6 +1055,10 @@ public actor SearchPipeline {
             traceID: traceID,
             weights: weights
         )
+        let policy = await privacyActor.getPolicy()
+        return results.filter {
+            policy.isAuthorized(sourceType: Self.normalizeSourceType($0.memory.sourceType))
+        }
     }
 
     /// ActiveRouteSet → SearchRouteSnapshot 桥接：逐通道经 loadGeneration 解析原生维度。

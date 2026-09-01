@@ -7,7 +7,9 @@
   "inputs": {
     "query": "User search text",
     "results": "SearchResultItem[] mapped to UI models",
-    "lowConfidence": "Bool — cross-language low confidence flag"
+    "lowConfidence": "Bool — cross-language low confidence flag",
+    "displayableResults": "Policy-allowed results with source-resolvable content, stable memoryId/Focus route and real aspect ratio or summary",
+    "presentationKind": "Per-result deterministic UI-only mapping: scanEligible for source-resolvable photo/video or an independently meaningful trimmed summary of 1...160 Swift Character grapheme clusters; continuousReading for longer or continuous-reading note, voice transcript or body text"
   },
   "outputs": {
     "visibleContent": "Search result cards with title, source, time, similarity",
@@ -19,11 +21,13 @@
   "masonryEnabled": true,
   "fallbackConditions": [
     "Accessibility Dynamic Type (.accessibility1+)",
-    "Available width cannot fit two 152pt cards plus gutter",
+    "Available content width is below the exact 340pt masonry minimum",
     "Fewer than 6 displayable results",
-    "Long text cards are the majority or exceed summary policy",
+    "scanEligible does not strictly outnumber continuousReading (ties use single column)",
     "Critical media cannot be safely cropped"
   ],
+  "orderingRule": "Masonry preserves SearchPipeline relevance order, partial/low-confidence semantics and feedback memoryId binding",
+  "gestureRule": "Generic search result cards have no horizontal swipe; feedback and problem reporting use explicit controls, menus and accessibility actions",
   "states": [
     "idle",
     "loading",

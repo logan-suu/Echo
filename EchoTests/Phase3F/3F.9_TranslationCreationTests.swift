@@ -242,14 +242,14 @@ struct TranslationCreationTests {
             func generate(prompt: String, preferredLanguage: String) async throws -> String { output }
         }
 
-        /// 测试初始化 — 授权 search（PrivacyActor.shared deny-by-default，管线 checkpoint 需要）。
+        /// Test setup authorizes the real source types consumed by creation.
         /// 与 SearchPipelineTests init() 同模式（§9.4 串行执行共享单例）。
         init() async throws {
             try await DatabaseManager.shared.open()
             try await DatabaseManager.shared.execute(sql: "DELETE FROM AuditLog")
             try await PrivacyActor.shared.updatePolicy(UserPolicy(
                 preferredLanguage: "en-US",
-                authorizedSourceTypes: ["search", "photo", "note", "voice", "text"],
+                authorizedSourceTypes: ["photo", "note", "voice", "text"],
                 policyVersion: 1
             ))
         }
@@ -301,6 +301,24 @@ struct TranslationCreationTests {
             let output = try await pipeline.generate(template: .letter, sources: [], traceID: "test-trace")
             #expect(output.emptyReason != nil)
             #expect(output.paragraphs.isEmpty)
+        }
+
+        @Test("US-PRV-001 AC-7: generation checks real sources instead of a search pseudo-source")
+        func generationChecksRealSourceAuthorization() async throws {
+            try await PrivacyActor.shared.updatePolicy(UserPolicy(
+                preferredLanguage: "en-US",
+                authorizedSourceTypes: ["photo"],
+                policyVersion: 1
+            ))
+            let pipeline = try await makePipeline(output: "anything")
+
+            await #expect(throws: CreativeError.self) {
+                _ = try await pipeline.generate(
+                    template: .letter,
+                    sources: sampleSources(),
+                    traceID: "test-real-source-policy"
+                )
+            }
         }
 
         @Test("US-SYN-008: runtime unavailable (no LLM provider) fails closed with L2/L3 error")

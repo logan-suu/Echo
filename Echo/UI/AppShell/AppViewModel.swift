@@ -59,6 +59,7 @@ final class AppViewModel {
 
     /// 当前选中的标签页
     var selectedTab: AppTab = .home
+    private(set) var pendingSearchQuery: String?
 
     // MARK: - UI State
 
@@ -103,6 +104,16 @@ final class AppViewModel {
     /// 切换标签页
     func selectTab(_ tab: AppTab) {
         selectedTab = tab
+    }
+
+    func openSearch(query: String) {
+        pendingSearchQuery = query
+        selectedTab = .search
+    }
+
+    func consumePendingSearchQuery() -> String? {
+        defer { pendingSearchQuery = nil }
+        return pendingSearchQuery
     }
 }
 

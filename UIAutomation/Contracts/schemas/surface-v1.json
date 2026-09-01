@@ -16,6 +16,10 @@
     "layoutMode": { "type": "string", "enum": ["adaptive_masonry", "single_column", "system_list", "form", "sheet", "alert"] },
     "masonryEnabled": { "type": "boolean", "description": "Whether masonry is conditionally enabled (Discovery only)" },
     "fallbackConditions": { "type": "array", "items": { "type": "string" }, "description": "Conditions that trigger single-column/List fallback" },
+    "displayableDefinition": { "type": "string", "description": "Deterministic definition of which live items count toward layout thresholds" },
+    "emptyStateRule": { "type": "string", "description": "Truthfulness rule for empty/loading/progress presentation" },
+    "orderingRule": { "type": "string", "description": "Semantic ordering and identity constraints that layout must preserve" },
+    "gestureRule": { "type": "string", "description": "Surface gesture ownership and required accessible equivalents" },
     "states": { "type": "array", "items": { "type": "string" }, "description": "Array of stateId values this surface supports" },
     "version": { "type": "string", "const": "1.0.0" }
   }

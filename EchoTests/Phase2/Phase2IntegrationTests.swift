@@ -527,13 +527,11 @@ struct Phase2IntegrationTests {
             } catch let e as IngestError { if case .privacyDenied = e {} else { Issue.record("Unexpected: \(e)") } }
         }
 
-        @Test("SearchPipeline denies when search unauthorized")
-        func test_searchDenied() async throws {
+        @Test("SearchPipeline does not require a search pseudo-source")
+        func test_searchOperationUsesRealSourceAuthorization() async throws {
             let sp = SearchPipeline(embedder: stubEmbedder, privacyActor: PrivacyActor.shared, vectorStore: vectorStore)
-            do {
-                _ = try await sp.search(query: "t", k: 5)
-                Issue.record("Expected SearchError.privacyDenied")
-            } catch let e as SearchError { if case .privacyDenied = e {} else { Issue.record("Unexpected: \(e)") } }
+            let results = try await sp.search(query: "t", k: 5)
+            #expect(results.isEmpty)
         }
     }
 

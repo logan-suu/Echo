@@ -707,11 +707,13 @@ private struct WP4NoopEmbedder: EmbedderProtocol {
 
 extension PhotoTextSearchIntegrationTests {
 
-    @Test("searchTyped consumes injected factory and resolves active route (WP4 尾刀)")
+    @Test("searchTyped consumes the route and filters revoked real sources (WP4 / US-PRV-001 AC-7)")
     func testSearchTypedConsumesFactoryAndResolvesActiveRoute() async throws {
         let db = DatabaseManager.shared
         try await db.open()
         let privacy = PrivacyActor(db: db)
+        try await privacy.loadPolicy()
+        let originalPolicy = await privacy.getPolicy()
         let registry = GenerationRegistryActor(db: db)
         let repo = CanonicalMemoryRepositoryActor(db: db, generationRegistry: registry)
 
@@ -745,7 +747,7 @@ extension PhotoTextSearchIntegrationTests {
             sql: "INSERT OR REPLACE INTO UserPolicyStore (id, preferredLanguage, authorizedSourceTypes, policyVersion, updatedAt) VALUES (1, ?, ?, ?, ?)",
             bindings: [
                 .text("zh-Hans"),
-                .text(#"["search","photo","note","voice","text","video"]"#),
+                .text(#"["photo"]"#),
                 .int(1),
                 .double(Date().timeIntervalSince1970),
             ]
@@ -778,6 +780,26 @@ extension PhotoTextSearchIntegrationTests {
         #expect(results.count == 1, "single dense hit must produce one fused result")
         #expect(results.first?.memory.memoryId == memID)
         #expect(results.first?.provenance.map(\.channel) == [.textDense])
+
+        try await privacy.updatePolicy(UserPolicy(
+            authorizedSourceTypes: ["note"],
+            policyVersion: 2
+        ))
+        let deniedResults = try await pipeline.searchTyped(
+            query: "red flower",
+            locale: "en-US",
+            k: 10,
+            traceID: "t-wp4-entry-revoked",
+            adapters: [
+                WP4CannedChannel(channel: .textDense, outcome: .success(
+                    channel: .textDense,
+                    hits: [RawChannelHit(channel: .textDense, vectorID: vecID, rank: 1, nativeScore: nil, generationID: genText)],
+                    elapsedMs: 1
+                )),
+            ]
+        )
+        #expect(deniedResults.isEmpty, "revoked photo memories must not leave the typed search path")
+        try await privacy.updatePolicy(originalPolicy)
     }
 
     @Test("searchTyped throws featureDisabled without injected factory (WP4 尾刀)")

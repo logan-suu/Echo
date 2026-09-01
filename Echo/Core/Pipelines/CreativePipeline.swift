@@ -5,9 +5,11 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-SYN-002 (溯源锚点), US-SYN-003 (grounded 生成),
 //            US-SYN-007 (术语表注入), US-SYN-008 (合成失败模板降级)
 // 任务: 3F.9 - Apple Translation 与 grounded creation
+//       4.0a - Search operation/source authorization separation
 // AC 覆盖: US-SYN-002 AC-1/3 ✅ (锚点渲染/NoSource), AC-5 ✅ (.synthesis 审计),
 //          US-SYN-003 AC-2 ✅ (严格引用检索结果, 每段附溯源锚点), AC-6 ✅ (.creativeGeneration 审计),
 //          US-SYN-007 AC-1 ✅ (Prompt 注入术语表子集), US-SYN-008 AC-1/5 ✅ (失败模板降级 + .synthesisFallback 审计),
+//          US-PRV-001 AC-7 ✅ (按真实 sourceType 授权，不使用 search 伪来源),
 //          R-004 ✅ (LanguageAligner 语言对齐)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约: 审计强制 / 错误分级 / 纯函数), R-006 (PrivacyCheckpoint 入口),
 //           §4.2 (仅持有不可变引用); actor 声明合法 (v5.12)
@@ -206,7 +208,7 @@ public actor CreativePipeline {
         let checkpoint = await privacyActor.validate(
             operation: .search,
             traceID: traceID,
-            sourceTypes: ["search"]
+            sourceTypes: Array(Set(sources.map { SearchPipeline.normalizeSourceType($0.sourceType) })).sorted()
         )
         guard checkpoint.isAllowed else {
             throw CreativeError.privacyDenied(sourceTypes: checkpoint.sourceTypes)

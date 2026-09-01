@@ -175,7 +175,7 @@ struct AppRootView: View {
         TabView(selection: $viewModel.selectedTab) {
             Tab(value: AppTab.home) {
                 NavigationStack {
-                    HomeView()
+                    HomeView(appViewModel: viewModel)
                 }
             } label: {
                 Label(
@@ -186,7 +186,7 @@ struct AppRootView: View {
 
             Tab(value: AppTab.search) {
                 NavigationStack {
-                    SearchView()
+                    SearchView(appViewModel: viewModel)
                 }
             } label: {
                 Label(
@@ -237,7 +237,6 @@ struct AppRootView: View {
         }
     }
     #endif
-
 }
 
 // MARK: - Preview

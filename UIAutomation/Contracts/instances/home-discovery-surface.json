@@ -5,11 +5,13 @@
   "surfaceFamily": "discovery",
   "responsibility": "Render the live-data Ask Echo, Today Echo, recent imports, real collections and active background-task status using the approved balanced-canvas direction",
   "inputs": {
-    "visibleMemoryCount": "Count of real memories visible under current policy",
+    "visibleMemoryCount": "Count of policy-allowed, non-excluded memories whose original source, stable memoryId, Focus route and display content can still be resolved",
     "todayEcho": "Optional real date/anniversary match from AwakeningCardRepositoryActor",
     "recentImports": "Stable ordered live memory card values",
     "collections": "Real metadata-derived topic or time collections; absent when unsupported",
-    "runtimeStatus": "Live progress, offline and degradation state"
+    "runtimeStatus": "Live progress, offline and degradation state",
+    "scanProgress": "Optional real active ProgressActor scan task; nil when no scan is active, completed or source authorization is missing",
+    "suggestions": "Localized executable SearchPipeline query/filter payloads gated by current production capabilities; never result fixtures"
   },
   "outputs": {
     "visibleContent": "Ask Echo followed by available Today Echo, recent imports, collections and active task status",
@@ -23,9 +25,12 @@
     "visibleMemoryCount is below 20",
     "Section has fewer than 6 real displayable cards",
     "Accessibility Dynamic Type (.accessibility1+)",
-    "Available width cannot fit two 152pt cards plus gutter",
+    "Available content width is below the exact 340pt masonry minimum",
     "Long text or critical media requires continuous reading or safe fit"
   ],
+  "displayableDefinition": "Policy allowed, non-excluded, source resolvable, stable memoryId and Focus route present, with real aspect ratio or real summary",
+  "emptyStateRule": "Show determinate scan progress only for a real active ProgressActor task; otherwise show authorization/import guidance without ProgressView or scanning copy",
+  "gestureRule": "Generic Discovery cards have no horizontal swipe; US-AWK-005 awakening cards are a dedicated variant with left-next/right-record-feeling plus equivalent visible and accessibility actions",
   "states": [
     "empty",
     "lowData",

@@ -1,21 +1,22 @@
 // ==========================================
 // 文件: HomeView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
-// 对应规格: docs/ui/echo-memory-canvas-style.md §3.1 (Discovery surfaces — 自适应卡片, 非 masonry),
+// i18n: User-facing strings resolve through Localizable.xcstrings (zh-Hans + en-US).
+// 对应规格: docs/ui/echo-memory-canvas-style.md §3.1 (Discovery adaptive masonry),
 //            §4 (共享 Token), §10.1.1 (无记忆时品牌欢迎页), §10.2.1 (骨架屏),
 //            §16.1 (离线模式指示器 US-RES-001 AC-3)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Discovery surface family)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 AC-4, US-AWK-005, US-RES-001 AC-3
-// 任务: 3.1 - HomeView + HomeViewModel + Awakening Cards + Offline Indicator
+// 任务: 3.1 - HomeView + HomeViewModel + Awakening Cards + Offline Indicator; 4.0a - Discovery 平衡画布
 //          (3.6 降级横幅 host; 3.7 断点续传恢复提示 host)
 // AC 覆盖: US-AWK-001 AC-4 ✅ (唤醒卡片 UI), US-AWK-005 AC-1 ✅ (卡片展示),
 //          US-RES-001 AC-3 ✅ (离线模式标识), AWK-002 AC-3 ✅ (纪念日卡片),
 //          AWK-003 AC-4 ✅ (情绪卡片), AWK-005 AC-2 🔮 (左滑/右滑, Phase 3.3+)
 //          3.7 host: ResumeProgressPromptView + resume-progress-* fixture 注入
 //          (2026-08-02 PR review W-1: ResumeProgressPromptView 改真实布局槽位, 移除零高 frame)
-// 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Discovery 自适应卡片, 非 masonry),
+//          4.0a: live recent memories, deterministic masonry gate, truthful zero-memory progress
+// 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.2 (Discovery adaptive masonry),
 //           §10.1 (Views 目录), echo-memory-canvas apple-native 基础
-// 生成时间: 2026-07-26
+// 生成时间: 2026-07-26; 2026-09-01 (4.0a)
 // ==========================================
 
 import SwiftUI
@@ -25,9 +26,9 @@ import SwiftUI
 /// Home 主视图 — 记忆发现与唤醒卡片主页。
 ///
 /// ## Surface Family: Discovery
-/// - 布局: 自适应内容卡片列表（非 masonry）
+/// - 布局: 真实数据达到确定性门禁时 adaptive masonry，否则稳定单列
 /// - 系统容器: NavigationStack (由 AppRootView 提供)
-/// - Masonry 启用条件: 不满足 (§6.1 — 唤醒卡片内容简短, 但当前为单列自适应布局)
+/// - Masonry 启用条件: 20+ 可展示记忆、区块 6+ 卡片、340pt、非 AX 字号且 VoiceOver 关闭
 ///
 /// ## 状态驱动
 /// - idle: 品牌欢迎页或初始状态
@@ -41,12 +42,19 @@ import SwiftUI
 ///
 /// ## Style
 /// - echo-memory-canvas token: .largeTitle, Color.primary, Color(.systemBackground), SF Symbols
-/// - 禁止 masonry 布局, 禁止 Pinterest 品牌元素
+/// - 禁止 Pinterest 品牌元素；Focus/Task surfaces 保持非 masonry
 /// - 使用系统 Dynamic Type, semantic colors, 系统容器
 struct HomeView: View {
     // MARK: - ViewModel
 
-    private var viewModel: HomeViewModel
+    @State private var viewModel: HomeViewModel
+    private let appViewModel: AppViewModel?
+    @State private var selectedMemoryID: UUID?
+    @State private var discoveryContentWidth: CGFloat = 0
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// 后台任务面板 ViewModel — 由工具栏按钮展示 (US-SYS-001 AC-1 顶部状态栏入口)
     /// 3F.11 fix: 注入真实 ProgressActor — 面板读取 SQLite TaskProgress 实时进度（US-SYS-001 AC-2）
@@ -75,10 +83,22 @@ struct HomeView: View {
     /// 首次出现标记 — 控制 fixture 注入仅执行一次
     @State private var hasHandledLaunchArguments = false
 
-    init(viewModel: HomeViewModel? = nil) {
-        self.viewModel = viewModel ?? HomeViewModel(
-            cardRepository: AwakeningCardRepositoryActor()
+    init(
+        viewModel: HomeViewModel? = nil,
+        appViewModel: AppViewModel? = nil
+    ) {
+        self.appViewModel = appViewModel
+        let resolvedViewModel = viewModel ?? HomeViewModel(
+            cardRepository: AwakeningCardRepositoryActor(),
+            discoveryAdapter: HomeDiscoveryAdapter(
+                memoryReader: LiveAppAdapters.makeCanonicalRepository(),
+                progressReader: ProgressActor.shared,
+                policyReader: PrivacyActor.shared,
+                sourceResolver: LiveDiscoverySourceResolver()
+            ),
+            searchCapability: LiveHomeSearchCapability()
         )
+        _viewModel = State(initialValue: resolvedViewModel)
     }
 
     /// 3F.11 fix: 面板关闭后重建时注入真实 ProgressActor（US-SYS-001 AC-2）
@@ -138,13 +158,16 @@ struct HomeView: View {
                 taskPanelViewModel = makeTaskPanelViewModel()
             }
         }
+        .navigationDestination(item: $selectedMemoryID) { memoryID in
+            MemoryDetailView(memoryId: memoryID)
+        }
         .onAppear {
             viewModel.onAppear()
             handleFirstAppear()
         }
         .onDisappear { viewModel.onDisappear() }
-        .animation(.easeInOut(duration: 0.25), value: viewModel.viewState)
-        .animation(.easeInOut(duration: 0.3), value: viewModel.isOffline)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: viewModel.viewState)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: viewModel.isOffline)
     }
 
     // MARK: - Launch Argument Fixture Injection
@@ -205,10 +228,10 @@ struct HomeView: View {
             loadingSkeleton
 
         case .completed:
-            if viewModel.awakeningCards.isEmpty {
+            if viewModel.awakeningCards.isEmpty && viewModel.discoveryCards.isEmpty {
                 emptyWelcomePage
             } else {
-                awakeningCardList
+                discoveryFeed
             }
 
         case .error(let level):
@@ -309,14 +332,7 @@ struct HomeView: View {
                     .lineSpacing(4)
                     .padding(.horizontal, 32)
 
-                // Indicator
-                ProgressView()
-                    .tint(Color.accentColor)
-                    .padding(.top, 8)
-
-                Text("Echo is getting ready…")
-                    .font(.subheadline)
-                    .foregroundStyle(.tertiary)
+                zeroMemoryGuidance
 
                 Spacer().frame(height: 60)
             }
@@ -326,47 +342,133 @@ struct HomeView: View {
         .accessibilityLabel("Echo welcome page. Your memories will appear here.")
     }
 
+    @ViewBuilder
+    private var zeroMemoryGuidance: some View {
+        switch viewModel.zeroMemoryState {
+        case .activeScan(let processed, let total):
+            VStack(spacing: EchoSpacingToken.compact.points) {
+                ProgressView(value: Double(processed), total: Double(max(total, 1)))
+                    .tint(EchoColorToken.warmAccent.color)
+                Text(String(
+                    format: EchoStrings.tr("Scanning your memories (%lld of %lld)"),
+                    processed,
+                    total
+                ))
+                    .font(EchoTypographyToken.metadata.font)
+                    .foregroundStyle(EchoColorToken.secondaryText.color)
+            }
+            .padding(.horizontal, EchoSpacingToken.section.points)
+
+        case .importGuidance:
+            EchoStatusPresentation(
+                role: .informational,
+                systemImage: "square.and.arrow.down",
+                title: EchoStrings.tr("No memories yet"),
+                message: EchoStrings.tr("Share a note or voice memo to Echo to begin.")
+            )
+            .padding(.horizontal, EchoSpacingToken.section.points)
+
+        case .authorizationGuidance:
+            EchoStatusPresentation(
+                role: .informational,
+                systemImage: "lock.open",
+                title: EchoStrings.tr("Connect a memory source"),
+                message: EchoStrings.tr("Review data sources in Settings to start importing memories.")
+            )
+            .padding(.horizontal, EchoSpacingToken.section.points)
+        }
+    }
+
     // MARK: - Awakening Card List
 
     /// 唤醒卡片列表 — Discovery surface 自适应卡片布局
-    private var awakeningCardList: some View {
+    private var discoveryFeed: some View {
         ScrollView {
-            VStack(spacing: 12) {
-                // Section header
-                sectionHeader
-
-                // Awakening cards
-                ForEach(viewModel.awakeningCards) { card in
-                    AwakeningCardView(card: card)
+            VStack(alignment: .leading, spacing: EchoSpacingToken.section.points) {
+                if !viewModel.searchSuggestions.isEmpty {
+                    EchoSectionHeader(
+                        title: "Ask Echo",
+                        subtitle: "Explore your memories with an offline search"
+                    )
+                    askEchoSuggestions
                 }
 
-                // Bottom spacing for tab bar
-                Spacer().frame(height: 24)
+                if !viewModel.awakeningCards.isEmpty {
+                    EchoSectionHeader(title: "Awakenings")
+                    ForEach(viewModel.awakeningCards) { card in
+                        AwakeningCardView(card: card) {
+                            selectedMemoryID = card.memoryIds.first
+                        }
+                    }
+                }
+
+                if !viewModel.discoveryCards.isEmpty {
+                    EchoSectionHeader(
+                        title: "Recent memories",
+                        subtitle: "From your connected sources"
+                    )
+                    discoveryCards
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
+            .padding(.bottom, EchoSpacingToken.section.points)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                discoveryContentWidth = max(0, width - 32)
+            }
         }
         .refreshable {
             viewModel.refresh()
         }
     }
 
-    /// 列表章节头部
-    private var sectionHeader: some View {
-        HStack {
-            Text("Awakenings")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.primary)
-
-            Spacer()
-
-            Text("\(viewModel.awakeningCards.count) cards")
-                .font(.subheadline)
-                .foregroundStyle(Color.secondary)
+    private var askEchoSuggestions: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: EchoSpacingToken.normal.points) {
+                ForEach(viewModel.searchSuggestions) { suggestion in
+                    Button {
+                        appViewModel?.openSearch(query: EchoStrings.tr(suggestion.queryKey))
+                    } label: {
+                        Label(
+                            EchoStrings.tr(suggestion.titleKey),
+                            systemImage: "sparkle.magnifyingglass"
+                        )
+                    }
+                    .buttonStyle(EchoActionButtonStyle(role: .secondary))
+                    .accessibilityHint("Open Search and run this query")
+                }
+            }
         }
-        .padding(.bottom, 4)
-        .accessibilityAddTraits(.isHeader)
+        .scrollIndicators(.hidden)
+    }
+
+    @ViewBuilder
+    private var discoveryCards: some View {
+        let environment = DiscoveryLayoutEnvironment(
+            contentWidth: discoveryContentWidth,
+            usesAccessibilityDynamicType: dynamicTypeSize.isAccessibilitySize,
+            voiceOverEnabled: voiceOverEnabled
+        )
+        if viewModel.discoveryLayoutMode(environment: environment) == .adaptiveMasonry {
+            DiscoveryMasonryLayout {
+                discoveryCardViews
+            }
+        } else {
+            LazyVStack(spacing: EchoSpacingToken.normal.points) {
+                discoveryCardViews
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var discoveryCardViews: some View {
+        ForEach(viewModel.discoveryCards) { card in
+            DiscoveryMemoryCardView(card: card) {
+                selectedMemoryID = card.id
+            }
+        }
     }
 
     // MARK: - Error State
@@ -479,33 +581,31 @@ struct HomeView: View {
 /// - SF Symbol: 由 triggerType 决定
 struct AwakeningCardView: View {
     let card: AwakeningCardModel
+    let action: () -> Void
+
+    init(card: AwakeningCardModel, action: @escaping () -> Void = {}) {
+        self.card = card
+        self.action = action
+    }
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Trigger type icon
-            iconView
-
-            // Card text content
-            textContent
-
-            Spacer(minLength: 8)
-
-            // Relative time
-            Text(card.localizedRelativeTime)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
+        Button(action: action) {
+            EchoContainer(level: .emphasized) {
+                HStack(spacing: 14) {
+                    iconView
+                    textContent
+                    Spacer(minLength: 8)
+                    Text(card.localizedRelativeTime)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+            }
         }
-        .padding(14)
-        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 14))
-        .shadow(color: Color.black.opacity(0.04), radius: 3, y: 1)
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(cardAccessibilityLabel)
         .accessibilityHint("Tap to view memories")
-        .contentShape(Rectangle())
-        .onTapGesture {
-            // 🔮 Phase 3.3+: Navigate to MemoryDetailView with card.memoryIds
-        }
     }
 
     // MARK: - Icon

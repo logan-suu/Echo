@@ -5,9 +5,11 @@
 // 任务: 1.8 - 搭建单元测试框架，编写第一个 Actor 测试用例 (Stub)
 //       2.1 - PrivacyActor + UserPolicy 实现 (Full Implementation)
 //       3F.1 - deny-by-default 同意闸门 (ADR-007 §决策-2)
+//       4.0a - Search operation/source authorization separation
 // AC 覆盖: US-PRV-001 AC-1 (策略即时生效), AC-2 (被拒数据不进 Retriever),
 //          AC-3 (Denial Response), AC-4 (缓存失效), AC-5 (重新授权不清除排除表),
 //          AC-6 (审计记录 .denied/.reauthorized),
+//          AC-7 (search is an operation, not an authorized source type),
 //          PR review 修复: 同意闸门仅 .denied 短路，.allowed 落入 per-source 授权检查 (US-PRV-001)
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), §7.1 (PrivacyCheckpoint 强制注入),
 //           §7.3 (审计日志), §5.4 (30天保留), R-006 (审计强制覆盖),
@@ -96,7 +98,7 @@ public struct UserPolicy: Sendable, Codable {
 
     public nonisolated init(
         preferredLanguage: String = "zh-Hans",
-        authorizedSourceTypes: Set<String> = ["photo", "note", "voice", "video", "thirdParty", "search"],
+        authorizedSourceTypes: Set<String> = ["photo", "note", "voice", "video", "thirdParty"],
         policyVersion: Int = 1
     ) {
         self.preferredLanguage = preferredLanguage
