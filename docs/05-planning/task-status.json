@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-01T04:54:07Z",
+  "last_updated": "2026-09-01T05:00:01Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2043,7 +2043,7 @@
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
       "entry_gate": "3F.11",
-      "last_updated": "2026-09-01T04:54:07Z",
+      "last_updated": "2026-09-01T05:00:01Z",
       "tasks": [
         {
           "id": "4.0",
@@ -2089,8 +2089,15 @@
             "AppShell 在 iPhone 17 Pro iOS 26.5 与 iPhone 16 Pro iOS 18.x 保持系统导航、Tab、toolbar 与 modal 行为",
             "基础组件具有 Dynamic Type、VoiceOver、increased contrast、Reduce Motion 与 zh-Hans/en-US 自动化测试"
           ],
-          "last_updated": "2026-09-01T04:54:07Z",
-          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c. Spec review clarified that AppShell is a host rather than a Task surface and that contract consistency means schema conformance plus semantic agreement, not equal version numbers. Delivery adds the app-wide DesignProfile environment, semantic typography/color/spacing/radius/container/status/action/motion primitives, shared accessible components, and the iOS 18 native Tab API. AC-1 review also repaired the DesignProfile schema so its required $schema field is valid under additionalProperties=false. Final evidence: 21 focused/AppShell regression tests passed serially on iPhone 17 Pro; SwiftLint reported 0 violations; DesignProfile and all Surface contract checks passed; the same app build installed and remained running on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2. Human Live Simulator visual approval remains required before merge."
+          "last_updated": "2026-09-01T05:00:01Z",
+          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c. Spec review clarified that AppShell is a host rather than a Task surface and that contract consistency means schema conformance plus semantic agreement, not equal version numbers. Delivery adds the app-wide DesignProfile environment, semantic typography/color/spacing/radius/container/status/action/motion primitives, shared accessible components, and the iOS 18 native Tab API. AC-1 review also repaired the DesignProfile schema so its required $schema field is valid under additionalProperties=false. Final evidence: 21 focused/AppShell regression tests passed serially on iPhone 17 Pro; SwiftLint reported 0 violations; DesignProfile and all Surface contract checks passed; the same app build installed and remained running on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2. Human Live Simulator visual approval remains required before merge.",
+          "pr": {
+            "number": 67,
+            "url": "https://github.com/logan-suu/Echo/pull/67",
+            "head": "feature/balanced-canvas-foundation-4.0",
+            "base": "dev-1.0",
+            "created_at": "2026-09-01T05:00:01Z"
+          }
         },
         {
           "id": "4.0a",
