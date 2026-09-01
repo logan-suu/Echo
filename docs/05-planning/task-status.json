@@ -2143,6 +2143,13 @@
               "iPhone 16 Pro (iOS 18.2)"
             ]
           },
+          "pr": {
+            "number": 68,
+            "url": "https://github.com/logan-suu/Echo/pull/68",
+            "head": "feature/discovery-balanced-canvas-US-AWK-002",
+            "base": "dev-1.0",
+            "created_at": "2026-09-01T13:29:30Z"
+          },
           "dependencies": [
             "4.0"
           ],
@@ -2174,8 +2181,8 @@
             "通用卡无水平滑动；唤醒卡保留稳定 cardId/memoryId 与 Focus 路由，不以视觉任务替代 4.0d 的交互闭环",
             "双语、VoiceOver 语义顺序、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T13:27:31Z",
-          "notes": "2026-09-01 spec reasonableness review retained the approved Balanced Canvas direction but made 4.0a executable: defined displayable live data, deterministic Search presentationKind eligibility, truthful zero-memory progress, read-only adapter/API scope, story AC ownership and the US-AWK-005 gesture exception. User confirmed the revised contract; TDD implementation started at 2026-09-01T12:30:36Z. Dual-device Live Review then exposed a pre-existing privacy-model defect: iPhone 17 Pro retained a policy containing only real sources while iPhone 16 Pro used the newer in-memory default, and SearchPipeline incorrectly required the pseudo-source search. Spec v5.36 now treats search as an operation and requires per-real-source filtering without policy mutation. Repair evidence: the new compatibility test failed Red with privacyDenied(sourceTypes: [search]), then 97 affected Search/Privacy/Phase2/Phase3/Permission tests and 4 CreativePipeline real-source tests passed serially on iPhone 17 Pro. The final 4.0a task suite passed 10/10, SwiftLint completed with zero violations, localization reported 360-key parity, static bans and 153 accessibility contracts passed, and release compliance found no blocking issue. The reported 17 Pro policy was restored exactly after hosted tests and remained unchanged after final app launch. The same final build was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 without screenshot/video capture. Human visual approval received at 2026-09-01T13:22:19Z. commit-pr-echo moved the task to review at 2026-09-01T13:27:31Z; PR metadata will be recorded after creation."
+          "last_updated": "2026-09-01T13:29:30Z",
+          "notes": "2026-09-01 spec reasonableness review retained the approved Balanced Canvas direction but made 4.0a executable: defined displayable live data, deterministic Search presentationKind eligibility, truthful zero-memory progress, read-only adapter/API scope, story AC ownership and the US-AWK-005 gesture exception. User confirmed the revised contract; TDD implementation started at 2026-09-01T12:30:36Z. Dual-device Live Review then exposed a pre-existing privacy-model defect: iPhone 17 Pro retained a policy containing only real sources while iPhone 16 Pro used the newer in-memory default, and SearchPipeline incorrectly required the pseudo-source search. Spec v5.36 now treats search as an operation and requires per-real-source filtering without policy mutation. Repair evidence: the new compatibility test failed Red with privacyDenied(sourceTypes: [search]), then 97 affected Search/Privacy/Phase2/Phase3/Permission tests and 4 CreativePipeline real-source tests passed serially on iPhone 17 Pro. The final 4.0a task suite passed 10/10, SwiftLint completed with zero violations, localization reported 360-key parity, static bans and 153 accessibility contracts passed, and release compliance found no blocking issue. The reported 17 Pro policy was restored exactly after hosted tests and remained unchanged after final app launch. The same final build was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 without screenshot/video capture. Human visual approval received at 2026-09-01T13:22:19Z. commit-pr-echo moved the task to review and created PR #68 against dev-1.0; full CI and aggregate coverage remain pending."
         },
         {
           "id": "4.0b",
