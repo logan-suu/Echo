@@ -135,6 +135,7 @@ struct BalancedCanvasFoundationTests {
         #expect(source.contains("EchoTypographyToken"))
         #expect(!source.contains(".font(.system(size:"))
         #expect(source.contains(".accessibilityElement(children: .combine)"))
+        #expect(source.contains(".accessibilityAddTraits(.isHeader)"))
         #expect(source.contains(".accessibilityHidden(true)"))
         #expect(source.contains("@Environment(\\.colorSchemeContrast)"))
         #expect(source.contains("@Environment(\\.accessibilityReduceMotion)"))
