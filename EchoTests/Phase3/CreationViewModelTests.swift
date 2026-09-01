@@ -116,12 +116,18 @@ struct CreationViewModelTests {
     }
 
     @Test("US-SYN-003 AC-3: export(format:) presents share sheet")
-    func exportPresentsShareSheet() {
+    func exportPresentsShareSheet() async {
         let vm = CreationViewModel()
         vm.loadPreloaded(CreationFixtureLoader.load("creation-generated-letter")!)
         vm.export(format: .pdf)
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(2))
+        while clock.now < deadline, !vm.isSharePresented {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
         #expect(vm.isExportPickerPresented == false)
         #expect(vm.isSharePresented == true)
+        #expect(vm.sharePayload?.attachmentURL?.pathExtension == "pdf")
     }
 
     // MARK: - US-SYN-004 AC-4: Share / Export / Print

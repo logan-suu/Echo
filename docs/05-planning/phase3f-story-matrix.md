@@ -24,11 +24,11 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | Status | Count |
 | --- | --- |
 | Production-complete | 0 |
-| Partial | 16 |
-| Stub | 25 |
+| Partial | 21 |
+| Stub | 22 |
 | Absent/unmapped | 9 |
 | Deferred | 2 |
-| Impossible/spec-invalid | 14 |
+| Impossible/spec-invalid | 12 |
 | **Total** | **66** |
 
 `Impossible/spec-invalid` is used where a required AC cannot be accepted without a specification decision (for example, unavailable public APIs, contradictory source rules, or impossible timing guarantees). It does **not** erase any partial implementation evidence in the notes.

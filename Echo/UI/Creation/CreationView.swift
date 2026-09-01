@@ -19,6 +19,7 @@
 // ==========================================
 
 import SwiftUI
+import UIKit
 
 // MARK: - CreationView
 
@@ -96,7 +97,7 @@ struct CreationView: View {
         }
         // 分享/导出/打印 Sheet (US-SYN-003 AC-3, US-SYN-004 AC-4)
         .sheet(item: $viewModel.sharePayload) { payload in
-            ShareLinkSheet(payload: payload)
+            SystemShareSheet(payload: payload)
         }
         .navigationDestination(for: UUID.self) { memoryID in
             MemoryDetailView(memoryId: memoryID)
@@ -512,45 +513,26 @@ struct PromptEditorSheet: View {
     }
 }
 
-// MARK: - ShareLinkSheet
+// MARK: - SystemShareSheet
 
 /// 分享 Sheet — 生成内容分享/导出/打印 (US-SYN-003 AC-3, US-SYN-004 AC-4)。
 ///
 /// ## Surface Family: Focus
 /// - 系统分享面板，非 masonry
-struct ShareLinkSheet: View {
+struct SystemShareSheet: UIViewControllerRepresentable {
     let payload: CreationSharePayload
-    @Environment(\.dismiss) private var dismiss
 
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                ShareLink(
-                    item: payload.text,
-                    preview: SharePreview(payload.previewTitle)
-                ) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.callout)
-                }
-                .buttonStyle(EchoActionButtonStyle(role: .primary))
-                .accessibilityIdentifier("creation-share-link")
-
-                Text("Share or export this creation as text, PDF, or Markdown.")
-                    .font(.footnote)
-                    .foregroundStyle(Color.secondary)
-            }
-            .padding()
-            .navigationTitle("Share Creation")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .accessibilityIdentifier("creation-share-done")
-                }
-            }
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let item: Any
+        if let attachmentURL = payload.attachmentURL {
+            item = attachmentURL
+        } else {
+            item = payload.text
         }
+        return UIActivityViewController(activityItems: [item], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {
     }
 }
 

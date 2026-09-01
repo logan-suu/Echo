@@ -84,6 +84,9 @@ struct FocusBalancedCanvasTests {
         let fixtures = try loadSource("Echo/UI/Creation/CreationFixtureLoader.swift")
 
         #expect(view.contains(".sheet(item:"))
+        #expect(view.contains("SystemShareSheet(payload: payload)"))
+        #expect(view.contains("UIActivityViewController(activityItems:"))
+        #expect(!view.contains("ShareLink("))
         #expect(viewModel.contains("CreationSharePayload"))
         #expect(!view.contains("savedToast"))
         #expect(!viewModel.contains("case saved"))
@@ -125,6 +128,50 @@ struct FocusBalancedCanvasTests {
         #expect(viewModel.viewState == .error(.l2Recoverable(
             message: "Unable to prepare this creation for sharing. Please try again."
         )))
+    }
+
+    @Test("AC-4: Markdown export distinguishes unavailable provenance from a source anchor")
+    func test_AC4_markdownExportPreservesNoSourceTruth() throws {
+        let viewModel = CreationViewModel()
+        let memoryID = UUID()
+        viewModel.loadPreloaded(CreationModel(
+            selectedTemplate: .letter,
+            title: "Grounded draft",
+            periodType: nil,
+            paragraphs: [
+                CreationParagraph(
+                    id: UUID(),
+                    text: "A paragraph without resolvable provenance.",
+                    citation: CreationCitation(memoryId: memoryID, hasSource: false)
+                ),
+            ],
+            sourceMemoryCount: 0,
+            emptyReason: nil
+        ))
+
+        viewModel.export(format: .markdown)
+
+        let payload = try #require(viewModel.sharePayload)
+        #expect(payload.kind == .markdown)
+        #expect(payload.text.contains("NoSource"))
+        #expect(!payload.text.contains(memoryID.uuidString))
+        #expect(payload.attachmentURL == nil)
+    }
+
+    @Test("AC-4: PDF export prepares a real local PDF attachment")
+    func test_AC4_pdfExportCreatesAttachment() async throws {
+        let viewModel = CreationViewModel()
+        let model = try #require(CreationFixtureLoader.load("creation-generated-letter"))
+        viewModel.loadPreloaded(model)
+
+        viewModel.export(format: .pdf)
+        let payload = try await awaitSharePayload(viewModel)
+        let attachmentURL = try #require(payload.attachmentURL)
+        let data = try Data(contentsOf: attachmentURL)
+
+        #expect(payload.kind == .pdf)
+        #expect(attachmentURL.pathExtension == "pdf")
+        #expect(data.starts(with: Data("%PDF".utf8)))
     }
 
     @Test("AC-4: production generation fails closed while explicit fixture generation is labeled")
@@ -252,6 +299,21 @@ struct FocusBalancedCanvasTests {
         return viewModel.viewState
     }
 
+    private func awaitSharePayload(
+        _ viewModel: CreationViewModel,
+        timeout: Duration = .seconds(2)
+    ) async throws -> CreationSharePayload {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline {
+            if let payload = viewModel.sharePayload {
+                return payload
+            }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        throw SharePayloadTimeout()
+    }
+
     private func awaitTranslationSettled(
         _ viewModel: MemoryDetailViewModel
     ) async -> MemoryDetailViewModel.TranslationPhase {
@@ -276,3 +338,5 @@ struct FocusBalancedCanvasTests {
         return root
     }
 }
+
+private struct SharePayloadTimeout: Error {}
