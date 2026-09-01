@@ -181,6 +181,9 @@ struct BalancedCanvasFoundationTests {
         #expect(source.contains(".accessibilityHidden(true)"))
         #expect(source.contains("@Environment(\\.colorSchemeContrast)"))
         #expect(source.contains("@Environment(\\.accessibilityReduceMotion)"))
+        #expect(source.contains("case .secondary, .destructive: .primary"))
+        #expect(source.contains("case .secondary, .destructive: EchoColorToken.fill.color"))
+        #expect(!source.contains("case .destructive: .white"))
     }
 
     @Test("AC-4: AppShell labels have complete zh-Hans and en-US catalog values")

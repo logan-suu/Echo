@@ -261,6 +261,7 @@ jobs:
           # DEF-64-007: Swift Testing suites self-disable on this flag
           # (shared-DatabaseManager ordering debt).
           ECHO_SKIP_FULL_SUITE: "1"
+          NSUnbufferedIO: YES
         run: |
           set -o pipefail
           # DEF-64-004: XCUITest fixtures fail identically on local and CI
@@ -281,9 +282,6 @@ jobs:
             -skip-testing:EchoTests/PhotoTextSearchIdentityTests \
             -skip-testing:EchoTests/PhotoTextSearchIntegrationTests \
             2>&1 | tee test.log
-        env:
-          NSUnbufferedIO: YES
-
       # ── Coverage Gate (R-2.2a): enforce coverage threshold ──
       # SwiftUI Views (*View.swift) and Fixture Loaders (*FixtureLoader.swift)
       # under Echo/UI/ are excluded from coverage calculation (feature-dir

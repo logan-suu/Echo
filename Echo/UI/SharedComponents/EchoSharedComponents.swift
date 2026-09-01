@@ -187,16 +187,14 @@ struct EchoActionButtonStyle: ButtonStyle {
     private var foregroundStyle: Color {
         switch role {
         case .primary, .recovery: EchoColorToken.onWarmAccent.color
-        case .secondary: .primary
-        case .destructive: .white
+        case .secondary, .destructive: .primary
         }
     }
 
     private var backgroundStyle: Color {
         switch role {
         case .primary, .recovery: EchoColorToken.warmAccent.color
-        case .secondary: EchoColorToken.fill.color
-        case .destructive: EchoColorToken.blocking.color
+        case .secondary, .destructive: EchoColorToken.fill.color
         }
     }
 
