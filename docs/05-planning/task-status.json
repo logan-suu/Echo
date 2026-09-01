@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-01T12:30:36Z",
+  "last_updated": "2026-09-01T14:27:08Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2131,7 +2131,7 @@
             "UIAutomation/Contracts/instances/home-discovery-surface.json",
             "UIAutomation/Contracts/instances/search-surface.json"
           ],
-          "status": "review",
+          "status": "done",
           "ui_run": {
             "runId": "4.0a-live-review-2026-09-01",
             "automation_phase": "accepted",
@@ -2148,7 +2148,8 @@
             "url": "https://github.com/logan-suu/Echo/pull/68",
             "head": "feature/discovery-balanced-canvas-US-AWK-002",
             "base": "dev-1.0",
-            "created_at": "2026-09-01T13:29:30Z"
+            "created_at": "2026-09-01T13:29:30Z",
+            "merged_at": "2026-09-01T14:24:01Z"
           },
           "dependencies": [
             "4.0"
@@ -2181,8 +2182,16 @@
             "通用卡无水平滑动；唤醒卡保留稳定 cardId/memoryId 与 Focus 路由，不以视觉任务替代 4.0d 的交互闭环",
             "双语、VoiceOver 语义顺序、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T13:55:08Z",
-          "notes": "2026-09-01 spec reasonableness review retained the approved Balanced Canvas direction but made 4.0a executable: defined displayable live data, deterministic Search presentationKind eligibility, truthful zero-memory progress, read-only adapter/API scope, story AC ownership and the US-AWK-005 gesture exception. User confirmed the revised contract; TDD implementation started at 2026-09-01T12:30:36Z. Dual-device Live Review then exposed a pre-existing privacy-model defect: iPhone 17 Pro retained a policy containing only real sources while iPhone 16 Pro used the newer in-memory default, and SearchPipeline incorrectly required the pseudo-source search. Spec v5.36 now treats search as an operation and requires per-real-source filtering without policy mutation. Repair evidence: the new compatibility test failed Red with privacyDenied(sourceTypes: [search]), then 97 affected Search/Privacy/Phase2/Phase3/Permission tests and 4 CreativePipeline real-source tests passed serially on iPhone 17 Pro. The final 4.0a task suite passed 10/10, SwiftLint completed with zero violations, localization reported 360-key parity, static bans and 153 accessibility contracts passed, and release compliance found no blocking issue. The reported 17 Pro policy was restored exactly after hosted tests and remained unchanged after final app launch. The same final build was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 without screenshot/video capture. Human visual approval received at 2026-09-01T13:22:19Z. commit-pr-echo moved the task to review and created PR #68 against dev-1.0. PR review found and fixed a blocking typed-search authorization gap: typed results now apply the latest UserPolicy to normalized real source types before leaving SearchPipeline. Four functional/contract CodeRabbit findings were fixed (post-resolution Search cancellation, thirdParty-only authorization guidance, authorization-attributable test metadata, and exact 340pt Surface contracts), and its maintenance-date finding was synchronized across three documents to 2026-09-30; the legacy empty-result checkpoint suggestion was rejected because `try await pipeline.search` already fails on denial. Independent review also fixed Home partial-snapshot publication after cancellation. Red tests reproduced both cancellation defects and the thirdParty defect; the repaired Discovery and typed-search suites passed 31/31 serially. No review finding was deferred."
+          "last_updated": "2026-09-01T14:27:08Z",
+          "notes": "2026-09-01 spec reasonableness review retained the approved Balanced Canvas direction but made 4.0a executable: defined displayable live data, deterministic Search presentationKind eligibility, truthful zero-memory progress, read-only adapter/API scope, story AC ownership and the US-AWK-005 gesture exception. User confirmed the revised contract; TDD implementation started at 2026-09-01T12:30:36Z. Dual-device Live Review then exposed a pre-existing privacy-model defect: iPhone 17 Pro retained a policy containing only real sources while iPhone 16 Pro used the newer in-memory default, and SearchPipeline incorrectly required the pseudo-source search. Spec v5.36 now treats search as an operation and requires per-real-source filtering without policy mutation. Repair evidence: the new compatibility test failed Red with privacyDenied(sourceTypes: [search]), then 97 affected Search/Privacy/Phase2/Phase3/Permission tests and 4 CreativePipeline real-source tests passed serially on iPhone 17 Pro. The final 4.0a task suite passed 10/10, SwiftLint completed with zero violations, localization reported 360-key parity, static bans and 153 accessibility contracts passed, and release compliance found no blocking issue. The reported 17 Pro policy was restored exactly after hosted tests and remained unchanged after final app launch. The same final build was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 without screenshot/video capture. Human visual approval received at 2026-09-01T13:22:19Z. commit-pr-echo moved the task to review and created PR #68 against dev-1.0. PR review found and fixed a blocking typed-search authorization gap: typed results now apply the latest UserPolicy to normalized real source types before leaving SearchPipeline. Four functional/contract CodeRabbit findings were fixed (post-resolution Search cancellation, thirdParty-only authorization guidance, authorization-attributable test metadata, and exact 340pt Surface contracts), and its maintenance-date finding was synchronized across three documents to 2026-09-30; the legacy empty-result checkpoint suggestion was rejected because `try await pipeline.search` already fails on denial. Independent review also fixed Home partial-snapshot publication after cancellation. Red tests reproduced both cancellation defects and the thirdParty defect; the repaired Discovery and typed-search suites passed 31/31 serially. No review finding was deferred. PR #68 was human-merged at 2026-09-01T14:24:01Z, completing the task acceptance event.",
+          "status_transitions": {
+            "review_at": "2026-09-01T13:29:30Z",
+            "merged_at": "2026-09-01T14:24:01Z",
+            "done_at": "2026-09-01T14:27:08Z"
+          },
+          "merged_at": "2026-09-01T14:24:01Z",
+          "merge_commit": "7a79045642be72cca9e2266d0c01981781441247",
+          "merged_by": "logan-suu"
         },
         {
           "id": "4.0b",
@@ -2301,7 +2310,7 @@
             "docs/05-planning/phase3f-story-matrix.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "4.0a"
           ],
@@ -2327,7 +2336,7 @@
             "AC-5：cardInteraction action=next/record/jump、feelingAssociatedToSource 的 hash-only 审计证据",
             "双语、Dynamic Type、VoiceOver、Reduce Motion、权限拒绝/限流与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T12:12:37Z",
+          "last_updated": "2026-09-01T14:27:08Z",
           "notes": "Created by the 4.0a reasonableness review because Phase 3/3F evidence explicitly left US-AWK-005 media/music/reaction persistence incomplete. A release test task cannot substitute for missing production behavior."
         },
         {
