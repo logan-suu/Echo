@@ -5,6 +5,7 @@
   "description": "Global visual and interaction identity shared by every Echo surface",
   "type": "object",
   "required": [
+    "$schema",
     "profileId",
     "version",
     "baseProfile",
@@ -14,6 +15,7 @@
     "coveredDomains"
   ],
   "properties": {
+    "$schema": { "type": "string", "const": "https://echo-ui-automation/schemas/contracts/design-profile/v1" },
     "profileId": { "type": "string", "const": "echo-memory-canvas" },
     "version": { "type": "string", "const": "1.1.0" },
     "baseProfile": { "type": "string", "const": "apple-native" },

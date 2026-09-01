@@ -1,10 +1,38 @@
 {
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
   "designProfileId": "echo-memory-canvas",
-  "contractVersion": "1.0.0",
   "surfaceId": "degradation-banner",
   "surfaceFamily": "task",
+  "responsibility": "Render truthful low-power, thermal, model-degradation and L1-L4 status/recovery presentations without owning retry or recovery policy",
+  "inputs": {
+    "runtimeCondition": "Live low-power, thermal and model availability values from adapters",
+    "errorPresentation": "Mapped L1-L4 UI state and permitted recovery actions",
+    "backgroundTaskPreference": "User preference controlling low-power background task behavior"
+  },
+  "outputs": {
+    "visibleContent": "Shared banner, blocking recovery or conflict presentation appropriate to the mapped severity",
+    "interactionTargets": "Dismiss, retry, open settings, toggle background tasks and resolve conflict",
+    "accessibilityTree": "Status announcement with severity, consequence and available recovery action"
+  },
+  "systemContainer": "Banner overlay + full-screen blocking recovery + conflict sheet",
+  "layoutMode": "single_column",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "Masonry is always forbidden for this Task surface",
+    "L3 uses a blocking recovery surface and L4 exposes the conflict-resolution entry rather than compressing either into a transient banner"
+  ],
   "description": "Displays non-intrusive degradation banners when device conditions (low power, thermal pressure, model load failure) require reduced functionality. Auto-dismisses when conditions normalize. Per echo-memory-canvas-style §11.4.",
   "states": [
+    "normal",
+    "lowPower",
+    "thermal",
+    "modelDegraded",
+    "l1Transient",
+    "l2Recoverable",
+    "l3Blocking",
+    "l4Conflict"
+  ],
+  "stateDetails": [
     {
       "stateId": "normal",
       "description": "No degradation active. Banner hidden.",
@@ -109,9 +137,9 @@
       "alert"
     ],
     "traits": [
-      "updatesFrequently",
-      "startsMediaSession"
+      "updatesFrequently"
     ],
     "dynamicType": "supported"
-  }
+  },
+  "version": "1.0.0"
 }

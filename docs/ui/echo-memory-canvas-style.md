@@ -12,7 +12,7 @@
 - **Profile ID**：`echo-memory-canvas`
 - **Base Profile**：`apple-native`
 - **批准状态**：用户已批准；2026-08-31 进一步选择方案 B「平衡画布」作为唯一方向
-- **风格强度**：约 60% Pinterest-inspired 内容组织 + 40% Apple 原生交互；强度描述用于界定全 App 视觉身份，不是像素相似度目标
+- **风格强度**：“约 60% Pinterest-inspired 内容组织 + 40% Apple 原生交互”仅作为方向性简写；它不是逐页面比例、像素相似度目标或自动化验收指标。验收以 surface family、共享 token/component、系统交互和可访问性契约为准
 - **全 App 范围**：所有页面必须体现同一平衡画布视觉语言；Discovery 表达最强，Focus/Task 通过共享 token、容器、媒体处理、层级与 motion 保持一致
 - **额外灵感来源**：Pinterest 启发图片优先密度、非等高内容节奏与连续探索；**不是**产品依赖、品牌关系或复制其 UI 的许可
 - **边界**：系统导航、Tab Bar、搜索行为、菜单、编辑、权限、错误与恢复继续使用 Apple 原生交互模式；一致不等于所有页面都使用 masonry
@@ -94,6 +94,8 @@
 - `surfaceFamily: discovery | focus | task`
 - 所选系统容器
 - 回退条件
+
+AppShell 是 Apple 原生系统宿主，负责 NavigationStack、TabView、toolbar、search 与 modal 基础行为；它承载 Discovery/Focus/Task，但自身不是 Task surface，也不创建第四种 `surfaceFamily`。因此 AppShell 使用 DesignProfile 合约验收，不创建伪造的 AppShell Surface 合约。
 
 ### 3.5 全 App 一致性契约
 
@@ -303,7 +305,7 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 | `echo-memory-canvas` 设计配置 | 用户 | 2026-07-25 | bootstrap 规范 §7 |
 | `apple-native` 基础 | 用户 | 2026-07-25 | bootstrap 规范 §7.1 |
 | Discovery/Focus/Task 三类映射 | 用户 | 2026-07-25 | bootstrap 规范 §7.2 |
-| 方案 B「平衡画布」（约 60% Pinterest-inspired，仅覆盖 Discovery） | 用户 | 2026-08-31 | 当前产品决策 |
+| 方案 B「平衡画布」（全 App 视觉身份；Discovery 表达最强，Focus/Task 同源但不使用 masonry） | 用户 | 2026-08-31 | 当前产品决策 |
 
 > 若要改变 profile、Apple 原生基础或三类 surface 映射，必须修订本文和 `docs/ui/echo-memory-canvas-style.md` 并重新获得用户批准。
 

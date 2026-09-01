@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://echo-ui-automation/schemas/contracts/surface/v1",
   "title": "Surface Contract",
-  "description": "An independently renderable and verifiable UI boundary",
+  "description": "An independently renderable and verifiable UI boundary. AppShell is a system host for surfaces and is intentionally not modeled as a fourth surface family.",
   "type": "object",
   "required": ["designProfileId", "surfaceId", "surfaceFamily", "responsibility", "inputs", "outputs"],
   "properties": {

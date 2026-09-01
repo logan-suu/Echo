@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-31T17:22:09Z",
+  "last_updated": "2026-09-01T04:54:07Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2043,7 +2043,7 @@
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
       "entry_gate": "3F.11",
-      "last_updated": "2026-08-31T17:22:09Z",
+      "last_updated": "2026-09-01T04:54:07Z",
       "tasks": [
         {
           "id": "4.0",
@@ -2062,7 +2062,7 @@
             "docs/05-planning/开发计划安排文档.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
             "3F.11"
           ],
@@ -2080,16 +2080,17 @@
             "只建立 echo-memory-canvas DesignProfile、共享 typography/color/spacing/radius/container/status/action/motion primitives 与 Apple 原生 AppShell，不修改任何领域行为",
             "共享组件必须通过语义 token 和系统 Dynamic Type 构建，禁止为各功能域暴露任意样式开关或复制常量",
             "NavigationStack、TabView、toolbar、search 与 modal chrome 保持 Apple 原生；不创建 Pinterest 风格的自定义系统 chrome",
+            "AppShell 是承载 Discovery/Focus/Task 的系统宿主，不归类为 Task surface，也不创建第四种 surface family；surface_families 字段表示共享基础必须支持三类 family",
             "本任务不改造 Home/Search/Focus/Task 具体页面；页面族分别由 4.0a/4.0b/4.0c 消费基础"
           ],
           "acceptance_evidence": [
-            "DesignProfile schema/instance 与 acceptance policy 可解析且版本一致",
+            "DesignProfile schema/instance 与 acceptance policy 均可解析；instance 对其 $schema 校验通过；三者对 profile ID、surface family、no-masonry 边界与批准点的语义一致（各文档版本号独立演进，不要求数值相等）",
             "共享 token/component API 覆盖 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action 与 Reduce Motion",
             "AppShell 在 iPhone 17 Pro iOS 26.5 与 iPhone 16 Pro iOS 18.x 保持系统导航、Tab、toolbar 与 modal 行为",
             "基础组件具有 Dynamic Type、VoiceOver、increased contrast、Reduce Motion 与 zh-Hans/en-US 自动化测试"
           ],
-          "last_updated": "2026-08-31T17:22:09Z",
-          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c."
+          "last_updated": "2026-09-01T04:54:07Z",
+          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c. Spec review clarified that AppShell is a host rather than a Task surface and that contract consistency means schema conformance plus semantic agreement, not equal version numbers. Delivery adds the app-wide DesignProfile environment, semantic typography/color/spacing/radius/container/status/action/motion primitives, shared accessible components, and the iOS 18 native Tab API. AC-1 review also repaired the DesignProfile schema so its required $schema field is valid under additionalProperties=false. Final evidence: 21 focused/AppShell regression tests passed serially on iPhone 17 Pro; SwiftLint reported 0 violations; DesignProfile and all Surface contract checks passed; the same app build installed and remained running on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2. Human Live Simulator visual approval remains required before merge."
         },
         {
           "id": "4.0a",
@@ -3032,6 +3033,28 @@
         "docs/05-planning/task-status.json",
         "docs/05-planning/开发计划安排文档.md",
         "docs/ui/README.md"
+      ]
+    },
+    {
+      "id": "DOC-20260831-BALANCED-CANVAS-SPEC-REVIEW",
+      "status": "resolved",
+      "detected_at": "2026-09-01T04:32:31Z",
+      "resolved_at": "2026-09-01T04:32:31Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "app-wide-profile-with-family-specific-layouts",
+      "decision": "Retain Balanced Canvas as the app-wide visual profile, treat the 60/40 wording as directional rather than numeric acceptance, classify AppShell as a system host rather than a Task surface, deliver the profile through the 4.0/4.0a/4.0b/4.0c task family, and define cross-document consistency as schema conformance plus semantic agreement rather than equal version numbers.",
+      "reason": "The prior approval row, historical task wording, AppShell family classification and equal-version acceptance phrase conflicted with the current split task model or were not objectively testable.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/ui/README.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "UIAutomation/Contracts/schemas/surface-v1.json",
+        "UIAutomation/Contracts/instances/awakening-settings-surface.json",
+        "UIAutomation/Contracts/instances/degradation-banner-surface.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/task-status.json"
       ]
     }
   ],
