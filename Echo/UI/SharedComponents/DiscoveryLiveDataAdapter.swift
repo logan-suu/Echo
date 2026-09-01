@@ -3,7 +3,8 @@
 // Specification: docs/01-spec/用户故事与验收标准规格书.md
 //                → Home/Search Discovery 展示细则
 // Task: 4.0a - Discovery Balanced Canvas with live Home/Search data
-// AC coverage: AC-1 (live canonical data), AC-3 (truthful ProgressActor state)
+// AC coverage: AC-1 (live canonical data), AC-3 (truthful ProgressActor state,
+//              including thirdParty-only authorization in PR #68 review fix)
 // Architecture: docs/ui/architecture.md §7 (thin read-only adapters)
 // Generated: 2026-09-01
 // ==========================================
@@ -157,7 +158,7 @@ actor HomeDiscoveryAdapter: HomeDiscoveryServing {
             metadataBySourceLocator: metadata
         )
         let hasAuthorizedSource = policy.authorizedSourceTypes.contains { sourceType in
-            ["photo", "video", "note", "voice", "text"].contains(sourceType)
+            ["photo", "video", "note", "voice", "text", "thirdParty"].contains(sourceType)
         }
 
         return HomeDiscoverySnapshot(

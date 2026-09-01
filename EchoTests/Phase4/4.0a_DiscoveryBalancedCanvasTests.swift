@@ -227,6 +227,7 @@ struct DiscoveryBalancedCanvasTests {
             ),
             sourceResolver: FakeSourceResolver(metadata: [
                 "photo-live": DiscoverySourceMetadata(resolved: true, aspectRatio: 3.0 / 2.0),
+                "third-party": DiscoverySourceMetadata(resolved: true),
                 "photo-missing": DiscoverySourceMetadata(resolved: false),
             ])
         )
@@ -237,6 +238,102 @@ struct DiscoveryBalancedCanvasTests {
         #expect(snapshot.visibleMemoryCount == 1)
         #expect(snapshot.zeroMemoryState == .activeScan(processed: 8, total: 40))
         #expect(snapshot.hasAuthorizedSource)
+    }
+
+    @Test("AC-3: a third-party-only policy is authorized import guidance")
+    func test_AC3_thirdPartyOnlyPolicyIsAuthorized() async throws {
+        let adapter = HomeDiscoveryAdapter(
+            memoryReader: FakeMemoryReader(memories: []),
+            progressReader: FakeProgressReader(progress: []),
+            policyReader: FakePolicyReader(
+                policy: UserPolicy(authorizedSourceTypes: ["thirdParty"])
+            ),
+            sourceResolver: FakeSourceResolver(metadata: [:])
+        )
+
+        let snapshot = try await adapter.load(limit: 50)
+
+        #expect(snapshot.hasAuthorizedSource)
+        #expect(snapshot.zeroMemoryState == .importGuidance)
+    }
+
+    @Test("AC-4: cancelling during source resolution cannot publish completed results")
+    @MainActor
+    func test_AC4_cancelledSourceResolutionDoesNotCompleteSearch() async throws {
+        let database = DatabaseManager.shared
+        try await database.open()
+        let privacy = PrivacyActor(db: database)
+        try await privacy.loadPolicy()
+        let originalPolicy = await privacy.getPolicy()
+        try await privacy.updatePolicy(UserPolicy(
+            authorizedSourceTypes: ["photo", "note"],
+            policyVersion: originalPolicy.policyVersion + 1
+        ))
+        let resolver = ControlledSourceResolver()
+        let viewModel = SearchViewModel(
+            searchPipeline: SearchPipeline(
+                embedder: StubEmbedder(),
+                privacyActor: privacy,
+                vectorStore: VectorStoreActor(dimension: 512)
+            ),
+            composition: nil,
+            sourceResolver: resolver
+        )
+
+        viewModel.submitQuery("Waterfall")
+        await resolver.waitUntilStarted()
+        viewModel.onDisappear()
+        await resolver.complete()
+        for _ in 0..<100 where viewModel.viewState == .cancelled {
+            await Task.yield()
+        }
+
+        #expect(viewModel.viewState == .cancelled)
+        #expect(viewModel.results.isEmpty)
+        try await privacy.updatePolicy(originalPolicy)
+    }
+
+    @Test("AC-4: cancelling Home discovery cannot publish a partial snapshot")
+    @MainActor
+    func test_AC4_cancelledHomeDiscoveryDoesNotPublishSnapshot() async {
+        let card = DiscoveryCardPresentation(
+            id: UUID(),
+            sourceLocator: "note-cancelled",
+            sourceType: "note",
+            timestamp: 1_700_000_000,
+            summary: "Must not publish",
+            aspectRatio: nil,
+            locationLabel: nil,
+            presentationKind: .scanEligible,
+            sourceLanguage: "en-US",
+            crossLanguageMatch: false,
+            lowConfidence: false
+        )
+        let service = ControlledHomeDiscoveryService(
+            snapshot: HomeDiscoverySnapshot(
+                cards: [card],
+                visibleMemoryCount: 1,
+                zeroMemoryState: .importGuidance,
+                hasAuthorizedSource: true
+            )
+        )
+        let viewModel = HomeViewModel(
+            discoveryAdapter: service,
+            searchCapability: FakeHomeSearchCapability(available: true)
+        )
+
+        viewModel.loadAwakeningCards()
+        await service.waitUntilStarted()
+        viewModel.onDisappear()
+        await service.complete()
+        for _ in 0..<100 where viewModel.viewState == .cancelled {
+            await Task.yield()
+        }
+
+        #expect(viewModel.viewState == .cancelled)
+        #expect(viewModel.discoveryCards.isEmpty)
+        #expect(viewModel.visibleMemoryCount == 0)
+        #expect(!viewModel.canOfferSearchSuggestions)
     }
 
     @Test("AC-4: masonry packing never mutates semantic item order")
@@ -407,6 +504,32 @@ private actor FakeSourceResolver: DiscoverySourceResolving {
     }
 }
 
+private actor ControlledSourceResolver: DiscoverySourceResolving {
+    private var started = false
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func resolve(
+        _ references: [DiscoverySourceReference]
+    ) async -> [String: DiscoverySourceMetadata] {
+        started = true
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+        return [:]
+    }
+
+    func waitUntilStarted() async {
+        while !started {
+            await Task.yield()
+        }
+    }
+
+    func complete() {
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
 private actor FakeHomeDiscoveryService: HomeDiscoveryServing {
     let snapshot: HomeDiscoverySnapshot
 
@@ -416,6 +539,35 @@ private actor FakeHomeDiscoveryService: HomeDiscoveryServing {
 
     func load(limit: Int) async throws -> HomeDiscoverySnapshot {
         snapshot
+    }
+}
+
+private actor ControlledHomeDiscoveryService: HomeDiscoveryServing {
+    private let snapshot: HomeDiscoverySnapshot
+    private var started = false
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    init(snapshot: HomeDiscoverySnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func load(limit: Int) async throws -> HomeDiscoverySnapshot {
+        started = true
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+        return snapshot
+    }
+
+    func waitUntilStarted() async {
+        while !started {
+            await Task.yield()
+        }
+    }
+
+    func complete() {
+        continuation?.resume()
+        continuation = nil
     }
 }
 

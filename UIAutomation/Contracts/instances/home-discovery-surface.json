@@ -25,7 +25,7 @@
     "visibleMemoryCount is below 20",
     "Section has fewer than 6 real displayable cards",
     "Accessibility Dynamic Type (.accessibility1+)",
-    "Available width cannot fit two 152pt cards plus gutter",
+    "Available content width is below the exact 340pt masonry minimum",
     "Long text or critical media requires continuous reading or safe fit"
   ],
   "displayableDefinition": "Policy allowed, non-excluded, source resolvable, stable memoryId and Focus route present, with real aspect ratio or real summary",

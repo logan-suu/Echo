@@ -10,7 +10,8 @@
 // AC 覆盖: US-AWK-001 AC-4 ✅ (唤醒卡片展示), US-AWK-002 AC-3 ✅ (纪念日卡片),
 //          US-AWK-003 AC-4 ✅ (情绪唤醒卡片), US-AWK-005 AC-1 ✅ (卡片展示),
 //          US-RES-001 AC-3 ✅ (离线模式标识), AC-2 ❌ (无网络时仅缓存, Phase 4)
-//          4.0a: UserPolicy + canonical memory + ProgressActor 只读快照与布局门禁
+//          4.0a: UserPolicy + canonical memory + ProgressActor 只读快照与布局门禁；
+//                PR #68 review fix: cancellation 前不发布 partial Discovery snapshot
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转: idle→loading→completed/error/cancelled),
 //           §4.2 (Actor 隔离 — 仅持有不可变引用), §8.2 (禁止 idle→completed 直接跳转),
@@ -268,24 +269,23 @@ final class HomeViewModel {
             guard let self else { return }
 
             do {
+                var loadedAwakeningCards: [AwakeningCardModel]?
                 // 3F.8: 从持久化卡片存储加载最近唤醒卡片（ADR-012 决策-5，重启去重后展示）
                 if let cardRepository {
                     let cards = try await cardRepository.fetchRecent(limit: 20)
-                    self.awakeningCards = cards.map(AwakeningCardModel.init)
+                    loadedAwakeningCards = cards.map(AwakeningCardModel.init)
                 } else if let pipeline = self.awakeningPipeline {
                     // Example: cards would be fetched from a local store
                     // let cards = await pipeline.fetchRecentCards()
                     _ = pipeline // Silenced for now; Phase 3.12+ wires the store
                 }
 
+                var discoverySnapshot: HomeDiscoverySnapshot?
                 if let discoveryAdapter {
-                    let snapshot = try await discoveryAdapter.load(limit: 60)
-                    self.discoveryCards = snapshot.cards
-                    self.visibleMemoryCount = snapshot.visibleMemoryCount
-                    self.zeroMemoryState = snapshot.zeroMemoryState
-                    self.hasAuthorizedSource = snapshot.hasAuthorizedSource
+                    discoverySnapshot = try await discoveryAdapter.load(limit: 60)
                 }
-                self.canOfferSearchSuggestions = if self.discoveryCards.isEmpty {
+                let cardsForCapability = discoverySnapshot?.cards ?? self.discoveryCards
+                let canOfferSearchSuggestions = if cardsForCapability.isEmpty {
                     false
                 } else {
                     await self.searchCapability?.isSearchAvailable() ?? false
@@ -296,6 +296,16 @@ final class HomeViewModel {
                     return
                 }
 
+                if let loadedAwakeningCards {
+                    self.awakeningCards = loadedAwakeningCards
+                }
+                if let discoverySnapshot {
+                    self.discoveryCards = discoverySnapshot.cards
+                    self.visibleMemoryCount = discoverySnapshot.visibleMemoryCount
+                    self.zeroMemoryState = discoverySnapshot.zeroMemoryState
+                    self.hasAuthorizedSource = discoverySnapshot.hasAuthorizedSource
+                }
+                self.canOfferSearchSuggestions = canOfferSearchSuggestions
                 self.viewState = .completed
             } catch is CancellationError {
                 self.viewState = .cancelled

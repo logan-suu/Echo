@@ -25,6 +25,7 @@
 //          AC-2 🔮 (UI提示文案, Phase 3 SearchView), AC-4 🔮 (不准确反馈按钮, Phase 3 SearchView)
 //          US-RET-005 AC-4 ✅ (followUpQuery 审计携带父 traceID, 2026-08-11 3F.6)
 //          DEF-34-001 ✅ (RRF 融合 + ID-keyed 元数据组装, 禁止 top-1 re-search, 2026-08-11 3F.6)
+//          US-PRV-001 AC-7 ✅ (legacy/typed 路径均按真实结果来源过滤, PR #68 review fix)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约 — 纯函数、无状态、审计强制、错误分级),
 //           AGENTS.md §5.3 (反馈存储契约),
 //           R-006 (PrivacyCheckpoint 强制注入), R-008 (跨 Actor await),
@@ -1043,7 +1044,7 @@ public actor SearchPipeline {
             resolvedAdapters = try Self.makeDefaultAdapters(route: resolvedRoute, registry: registry, repo: repo)
         }
 
-        return await Self.searchMultiChannelTyped(
+        let results = await Self.searchMultiChannelTyped(
             factory: factory,
             route: resolvedRoute,
             adapters: resolvedAdapters,
@@ -1054,6 +1055,10 @@ public actor SearchPipeline {
             traceID: traceID,
             weights: weights
         )
+        let policy = await privacyActor.getPolicy()
+        return results.filter {
+            policy.isAuthorized(sourceType: Self.normalizeSourceType($0.memory.sourceType))
+        }
     }
 
     /// ActiveRouteSet → SearchRouteSnapshot 桥接：逐通道经 loadGeneration 解析原生维度。

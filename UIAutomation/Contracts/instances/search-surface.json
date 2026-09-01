@@ -21,7 +21,7 @@
   "masonryEnabled": true,
   "fallbackConditions": [
     "Accessibility Dynamic Type (.accessibility1+)",
-    "Available width cannot fit two 152pt cards plus gutter",
+    "Available content width is below the exact 340pt masonry minimum",
     "Fewer than 6 displayable results",
     "scanEligible does not strictly outnumber continuousReading (ties use single column)",
     "Critical media cannot be safely cropped"

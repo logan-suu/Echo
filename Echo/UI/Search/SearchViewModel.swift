@@ -14,7 +14,8 @@
 //          PR#59 修复: 🟡-2 live pipeline 单实例缓存 (US-RET-005 follow-up 会话状态复用),
 //                      🟡-3 默认 live 路径 FeedbackPipeline 接线 (US-FBK-001/003 落库),
 //                      🟡-4 无路由 → 显式 route-unavailable (US-RET-008), 不再静默空结果
-//          4.0a: 保留 memoryId/相关度/跨语言/低置信度语义，fail-closed 过滤不可解析来源
+//          4.0a: 保留 memoryId/相关度/跨语言/低置信度语义，fail-closed 过滤不可解析来源；
+//                PR #68 review fix: source resolution 后再次检查取消，禁止发布过期 completed 状态
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
@@ -398,9 +399,14 @@ final class SearchViewModel {
                             self.viewState = .cancelled
                             return
                         }
-                        self.results = await self.mapDisplayable(
+                        let displayable = await self.mapDisplayable(
                             fused.map(Self.mapFusedItem)
                         )
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
+                        self.results = displayable
                     } else {
                         let items = try await pipeline.search(
                             query: self.query,
@@ -411,7 +417,12 @@ final class SearchViewModel {
                             self.viewState = .cancelled
                             return
                         }
-                        self.results = await self.mapDisplayable(items)
+                        let displayable = await self.mapDisplayable(items)
+                        guard !Task.isCancelled else {
+                            self.viewState = .cancelled
+                            return
+                        }
+                        self.results = displayable
                     }
                 } else if self.isFixtureBacked {
                     // Deterministic results are allowed only after explicit fixture injection.
