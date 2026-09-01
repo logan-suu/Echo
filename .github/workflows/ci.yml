@@ -30,6 +30,11 @@ jobs:
     name: Build, Lint & Test
     runs-on: macos-15
     timeout-minutes: 30
+    env:
+      # macos-15 defaults to Xcode 16.4. Echo's UI toolchain baseline is
+      # Xcode 26.x; pin an installed runner image version to avoid silently
+      # compiling with the legacy Swift 6.1.2 frontend.
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
     steps:
       - name: Checkout repository
