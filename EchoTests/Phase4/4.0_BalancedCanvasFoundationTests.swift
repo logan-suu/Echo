@@ -237,6 +237,7 @@ struct BalancedCanvasFoundationTests {
         #expect(colors.count == 2)
 
         let lightColor = try #require(colors.first?["color"] as? [String: Any])
+        #expect(lightColor["color-space"] as? String == "srgb")
         let lightComponents = try #require(lightColor["components"] as? [String: String])
         #expect(lightComponents["red"] == light["red"])
         #expect(lightComponents["green"] == light["green"])
@@ -246,6 +247,7 @@ struct BalancedCanvasFoundationTests {
         let appearances = try #require(darkEntry["appearances"] as? [[String: String]])
         #expect(appearances == [["appearance": "luminosity", "value": "dark"]])
         let darkColor = try #require(darkEntry["color"] as? [String: Any])
+        #expect(darkColor["color-space"] as? String == "srgb")
         let darkComponents = try #require(darkColor["components"] as? [String: String])
         #expect(darkComponents["red"] == dark["red"])
         #expect(darkComponents["green"] == dark["green"])
