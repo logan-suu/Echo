@@ -193,11 +193,12 @@ enum State {
 
 ### 8.1 平衡画布组合边界
 
-- `HomeViewModel` 只提供来自 live adapter 的稳定、有序 section/card 值类型；View 根据契约阈值决定 masonry 或单列呈现，不重新推导领域排序。
-- Home 的 `empty`、`lowData`、`richData` 是展示状态映射，不是第二份记忆数据库状态；阈值输入来自真实可见记忆数量。
-- Search 保留 SearchPipeline 的相关度顺序；masonry 装箱不得改变该语义顺序或反馈绑定的 `memoryId`。
+- `HomeViewModel` 只提供来自 live adapter 的稳定、有序 section/card 值类型；View 根据契约阈值决定 masonry 或单列呈现，不重新推导领域排序。`4.0a` 可新增只读 `DiscoveryMemoryProviding` 协议及 production adapter；若现有 repository 缺少计数/最近记忆读取，可补充无副作用读 API，但不得新增存储、schema、迁移或写路径。
+- Home 的 `empty`、`lowData`、`richData` 是展示状态映射，不是第二份记忆数据库状态；阈值输入是当前策略允许、未排除、来源可解析且可安全展示的真实记忆数量。0 条时只有真实 ProgressActor 扫描任务可以驱动进度 UI。
+- Search 保留 SearchPipeline 的相关度顺序；UI adapter 只映射 `presentationKind = scanEligible | continuousReading`。照片/视频且来源可解析，或去除首尾空白后非空且不超过 160 个 Swift `Character`（扩展字形簇）的可独立理解摘要为 `scanEligible`；更长或需要连续阅读的备忘录、语音转写/正文为 `continuousReading`。不少于 6 个可展示结果、`scanEligible` 严格多于半数、非 Accessibility Dynamic Type、VoiceOver 关闭且可用内容宽度至少 340pt（2 × 164pt + 12pt）才进入 masonry，平票按单列；masonry 装箱不得改变语义顺序、partial/low-confidence 状态或反馈绑定的 `memoryId`。
 - Home 与 Search 共用 Memory Card 协议；卡片打开后路由到 Focus surface，详情页不得继承 masonry。
 - ProgressActor/TaskQueueActor、离线、降级和权限状态仍通过独立 runtime adapter 注入，不得混入布局计算。
+- 通用 Discovery 卡片不使用水平滑动手势；US-AWK-005 唤醒卡的左右滑是专用 variant，且必须提供等价按钮和 `accessibilityAction`。
 
 ### 8.2 全 App Profile 应用
 

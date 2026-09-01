@@ -168,11 +168,11 @@ struct Phase3IntegrationTests {
             #expect(!vm.hasSearched)
         }
 
-        @Test("Privacy denial maps to L2 recoverable error state (R-006 through UI layer)")
-        func test_privacyDeniedErrorState() async throws {
+        @Test("Search operation remains available without a search pseudo-source")
+        func test_searchOperationUsesRealSourcePolicy() async throws {
             try await PrivacyActor.shared.updatePolicy(UserPolicy(
                 preferredLanguage: "zh-Hans",
-                authorizedSourceTypes: ["photo"],  // search NOT authorized
+                authorizedSourceTypes: ["photo"],
                 policyVersion: 1
             ))
 
@@ -181,17 +181,11 @@ struct Phase3IntegrationTests {
             vm.submitQuery("anything")
             let state = await awaitSettled(vm)
 
-            guard case .error(let level) = state else {
-                Issue.record("Expected .error, got \(state)")
-                return
-            }
-            guard case .l2Recoverable = level else {
-                Issue.record("Expected .l2Recoverable (SearchError.privacyDenied is L2), got \(level)")
-                return
-            }
+            #expect(state == .completed)
+            #expect(vm.results.allSatisfy { $0.sourceType == "photo" })
 
             // Restore policy synchronously before the test returns — the suite is
-            // serialized and later tests depend on search being authorized.
+            // serialized and later tests depend on the shared policy fixture.
             // No fire-and-forget Task (deterministic global PrivacyActor state).
             try await PrivacyActor.shared.updatePolicy(UserPolicy(
                 preferredLanguage: "zh-Hans",

@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-01T07:04:28Z",
+  "last_updated": "2026-09-01T12:30:36Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2116,7 +2116,8 @@
             "US-AWK-005",
             "US-RET-001",
             "US-RES-001",
-            "US-SYS-001"
+            "US-SYS-001",
+            "US-PRV-001"
           ],
           "owner": "iOS Product Experience Lead",
           "documents_required": [
@@ -2130,7 +2131,18 @@
             "UIAutomation/Contracts/instances/home-discovery-surface.json",
             "UIAutomation/Contracts/instances/search-surface.json"
           ],
-          "status": "ready",
+          "status": "review",
+          "ui_run": {
+            "runId": "4.0a-live-review-2026-09-01",
+            "automation_phase": "accepted",
+            "started_at": "2026-09-01T12:30:36Z",
+            "delivery_approved_at": "2026-09-01T13:22:19Z",
+            "visual_media_captured": false,
+            "devices": [
+              "iPhone 17 Pro (iOS 26.5)",
+              "iPhone 16 Pro (iOS 18.2)"
+            ]
+          },
           "dependencies": [
             "4.0"
           ],
@@ -2140,19 +2152,30 @@
             "Home",
             "Search"
           ],
+          "ac_scope": {
+            "delivers": "Production presentation wiring, deterministic Discovery layout eligibility, semantic ordering, interaction equivalence and Discovery-to-Focus continuity",
+            "does_not_reclaim": "Core retrieval quality, awakening scheduling, feeling storage, task queue, offline engine or audit AC already owned by US-AWK-002/005, US-RET-001, US-RES-001 and US-SYS-001"
+          },
           "implementation_constraints": [
-            "默认 App 路径只能消费 live adapters、AwakeningCardRepositoryActor、真实记忆索引与 ProgressActor/TaskQueueActor 进度，不得用 fixture、Preview 或静态示例填充内容",
-            "Home 在 20+ 真实记忆、单区块至少 6 张卡片、默认 Dynamic Type 与足够宽度时默认双列 adaptive masonry；低数据/AX/窄宽/长文本回退单列",
-            "Search 在至少 6 个适合扫描的结果时使用同一画布语法；masonry 装箱不得改变 SearchPipeline 相关度顺序或反馈 memoryId 绑定",
-            "建议问题只能来自当前生产检索能力与真实可用筛选维度"
+            "默认 App 路径只能消费 live adapters、AwakeningCardRepositoryActor、真实记忆索引与 ProgressActor/TaskQueueActor 进度，不得用 fixture、Preview、伪造内容或假进度填充；本地化建议模板仅在携带可执行 SearchPipeline payload 且通过当前能力检查时可用",
+            "visibleMemoryCount/displayableResultCount 只统计 UserPolicy 允许、未排除、来源可解析、稳定 memoryId/Focus 路由存在且具有真实 aspect ratio 或真实摘要的项目",
+            "允许新增 UI-adjacent Discovery 只读协议/adapter，并为现有 repository 补充无副作用的计数/最近记忆读取 API；禁止新增第二份存储、数据库 schema/迁移或写路径",
+            "Home 在 20+ 可展示真实记忆、单区块至少 6 张可展示卡片、非 Accessibility Dynamic Type、VoiceOver 关闭且可用内容宽度至少 340pt（2 × 164pt + 12pt）时默认双列 adaptive masonry；任一条件未满足即单列",
+            "Search adapter 确定性映射 presentationKind=scanEligible|continuousReading；文本仅在 trim 后为 1...160 个 Swift Character 时可 scanEligible；不少于 6 个可展示结果、scanEligible 严格多于半数且满足同一 AX/VoiceOver/340pt 门禁时默认 masonry，平票或 continuousReading 多数时单列；装箱不得改变相关度顺序、partial/low-confidence 语义或反馈 memoryId 绑定",
+            "Home 0 条状态仅在 ProgressActor 存在真实活跃扫描任务时显示 determinate 进度；无任务、已完成或未授权时显示授权/分享导入引导，不显示扫描进度或扫描中文案",
+            "PrivacyOperation.search 只作为操作级 checkpoint，不得作为 authorizedSourceTypes 伪来源；历史策略缺少 search 时仍按 photo/note/voice/video/thirdParty 等真实来源逐项授权，且不得恢复已撤销来源",
+            "通用 Home/Search 卡不定义水平滑动；US-AWK-005 AC-1~5 的媒体/音乐、左右滑、感受持久化与审计生产闭环由独立任务 4.0d 交付，4.0a 只保留稳定 card/memory identity 与 Focus 路由槽位"
           ],
           "acceptance_evidence": [
-            "Home 0 / 1~19 / 20+ 三档真实数据状态，无 fixture 补位",
-            "Search <6 / >=6、长文本与 Accessibility Dynamic Type 的确定性布局切换",
+            "Home 0（活跃扫描/无扫描/未授权）/1~19/20+ 真实数据状态，无 fixture、伪造内容或假进度补位",
+            "Search <6、>=6 scanEligible 多数、>=6 平票、continuousReading 多数与 Accessibility Dynamic Type 的确定性布局切换",
             "卡片保留稳定 memoryId、source identity、时间/地点 metadata 与 Focus 跳转",
+            "旧 UserPolicy 不含 search 伪来源时检索仍可执行，并继续过滤未授权的真实来源",
+            "通用卡无水平滑动；唤醒卡保留稳定 cardId/memoryId 与 Focus 路由，不以视觉任务替代 4.0d 的交互闭环",
             "双语、VoiceOver 语义顺序、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T07:04:28Z"
+          "last_updated": "2026-09-01T13:27:31Z",
+          "notes": "2026-09-01 spec reasonableness review retained the approved Balanced Canvas direction but made 4.0a executable: defined displayable live data, deterministic Search presentationKind eligibility, truthful zero-memory progress, read-only adapter/API scope, story AC ownership and the US-AWK-005 gesture exception. User confirmed the revised contract; TDD implementation started at 2026-09-01T12:30:36Z. Dual-device Live Review then exposed a pre-existing privacy-model defect: iPhone 17 Pro retained a policy containing only real sources while iPhone 16 Pro used the newer in-memory default, and SearchPipeline incorrectly required the pseudo-source search. Spec v5.36 now treats search as an operation and requires per-real-source filtering without policy mutation. Repair evidence: the new compatibility test failed Red with privacyDenied(sourceTypes: [search]), then 97 affected Search/Privacy/Phase2/Phase3/Permission tests and 4 CreativePipeline real-source tests passed serially on iPhone 17 Pro. The final 4.0a task suite passed 10/10, SwiftLint completed with zero violations, localization reported 360-key parity, static bans and 153 accessibility contracts passed, and release compliance found no blocking issue. The reported 17 Pro policy was restored exactly after hosted tests and remained unchanged after final app launch. The same final build was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 without screenshot/video capture. Human visual approval received at 2026-09-01T13:22:19Z. commit-pr-echo moved the task to review at 2026-09-01T13:27:31Z; PR metadata will be recorded after creation."
         },
         {
           "id": "4.0b",
@@ -2251,6 +2274,54 @@
             "双语、Dynamic Type、VoiceOver、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
           ],
           "last_updated": "2026-09-01T07:04:28Z"
+        },
+        {
+          "id": "4.0d",
+          "title": "交互式唤醒卡生产闭环",
+          "story": [
+            "US-AWK-005"
+          ],
+          "owner": "iOS Awakening Experience Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/双语言实现说明文档.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "docs/05-planning/phase3f-story-matrix.md",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0a"
+          ],
+          "test_file": "EchoTests/Phase4/4.0d_InteractiveAwakeningCardTests.swift",
+          "surface_family": "discovery",
+          "ui_scope": [
+            "Home",
+            "AwakeningCard",
+            "Detail"
+          ],
+          "implementation_constraints": [
+            "交付 US-AWK-005 AC-1~5 的真实生产闭环，不得以 fixture、通知占位文案或仅导航到详情冒充卡片完成",
+            "userFeelings 是原记忆的扩展属性而非独立记忆；新增 schema/迁移与 Actor 写路径必须事务化、端侧保存、可编辑/删除且不可被用户搜索",
+            "左滑下一张、右滑记录感受仅属于专用 AwakeningCard variant；同时提供等价可见按钮和 accessibility actions，避免手势成为唯一入口",
+            "媒体缩略图、来源跳转和 Apple Music 授权状态来自真实系统 adapter；无授权显示本地化提示，限流/不可用静默降级到随 App 打包的离线年份曲库，不发起模型或内容下载",
+            "所有新增异步入口遵循 PrivacyCheckpoint、Actor isolation、L1~L4 与 hash-only audit；禁止 Combine、Task.detached、@unchecked Sendable 和 nonisolated(unsafe)"
+          ],
+          "acceptance_evidence": [
+            "AC-1：真实文案、1~3 个媒体缩略图与授权感知音乐建议/离线降级证据",
+            "AC-2：左滑下一张、右滑记录感受及等价按钮/accessibility actions 触发相同 intent",
+            "AC-3：照片、文案/备忘录和语音分别跳转正确原始数据或播放/详情 surface",
+            "AC-4：userFeelings 新增、查看、编辑、删除、重启持久化、不可搜索及下一次个性化刷新边界测试",
+            "AC-5：cardInteraction action=next/record/jump、feelingAssociatedToSource 的 hash-only 审计证据",
+            "双语、Dynamic Type、VoiceOver、Reduce Motion、权限拒绝/限流与双设备无媒体 Live Simulator Review"
+          ],
+          "last_updated": "2026-09-01T12:12:37Z",
+          "notes": "Created by the 4.0a reasonableness review because Phase 3/3F evidence explicitly left US-AWK-005 media/music/reaction persistence incomplete. A release test task cannot substitute for missing production behavior."
         },
         {
           "id": "4.1",
@@ -2357,11 +2428,13 @@
           "dependencies": [
             "4.0a",
             "4.0b",
-            "4.0c"
+            "4.0c",
+            "4.0d"
           ],
           "test_file": "EchoTests/Phase4/AllPipelinesTests.swift",
           "acceptance_evidence": [
             "默认 App 无 -ui-fixture 参数的来源、摄入、检索、反馈、编辑、删除、唤醒、翻译和创作全链路通过记录",
+            "US-AWK-005 媒体/音乐、下一张、感受新增编辑删除与来源跳转的 no-fixture 生产闭环记录（消费 4.0d，不以本测试任务补写功能）",
             "Home 0/1~19/20+ live-data 状态与 Search <6/>=6 结果布局路径的 no-fixture 端到端记录",
             "12 个 UI 功能域在默认 App 路径使用同一 design profile 且跨 Surface 导航不出现视觉系统切换的端到端记录",
             "真实 PhotoKit 与 Share Extension 输入的 traceID 贯穿 PrivacyCheckpoint、SQLite、generation route 和审计日志",
@@ -2498,7 +2571,8 @@
           "dependencies": [
             "4.0a",
             "4.0b",
-            "4.0c"
+            "4.0c",
+            "4.0d"
           ],
           "test_file": "EchoTests/Phase4/QualityGateTests.swift",
           "acceptance_evidence": [
@@ -2538,7 +2612,8 @@
           "dependencies": [
             "4.0a",
             "4.0b",
-            "4.0c"
+            "4.0c",
+            "4.0d"
           ],
           "test_file": "EchoTests/Phase4/LocalizationAccessibilityTests.swift",
           "acceptance_evidence": [
@@ -2582,7 +2657,8 @@
           "dependencies": [
             "4.0a",
             "4.0b",
-            "4.0c"
+            "4.0c",
+            "4.0d"
           ],
           "test_file": null,
           "acceptance_evidence": [
@@ -2653,6 +2729,7 @@
             "4.0a",
             "4.0b",
             "4.0c",
+            "4.0d",
             "4.1",
             "4.2",
             "4.3",
@@ -2666,6 +2743,7 @@
           "test_file": null,
           "acceptance_evidence": [
             "唯一 RC build number、marketing version、Git commit 和 archive SHA-256 的不可变记录",
+            "4.0d 为 done，US-AWK-005 AC-1~5 生产证据可定位且不再标记 Stub/partial",
             "4.1 至 4.9 均为 done 且证据链接可访问的 gate checklist",
             "P0=0、P1=0 和所有 v1 范围变更均有批准记录的缺陷清单",
             "DEF-001（Widget/Live Activity）与 DEF-002（Siri/App Intents）已有明确的 v1 实现任务，或由产品负责人批准移出 v1 并同步规格/故事矩阵",
@@ -2782,6 +2860,7 @@
             "4.0a",
             "4.0b",
             "4.0c",
+            "4.0d",
             "4.1",
             "4.2",
             "4.3",
@@ -2798,7 +2877,7 @@
           ],
           "test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
           "acceptance_evidence": [
-            "4.1 至 4.13 全部为 done 且每项 acceptance_evidence 均有可定位制品",
+            "4.0、4.0a、4.0b、4.0c、4.0d 与 4.1 至 4.13 全部为 done，且每项 acceptance_evidence 均有可定位制品",
             "EchoTests/Phase4/Phase4IntegrationTests.swift 在最终 RC 上 exit code 0",
             "Phase 1、2、3、3F、4 的累计单元与集成测试均为 0 failure",
             "最终 RC 身份、签名、SBOM、隐私、文档、P0=0 和 P1=0 的发布证据索引",
@@ -3007,6 +3086,7 @@
         "docs/ui/testing-and-artifacts.md",
         "UIAutomation/Contracts/instances/home-discovery-surface.json",
         "UIAutomation/Contracts/instances/search-surface.json",
+        "UIAutomation/Contracts/schemas/surface-v1.json",
         "UIAutomation/Policies/acceptance-policy.json",
         "docs/05-planning/开发计划安排文档.md",
         "docs/05-planning/task-status.json"
@@ -3091,6 +3171,35 @@
         "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
         "UIAutomation/Policies/acceptance-policy.json",
         "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260901-4-0A-REASONABLENESS",
+      "status": "resolved",
+      "detected_at": "2026-09-01T12:12:37Z",
+      "resolved_at": "2026-09-01T12:12:37Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "retain-direction-tighten-contract-add-missing-task",
+      "decision": "Retain the approved Balanced Canvas direction for task 4.0a, define displayable live data, deterministic scanEligible/continuousReading eligibility, truthful zero-memory progress, a read-only Discovery adapter/API boundary and explicit story AC ownership; add task 4.0d for the US-AWK-005 production behavior that Phase 3/3F evidence still marks partial.",
+      "reason": "The previous specification was directionally sound but not directly executable: current Home/Search models do not expose all claimed live metadata, suitable-for-scanning and long-text-majority were not deterministic, the zero-memory style implied fake progress, generic swipe actions conflicted with US-AWK-005, and Phase 3F evidence confirms media/music/reaction persistence was never implemented. A visual task or later E2E test cannot substitute for missing production behavior.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/架构设计文档.md",
+        "docs/02-architecture/数据流全链路技术说明文档.md",
+        "docs/03-implementation/双语言实现说明文档.md",
+        "docs/ui/README.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/instances/home-discovery-surface.json",
+        "UIAutomation/Contracts/instances/search-surface.json",
+        "UIAutomation/Contracts/schemas/surface-v1.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/phase3f-story-matrix.md",
+        "docs/05-planning/phase3f-evidence-index.md",
         "docs/05-planning/task-status.json"
       ]
     }

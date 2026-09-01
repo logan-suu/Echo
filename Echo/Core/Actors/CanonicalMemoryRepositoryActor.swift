@@ -4,7 +4,7 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-ING-006, US-PRV-004/006/007,
 //            US-AWK-007, US-FBK-001/002/003
 //            AGENTS.md D-002/D-003/D-004/D-005, §5 存储契约
-// 任务: 3F.4 - Canonical storage 与 generation 生命周期
+// 任务: 3F.4 - Canonical storage 与 generation 生命周期; 4.0a - Discovery 只读最近记忆 API
 // AC 覆盖: 确定性 ID (RFC 4122 派生), 事务 CRUD (canonical+vector+FTS 同事务/补偿),
 //          崩溃点故障注入 (无 half-write), 全删除边界 (D-005), 级联删除 (US-PRV-007),
 //          仅从 Echo 移除写 ExcludedAssets (US-PRV-004), 反馈 generation 身份
@@ -13,6 +13,7 @@
 //          2026-08-09 PR#56 二轮: CR-3 FTS 行与 representation 解耦 (每记忆一行),
 //          CR-1 deleteMemory 缺参回退 memory 定位, Nitpick-1 故障注入 DEBUG-only
 //          2026-08-11 3F.6: searchCanonical ORDER BY rank (DEF-56-006, FTS5 bm25 相关性排序)
+//          2026-09-01 4.0a: 无副作用 fetchRecentMemories，供 live Discovery adapter 使用
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007, R-008 (跨 Actor await)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
 // 生成时间: 2026-08-09
@@ -219,6 +220,25 @@ public actor CanonicalMemoryRepositoryActor {
             bindings: [.text(memoryId.uuidString)]
         )
         return rows.first.flatMap { Self.rowToMemory($0) }
+    }
+
+    /// Returns recent canonical memories for the read-only Discovery adapter.
+    ///
+    /// This API does not create a second store or mutate ranking/index state. The UI adapter
+    /// applies UserPolicy and live source-resolution checks before an item becomes displayable.
+    public func fetchRecentMemories(limit: Int) async throws -> [Memory] {
+        guard limit > 0 else { return [] }
+        let rows = try await db.executeQuery(
+            sql: """
+                SELECT memoryId, sourceLocator, canonicalText, sourceType, createdAt, updatedAt,
+                       recoverability, originalTimestamp, userEdited, userLocked
+                FROM Memory
+                ORDER BY COALESCE(originalTimestamp, createdAt) DESC, memoryId ASC
+                LIMIT ?
+                """,
+            bindings: [.int(Int64(limit))]
+        )
+        return rows.compactMap(Self.rowToMemory)
     }
 
     /// 按 sourceLocator 定位全部关联记忆 ID（3F.5 生产同步路由）。

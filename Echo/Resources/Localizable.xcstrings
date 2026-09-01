@@ -5859,6 +5859,90 @@
         }
       }
     },
+    "Connect a memory source": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Connect a memory source" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "连接记忆来源" } }
+      }
+    },
+    "From your connected sources": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "From your connected sources" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "来自已连接的数据源" } }
+      }
+    },
+    "No memories yet": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "No memories yet" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "还没有记忆" } }
+      }
+    },
+    "Recent memories": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Recent memories" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "最近的记忆" } }
+      }
+    },
+    "Review data sources in Settings to start importing memories.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Review data sources in Settings to start importing memories." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "请在设置中检查数据源授权，以开始导入记忆。" } }
+      }
+    },
+    "Scanning your memories (%lld of %lld)": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Scanning your memories (%1$lld of %2$lld)" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在扫描记忆（%1$lld/%2$lld）" } }
+      }
+    },
+    "Share a note or voice memo to Echo to begin.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Share a note or voice memo to Echo to begin." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "将备忘录或语音备忘录分享到 Echo 即可开始。" } }
+      }
+    },
+    "Ask Echo": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Ask Echo" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "问问 Echo" } }
+      }
+    },
+    "Explore your memories with an offline search": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Explore your memories with an offline search" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "通过离线搜索探索你的记忆" } }
+      }
+    },
+    "Memories from this month": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Memories from this month" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "这个月的记忆" } }
+      }
+    },
+    "memories from this month": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "memories from this month" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "这个月的记忆" } }
+      }
+    },
+    "Moments that made me smile": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Moments that made me smile" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "让我微笑的时刻" } }
+      }
+    },
+    "moments that made me smile": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "moments that made me smile" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "让我微笑的时刻" } }
+      }
+    },
+    "Open Search and run this query": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Open Search and run this query" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开搜索并执行此查询" } }
+      }
+    },
     "Failed": {
       "localizations": {
         "en-US": {

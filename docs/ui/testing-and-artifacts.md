@@ -66,8 +66,11 @@
 - 自动 accessibility audit 不能替代 VoiceOver/Voice Control/Switch Control 专项检查
 - 最终视觉判断只通过 **Live Simulator Review（双设备）**（bootstrap 规范 §11.4）：iPhone 17 Pro (iOS 26.5) 主审查 + iPhone 16 Pro (iOS 18.x) 最低版本审查
 - Home 必须分别验收 0、1~19、20+ 三档真实数据状态；20+ 在默认 Dynamic Type 与足够宽度下应呈现双列平衡画布
-- Search 必须分别验收 `<6` 与 `>=6` 个可展示结果；后者仅在短摘要/媒体结果适合扫描时进入 masonry
+- Home 的 0 条状态必须拆分验证：有真实活跃扫描任务时显示真实 determinate 进度；无任务/已完成/未授权时不显示 ProgressView 或扫描中文案
+- Search 必须分别验收 `<6` 与 `>=6` 个可展示结果；`>=6` 时仅当 `scanEligible` 严格多于 `continuousReading` 才进入 masonry，平票与连续阅读占多数均保持单列
+- “可展示”测试数据必须满足：策略允许、未排除、来源可解析、稳定 memoryId/Focus 路由存在，并具有真实 aspect ratio 或真实摘要；失效来源不得计入阈值
 - VoiceOver reading order 必须与稳定语义数据顺序一致，不以视觉列位置作为断言
+- 4.0a 验证通用 Discovery 卡无水平滑动手势；4.0d 验证 US-AWK-005 专用唤醒卡左右滑与等价按钮/辅助功能动作产生相同 intent，并覆盖感受持久化与审计
 
 ### 2.6 权限流程测试（Permission Flow Testing）
 - 系统权限对话框拒绝路径覆盖（相册、麦克风、语音、通知等）

@@ -6,15 +6,16 @@
 //            US-AWK-005 AC-1~3 (交互式卡片展示), US-RES-001 AC-3 (离线标识)
 //            docs/ui/echo-memory-canvas-style.md §10.1 (空态/加载态), §16.1 (离线指示器)
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
-// 任务: 3.1 - HomeView + HomeViewModel + Awakening Cards + Offline Indicator
+// 任务: 3.1 - HomeView + HomeViewModel + Awakening Cards + Offline Indicator; 4.0a - Discovery live adapter
 // AC 覆盖: US-AWK-001 AC-4 ✅ (唤醒卡片展示), US-AWK-002 AC-3 ✅ (纪念日卡片),
 //          US-AWK-003 AC-4 ✅ (情绪唤醒卡片), US-AWK-005 AC-1 ✅ (卡片展示),
 //          US-RES-001 AC-3 ✅ (离线模式标识), AC-2 ❌ (无网络时仅缓存, Phase 4)
+//          4.0a: UserPolicy + canonical memory + ProgressActor 只读快照与布局门禁
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转: idle→loading→completed/error/cancelled),
 //           §4.2 (Actor 隔离 — 仅持有不可变引用), §8.2 (禁止 idle→completed 直接跳转),
 //           docs/ui/architecture.md §2.2 (错误传播路径), §6 (ViewModel 状态枚举)
-// 生成时间: 2026-07-26
+// 生成时间: 2026-07-26; 2026-09-01 (4.0a)
 // ==========================================
 
 import SwiftUI
@@ -137,12 +138,18 @@ struct AwakeningCardModel: Identifiable, Sendable, Equatable {
     }
 }
 
+struct HomeSearchSuggestion: Identifiable, Equatable, Sendable {
+    let id: String
+    let titleKey: String
+    let queryKey: String
+}
+
 // MARK: - HomeViewModel
 
-/// Home 视图 ViewModel — 唤醒卡片展示 + 离线状态管理。
+/// Home 视图 ViewModel — 真实记忆发现、唤醒卡片与离线状态管理。
 ///
 /// ## Surface Family: Discovery
-/// - 布局: 自适应卡片列表（非 masonry）
+/// - 布局: 真实数据达到门禁时 adaptive masonry，否则稳定单列
 /// - 样式: echo-memory-canvas + apple-native 基础
 ///
 /// ## 职责 (docs/ui/architecture.md §7.1)
@@ -191,6 +198,16 @@ final class HomeViewModel {
     private(set) var viewState: ViewState = .idle
     /// 唤醒卡片列表（由 AwakeningPipeline 事件驱动填充）
     private(set) var awakeningCards: [AwakeningCardModel] = []
+    /// 规范记忆经 UserPolicy + live source resolution 映射后的可展示卡片。
+    private(set) var discoveryCards: [DiscoveryCardPresentation] = []
+    /// 当前生产快照内的可展示记忆数（仅真实可解析项目）。
+    private(set) var visibleMemoryCount = 0
+    /// 0 条记忆时的诚实状态；仅真实活跃扫描可产生进度。
+    private(set) var zeroMemoryState: DiscoveryZeroMemoryState = .authorizationGuidance
+    /// 当前是否至少有一种受支持来源获 UserPolicy 授权。
+    private(set) var hasAuthorizedSource = false
+    /// Ask Echo suggestions are visible only after the live Search route passes capability checks.
+    private(set) var canOfferSearchSuggestions = false
     /// 离线模式标识 (US-RES-001 AC-3)
     private(set) var isOffline: Bool = false
 
@@ -202,6 +219,10 @@ final class HomeViewModel {
 
     /// 3F.8: 唤醒卡片持久化存储（ADR-012 决策-5）— 启动时加载最近卡片
     private let cardRepository: AwakeningCardRepositoryActor?
+
+    /// 4.0a read-only adapter: canonical memories + UserPolicy + ProgressActor + source metadata.
+    private let discoveryAdapter: (any HomeDiscoveryServing)?
+    private let searchCapability: (any HomeSearchCapabilityServing)?
 
     /// 当前活跃的加载 Task
     private var loadingTask: Task<Void, Never>?
@@ -215,10 +236,14 @@ final class HomeViewModel {
     /// - Parameter cardRepository: 唤醒卡片持久化存储（3F.8，可选注入）。
     init(
         awakeningPipeline: AwakeningPipeline? = nil,
-        cardRepository: AwakeningCardRepositoryActor? = nil
+        cardRepository: AwakeningCardRepositoryActor? = nil,
+        discoveryAdapter: (any HomeDiscoveryServing)? = nil,
+        searchCapability: (any HomeSearchCapabilityServing)? = nil
     ) {
         self.awakeningPipeline = awakeningPipeline
         self.cardRepository = cardRepository
+        self.discoveryAdapter = discoveryAdapter
+        self.searchCapability = searchCapability
     }
 
     deinit {}
@@ -253,6 +278,19 @@ final class HomeViewModel {
                     _ = pipeline // Silenced for now; Phase 3.12+ wires the store
                 }
 
+                if let discoveryAdapter {
+                    let snapshot = try await discoveryAdapter.load(limit: 60)
+                    self.discoveryCards = snapshot.cards
+                    self.visibleMemoryCount = snapshot.visibleMemoryCount
+                    self.zeroMemoryState = snapshot.zeroMemoryState
+                    self.hasAuthorizedSource = snapshot.hasAuthorizedSource
+                }
+                self.canOfferSearchSuggestions = if self.discoveryCards.isEmpty {
+                    false
+                } else {
+                    await self.searchCapability?.isSearchAvailable() ?? false
+                }
+
                 guard !Task.isCancelled else {
                     self.viewState = .cancelled
                     return
@@ -276,6 +314,30 @@ final class HomeViewModel {
     /// 刷新唤醒卡片 — 下拉刷新时调用。
     func refresh() {
         loadAwakeningCards()
+    }
+
+    func discoveryLayoutMode(environment: DiscoveryLayoutEnvironment) -> DiscoveryLayoutMode {
+        DiscoveryLayoutPolicy.homeMode(
+            visibleMemoryCount: visibleMemoryCount,
+            sectionItemCount: discoveryCards.count,
+            environment: environment
+        )
+    }
+
+    var searchSuggestions: [HomeSearchSuggestion] {
+        guard canOfferSearchSuggestions else { return [] }
+        return [
+            HomeSearchSuggestion(
+                id: "recent-month",
+                titleKey: "Memories from this month",
+                queryKey: "memories from this month"
+            ),
+            HomeSearchSuggestion(
+                id: "joyful-moments",
+                titleKey: "Moments that made me smile",
+                queryKey: "moments that made me smile"
+            ),
+        ]
     }
 
     /// Set state to completed with preloaded cards (for Preview/testing only).

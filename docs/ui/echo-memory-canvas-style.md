@@ -192,9 +192,9 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 
 ### 5.3 Text/Note Card
 - 正文摘要可自然换行
-- 设置可读的最大摘要策略（如 3 行）
+- masonry 中只接受已由展示 adapter 标记为 `scanEligible` 的短摘要，可使用最多 3 行的预览；需要连续阅读的文本必须标记为 `continuousReading` 并触发单列，单列正文可自然增长
 - 提供完整内容入口
-- 不得使用固定卡片高度裁掉文字
+- 不得使用固定卡片高度裁掉正文，也不得把原文截断后错误标记为可独立理解的短摘要
 - Fixture：离线、确定、控制 `contentId`、`textContent`、`locale`、`title`
 
 ### 5.4 Voice Card
@@ -225,8 +225,11 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 - 当前区块达到其 Surface 契约声明的真实内容阈值，且卡片具有稳定 ID 与 aspect ratio metadata
 - 卡片以媒体、短摘要或可独立理解的记忆单元为主，适合视觉扫描
 - Home：总记忆数达到 20 条后才进入 rich-data 画布；单个瀑布流区块至少有 6 张真实可展示卡片
-- Search：至少 6 个可展示结果且长文本卡片不占多数；否则维持相关度优先的单列结果
+- Search：至少 6 个可展示结果，且 adapter 映射的 `scanEligible` 结果严格多于 `continuousReading`；平票或 `continuousReading` 占多数时维持相关度优先的单列结果。`scanEligible` 仅包括来源可解析的照片/视频，或去除首尾空白后非空且不超过 160 个 Swift `Character`（扩展字形簇）的可独立理解摘要；更长或需连续阅读的备忘录、语音转写/正文标记为 `continuousReading`
+- 双列还要求非 Accessibility Dynamic Type、VoiceOver 关闭且可用内容宽度至少 340pt（2 × 164pt 最小卡宽 + 12pt 列距）；任一条件不满足即单列
 - iPhone 默认两列；iPad 根据可用宽度、Split View 和 152pt 最小卡宽自适应为 2~5 列
+
+“可展示”统一指：当前 UserPolicy 允许、未排除、原始来源仍可解析、稳定 `memoryId` 与 Focus 跳转存在，且媒体具有真实 aspect ratio 或文本具有真实摘要。不可展示项目不进入任何数量阈值。
 
 ### 6.2 单列/List 回退（必须）
 以下任一条件触发回退到单列卡片或系统 List：
@@ -322,10 +325,10 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 
 **Surface Family**: `discovery`
 
-- 当系统尚未摄入任何记忆时，HomeView 展示品牌欢迎页而非空白列表
-- 页面构成：顶部 Echo logo + `.largeTitle` 标题 + `.body` 说明 + determinate `ProgressView`
-- 文案（String Catalog）：zh-Hans `"Echo 正在扫描你的记忆…"` / en-US `"Echo is scanning your memories…"`
-- 扫描完成后自动切换至正常内容视图
+- 当系统没有可展示记忆时，HomeView 展示品牌空态而非空白列表
+- 仅当 ProgressActor 存在真实活跃扫描任务时，页面才显示由真实 `processedCount/totalCount` 驱动的 determinate `ProgressView`，文案（String Catalog）为 zh-Hans `"Echo 正在扫描你的记忆…"` / en-US `"Echo is scanning your memories…"`
+- 扫描已完成、没有活跃扫描任务或用户尚未授权数据源时，不显示 ProgressView 或扫描中文案；改为根据真实授权/来源状态提供相册授权或系统分享导入入口
+- 扫描完成后按真实 `visibleMemoryCount` 切换至低数据/rich-data 内容；结果仍为 0 时保留诚实导入空态
 
 #### 10.1.2 Focus — 数据加载失败空态
 
@@ -507,8 +510,9 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 
 ### 17.2 卡片交互
 - 长按：contextMenu（查看详情/标记问题/分享/移出 Echo）
-- 左滑："移出 Echo"（destructive），右滑："收藏"（非 destructive）
 - 点击：进入 Focus surface
+- 通用 masonry/ScrollView 卡片不定义水平滑动手势；移出 Echo、收藏与反馈通过显式按钮、Menu/contextMenu 和等价 `accessibilityAction` 提供，避免与纵向滚动及辅助技术手势冲突
+- **US-AWK-005 专用唤醒卡例外**：左滑“下一张”、右滑“记录感受”，并同时提供等价可见按钮与辅助功能动作；不得把该语义复用于普通 Home/Search 记忆卡
 
 ### 17.3 卡片 Accessibility
 - VoiceOver label：`"[类型]，[内容描述]，[时间]，[位置]"`

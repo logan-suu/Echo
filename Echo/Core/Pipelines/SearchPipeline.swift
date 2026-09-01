@@ -10,6 +10,7 @@
 //        2.8 - 集成反馈到 SearchPipeline
 //        2.9 - 跨语言低置信度降级（US-RET-006）
 //        3F.6 - 跟进查询审计（US-RET-005 AC-4）+ 生产多通道检索（R-3.7/DEF-34-001）
+//        4.0a - Separate search operation checkpoint from source authorization
 // AC 覆盖: US-RET-001 AC-1 ✅ (余弦相似度), AC-3 ✅ (crossLanguageMatch标记), AC-4 ✅ (审计),
 //          AC-2 🔮 (Cross-Encoder, Phase 3), AC-5 🔮 (Recall@10, Golden Dataset Phase 3)
 //          US-RET-002 ✅ (中文→英文, 同 RET-001)
@@ -366,7 +367,7 @@ public actor SearchPipeline {
         let checkpoint = await privacyActor.validate(
             operation: .search,
             traceID: traceID,
-            sourceTypes: ["search"]
+            sourceTypes: []
         )
         guard checkpoint.isAllowed else {
             throw SearchError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
@@ -1016,7 +1017,7 @@ public actor SearchPipeline {
         let checkpoint = await privacyActor.validate(
             operation: .search,
             traceID: traceID,
-            sourceTypes: ["search"]
+            sourceTypes: []
         )
         guard checkpoint.isAllowed else {
             throw SearchError.privacyDenied(sourceTypes: checkpoint.sourceTypes)

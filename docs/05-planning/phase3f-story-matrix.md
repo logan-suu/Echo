@@ -76,7 +76,7 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | AWK-002 | Impossible/spec-invalid | 3F.0, 3F.8, 4.2 | iOS cannot guarantee an exact daily 09:00 background schedule. |
 | AWK-003 | Partial | 3F.8, 4.2 | Emotion orchestration/debounce code exists with stub providers; HealthKit, live sentiment, delivery, and persistence are absent. |
 | AWK-004 | Deferred | DEF-001 (approved deferral) | Explicit P1 Phase-4 Widget/Live Activity deferral (DEF-001). |
-| AWK-005 | Stub | 3F.7, 3F.8, 4.2 | Interactive card presentation uses fixture/local state; no media/music/reaction persistence or data navigation. |
+| AWK-005 | Partial | 3F.7, 3F.8, 4.0d, 4.2 | 3F delivered persistent card identity, minimized notification and response→detail routing. Phase 4 task 4.0d owns media/music, next/record interactions, userFeelings persistence/edit/delete, full source navigation and cardInteraction audit; 4.2 verifies the no-fixture production loop. |
 | AWK-006 | Deferred | DEF-002 (approved deferral) | Explicit P1 Phase-4 Siri/App Intents deferral (DEF-002). |
 | AWK-007 | Partial | 3F.4, 3F.7, 4.2 | Detail editing/conflict UI mutates fixture model, but no reindexing, source preservation, userLocked behavior, or persistent conflict resolution. |
 | PRV-001 | Partial | 3F.1, 3F.2, 3F.6, 4.2, 4.5, 4.9 | PrivacyActor has isolated policy/checkpoint behavior; startup neither loads nor wires a deny-by-default production policy. |

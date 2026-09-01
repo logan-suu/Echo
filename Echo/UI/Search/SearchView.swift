@@ -1,17 +1,18 @@
 // ==========================================
 // 文件: SearchView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
-// 对应规格: docs/ui/echo-memory-canvas-style.md §3.1 (Discovery surfaces), §6.2 (单列/List 回退),
+// i18n: User-facing strings resolve through Localizable.xcstrings (zh-Hans + en-US).
+// 对应规格: docs/ui/echo-memory-canvas-style.md §3.1 (Discovery surfaces), §6 (adaptive masonry / single-column fallback),
 //            §10.2 (加载态), §14 (筛选与搜索 UI 模式), §14.3 (低置信度横幅), §14.4 (反馈按钮),
 //            §14.5 (Bad Case 标记)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Discovery surface family)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-RET-001, US-RET-006, US-FBK-001, US-FBK-003
-// 任务: 3.2 - SearchView + SearchViewModel + Feedback + Low-confidence banner + Scan results
+// 任务: 3.2 - SearchView + SearchViewModel + Feedback + Low-confidence banner; 4.0a - Discovery 平衡画布
 // AC 覆盖: US-RET-001 AC-3 ✅ (结果列表展示), US-RET-006 AC-2/AC-4 ✅ (低置信度横幅),
 //          US-FBK-001 AC-1 ✅ (👍/👎 按钮), US-FBK-003 AC-1 ✅ (Bad Case contextMenu)
-// 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Discovery 自适应卡片, 非 masonry),
-//           echo-memory-canvas apple-native 基础; 系统 .searchable + List 容器
-// 生成时间: 2026-08-01
+//          4.0a: stable relevance order, exact presentationKind gate, real source metadata and Focus route
+// 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.2 (Discovery adaptive masonry),
+//           echo-memory-canvas apple-native 基础; 系统 .searchable + ScrollView
+// 生成时间: 2026-08-01; 2026-09-01 (4.0a)
 // ==========================================
 
 import SwiftUI
@@ -21,9 +22,9 @@ import SwiftUI
 /// 检索主视图 — 记忆搜索 + 结果展示 + 反馈交互。
 ///
 /// ## Surface Family: Discovery
-/// - 布局: 系统 List（混合文本/图片内容，需阅读顺序 → §6.2 单列回退，禁用 masonry）
+/// - 布局: scanEligible 严格多数且通过数量/宽度/AX 门禁时 adaptive masonry，否则稳定单列
 /// - 系统容器: NavigationStack (由 AppRootView 提供) + .searchable
-/// - Masonry 启用条件: 不满足 (§6.1/§6.2 — 结果含长文本需连续阅读顺序)
+/// - Masonry 启用条件: 6+ 可展示结果、scanEligible 严格多数、340pt、非 AX 字号且 VoiceOver 关闭
 ///
 /// ## 状态驱动
 /// - idle: 提示文本 + 搜索框
@@ -39,12 +40,18 @@ import SwiftUI
 ///
 /// ## Style
 /// - echo-memory-canvas token: .headline/.body/.caption, Color.primary, semantic colors, SF Symbols
-/// - 禁止 masonry 布局, 禁止 Pinterest 品牌元素
+/// - 禁止 Pinterest 品牌元素；continuousReading 多数和平票回退单列
 /// - 使用系统 Dynamic Type, semantic colors, 系统容器
 struct SearchView: View {
     // MARK: - ViewModel
 
     @State private var viewModel: SearchViewModel
+    private let appViewModel: AppViewModel?
+    @State private var discoveryContentWidth: CGFloat = 0
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// 搜索框绑定文本
     @State private var searchText: String = ""
@@ -64,7 +71,11 @@ struct SearchView: View {
     /// 首次出现标记 — 控制 fixture 注入仅执行一次 (2026-08-02 回归修复)
     @State private var hasHandledLaunchArguments = false
 
-    init(viewModel: SearchViewModel = SearchViewModel(composition: AppComposition.shared)) {
+    init(
+        viewModel: SearchViewModel = SearchViewModel(composition: AppComposition.shared),
+        appViewModel: AppViewModel? = nil
+    ) {
+        self.appViewModel = appViewModel
         _viewModel = State(initialValue: viewModel)
     }
 
@@ -106,8 +117,11 @@ struct SearchView: View {
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
         .onDisappear { viewModel.onDisappear() }
-        .onAppear { handleFirstAppear() }
-        .animation(.easeInOut(duration: 0.25), value: viewModel.viewState)
+        .onAppear {
+            handleFirstAppear()
+            submitPendingHomeQuery()
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: viewModel.viewState)
     }
 
     // MARK: - Launch Argument Fixture Injection
@@ -123,6 +137,12 @@ struct SearchView: View {
         #if DEBUG
         handleLaunchArguments()
         #endif
+    }
+
+    private func submitPendingHomeQuery() {
+        guard let query = appViewModel?.consumePendingSearchQuery() else { return }
+        searchText = query
+        viewModel.submitQuery(query)
     }
 
     #if DEBUG
@@ -301,43 +321,66 @@ struct SearchView: View {
 
     // MARK: - Result List
 
-    /// 结果列表 — Discovery 单列 List (§6.2 回退)
+    /// Result canvas — adaptive masonry only when the deterministic policy allows it.
     private var resultList: some View {
-        List {
-            // 结果计数头
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.grouped.points) {
                 HStack {
                     Text("Results")
-                        .font(.headline)
-                        .foregroundStyle(Color.primary)
+                        .font(EchoTypographyToken.subtitle.font)
+                        .foregroundStyle(EchoColorToken.primaryText.color)
 
                     Spacer()
 
                     Text("\(viewModel.results.count)")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
+                        .font(EchoTypographyToken.metadata.font)
+                        .foregroundStyle(EchoColorToken.secondaryText.color)
                 }
                 .accessibilityAddTraits(.isHeader)
-            }
 
-            // 搜索结果卡片
-            Section {
-                ForEach(viewModel.results) { result in
-                    SearchResultRow(
-                        result: result,
-                        feedbackState: viewModel.feedbackStates[result.id] ?? .none,
-                        onLike: { viewModel.recordLike(result) },
-                        onDislike: { viewModel.recordDislike(result) },
-                        onMarkBadCase: { viewModel.markBadCase(result) },
-                        onOpen: { openDetail(for: result) }
-                    )
-                    .listRowSeparator(.visible)
-                }
+                resultCards
+            }
+            .padding(.horizontal, EchoSpacingToken.grouped.points)
+            .padding(.vertical, EchoSpacingToken.compact.points)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                discoveryContentWidth = max(0, width - 32)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
         .accessibilityIdentifier("search-results-list")
+    }
+
+    @ViewBuilder
+    private var resultCards: some View {
+        let environment = DiscoveryLayoutEnvironment(
+            contentWidth: discoveryContentWidth,
+            usesAccessibilityDynamicType: dynamicTypeSize.isAccessibilitySize,
+            voiceOverEnabled: voiceOverEnabled
+        )
+        if viewModel.discoveryLayoutMode(environment: environment) == .adaptiveMasonry {
+            DiscoveryMasonryLayout {
+                resultCardViews
+            }
+        } else {
+            LazyVStack(spacing: EchoSpacingToken.normal.points) {
+                resultCardViews
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var resultCardViews: some View {
+        ForEach(viewModel.results) { result in
+            SearchResultRow(
+                result: result,
+                feedbackState: viewModel.feedbackStates[result.id] ?? .none,
+                onLike: { viewModel.recordLike(result) },
+                onDislike: { viewModel.recordDislike(result) },
+                onMarkBadCase: { viewModel.markBadCase(result) },
+                onOpen: { openDetail(for: result) }
+            )
+        }
     }
 
     // MARK: - Low-Confidence Banner
@@ -456,61 +499,59 @@ struct SearchResultRow: View {
     let onOpen: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 类型 + 时间行
-            HStack {
-                Text(result.sourceTypeLabel)
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
+        EchoContainer(level: .card) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
+                Button(action: onOpen) {
+                    VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
+                        if let aspectRatio = result.aspectRatio {
+                            DiscoveryMediaThumbnail(
+                                assetID: result.assetId,
+                                aspectRatio: aspectRatio,
+                                sourceType: result.sourceType
+                            )
+                        }
 
-                Spacer()
+                        Text(result.summary)
+                            .font(EchoTypographyToken.body.font)
+                            .foregroundStyle(EchoColorToken.primaryText.color)
+                            .lineLimit(result.presentationKind == .scanEligible ? 3 : nil)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(result.dateDescription)
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
-            }
-
-            // 摘要
-            Text(result.summary)
-                .font(.body)
-                .foregroundStyle(Color.primary)
-                .lineLimit(3)
-
-            // 相似度 + 反馈按钮行
-            HStack(spacing: 12) {
-                Label("\(result.similarityPercent) match", systemImage: "bolt.fill")
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
-                    .labelStyle(.titleAndIcon)
-
-                Spacer()
-
-                // 👍 反馈
-                Button {
-                    onLike()
-                } label: {
-                    Image(systemName: feedbackState == .liked ? "hand.thumbsup.fill" : "hand.thumbsup")
-                        .foregroundStyle(feedbackState == .liked ? Color.accentColor : Color.secondary)
+                        EchoMetadataGroup {
+                            Text(result.sourceTypeLabel)
+                            Text(result.dateDescription)
+                            if let locationLabel = result.locationLabel {
+                                Label(locationLabel, systemImage: "location")
+                            }
+                            Label("\(result.similarityPercent) match", systemImage: "bolt.fill")
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Like this result")
-                .accessibilityValue(feedbackState == .liked ? "Selected" : "Not selected")
-                .accessibilityIdentifier("result-like-\(result.id.uuidString)")
+                .accessibilityLabel(result.accessibilityLabel)
+                .accessibilityHint("Open memory details")
 
-                // 👎 反馈
-                Button {
-                    onDislike()
-                } label: {
-                    Image(systemName: feedbackState == .disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                        .foregroundStyle(feedbackState == .disliked ? Color.accentColor : Color.secondary)
+                HStack(spacing: EchoSpacingToken.normal.points) {
+                    Spacer()
+                    feedbackButton(
+                        selected: feedbackState == .liked,
+                        systemImage: "hand.thumbsup",
+                        selectedSystemImage: "hand.thumbsup.fill",
+                        label: "Like this result",
+                        identifier: "result-like-\(result.id.uuidString)",
+                        action: onLike
+                    )
+                    feedbackButton(
+                        selected: feedbackState == .disliked,
+                        systemImage: "hand.thumbsdown",
+                        selectedSystemImage: "hand.thumbsdown.fill",
+                        label: "Dislike this result",
+                        identifier: "result-dislike-\(result.id.uuidString)",
+                        action: onDislike
+                    )
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Dislike this result")
-                .accessibilityValue(feedbackState == .disliked ? "Selected" : "Not selected")
-                .accessibilityIdentifier("result-dislike-\(result.id.uuidString)")
             }
         }
-        .padding(.vertical, 4)
         .accessibilityElement(children: .contain)
         .contextMenu {
             Button {
@@ -520,10 +561,28 @@ struct SearchResultRow: View {
             }
             .accessibilityIdentifier("result-badcase-\(result.id.uuidString)")
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onOpen()
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    private func feedbackButton(
+        selected: Bool,
+        systemImage: String,
+        selectedSystemImage: String,
+        label: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: selected ? selectedSystemImage : systemImage)
+                .foregroundStyle(
+                    selected ? EchoColorToken.warmAccent.color : EchoColorToken.secondaryText.color
+                )
+                .frame(minWidth: 44, minHeight: 44)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityValue(selected ? "Selected" : "Not selected")
+        .accessibilityIdentifier(identifier)
     }
 }
 

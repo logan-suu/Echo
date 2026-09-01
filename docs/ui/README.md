@@ -28,6 +28,7 @@
 | Phase 4 Discovery（4.0a） | style + architecture + testing + Home/Search Surface Contracts |
 | Phase 4 Focus（4.0b） | style + architecture + testing + Detail/Creation/Translation Surface Contracts |
 | Phase 4 Task（4.0c） | style + architecture + testing + Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress Surface Contracts |
+| Phase 4 交互式唤醒卡（4.0d） | style + architecture + testing + US-AWK-005 AC 原文 + Home/Detail contracts；这是生产功能闭环，不是第四种 surface family |
 | UI 测试 | `testing-and-artifacts.md` |
 | UI 交付 | `automation-workflow.md`（§批准点 — 含 UI 审查指南：页面清单/导航路径/未实现说明） |
 | 首次 bootstrap | `echo-readiness.md` + `automation-workflow.md` |

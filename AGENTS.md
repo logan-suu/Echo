@@ -1,6 +1,6 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.34
+**版本**：v5.36
 **生效日期**：2026-09-01
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -526,6 +526,7 @@ let checkpoint = await PrivacyActor.shared.validate(
 - Trace ID 在 Pipeline 入口生成（UUID）
 - 通过所有函数参数显式传递，禁止 TaskLocal/全局变量
 - 审计日志、错误日志、性能监控均使用同一 Trace ID
+- `PrivacyOperation` 与 `sourceTypes` 正交：`.search` 是操作，不是数据源。`authorizedSourceTypes` 仅保存真实可授权来源；通用检索入口不得以伪来源 `search` 作为全局功能开关，必须在操作级 checkpoint 后按真实候选来源逐项过滤。
 
 ### 7.3 审计事件完整清单
 
@@ -1385,11 +1386,11 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 | **Focus** | 沉浸式单列 + grouped metadata | ❌ 禁止 | Memory detail、media viewing、translation |
 | **Task** | Form、List、Sheet、Alert、Menu、Toolbar | ❌ 禁止 | Edit、settings、permissions、background tasks、errors、recovery |
 
-**方案 B 强制边界**：方案 B 适用于 AppShell、Home、Search、Detail、Settings、Onboarding、Awakening、BackgroundTask、Creation、Degradation、ResumeProgress、Translation 全部页面。Home 在 20+ 真实记忆且单区块至少 6 张可展示卡片、默认 Dynamic Type、宽度足够时默认双列；Search 在至少 6 个适合扫描的结果时采用同一画布语法。Focus/Task 不使用 masonry，但必须共享 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action components 与 motion。NavigationStack、TabView、搜索及系统任务交互保持 Apple 原生；禁止为增强 Pinterest 感复制品牌或自定义系统 chrome。
+**方案 B 强制边界**：方案 B 适用于 AppShell、Home、Search、Detail、Settings、Onboarding、Awakening、BackgroundTask、Creation、Degradation、ResumeProgress、Translation 全部页面。Home 在 20+ 可展示真实记忆且单区块至少 6 张可展示卡片、非 Accessibility Dynamic Type、VoiceOver 关闭、可用内容宽度至少 340pt（2 × 164pt 卡宽 + 12pt 列距）时默认双列；Search 由 UI adapter 将结果确定性映射为 `scanEligible` 或 `continuousReading`，仅在不少于 6 个可展示结果且 `scanEligible` 严格多于半数时采用 adaptive masonry，平票按单列。去除首尾空白后不超过 160 个扩展字形簇且可独立理解的摘要才可标记为 `scanEligible`；其余正文为 `continuousReading`。可展示项目必须策略允许、未排除、来源可解析、稳定 ID/Focus 路由存在，并具有真实 aspect ratio 或真实摘要。Focus/Task 不使用 masonry，但必须共享 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action components 与 motion。NavigationStack、TabView、搜索及系统任务交互保持 Apple 原生；禁止为增强 Pinterest 感复制品牌或自定义系统 chrome。
 
 **Warm accent 语义色对（2026-09-01 人类批准）**：`warmAccent` 由 `AccentColor` Asset Catalog 提供，浅色外观为 sRGB `#A64B32`，深色外观为 sRGB `#E08A68`；`onWarmAccent` 分别为 `#FFFFFF` 与 `#1C1C1E`。重点 action 必须同时消费背景与前景 token，禁止在两种外观中硬编码同一前景色。
 
-**Phase 4 交付边界**：`4.0` 只建立 DesignProfile、共享 token/component API 与 Apple 原生 AppShell；`4.0a`、`4.0b`、`4.0c` 分别把该基础应用到 Discovery、Focus、Task 页面族。不得把“全 App profile”误解为由 `4.0` 单任务改造全部功能页。
+**Phase 4 交付边界**：`4.0` 只建立 DesignProfile、共享 token/component API 与 Apple 原生 AppShell；`4.0a`、`4.0b`、`4.0c` 分别把该基础应用到 Discovery、Focus、Task 页面族。不得把“全 App profile”误解为由 `4.0` 单任务改造全部功能页。`4.0d` 不是新的 surface family 或视觉切片，而是规格审查后新增的 US-AWK-005 生产功能闭环；它依赖 4.0a，补齐媒体/音乐、下一张/记录感受、userFeelings 持久化与审计，4.2 仅负责验证而不得替代实现。
 
 ### 17.3 双状态模型
 
@@ -1512,3 +1513,5 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.32 | 2026-08-31 | 明确方案 B 为全 App 视觉身份：全部 12 个 UI 功能域必须共享 design profile、token、容器层级、状态/动作组件与 motion；Discovery/Focus/Task 保持各自信息架构，Focus/Task no-masonry 不再被解释为允许另一套旧视觉皮肤。4.0 扩展为全 App 视觉统一任务。 | Codex |
 | v5.33 | 2026-08-31 | 规格合理性复审：明确 60/40 仅为方向性描述、不可作为数值门禁；AppShell 是承载三类 Surface 的系统宿主而非 Task surface；全 App 平衡画布改由 `4.0` Foundation/AppShell + `4.0a` Discovery + `4.0b` Focus + `4.0c` Task 任务族交付，并把跨文档一致性改为可验证的 schema conformance + 语义契约一致性。 | Codex |
 | v5.34 | 2026-09-01 | 用户批准暖陶土色语义对：`warmAccent` 浅色/深色为 `#A64B32`/`#E08A68`，`onWarmAccent` 为 `#FFFFFF`/`#1C1C1E`；重点 action 必须同时消费背景与前景 token，禁止跨 appearance 固定白色前景。 | Codex |
+| v5.35 | 2026-09-01 | 4.0a 规格合理性复审：定义可展示真实记忆边界、Search `scanEligible`/`continuousReading` 确定性门禁、真实扫描空态与只读 Discovery adapter 范围；发现 US-AWK-005 仍为 partial，新增 4.0d 生产闭环任务并明确 4.0a/4.2 不得冒充其后端 AC。 | Codex |
+| v5.36 | 2026-09-01 | 双设备 Live Review 修正规格缺陷：明确 `.search` 是 PrivacyOperation 而非 UserPolicy 数据源；检索入口执行操作级 checkpoint 后按真实来源过滤，禁止因旧策略缺少伪来源 `search` 而整项拒绝或恢复用户已撤销授权。 | Codex |
