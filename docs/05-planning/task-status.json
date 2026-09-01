@@ -2085,12 +2085,12 @@
           ],
           "acceptance_evidence": [
             "DesignProfile schema/instance 与 acceptance policy 均可解析；instance 对其 $schema 校验通过；三者对 profile ID、surface family、no-masonry 边界与批准点的语义一致（各文档版本号独立演进，不要求数值相等）",
-            "共享 token/component API 覆盖 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action 与 Reduce Motion",
+            "共享 token/component API 覆盖 typography、semantic colors、warmAccent/onWarmAccent 浅色 #A64B32/#FFFFFF 与深色 #E08A68/#1C1C1E 语义色对、spacing、radii、container hierarchy、status/action 与 Reduce Motion",
             "AppShell 在 iPhone 17 Pro iOS 26.5 与 iPhone 16 Pro iOS 18.x 保持系统导航、Tab、toolbar 与 modal 行为",
             "基础组件具有 Dynamic Type、VoiceOver、increased contrast、Reduce Motion 与 zh-Hans/en-US 自动化测试"
           ],
-          "last_updated": "2026-09-01T05:29:05Z",
-          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c. Spec review clarified that AppShell is a host rather than a Task surface and that contract consistency means schema conformance plus semantic agreement, not equal version numbers. Delivery adds the app-wide DesignProfile environment, semantic typography/color/spacing/radius/container/status/action/motion primitives, shared accessible components, and the iOS 18 native Tab API. AC-1 review also repaired the DesignProfile schema so its required $schema field is valid under additionalProperties=false. PR review accepted the missing VoiceOver heading semantics finding and added an AC-4 regression test plus the isHeader trait. The provenance-header suggestion was rejected because the existing English birth-certificate metadata satisfies AGENTS.md sections 3.5 and 12.5. AC-2 is blocked pending human approval of the warm accent value because AccentColor.colorset is currently empty and a design color must not be invented. Review evidence: 21 focused/AppShell regression tests passed serially on iPhone 17 Pro; SwiftLint reported 0 violations; DesignProfile and all Surface contract checks passed; the same app build installed and remained running on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2. Human Live Simulator visual approval remains required before merge.",
+          "last_updated": "2026-09-01T05:45:25Z",
+          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c. Spec review clarified that AppShell is a host rather than a Task surface and that contract consistency means schema conformance plus semantic agreement, not equal version numbers. Delivery adds the app-wide DesignProfile environment, semantic typography/color/spacing/radius/container/status/action/motion primitives, shared accessible components, and the iOS 18 native Tab API. AC-1 review also repaired the DesignProfile schema so its required $schema field is valid under additionalProperties=false. PR review accepted the missing VoiceOver heading semantics finding and added an AC-4 regression test plus the isHeader trait. The provenance-header suggestion was rejected because the existing English birth-certificate metadata satisfies AGENTS.md sections 3.5 and 12.5. The human product owner approved the recommended semantic terracotta pair: warmAccent light/dark #A64B32/#E08A68 and onWarmAccent #FFFFFF/#1C1C1E. Specifications, UI architecture, DesignProfile contract and acceptance policy were updated before implementation. The implementation materializes AccentColor and OnAccentColor light/dark assets, exposes onWarmAccent, and removes the fixed white foreground from primary/recovery actions. Final review evidence: 22 focused/AppShell regression tests passed serially on iPhone 17 Pro, including exact asset values and 4.5:1 contrast gates; SwiftLint reported 0 violations; DesignProfile and all Surface contract checks passed; the same repaired app build installed, launched and remained running on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2. Human Live Simulator visual approval remains required before merge.",
           "pr": {
             "number": 67,
             "url": "https://github.com/logan-suu/Echo/pull/67",
@@ -3060,6 +3060,27 @@
         "UIAutomation/Contracts/schemas/surface-v1.json",
         "UIAutomation/Contracts/instances/awakening-settings-surface.json",
         "UIAutomation/Contracts/instances/degradation-banner-surface.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260901-WARM-ACCENT-PAIR",
+      "status": "resolved",
+      "detected_at": "2026-09-01T05:29:05Z",
+      "resolved_at": "2026-09-01T05:38:38Z",
+      "decision_maker": "Human product owner",
+      "selected_option": "custom-semantic-terracotta-pair",
+      "decision": "Define the Balanced Canvas accent as a semantic light/dark pair: warmAccent #A64B32/#E08A68 and onWarmAccent #FFFFFF/#1C1C1E. Emphasized actions must consume both tokens instead of hardcoding white foreground content.",
+      "reason": "The prior Color.accentColor contract did not materialize a warm identity because AccentColor.colorset was empty, and a single white foreground was not appropriate for both approved appearances.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "UIAutomation/Contracts/schemas/design-profile-v1.json",
+        "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
+        "UIAutomation/Policies/acceptance-policy.json",
         "docs/05-planning/开发计划安排文档.md",
         "docs/05-planning/task-status.json"
       ]

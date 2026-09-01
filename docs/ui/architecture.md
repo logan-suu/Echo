@@ -202,6 +202,7 @@ enum State {
 ### 8.2 全 App Profile 应用
 
 - 所有 Surface View 必须引用 `designProfileId = echo-memory-canvas`，不允许功能域自行定义平行的 color/type/spacing/radius/motion 系统。
+- 共享颜色层必须把重点色建模为 `warmAccent` / `onWarmAccent` 语义对：Asset Catalog 的 `AccentColor` / `OnAccentColor` 分别提供浅色 `#A64B32` + `#FFFFFF` 与深色 `#E08A68` + `#1C1C1E`。组件同时消费背景与前景 token，禁止假定 accent 上永久使用白色。
 - 共享视觉 primitives 由 UI Component 层提供：Memory Card、section header、metadata group、status presentation、primary/secondary action；功能域只组合，不复制样式常量。
 - Discovery/Focus/Task 的布局策略分别独立，但消费相同 token 与组件语义。Focus/Task 禁止 masonry 不代表可以保留与平衡画布无关的旧视觉皮肤。
 - AppShell 统一 NavigationStack/TabView、toolbar 与页面背景；各功能域不得自定义一套 tab、back、search 或 modal chrome。

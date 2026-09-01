@@ -24,7 +24,7 @@ struct EchoDesignProfile: Equatable, Sendable {
     static let balancedCanvas = EchoDesignProfile(
         id: "echo-memory-canvas",
         baseProfile: "apple-native",
-        version: "1.1.0",
+        version: "1.2.0",
         supportedSurfaceFamilies: EchoSurfaceFamily.allCases
     )
 }
@@ -90,6 +90,7 @@ enum EchoColorToken: CaseIterable, Hashable, Sendable {
     case fill
     case separator
     case warmAccent
+    case onWarmAccent
     case success
     case warning
     case blocking
@@ -106,6 +107,7 @@ enum EchoColorToken: CaseIterable, Hashable, Sendable {
         case .fill: Color(.secondarySystemFill)
         case .separator: Color(.separator)
         case .warmAccent: Color.accentColor
+        case .onWarmAccent: Color("OnAccentColor")
         case .success: .green
         case .warning: .orange
         case .blocking: .red

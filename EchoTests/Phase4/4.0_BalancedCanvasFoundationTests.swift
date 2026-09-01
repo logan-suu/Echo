@@ -22,7 +22,7 @@ struct BalancedCanvasFoundationTests {
 
         #expect(profile.id == "echo-memory-canvas")
         #expect(profile.baseProfile == "apple-native")
-        #expect(profile.version == "1.1.0")
+        #expect(profile.version == "1.2.0")
         #expect(Set(profile.supportedSurfaceFamilies) == Set(EchoSurfaceFamily.allCases))
         #expect(EchoAppShellContract.hostedSurfaceFamilies == Set(EchoSurfaceFamily.allCases))
     }
@@ -46,8 +46,19 @@ struct BalancedCanvasFoundationTests {
         let gates = try #require(policy["verification_gates"] as? [String: Any])
         let appWide = try #require(gates["app_wide_visual_profile"] as? [String: Any])
         let familyRules = try #require(gates["surface_family_rules"] as? [String: Any])
+        let warmAccentGate = try #require(gates["warm_accent_pair"] as? [String: Any])
         #expect(appWide["required"] as? Bool == true)
         #expect(familyRules["required"] as? Bool == true)
+        #expect(warmAccentGate["required"] as? Bool == true)
+
+        let visualLanguage = try #require(profileInstance["globalVisualLanguage"] as? [String: Any])
+        let warmAccent = try #require(visualLanguage["warmAccent"] as? [String: Any])
+        #expect(warmAccent["assetName"] as? String == "AccentColor")
+        #expect(warmAccent["onAssetName"] as? String == "OnAccentColor")
+        #expect(warmAccent["lightSRGB"] as? String == "#A64B32")
+        #expect(warmAccent["darkSRGB"] as? String == "#E08A68")
+        #expect(warmAccent["onLightSRGB"] as? String == "#FFFFFF")
+        #expect(warmAccent["onDarkSRGB"] as? String == "#1C1C1E")
 
         let approvalPoints = try #require(policy["approval_points"] as? [String: Any])
         let deliveryApproval = try #require(approvalPoints["fixed_delivery_approval"] as? [String: Any])
@@ -73,6 +84,7 @@ struct BalancedCanvasFoundationTests {
             .fill,
             .separator,
             .warmAccent,
+            .onWarmAccent,
             .success,
             .warning,
             .blocking,
@@ -99,6 +111,36 @@ struct BalancedCanvasFoundationTests {
         )
         _ = EchoActionButtonStyle(role: .primary)
         #expect(Bool(true))
+    }
+
+    @Test("AC-2: approved warm accent assets and action foreground are materialized")
+    func test_AC2_warmAccentPairMaterialized() throws {
+        let accent = try loadJSON("Echo/Assets.xcassets/AccentColor.colorset/Contents.json")
+        let onAccent = try loadJSON("Echo/Assets.xcassets/OnAccentColor.colorset/Contents.json")
+
+        try assertColorAsset(
+            accent,
+            light: ["red": "0.650980", "green": "0.294118", "blue": "0.196078"],
+            dark: ["red": "0.878431", "green": "0.541176", "blue": "0.407843"]
+        )
+        try assertColorAsset(
+            onAccent,
+            light: ["red": "1.000000", "green": "1.000000", "blue": "1.000000"],
+            dark: ["red": "0.109804", "green": "0.109804", "blue": "0.117647"]
+        )
+        #expect(contrastRatio(foreground: [1, 1, 1], background: [166 / 255, 75 / 255, 50 / 255]) >= 4.5)
+        #expect(
+            contrastRatio(
+                foreground: [28 / 255, 28 / 255, 30 / 255],
+                background: [224 / 255, 138 / 255, 104 / 255]
+            ) >= 4.5
+        )
+
+        let foundation = try loadSource("Echo/UI/SharedComponents/EchoDesignFoundation.swift")
+        let components = try loadSource("Echo/UI/SharedComponents/EchoSharedComponents.swift")
+        #expect(foundation.contains("case onWarmAccent"))
+        #expect(foundation.contains("Color(\"OnAccentColor\")"))
+        #expect(components.contains("EchoColorToken.onWarmAccent.color"))
     }
 
     @Test("AC-3: AppShell contract preserves Apple-native system containers")
@@ -176,5 +218,46 @@ struct BalancedCanvasFoundationTests {
             root.deleteLastPathComponent()
         }
         return root
+    }
+
+    private func assertColorAsset(
+        _ asset: [String: Any],
+        light: [String: String],
+        dark: [String: String]
+    ) throws {
+        let colors = try #require(asset["colors"] as? [[String: Any]])
+        #expect(colors.count == 2)
+
+        let lightColor = try #require(colors.first?["color"] as? [String: Any])
+        let lightComponents = try #require(lightColor["components"] as? [String: String])
+        #expect(lightComponents["red"] == light["red"])
+        #expect(lightComponents["green"] == light["green"])
+        #expect(lightComponents["blue"] == light["blue"])
+
+        let darkEntry = try #require(colors.last)
+        let appearances = try #require(darkEntry["appearances"] as? [[String: String]])
+        #expect(appearances == [["appearance": "luminosity", "value": "dark"]])
+        let darkColor = try #require(darkEntry["color"] as? [String: Any])
+        let darkComponents = try #require(darkColor["components"] as? [String: String])
+        #expect(darkComponents["red"] == dark["red"])
+        #expect(darkComponents["green"] == dark["green"])
+        #expect(darkComponents["blue"] == dark["blue"])
+    }
+
+    private func contrastRatio(foreground: [Double], background: [Double]) -> Double {
+        let foregroundLuminance = relativeLuminance(foreground)
+        let backgroundLuminance = relativeLuminance(background)
+        let lighter = max(foregroundLuminance, backgroundLuminance)
+        let darker = min(foregroundLuminance, backgroundLuminance)
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    private func relativeLuminance(_ components: [Double]) -> Double {
+        let linear = components.map { component in
+            component <= 0.04045
+                ? component / 12.92
+                : pow((component + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
     }
 }

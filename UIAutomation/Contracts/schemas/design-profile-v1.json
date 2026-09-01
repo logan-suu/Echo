@@ -17,10 +17,28 @@
   "properties": {
     "$schema": { "type": "string", "const": "https://echo-ui-automation/schemas/contracts/design-profile/v1" },
     "profileId": { "type": "string", "const": "echo-memory-canvas" },
-    "version": { "type": "string", "const": "1.1.0" },
+    "version": { "type": "string", "const": "1.2.0" },
     "baseProfile": { "type": "string", "const": "apple-native" },
     "approvalRecord": { "type": "object" },
-    "globalVisualLanguage": { "type": "object" },
+    "globalVisualLanguage": {
+      "type": "object",
+      "required": ["warmAccent"],
+      "properties": {
+        "warmAccent": {
+          "type": "object",
+          "required": ["assetName", "onAssetName", "lightSRGB", "darkSRGB", "onLightSRGB", "onDarkSRGB"],
+          "properties": {
+            "assetName": { "const": "AccentColor" },
+            "onAssetName": { "const": "OnAccentColor" },
+            "lightSRGB": { "const": "#A64B32" },
+            "darkSRGB": { "const": "#E08A68" },
+            "onLightSRGB": { "const": "#FFFFFF" },
+            "onDarkSRGB": { "const": "#1C1C1E" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
     "surfaceFamilyRules": { "type": "object" },
     "coveredDomains": { "type": "array", "minItems": 12, "uniqueItems": true, "items": { "type": "string" } },
     "prohibited": { "type": "array", "items": { "type": "string" } }

@@ -1,7 +1,7 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.33
-**生效日期**：2026-08-31
+**版本**：v5.34
+**生效日期**：2026-09-01
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
 **加载方式**：Agent 启动时自动加载根目录 `AGENTS.md`；子目录 `AGENTS.md` 叠加补充。  
@@ -1387,6 +1387,8 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 
 **方案 B 强制边界**：方案 B 适用于 AppShell、Home、Search、Detail、Settings、Onboarding、Awakening、BackgroundTask、Creation、Degradation、ResumeProgress、Translation 全部页面。Home 在 20+ 真实记忆且单区块至少 6 张可展示卡片、默认 Dynamic Type、宽度足够时默认双列；Search 在至少 6 个适合扫描的结果时采用同一画布语法。Focus/Task 不使用 masonry，但必须共享 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action components 与 motion。NavigationStack、TabView、搜索及系统任务交互保持 Apple 原生；禁止为增强 Pinterest 感复制品牌或自定义系统 chrome。
 
+**Warm accent 语义色对（2026-09-01 人类批准）**：`warmAccent` 由 `AccentColor` Asset Catalog 提供，浅色外观为 sRGB `#A64B32`，深色外观为 sRGB `#E08A68`；`onWarmAccent` 分别为 `#FFFFFF` 与 `#1C1C1E`。重点 action 必须同时消费背景与前景 token，禁止在两种外观中硬编码同一前景色。
+
 **Phase 4 交付边界**：`4.0` 只建立 DesignProfile、共享 token/component API 与 Apple 原生 AppShell；`4.0a`、`4.0b`、`4.0c` 分别把该基础应用到 Discovery、Focus、Task 页面族。不得把“全 App profile”误解为由 `4.0` 单任务改造全部功能页。
 
 ### 17.3 双状态模型
@@ -1509,3 +1511,4 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.31 | 2026-08-31 | 用户批准方案 B「平衡画布」：rich-data Discovery 默认 adaptive masonry，明确 Home 20+/单区块 6 张与 Search 6 结果阈值、低数据/AX 单列回退、稳定语义顺序；Apple 原生 App Shell 与 Focus/Task no-masonry 边界保持不变。同步 UI 规格、架构、测试、Surface Contracts、acceptance policy 与 Phase 4 任务。 | Codex |
 | v5.32 | 2026-08-31 | 明确方案 B 为全 App 视觉身份：全部 12 个 UI 功能域必须共享 design profile、token、容器层级、状态/动作组件与 motion；Discovery/Focus/Task 保持各自信息架构，Focus/Task no-masonry 不再被解释为允许另一套旧视觉皮肤。4.0 扩展为全 App 视觉统一任务。 | Codex |
 | v5.33 | 2026-08-31 | 规格合理性复审：明确 60/40 仅为方向性描述、不可作为数值门禁；AppShell 是承载三类 Surface 的系统宿主而非 Task surface；全 App 平衡画布改由 `4.0` Foundation/AppShell + `4.0a` Discovery + `4.0b` Focus + `4.0c` Task 任务族交付，并把跨文档一致性改为可验证的 schema conformance + 语义契约一致性。 | Codex |
+| v5.34 | 2026-09-01 | 用户批准暖陶土色语义对：`warmAccent` 浅色/深色为 `#A64B32`/`#E08A68`，`onWarmAccent` 为 `#FFFFFF`/`#1C1C1E`；重点 action 必须同时消费背景与前景 token，禁止跨 appearance 固定白色前景。 | Codex |

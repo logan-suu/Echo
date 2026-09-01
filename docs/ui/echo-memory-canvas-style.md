@@ -33,9 +33,12 @@
 ### 2.3 Color
 - 使用 `Color.primary`、`.secondary`、系统 `background`、`fill`、`tint` 等 semantic colors
 - 完整适配 light、dark 和 increased contrast
-- Echo 使用温暖、克制的 accent：`Color.accentColor`
+- Echo 使用温暖、克制的陶土色语义对，通过 Asset Catalog 提供 light/dark appearance：
+  - `warmAccent`（`AccentColor` asset）：浅色 sRGB `#A64B32`；深色 sRGB `#E08A68`
+  - `onWarmAccent`（`OnAccentColor` asset）：浅色 `#FFFFFF`；深色 `#1C1C1E`
+- SwiftUI 只通过 `EchoColorToken.warmAccent` / `.onWarmAccent` 消费该色对；重点 action 不得把前景色固定为 `.white`
 - Accent 限定于：tint、选中态、重点 action 和少量状态强调
-- 必须通过对比度与色盲语义验证
+- 对比度门禁同时验证 `warmAccent` 与 `onWarmAccent` 的 appearance 配对；颜色不得作为状态或动作的唯一语义
 
 ### 2.4 SF Symbols
 - 使用 SF Symbols 及其语义化 variant（`.fill`、`.circle`、`.slash`）
@@ -279,7 +282,7 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 
 ### 7.3 三类 Family 的视觉一致性
 通过共享 token 和行为达成一致，不来自把同一布局套到所有页面：
-- Typography、semantic colors、warm restrained accent、radii、spacing
+- Typography、semantic colors、`warmAccent` / `onWarmAccent` 陶土色对、radii、spacing
 - Materials、metadata hierarchy、SF Symbols、system motion
 - 相同语义使用相同组件：Memory Card、section header、status presentation、primary/secondary action、metadata group
 - 页面级验收必须同时检查“符合 family 布局”与“符合全 App profile”；只满足其中之一不算通过
