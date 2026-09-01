@@ -128,11 +128,16 @@ struct BalancedCanvasFoundationTests {
             light: ["red": "1.000000", "green": "1.000000", "blue": "1.000000"],
             dark: ["red": "0.109804", "green": "0.109804", "blue": "0.117647"]
         )
-        #expect(contrastRatio(foreground: [1, 1, 1], background: [166 / 255, 75 / 255, 50 / 255]) >= 4.5)
         #expect(
             contrastRatio(
-                foreground: [28 / 255, 28 / 255, 30 / 255],
-                background: [224 / 255, 138 / 255, 104 / 255]
+                foreground: [1.0, 1.0, 1.0],
+                background: [166.0 / 255.0, 75.0 / 255.0, 50.0 / 255.0]
+            ) >= 4.5
+        )
+        #expect(
+            contrastRatio(
+                foreground: [28.0 / 255.0, 28.0 / 255.0, 30.0 / 255.0],
+                background: [224.0 / 255.0, 138.0 / 255.0, 104.0 / 255.0]
             ) >= 4.5
         )
 
