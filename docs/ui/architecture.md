@@ -208,6 +208,8 @@ enum State {
 - Discovery/Focus/Task 的布局策略分别独立，但消费相同 token 与组件语义。Focus/Task 禁止 masonry 不代表可以保留与平衡画布无关的旧视觉皮肤。
 - AppShell 统一 NavigationStack/TabView、toolbar 与页面背景；各功能域不得自定义一套 tab、back、search 或 modal chrome。
 - 4.0 只交付共享 DesignProfile/component 与 AppShell；4.0a 覆盖 Home/Search，4.0b 覆盖 Detail/Creation/Translation，4.0c 覆盖 Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress。4.2/4.7/4.14 通过逐 Surface contract audit 证明任务族合并后没有遗漏。
+- `4.0b` 仅允许修改 Focus View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移和领域写语义保持只读。真实 adapter 缺少编辑重索引、冲突持久化或原始来源删除边界时，UI 必须映射为明确不可用/错误，不得在视觉切片中复制写规则或以 fixture 成功代替生产行为。
+- Detail 生产媒体经既有 source adapter 在当前 UserPolicy 下解析；解析失败不回退 bundled sample。Creation 只消费 grounded output 和稳定 source anchor；Notes 交接使用系统 share sheet 且不产生 Echo 可验证的“已保存”状态。Translation 继续作为 Detail 内 cache-first 的展示层能力，NLTagger `<0.9` 或语言对不支持时保留原文。
 - `4.0` 的 `surface_families = [discovery, focus, task]` 表示共享基础必须支持三类 family，不表示 AppShell 同时属于三类 family，也不授权 `4.0` 修改具体功能页。
 
 ---

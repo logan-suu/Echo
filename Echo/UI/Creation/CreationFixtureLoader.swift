@@ -7,10 +7,11 @@
 //            UIAutomation/Fixtures/README.md (Fixture 规范),
 //            docs/ui/testing-and-artifacts.md §2.1 (fixture 可确定性解码)
 // 任务: 3.9 - 整合所有 ViewModel 与 Pipeline + 创作保存 UI
-// AC 覆盖: US-SYN-003 AC-3 ✅ (预览/复制/导出), AC-4 ✅ (保存到备忘录按钮), AC-5 ✅ (Toast+链接 / L2 重试),
+// AC coverage: US-SYN-003 AC-3 ✅ (preview/copy/export), AC-4 ✅ (system share handoff),
+//              AC-5 ✅ (visible L2 recovery when handoff preparation fails),
 //          US-SYN-004 AC-4 ✅ (分享/导出/打印), US-SYN-005 AC-4 ✅ (Prompt 草稿可编辑确认), AC-6 ✅ (重置为默认)
 //          契约 fixture IDs: creation-idle / creation-generated-letter / creation-generated-report /
-//                            creation-empty / creation-error / creation-prompt-draft / creation-saved
+//                       creation-empty / creation-error / creation-prompt-draft
 // 架构约束: 确定性、离线、可复现; 不访问网络或生产数据库 (docs/ui/architecture.md §3 Fixture Loader);
 //           fixture ID 必须与 UIAutomation/Fixtures/creation/*.json 对齐
 // 生成时间: 2026-08-02
@@ -83,22 +84,6 @@ struct CreationModel: Sendable, Equatable {
     var sourceMemoryCount: Int
     /// 空态原因（无匹配源记忆时非 nil → empty state）
     var emptyReason: String?
-    /// 保存到备忘录后的笔记链接 (US-SYN-003 AC-5)
-    var noteLink: String?
-    /// 保存状态
-    var savePhase: CreationSavePhase
-}
-
-/// 保存到备忘录的阶段 (US-SYN-003 AC-4/AC-5)。
-enum CreationSavePhase: Sendable, Equatable {
-    /// 未保存
-    case none
-    /// 保存中
-    case saving
-    /// 已保存（含笔记链接）
-    case saved
-    /// 保存失败 (L2)
-    case failed
 }
 
 /// 确定性创作 Fixture Loader — Preview / 单元测试 / Live Sim Review 注入。
@@ -122,9 +107,6 @@ enum CreationFixtureLoader {
         case "creation-prompt-draft":
             return promptDraft
 
-        case "creation-saved":
-            return saved
-
         case "creation-error":
             // error 由 ViewModel 模拟（L2 错误路径）
             return nil
@@ -143,7 +125,6 @@ enum CreationFixtureLoader {
             "creation-empty",
             "creation-error",
             "creation-prompt-draft",
-            "creation-saved",
         ]
     }
 
@@ -172,9 +153,7 @@ enum CreationFixtureLoader {
             periodType: nil,
             paragraphs: [],
             sourceMemoryCount: 0,
-            emptyReason: nil,
-            noteLink: nil,
-            savePhase: .none
+            emptyReason: nil
         )
     }
 
@@ -205,9 +184,7 @@ enum CreationFixtureLoader {
                 ),
             ],
             sourceMemoryCount: 2,
-            emptyReason: nil,
-            noteLink: nil,
-            savePhase: .none
+            emptyReason: nil
         )
     }
 
@@ -238,9 +215,7 @@ enum CreationFixtureLoader {
                 ),
             ],
             sourceMemoryCount: 2,
-            emptyReason: nil,
-            noteLink: nil,
-            savePhase: .none
+            emptyReason: nil
         )
     }
 
@@ -254,9 +229,7 @@ enum CreationFixtureLoader {
             periodType: nil,
             paragraphs: [],
             sourceMemoryCount: 0,
-            emptyReason: "No source memories matched this template",
-            noteLink: nil,
-            savePhase: .none
+            emptyReason: "No source memories matched this template"
         )
     }
 
@@ -270,35 +243,7 @@ enum CreationFixtureLoader {
             periodType: nil,
             paragraphs: [],
             sourceMemoryCount: 0,
-            emptyReason: nil,
-            noteLink: nil,
-            savePhase: .none
-        )
-    }
-
-    // MARK: - creation-saved
-
-    /// 已保存到备忘录 — Toast + 链接 (US-SYN-003 AC-5)。
-    /// ADR-013 决策 4 (3F.9): Notes 交接仅用系统 share/export，不伪造 notes:// URL → noteLink 恒 nil。
-    private static var saved: CreationModel {
-        CreationModel(
-            selectedTemplate: .letter,
-            title: "A letter to your future self",
-            periodType: nil,
-            paragraphs: [
-                CreationParagraph(
-                    id: uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                    text: "In the summer of 2025 you spent many evenings walking in the park, and a small orange cat often followed you home.",
-                    citation: CreationCitation(
-                        memoryId: uuid("22222222-2222-2222-2222-222222222222"),
-                        hasSource: true
-                    )
-                ),
-            ],
-            sourceMemoryCount: 1,
-            emptyReason: nil,
-            noteLink: nil,
-            savePhase: .saved
+            emptyReason: nil
         )
     }
 
@@ -321,9 +266,7 @@ enum CreationFixtureLoader {
                 ),
             ],
             sourceMemoryCount: 1,
-            emptyReason: nil,
-            noteLink: nil,
-            savePhase: .none
+            emptyReason: nil
         )
     }
 
@@ -346,9 +289,7 @@ enum CreationFixtureLoader {
                 ),
             ],
             sourceMemoryCount: 1,
-            emptyReason: nil,
-            noteLink: nil,
-            savePhase: .none
+            emptyReason: nil
         )
     }
 

@@ -274,6 +274,10 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 - Creation 与 Translation 延续相同标题层级、引用卡片和内容容器，不使用独立的“工具型”皮肤
 - 媒体沉浸不隐藏必要的可访问退出路径
 - 翻译同时保留原文与译文关系
+- Focus 的“内容优先”不是隐藏状态或动作：主媒体/正文在第一层，引用与 grouped metadata 在第二层，编辑/删除/导出按主要、次要、破坏性层级放置；禁止把所有动作渲染为同权重的纵向按钮墙。
+- Detail 的生产媒体只能来自当前授权下可解析的真实本地来源；示例媒体只属于 Preview/fixture。解析失败时使用本地化诚实降级，不得以 bundled sample 冒充用户内容。
+- Creation 的 Notes 入口只呈现系统 share/export 流；Echo 不显示“已保存到 Notes”、不提供笔记深链，也不推断 share sheet 中的用户选择。
+- Translation 是 Detail 内的 Focus 子区；原文、译文、语言标签和来源上下文必须同时可理解，不创建独立工具皮肤或破坏返回栈。
 
 ### 7.2 Task surfaces
 - Form/List section、系统 disclosure、toggle、picker、progress、sheet、alert、confirmation

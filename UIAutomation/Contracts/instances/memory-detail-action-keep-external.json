@@ -3,7 +3,7 @@
   "actionId": "detail.keepExternal",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.resolveConflict(keep: .external)",
-  "expectedOutcome": "Conflict resolved adopting external new version (US-AWK-007 AC-4); 🔮 Core write Phase 3.9",
+  "expectedOutcome": "When the production conflict transaction boundary is connected, adopt and persist the external version; otherwise fail visibly as unavailable. Fixture mutation is not production evidence (US-AWK-007 AC-4).",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

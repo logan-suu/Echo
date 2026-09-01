@@ -65,9 +65,9 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | RET-007 | Absent/unmapped | 3F.6, 4.1, 4.2 | No retrieval cache or policy-aware invalidation. |
 | RET-008 | Stub | 3F.6, 4.1, 4.2 | No operational timeout/partial-result path; only UI error/fixture behavior. |
 | SYN-001 | Stub | 3F.9, 4.2 | Language picker is a fixture UI transition; no persisted policy or model prompt/retry integration. |
-| SYN-002 | Stub | 3F.9, 4.2 | Detail UI can present fixture anchors, but no generated response/provenance production path. |
-| SYN-003 | Impossible/spec-invalid | 3F.0, 3F.9, 4.2 | Creation UI is fixture-driven and the required direct Apple Notes creation/deep-link API is unavailable. |
-| SYN-004 | Impossible/spec-invalid | 3F.0, 3F.9, 4.2 | Depends on unavailable People identity/Notes APIs and cannot guarantee scheduled background generation. |
+| SYN-002 | Partial | 3F.9, 4.0e, 4.2 | Grounded generation produces anchors; 4.0e owns stable anchor → real Detail navigation and no-source production behavior. |
+| SYN-003 | Partial | 3F.0, 3F.9, 4.0e, 4.2 | Private Notes creation/deep-link was replaced by the approved system share/export boundary; 4.0e owns honest handoff state and sharePresented audit. |
+| SYN-004 | Partial | 3F.0, 3F.9, 4.0e, 4.2 | Best-effort scheduling and system share/export replace invalid exact-time/Notes assumptions; 4.0e owns the report handoff boundary and audit wiring. |
 | SYN-005 | Stub | 3F.9, 4.2 | Prompt editor UI exists; no bounded analysis pipeline or source enforcement. |
 | SYN-006 | Absent/unmapped | 3F.9, 4.2 | No emotion-intervention synthesis/prompt implementation. |
 | SYN-007 | Absent/unmapped | 3F.9, 4.2 | No term glossary runtime or Golden validation. |
@@ -78,11 +78,11 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | AWK-004 | Deferred | DEF-001 (approved deferral) | Explicit P1 Phase-4 Widget/Live Activity deferral (DEF-001). |
 | AWK-005 | Partial | 3F.7, 3F.8, 4.0d, 4.2 | 3F delivered persistent card identity, minimized notification and response→detail routing. Phase 4 task 4.0d owns media/music, next/record interactions, userFeelings persistence/edit/delete, full source navigation and cardInteraction audit; 4.2 verifies the no-fixture production loop. |
 | AWK-006 | Deferred | DEF-002 (approved deferral) | Explicit P1 Phase-4 Siri/App Intents deferral (DEF-002). |
-| AWK-007 | Partial | 3F.4, 3F.7, 4.2 | Detail editing/conflict UI mutates fixture model, but no reindexing, source preservation, userLocked behavior, or persistent conflict resolution. |
+| AWK-007 | Partial | 3F.4, 3F.7, 4.0e, 4.2 | Detail editing/conflict UI mutates fixture model; 4.0e owns reindexing, source preservation, userLocked sync behavior and persistent conflict resolution. |
 | PRV-001 | Partial | 3F.1, 3F.2, 3F.6, 4.2, 4.5, 4.9 | PrivacyActor has isolated policy/checkpoint behavior; startup neither loads nor wires a deny-by-default production policy. |
 | PRV-002 | Stub | 3F.7 | Audit rows can exist in core tests, but Settings audit viewer is not wired to live data. |
 | PRV-003 | Impossible/spec-invalid | 3F.0, 3F.7 | The AC requires complete 30-day export and a <=5MB file without a limit, pagination, or split rule. |
-| PRV-004 | Stub | 3F.1, 3F.4, 3F.7, 4.2, 4.5, 4.9 | Delete choice UI exists, but transactional deletion/ExcludedAssets behavior is not connected to canonical storage. |
+| PRV-004 | Partial | 3F.1, 3F.4, 3F.7, 4.0e, 4.2, 4.5, 4.9 | Remove-from-Echo is connected to canonical deletion; 4.0e owns the missing original-source deletion boundary and 4.5 verifies ExcludedAssets/D-005 behavior. |
 | PRV-005 | Impossible/spec-invalid | 3F.0, 3F.1, 4.2, 4.9 | iOS cannot guarantee cooling-period completion while the app is not running. |
 | PRV-006 | Partial | 3F.1, 3F.4, 4.2, 4.9 | Persistence/retention intent exists in core schema and settings UI, but no production canonical-store lifecycle verifies the full deletion boundary. |
 | PRV-007 | Impossible/spec-invalid | 3F.0, 3F.4, 4.2, 4.5, 4.9 | The required 5-second cascade after original deletion cannot be guaranteed while iOS is suspended/backgrounded. |

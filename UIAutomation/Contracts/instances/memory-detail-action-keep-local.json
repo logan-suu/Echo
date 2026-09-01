@@ -3,7 +3,7 @@
   "actionId": "detail.keepLocal",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.resolveConflict(keep: .local)",
-  "expectedOutcome": "Conflict resolved keeping user edit; memory marked userLocked; future syncs skip it (US-AWK-007 AC-4); 🔮 Core write Phase 3.9",
+  "expectedOutcome": "When the production conflict transaction boundary is connected, retain the user edit, persist userLocked and make future automatic sync skip it; otherwise fail visibly as unavailable. Fixture mutation is not production evidence (US-AWK-007 AC-4).",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

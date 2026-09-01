@@ -3,7 +3,7 @@
   "actionId": "detail.deleteOriginal",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.deleteMemory(preserveOriginal: false)",
-  "expectedOutcome": "Memory and original file removed, no ExcludedAssets write (US-PRV-004 AC-3); 🔮 Core write Phase 3.9",
+  "expectedOutcome": "If a production source-deletion boundary is available, remove the original and cascade Echo data without ExcludedAssets; otherwise fail visibly as unavailable. Fixture success is not production evidence (US-PRV-004 AC-3).",
   "requiresConfirmation": true,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

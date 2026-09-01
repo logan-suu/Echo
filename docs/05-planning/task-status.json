@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-01T14:27:08Z",
+  "last_updated": "2026-09-01T22:53:33Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -1806,8 +1806,7 @@
             "UIAutomation/Contracts/instances/creation-state-empty.json",
             "UIAutomation/Contracts/instances/creation-state-generating.json",
             "UIAutomation/Contracts/instances/creation-state-generated.json",
-            "UIAutomation/Contracts/instances/creation-state-saving.json",
-            "UIAutomation/Contracts/instances/creation-state-saved.json",
+            "UIAutomation/Contracts/instances/creation-state-share-handoff.json",
             "UIAutomation/Contracts/instances/creation-state-error.json",
             "UIAutomation/Contracts/instances/creation-action-select-template.json",
             "UIAutomation/Contracts/instances/creation-action-edit-prompt.json",
@@ -1828,7 +1827,7 @@
             "UIAutomation/Fixtures/creation/creation-prompt-draft.json",
             "UIAutomation/Fixtures/creation/creation-generated-report.json",
             "UIAutomation/Fixtures/creation/creation-generated-letter.json",
-            "UIAutomation/Fixtures/creation/creation-saved.json",
+            "UIAutomation/Fixtures/creation/creation-share-handoff.json",
             "UIAutomation/Fixtures/creation/creation-error.json",
             "UIAutomation/Contracts/instances/translation-state-availability-checking.json",
             "UIAutomation/Contracts/instances/translation-state-unavailable.json",
@@ -2215,7 +2214,7 @@
             "UIAutomation/Contracts/instances/creation-surface.json",
             "UIAutomation/Contracts/instances/translation-surface.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
             "4.0"
           ],
@@ -2228,16 +2227,26 @@
           ],
           "implementation_constraints": [
             "使用共享 profile 的单列主媒体/正文、引用卡片与 grouped metadata；masonry 始终禁止",
-            "不得改变编辑、删除、翻译、创作、引用溯源或导出的现有领域行为",
+            "不得新增 Core 写边界、数据库 schema/迁移或第二份领域真相；缺失的编辑重索引、冲突持久化与原始来源删除生产能力必须诚实显示不可用",
+            "生产媒体只来自当前授权下可解析的真实本地来源；bundled sample、Preview 和 fixture 不得作为生产完成证据",
+            "Creation 必须消费 grounded CreativePipeline 输出与稳定 source anchors；Notes 交接仅用系统 share/export，不得伪造已保存状态或笔记链接",
+            "Translation 维持 cache-first、TTL=7d，NLTagger 源语言置信度 <0.9 或语言对不支持时保留原文与语言标签",
             "真实媒体比例、长文本、译文/原文关系和引用锚点优先于视觉密度"
           ],
           "acceptance_evidence": [
             "Detail、Creation、Translation 全部引用 echo-memory-canvas profile 且无独立旧皮肤",
-            "跨 Discovery → Focus 导航视觉连续，返回栈和 memoryId 不变",
-            "长文本、媒体 fit、引用锚点、翻译切换、编辑/删除确认行为无回归",
+            "真实 Home/Search → Detail → Creation/Translation 路由视觉连续，返回栈和稳定 memoryId 不变",
+            "note/photo/voice/video 使用真实本地来源或诚实降级，生产路径无 bundled sample/fixture fallback",
+            "grounded/empty/runtime-error Creation、可点击引用/NoSource、系统 share handoff/cancel/failure 均有测试，且无 Saved to Notes Toast 或笔记链接",
+            "Translation cache hit、<0.9 uncertain、unsupported pair、L2 retry 与原文/译文关系均有测试",
+            "缺少生产 mutation boundary 的编辑、冲突或原始删除动作不会显示 fixture 成功",
             "双语、Dynamic Type、VoiceOver、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T07:04:28Z"
+          "last_updated": "2026-09-01T22:53:33Z",
+          "notes": "2026-09-01 reasonableness review retained the approved Focus direction but made 4.0b executable: fixed the SYN-003 private Notes contradiction, separated production evidence from fixtures, standardized the translation uncertain threshold at <0.9, and made missing mutation boundaries honest non-success states rather than visual-task AC claims. User confirmed the revised contract; TDD implementation started at 2026-09-01T22:16:15Z. Red evidence initially reported 26 contract/behavior issues. The repaired Focus suite passed 14/14, affected Phase 3/3F regression passed 79/79, and Creation/Translation/Detail Media XCUITest passed 9/9. Debug build succeeded; SwiftLint found zero violations; 152 accessibility contracts, 360 localization keys, JSON parsing, diff checks, and prohibited-pattern scans passed. The same app product was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 with no screenshot/video capture. Human visual approval for both devices was received at 2026-09-01T22:49:59Z. Git delivery remains intentionally pending explicit $commit-pr-echo invocation. commit-pr-echo preflight passed at 2026-09-01T22:53:33Z: dev-1.0 matched origin, SwiftLint reported zero violations, the 4.0b suite passed 14/14 serially, no Actor/Pipeline watermark scope changed, and no 4.0b PR-review deferral was pending. Delivery branch: feature/focus-balanced-canvas-US-AWK-007.",
+          "status_transitions": {
+            "review_at": "2026-09-01T22:53:33Z"
+          }
         },
         {
           "id": "4.0c",
@@ -2338,6 +2347,57 @@
           ],
           "last_updated": "2026-09-01T14:27:08Z",
           "notes": "Created by the 4.0a reasonableness review because Phase 3/3F evidence explicitly left US-AWK-005 media/music/reaction persistence incomplete. A release test task cannot substitute for missing production behavior."
+        },
+        {
+          "id": "4.0e",
+          "title": "Focus 生产动作与来源闭环",
+          "story": [
+            "US-AWK-007",
+            "US-PRV-004",
+            "US-SYN-002",
+            "US-SYN-003",
+            "US-SYN-004"
+          ],
+          "owner": "iOS Content and Core Integration Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/ui/architecture.md",
+            "UIAutomation/Contracts/instances/memory-detail-surface.json",
+            "UIAutomation/Contracts/instances/creation-surface.json",
+            "docs/05-planning/deferred-items.json",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0b"
+          ],
+          "test_file": "EchoTests/Phase4/4.0e_FocusProductionActionsTests.swift",
+          "surface_family": "focus",
+          "ui_scope": [
+            "Detail",
+            "Creation",
+            "Translation"
+          ],
+          "implementation_constraints": [
+            "新增生产写入必须通过明确 Actor/repository 边界并保持 PrivacyCheckpoint、D-005、strict concurrency 与 hash-only audit",
+            "编辑事务同时持久化 originalTimestamp/userEdited/userLocked 并完成 representation/vector/cache 的替换与重新向量化",
+            "原始来源删除失败或被拒绝时不得先删除 Echo canonical 状态；成功级联不写 ExcludedAssets",
+            "真实媒体与 source anchor 仅解析当前授权下的本地来源；资产缺失或撤权 fail closed，禁止 bundled sample fallback",
+            "Notes 交接仅用本地 export + system share sheet；审计只记 sharePresented，不推断目标 App、用户选择或保存结果"
+          ],
+          "acceptance_evidence": [
+            "no-fixture 编辑→事务持久化→重新向量化，以及同步中 L4 阻止保存的故障注入证据",
+            "local/external conflict resolution、userLocked 自动同步跳过、显式恢复与重启持久化证据",
+            "photo/video/voice/note 真实来源解析、权限撤回、资产消失与正确播放/Detail 路由证据",
+            "原始来源删除成功/拒绝/失败、D-005 补偿与 ExcludedAssets 不写边界证据",
+            "grounded citation → stable MemoryID Detail、NoSource 禁用、share handoff cancel/failure 与 sharePresented hash-only audit 证据"
+          ],
+          "last_updated": "2026-09-01T21:56:52Z",
+          "notes": "Created by the 4.0b reasonableness review because a visual task and a later E2E test cannot substitute for the production edit/conflict/source-deletion/media/citation/share-audit behavior still marked Partial after Phase 3F."
         },
         {
           "id": "4.1",
@@ -2445,7 +2505,8 @@
             "4.0a",
             "4.0b",
             "4.0c",
-            "4.0d"
+            "4.0d",
+            "4.0e"
           ],
           "test_file": "EchoTests/Phase4/AllPipelinesTests.swift",
           "acceptance_evidence": [
@@ -2551,9 +2612,9 @@
             "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "ready",
+          "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "4.0e"
           ],
           "test_file": "EchoTests/Phase4/ExcludedAssetsBoundaryTests.swift",
           "acceptance_evidence": [
@@ -2588,7 +2649,8 @@
             "4.0a",
             "4.0b",
             "4.0c",
-            "4.0d"
+            "4.0d",
+            "4.0e"
           ],
           "test_file": "EchoTests/Phase4/QualityGateTests.swift",
           "acceptance_evidence": [
@@ -2629,7 +2691,8 @@
             "4.0a",
             "4.0b",
             "4.0c",
-            "4.0d"
+            "4.0d",
+            "4.0e"
           ],
           "test_file": "EchoTests/Phase4/LocalizationAccessibilityTests.swift",
           "acceptance_evidence": [
@@ -2674,7 +2737,8 @@
             "4.0a",
             "4.0b",
             "4.0c",
-            "4.0d"
+            "4.0d",
+            "4.0e"
           ],
           "test_file": null,
           "acceptance_evidence": [
@@ -2746,6 +2810,7 @@
             "4.0b",
             "4.0c",
             "4.0d",
+            "4.0e",
             "4.1",
             "4.2",
             "4.3",
@@ -2877,6 +2942,7 @@
             "4.0b",
             "4.0c",
             "4.0d",
+            "4.0e",
             "4.1",
             "4.2",
             "4.3",
@@ -2893,7 +2959,7 @@
           ],
           "test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
           "acceptance_evidence": [
-            "4.0、4.0a、4.0b、4.0c、4.0d 与 4.1 至 4.13 全部为 done，且每项 acceptance_evidence 均有可定位制品",
+            "4.0、4.0a、4.0b、4.0c、4.0d、4.0e 与 4.1 至 4.13 全部为 done，且每项 acceptance_evidence 均有可定位制品",
             "EchoTests/Phase4/Phase4IntegrationTests.swift 在最终 RC 上 exit code 0",
             "Phase 1、2、3、3F、4 的累计单元与集成测试均为 0 failure",
             "最终 RC 身份、签名、SBOM、隐私、文档、P0=0 和 P1=0 的发布证据索引",
@@ -3216,6 +3282,36 @@
         "docs/05-planning/开发计划安排文档.md",
         "docs/05-planning/phase3f-story-matrix.md",
         "docs/05-planning/phase3f-evidence-index.md",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260901-4-0B-REASONABLENESS",
+      "status": "resolved",
+      "detected_at": "2026-09-01T21:56:52Z",
+      "resolved_at": "2026-09-01T21:56:52Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "retain-focus-direction-tighten-production-contract",
+      "decision": "Retain Balanced Canvas for Detail, Creation and Translation, but limit 4.0b to Focus presentation and continuity; require real-source or honest fallback evidence, grounded creation, system share/export Notes handoff, the <0.9 translation uncertainty boundary, and explicit non-success for unavailable mutation boundaries. Add 4.0e for the production edit/conflict/source-deletion/media/citation/share-audit closure that neither a visual task nor 4.2 tests may substitute.",
+      "reason": "The prior direction was visually sound but not executable: SYN-003 simultaneously prohibited and required private NoteStore writes; Focus contracts treated bundled fixtures as production content; Notes actions asserted unobservable saved-note links; translation contracts retained the obsolete <0.7 threshold and Phase 3.8 markers; and Phase 3F still marks edit/reindex, persistent conflict, original-source deletion and source navigation Partial without a real implementation owner.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/instances/memory-detail-surface.json",
+        "UIAutomation/Contracts/instances/creation-surface.json",
+        "UIAutomation/Contracts/instances/translation-surface.json",
+        "UIAutomation/Contracts/instances/creation-action-save-to-notes.json",
+        "UIAutomation/Contracts/instances/creation-journey-generate-save-basic.json",
+        "UIAutomation/Contracts/instances/creation-state-share-handoff.json",
+        "UIAutomation/Contracts/instances/memory-detail-action-translate.json",
+        "UIAutomation/Contracts/instances/translation-action-toggle.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/phase3f-story-matrix.md",
+        "docs/05-planning/deferred-items.json",
         "docs/05-planning/task-status.json"
       ]
     }

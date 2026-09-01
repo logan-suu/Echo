@@ -71,6 +71,9 @@
 - “可展示”测试数据必须满足：策略允许、未排除、来源可解析、稳定 memoryId/Focus 路由存在，并具有真实 aspect ratio 或真实摘要；失效来源不得计入阈值
 - VoiceOver reading order 必须与稳定语义数据顺序一致，不以视觉列位置作为断言
 - 4.0a 验证通用 Discovery 卡无水平滑动手势；4.0d 验证 US-AWK-005 专用唤醒卡左右滑与等价按钮/辅助功能动作产生相同 intent，并覆盖感受持久化与审计
+- 4.0b 必须从真实 Home/Search 路由进入 Detail，验证稳定 MemoryID 与返回栈；分别覆盖 note/photo/voice/video 的真实展示或诚实不可用态，禁止 bundled sample 进入生产证据
+- 4.0b Creation 必须覆盖 grounded output、无来源、runtime unavailable、引用跳转与 NoSource；Notes 入口只断言系统 share sheet 呈现/取消/呈现失败，不断言“已保存”、目标 App 或笔记链接
+- 4.0b Translation 必须覆盖 cache hit、`<0.9` uncertain、unsupported pair、L2 retry 与原文/译文关系；Focus 三个 Surface 均验证无 masonry、共享组件/token、Accessibility Dynamic Type 与 VoiceOver reading order
 
 ### 2.6 权限流程测试（Permission Flow Testing）
 - 系统权限对话框拒绝路径覆盖（相册、麦克风、语音、通知等）

@@ -3,20 +3,20 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "creation",
   "surfaceFamily": "focus",
-  "responsibility": "AI creation generation result page: template selection (US-SYN-003), generated content preview with citation anchors (AC-3 preview), copy, export PDF/Markdown, save-to-Apple-Notes with L2 error handling (AC-4/AC-5); narrative report share/export/print (US-SYN-004 AC-4); editable personal prompt draft confirm/reset (US-SYN-005 AC-4)",
+  "responsibility": "Render grounded creation as a Focus surface with template selection, generated content and source anchors, copy/export/share actions, and a user-mediated Apple Notes handoff through the system share sheet; never claim direct Notes creation or saved-note deep linking",
   "inputs": {
     "templateType": "Preset creation template: letter | report | poem | timeline (US-SYN-003 AC-1)",
     "sourceMemories": "Retrieved memory summaries with citation anchors (US-SYN-002/003 AC-2)",
-    "generatedContent": "AI-generated text with per-paragraph citation anchors (fixture-driven; 🔮 Phase 3.9 real synthesis pipeline)",
+    "generatedContent": "Grounded CreativePipeline output with per-paragraph stable source anchors; fixture output is Preview/test-only and prohibited as production evidence",
     "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US) — output language",
     "promptDraft": "Personalized System Prompt draft (US-SYN-005) — editable, confirm/reset"
   },
   "outputs": {
-    "visibleContent": "Template picker (idle), ProgressView while generating, generated content with citation anchors + copy/export/save buttons, L2 error toast + retry, saved Toast with link, prompt editor sheet (edit/confirm/reset)",
+    "visibleContent": "Template picker, generation progress, grounded content with citation anchors, copy/export/share/Save to Notes handoff actions, honest empty/runtime/L2 states, and prompt editor. Save to Notes presents the system share sheet; Echo does not show a saved-note Toast or link.",
     "interactionTargets": "creation-generate, creation-copy, creation-export, creation-save-to-notes, creation-retry, creation-edit-prompt, creation-confirm-prompt, creation-reset-prompt, creation-citation-anchor-*",
-    "accessibilityTree": "Generated content with source citation semantics; save result announced; prompt editor is editable text with confirm/reset actions"
+    "accessibilityTree": "Generated content with source citation semantics; system share handoff is announced without claiming a final save result; prompt editor is editable text with confirm/reset actions"
   },
-  "systemContainer": "NavigationStack (pushed from MemoryDetailView creation entry) + ScrollView + Form sheet (prompt editor) + confirmationDialog (export/save) + Toast",
+  "systemContainer": "NavigationStack (pushed from MemoryDetailView creation entry) + ScrollView + Form sheet (prompt editor) + confirmationDialog (export format) + item-driven system share handoff",
   "layoutMode": "single_column",
   "masonryEnabled": false,
   "fallbackConditions": [
@@ -28,8 +28,7 @@
     "generated",
     "empty",
     "error",
-    "saving",
-    "saved"
+    "share-handoff"
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

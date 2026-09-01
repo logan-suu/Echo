@@ -3,7 +3,7 @@
   "stateId": "loaded",
   "surfaceId": "memory-detail",
   "dataConditions": {
-    "memory": "Memory detail mapped from fixture: note (memory-detail-loaded) or media variants (memory-detail-photo-loaded / memory-detail-voice-loaded / memory-detail-video-loaded)",
+    "memory": "Production memory loaded by stable memoryId from the canonical repository; explicit tests may use note/photo/voice/video fixtures but fixtures are prohibited as production evidence",
     "viewState": "completed",
     "translationVisible": false
   },
@@ -17,5 +17,5 @@
     "deleteButton": "Remove memory",
     "citationAnchors": "One accessible element per source anchor"
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

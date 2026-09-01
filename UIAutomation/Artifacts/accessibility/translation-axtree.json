@@ -8,7 +8,7 @@
     "memory-detail-translation-toggle": "Button, label varies 'Show translation'/'Show original', value 'Original shown'/'Translation shown'",
     "memory-detail-translation-retry": "Button 'Retry', shown in L2 error state",
     "translated_body": "Static text 'Translated · en-US' + translated text (fixture 'orange tabby')",
-    "low_confidence_original": "Static text 'Original: <source text>' retained when confidence < 0.7"
+    "low_confidence_original": "Static text 'Original: <source text>' retained when source-language confidence < 0.9"
   },
   "verification": {
     "high_confidence_journey": "toggle -> translation shown -> toggle back to original (XCUITest passed)",

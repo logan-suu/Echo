@@ -3,7 +3,7 @@
   "actionId": "detail.translate",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.toggleTranslation()",
-  "expectedOutcome": "Translation toggled between original and translated text (US-DIS-002); translation persisted to cache TTL=7d (🔮 Phase 3.8)",
+  "expectedOutcome": "Translation toggles between original and translated text through the production cache-first display service; success persists to the 7-day cache, while NLTagger source confidence <0.9 or an unsupported pair keeps original text plus a language label (US-DIS-002, ADR-005/013)",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

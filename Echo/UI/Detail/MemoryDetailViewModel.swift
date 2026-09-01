@@ -51,6 +51,13 @@ enum MediaKind: Equatable, Sendable {
     case audio
 }
 
+enum MediaResolutionPhase: Equatable, Sendable {
+    case idle
+    case loading
+    case resolved
+    case unavailable
+}
+
 /// UI 层记忆详情展示模型 — 从 Core ``Memory`` / ``MemoryEntry`` 映射的薄适配器。
 ///
 /// 适配器职责 (docs/ui/architecture.md §7.1):
@@ -297,6 +304,8 @@ final class MemoryDetailViewModel {
     private var translationTask: Task<Void, Never>?
     /// WP7: 详情页媒体预览——PHAsset 图片本体（照片记忆展示生产接线）
     private(set) var photoImage: UIImage?
+    /// Presentation-only resolution state; never substitutes a second source of truth.
+    private(set) var photoResolutionPhase: MediaResolutionPhase = .idle
     /// WP7: canonical 仓库——生产 load 接线（route ENABLED 后详情真实加载）
     private let canonicalRepository: (any MemoryDetailRepository)?
 
@@ -308,8 +317,12 @@ final class MemoryDetailViewModel {
         case idle
         /// 翻译中
         case translating
-        /// 翻译完成（含低置信度 <0.7 情况，由 view 保留原文）
+        /// A trustworthy translation is ready for presentation.
         case translated
+        /// Source-language detection is uncertain; no translated text is exposed or cached.
+        case uncertain
+        /// The requested language pair is unavailable; original text remains primary.
+        case unavailable(String)
         /// L2 可恢复错误
         case error(String)
     }
@@ -443,8 +456,15 @@ final class MemoryDetailViewModel {
     /// WP7: PHAsset 图片本体加载——详情页媒体预览生产接线。
     /// 本地仅提取（isNetworkAccessAllowed=false，与摄入策略一致）；无资产静默跳过。
     func loadPhotoImage(assetId: String) {
-        guard photoImage == nil,
-              let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil).firstObject else { return }
+        guard photoImage == nil, photoResolutionPhase != .loading else { return }
+        photoResolutionPhase = .loading
+        guard let asset = PHAsset.fetchAssets(
+            withLocalIdentifiers: [assetId],
+            options: nil
+        ).firstObject else {
+            photoResolutionPhase = .unavailable
+            return
+        }
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
         options.deliveryMode = .highQualityFormat
@@ -455,6 +475,7 @@ final class MemoryDetailViewModel {
             options: options
         ) { [weak self] image, _ in
             self?.photoImage = image
+            self?.photoResolutionPhase = image == nil ? .unavailable : .resolved
         }
     }
 
@@ -466,8 +487,15 @@ final class MemoryDetailViewModel {
         isFixtureBacked = true
         stubMemory = model
         memory = model
+        photoImage = nil
+        photoResolutionPhase = .idle
         viewState = .completed
-        translationPhase = model.translatedText == nil ? .idle : .translated
+        if let confidence = model.sourceLanguageConfidence, confidence < 0.9 {
+            memory?.translatedText = nil
+            translationPhase = .uncertain
+        } else {
+            translationPhase = model.translatedText == nil ? .idle : .translated
+        }
     }
 
     /// 切换原文/译文 (US-DIS-002 AC-4)。
@@ -515,7 +543,10 @@ final class MemoryDetailViewModel {
             // AC-2: 优先查缓存
             if let cached = await self.translationCache.lookup(key: key) {
                 guard !Task.isCancelled else { return }
-                self.applyTranslation(cached.translatedText, sourceLanguageConfidence: cached.sourceLanguageConfidence)
+                self.applyTranslation(
+                    cached.translatedText,
+                    sourceLanguageConfidence: cached.sourceLanguageConfidence
+                )
                 return
             }
 
@@ -525,6 +556,13 @@ final class MemoryDetailViewModel {
                     text, from: source, to: target
                 )
                 guard !Task.isCancelled, self.memory?.translationVisible == true else { return }
+                guard result.sourceLanguageConfidence >= 0.9 else {
+                    self.applyTranslation(
+                        result.translatedText,
+                        sourceLanguageConfidence: result.sourceLanguageConfidence
+                    )
+                    return
+                }
                 // AC-5: 成功后写入缓存
                 await self.translationCache.store(
                     sourceText: text,
@@ -534,6 +572,11 @@ final class MemoryDetailViewModel {
                     sourceLanguageConfidence: result.sourceLanguageConfidence
                 )
                 self.applyTranslation(result.translatedText, sourceLanguageConfidence: result.sourceLanguageConfidence)
+            } catch TranslationError.unsupportedLanguage {
+                guard !Task.isCancelled, self.memory?.translationVisible == true else { return }
+                self.translationPhase = .unavailable(
+                    "Translation is unavailable for this language pair."
+                )
             } catch {
                 guard !Task.isCancelled, self.memory?.translationVisible == true else { return }
                 self.translationPhase = .error(
@@ -543,11 +586,17 @@ final class MemoryDetailViewModel {
         }
     }
 
-    /// 应用翻译结果到展示模型 — 源语言检测置信度由 view 决定是否展示译文 (AC-3, ADR-005)。
+    /// Applies only trustworthy translated text; uncertain output is never exposed or cached.
     private func applyTranslation(_ translatedText: String, sourceLanguageConfidence: Double) {
         guard var current = memory, current.translationVisible else { return }
-        current.translatedText = translatedText
         current.sourceLanguageConfidence = sourceLanguageConfidence
+        if sourceLanguageConfidence < 0.9 {
+            current.translatedText = nil
+            memory = current
+            translationPhase = .uncertain
+            return
+        }
+        current.translatedText = translatedText
         memory = current
         translationPhase = .translated
     }

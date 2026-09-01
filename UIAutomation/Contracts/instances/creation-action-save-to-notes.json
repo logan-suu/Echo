@@ -3,7 +3,7 @@
   "actionId": "creation.saveToNotes",
   "source": "user",
   "targetIntent": "CreationViewModel.saveToNotes()",
-  "expectedOutcome": "generated -> saving -> saved (Toast + link) | error (L2 retry) (US-SYN-003 AC-4/AC-5)",
+  "expectedOutcome": "generated remains grounded while a local export is prepared and the system share sheet is presented. User cancellation returns to generated without error; export/share presentation failure maps to L2 retry. Echo never claims a saved Note or exposes a note link (US-SYN-003 AC-4/AC-5, ADR-013).",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

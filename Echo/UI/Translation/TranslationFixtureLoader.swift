@@ -6,7 +6,7 @@
 // 任务: 3.8 - 跨语言翻译层集成
 // AC 覆盖: US-DIS-002 AC-1/AC-2/AC-3/AC-4/AC-5 (确定性翻译 fixture)
 //          契约 fixture IDs: translation-zh-en-high / translation-zh-en-low /
-//                            translation-zh-en-cached / translation-error
+//                       translation-zh-en-cached / translation-unavailable / translation-error
 // 架构约束: 确定性、离线、可复现; 不访问网络或生产数据库 (docs/ui/architecture.md §3);
 //           fixture ID 与 UIAutomation/Fixtures/translation/*.json 对齐
 // 生成时间: 2026-08-02
@@ -35,6 +35,9 @@ enum TranslationFixtureLoader {
         case "translation-zh-en-cached":
             return cached
 
+        case "translation-unavailable":
+            return unavailable
+
         case "translation-error":
             return errorFixture
 
@@ -45,7 +48,13 @@ enum TranslationFixtureLoader {
 
     /// 全部已注册 fixture ID
     static var availableFixtureIDs: [String] {
-        ["translation-zh-en-high", "translation-zh-en-low", "translation-zh-en-cached", "translation-error"]
+        [
+            "translation-zh-en-high",
+            "translation-zh-en-low",
+            "translation-zh-en-cached",
+            "translation-unavailable",
+            "translation-error",
+        ]
     }
 
     // MARK: - translation-zh-en-high
@@ -101,6 +110,22 @@ enum TranslationFixtureLoader {
             translationVisible: true,
             translatedText: "Last night I met an orange tabby in the park. It was very friendly, rubbing against my legs and following me for a while.",
             sourceLanguageConfidence: 0.95
+        )
+    }
+
+    // MARK: - translation-unavailable
+
+    private static var unavailable: MemoryDetailModel {
+        MemoryDetailModel(
+            id: uuid("99999999-9999-9999-9999-999999999992"),
+            assetId: "note-zh-unavail",
+            sourceType: "note",
+            title: "语言对不受支持",
+            originalText: "这是一条语言对不受支持的记忆，保留原文与语言标签。",
+            sourceLanguage: "zh-Hans",
+            preferredLanguage: "en-US",
+            timestamp: Date(timeIntervalSince1970: 1723756800),
+            tags: []
         )
     }
 

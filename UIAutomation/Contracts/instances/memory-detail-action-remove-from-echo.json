@@ -3,7 +3,7 @@
   "actionId": "detail.removeFromEcho",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.deleteMemory(preserveOriginal: true)",
-  "expectedOutcome": "Memory removed from Echo, asset written to ExcludedAssets (US-PRV-004 AC-2); 🔮 Core write Phase 3.9",
+  "expectedOutcome": "Production delegates the transactional removal to CanonicalMemoryRepositoryActor, clears Echo copies and writes ExcludedAssets only for the explicit Remove from Echo choice (US-PRV-004 AC-2)",
   "requiresConfirmation": true,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

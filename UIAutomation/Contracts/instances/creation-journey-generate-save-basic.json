@@ -6,15 +6,13 @@
     { "surfaceId": "creation", "stateId": "idle", "actionId": "creation.generate" },
     { "surfaceId": "creation", "stateId": "generating", "actionId": "creation.generate" },
     { "surfaceId": "creation", "stateId": "generated", "actionId": "creation.copy" },
-    { "surfaceId": "creation", "stateId": "generated", "actionId": "creation.saveToNotes" },
-    { "surfaceId": "creation", "stateId": "saving", "actionId": "creation.saveToNotes" },
-    { "surfaceId": "creation", "stateId": "saved", "actionId": "creation.openNote" }
+    { "surfaceId": "creation", "stateId": "generated", "actionId": "creation.saveToNotes" }
   ],
   "preconditionFixtures": ["creation-generated-letter"],
   "assertions": [
     { "type": "generate_flow", "expected": "idle -> generating -> generated with citation anchors" },
     { "type": "copy", "expected": "Content copied to pasteboard" },
-    { "type": "save_to_notes", "expected": "generated -> saving -> saved Toast + link (US-SYN-003 AC-5)" }
+    { "type": "save_to_notes", "expected": "Local export prepares and presents the system share sheet; cancellation is not an error; no saved-note Toast or link is asserted (ADR-013)" }
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

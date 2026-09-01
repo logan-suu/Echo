@@ -1,27 +1,27 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
-  "fixtureId": "creation-saved",
+  "fixtureId": "creation-share-handoff",
   "schemaVersion": "1.0.0",
   "locale": "en-US",
   "theme": "light",
   "dynamicTypeSize": "Large",
   "surfaceFamily": "focus",
   "payload": {
-    "templates": ["letter", "report", "poem", "timeline"],
     "selectedTemplate": "letter",
     "title": "A letter to your future self",
     "generatedContent": [
       {
         "paragraph": "In the summer of 2025 you spent many evenings walking in the park, and a small orange cat often followed you home.",
-        "citation": { "memoryId": "22222222-2222-2222-2222-222222222222", "hasSource": true }
+        "citation": {
+          "memoryId": "22222222-2222-2222-2222-222222222222",
+          "hasSource": true
+        }
       }
     ],
     "sourceMemoryCount": 1,
-    "savePhase": "saved",
-    "noteTitle": "A letter to your future self (Echo)",
-    "noteLink": "notes://echo/creation/2025-letter",
-    "promptDraft": "You are Echo, a local AI memory assistant. Focus on recent queries and feelings."
+    "shareHandoff": "presented",
+    "finalSaveResult": "unobservable"
   },
-  "controlledVariables": ["noteLink"],
+  "controlledVariables": ["shareHandoff"],
   "version": "1.0.0"
 }

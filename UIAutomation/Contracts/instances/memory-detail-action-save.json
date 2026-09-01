@@ -3,7 +3,7 @@
   "actionId": "detail.saveEdit",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.saveEdit()",
-  "expectedOutcome": "Edited memory saved locally (US-AWK-007 AC-2); re-vectorization 🔮 Phase 3.9; L4 conflict guard blocks save when syncing",
+  "expectedOutcome": "When the production edit/re-index transaction boundary is connected, save edited fields atomically and re-index; otherwise fail visibly as unavailable. L4 conflict guard blocks save while syncing, and fixture mutation is not production evidence (US-AWK-007 AC-2/AC-3).",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

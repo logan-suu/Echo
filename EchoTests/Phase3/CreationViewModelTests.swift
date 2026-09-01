@@ -5,7 +5,7 @@
 //            docs/ui/echo-memory-canvas-style.md §3.2 (Focus surfaces), docs/ui/architecture.md §6~7 (ViewModel/Adapter 契约)
 // 任务: 3.9 - 整合所有 ViewModel 与 Pipeline + 创作保存 UI
 // AC 覆盖: US-SYN-003 AC-1 (模板选择), AC-2 (溯源锚点), AC-3 (预览/复制/导出),
-//          AC-4 (保存到备忘录按钮), AC-5 (保存成功 Toast+链接 / 失败 L2 Toast+重试),
+//          AC-4 (系统分享交接), AC-5 (交接失败 L2 Toast+重试),
 //          US-SYN-004 AC-4 (分享/导出/打印), AC-5 (标题含报告周期),
 //          US-SYN-005 AC-4 (Prompt 草稿可编辑确认), AC-6 (重置为默认 Prompt)
 // 架构约束: 展示层 ViewModel 测试; 确定性 fixture; 无网络; @MainActor @Observable
@@ -151,20 +151,15 @@ struct CreationViewModelTests {
         let vm = CreationViewModel()
         vm.loadPreloaded(CreationFixtureLoader.load("creation-generated-letter")!)
         vm.saveToNotes()
-        // ADR-013 决策 4: Notes 交接仅用系统 share/export 流（用户中介），不伪造 notes:// URL。
+        // ADR-013 decision 4: Notes handoff is user-mediated system share/export only.
         #expect(vm.isSharePresented == true)
         #expect(vm.viewState == .generated)
-        #expect(vm.noteLink == nil)
     }
 
-    @Test("US-SYN-003 AC-5 ADR-013: saved fixture preserves toast but no fabricated notes URL")
-    func savedFixturePreservesToastAndLink() {
-        let vm = CreationViewModel()
-        vm.loadPreloaded(CreationFixtureLoader.load("creation-saved")!)
-        #expect(vm.viewState == .saved)
-        // ADR-013 决策 4: 禁止 notes://echo/... 深链 — noteLink 恒 nil
-        #expect(vm.noteLink == nil)
-        #expect(vm.saveToastMessage != nil)
+    @Test("US-SYN-003 AC-5 ADR-013: no fixture can fabricate a saved Notes result")
+    func savedFixtureIsUnavailable() {
+        #expect(CreationFixtureLoader.load("creation-saved") == nil)
+        #expect(!CreationFixtureLoader.availableFixtureIDs.contains("creation-saved"))
     }
 
     // MARK: - US-SYN-003 AC-3: Empty / Error states

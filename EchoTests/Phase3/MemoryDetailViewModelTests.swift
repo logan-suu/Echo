@@ -213,7 +213,8 @@ struct MemoryDetailViewModelTests {
 
     @Test("US-DIS-002 AC-3/AC-4: low-confidence fixture resolves with detection confidence <0.9 and retains original")
     func lowConfidenceFixtureKeepsOriginal() async {
-        let vm = makeFixtureTranslationVM()
+        let cache = TranslationCache()
+        let vm = makeFixtureTranslationVM(cache: cache)
         let model = TranslationFixtureLoader.load("translation-zh-en-low")!
         vm.loadPreloaded(model)
 
@@ -221,8 +222,10 @@ struct MemoryDetailViewModelTests {
         try? await Task.sleep(nanoseconds: 300_000_000)
 
         #expect(vm.memory?.translationVisible == true)
-        #expect(vm.memory?.translatedText != nil)
+        #expect(vm.memory?.translatedText == nil)
         #expect(vm.memory?.sourceLanguageConfidence ?? 1.0 < 0.9)
+        #expect(vm.translationPhase == .uncertain)
+        #expect(await cache.isEmpty)
     }
 
     @Test("US-DIS-002 AC-2: translation service error surfaces L2 error phase (retry available)")
