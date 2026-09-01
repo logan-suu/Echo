@@ -1,23 +1,21 @@
 // ==========================================
-// 文件: AppRootView.swift
-// 对应规格: docs/ui/echo-memory-canvas-style.md §3.3 (Task surfaces), docs/ui/architecture.md §3 (App Shell)
-// 任务: 3.0 - App Shell: TabView + NavigationStack + DI 注入
-//       3F.1 - Production composition (ADR-007 §决策-1/2/5)
-// AC 覆盖: TabView 三大标签页 (Home/Search/Settings)，各含独立 NavigationStack; 启动状态门控
-// 架构约束: 遵循 AGENTS.md §8.1, §10.1; echo-memory-canvas apple-native 基础; Task surface family (禁止 masonry)
-// 生成时间: 2026-07-26, 2026-08-04 (Task 3F.1)
+// File: AppRootView.swift
+// Specification: docs/ui/echo-memory-canvas-style.md §3.3; docs/ui/architecture.md §3
+// Tasks: 3.0 (AppShell), 3F.1 (production composition), 4.0 (Balanced Canvas host)
+// AC coverage: native TabView, per-tab NavigationStack, startup gates, shared profile host
+// Architecture: AGENTS.md §8.1, §10.1, §17.2; AppShell hosts all surface families
+// Generated: 2026-07-26; updated: 2026-08-31 (Task 4.0)
 // ==========================================
 
 import SwiftUI
 
 // MARK: - AppRootView
 
-/// Echo App 根视图 — TabView 容器 + 启动状态门控 (3F.1)
+/// Echo's system-native navigation host and startup gate.
 ///
-/// ## Surface Family: Task
-/// - 使用系统 TabView + NavigationStack
-/// - 绝对禁止 masonry 布局
-/// - 遵循 echo-memory-canvas style tokens (semantic colors, SF Symbols, Dynamic Type)
+/// AppShell is not a fourth content surface. It hosts Discovery, Focus, and Task
+/// destinations while retaining the platform TabView, NavigationStack, toolbar,
+/// search, and modal behaviors.
 ///
 /// ## 启动门控 (ADR-007 §决策-1/2/5)
 /// - .requiresConsent / .consentDeclined → 展示引导流程 (deny-by-default)
@@ -101,7 +99,7 @@ struct AppRootView: View {
                 }
             }
         }
-        .tint(Color.accentColor)
+        .echoAppShell()
         .environment(\.locale, languageCenter.locale)
         // iOS 18.x 无 TranslationSession 公开构造器 — 隐藏 host view 常驻获取 session (PR #61 review B-1)
         .background {
@@ -133,22 +131,21 @@ struct AppRootView: View {
             .onAppear { isOnboardingPresented = true }
     }
 
-    /// Unavailable startup state placeholder (ADR-007 §决策-5)
+    /// Shared blocking presentation for unavailable startup states.
     @ViewBuilder
     private func unavailableGate(title: String, message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.yellow)
-            Text(title)
-                .font(.title2)
-                .fontWeight(.semibold)
-            Text(message)
-                .font(.body)
-                .foregroundStyle(Color.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+        EchoContainer(level: .emphasized) {
+            EchoStatusPresentation(
+                role: .blocking,
+                systemImage: "exclamationmark.triangle",
+                title: title,
+                message: message
+            )
         }
+        .frame(maxWidth: 560)
+        .padding(EchoSpacingToken.section.points)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(EchoColorToken.canvasBackground.color)
     }
 
     /// Sync consent into composition when onboarding completes (US-PRV-008 AC-4)
@@ -173,17 +170,41 @@ struct AppRootView: View {
 
     // MARK: - Main Tabs
 
-    /// 主 TabView — 仅 startupState == .ready 时展示
+    /// Native iOS 18 tabs, shown only when startup has reached a usable state.
     private var mainTabs: some View {
         TabView(selection: $viewModel.selectedTab) {
-            homeTab
-                .tag(AppTab.home)
+            Tab(value: AppTab.home) {
+                NavigationStack {
+                    HomeView()
+                }
+            } label: {
+                Label(
+                    EchoStrings.tr(AppTab.home.titleKey),
+                    systemImage: AppTab.home.systemImage
+                )
+            }
 
-            searchTab
-                .tag(AppTab.search)
+            Tab(value: AppTab.search) {
+                NavigationStack {
+                    SearchView()
+                }
+            } label: {
+                Label(
+                    EchoStrings.tr(AppTab.search.titleKey),
+                    systemImage: AppTab.search.systemImage
+                )
+            }
 
-            settingsTab
-                .tag(AppTab.settings)
+            Tab(value: AppTab.settings) {
+                NavigationStack {
+                    SettingsView()
+                }
+            } label: {
+                Label(
+                    EchoStrings.tr(AppTab.settings.titleKey),
+                    systemImage: AppTab.settings.systemImage
+                )
+            }
         }
     }
 
@@ -217,40 +238,6 @@ struct AppRootView: View {
     }
     #endif
 
-    // MARK: - Tab Definitions
-
-    /// Home 标签页 — Discovery surface（后续 3.1 实现为内容卡片列表）
-    @ViewBuilder
-    private var homeTab: some View {
-        NavigationStack {
-            HomeView()
-        }
-        .tabItem {
-            Label(EchoStrings.tr(AppTab.home.titleKey), systemImage: AppTab.home.systemImage)
-        }
-    }
-
-    /// Search 标签页 — Discovery surface（后续 3.2 实现为搜索视图）
-    @ViewBuilder
-    private var searchTab: some View {
-        NavigationStack {
-            SearchView()
-        }
-        .tabItem {
-            Label(EchoStrings.tr(AppTab.search.titleKey), systemImage: AppTab.search.systemImage)
-        }
-    }
-
-    /// Settings 标签页 — Task surface（后续 3.4 实现为设置页面）
-    @ViewBuilder
-    private var settingsTab: some View {
-        NavigationStack {
-            SettingsView()
-        }
-        .tabItem {
-            Label(EchoStrings.tr(AppTab.settings.titleKey), systemImage: AppTab.settings.systemImage)
-        }
-    }
 }
 
 // MARK: - Preview

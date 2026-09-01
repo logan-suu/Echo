@@ -30,6 +30,11 @@ jobs:
     name: Build, Lint & Test
     runs-on: macos-15
     timeout-minutes: 30
+    env:
+      # macos-15 defaults to Xcode 16.4. Echo's UI toolchain baseline is
+      # Xcode 26.x; pin an installed runner image version to avoid silently
+      # compiling with the legacy Swift 6.1.2 frontend.
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
     steps:
       - name: Checkout repository
@@ -99,6 +104,37 @@ jobs:
           echo "SwiftLint version: $(swiftlint version)"
           echo "Xcode version: $(xcodebuild -version)"
           echo "Swift version: $(swift --version)"
+
+      - name: Ensure iPhone 17 Pro simulator
+        run: |
+          if xcrun simctl list devices available | grep -q "iPhone 17 Pro ("; then
+            exit 0
+          fi
+
+          ECHO_RUNTIME_ID=$(xcrun simctl list runtimes available -j | python3 -c '
+          import json
+          import sys
+
+          runtimes = [
+              runtime for runtime in json.load(sys.stdin)["runtimes"]
+              if runtime.get("isAvailable")
+              and ".iOS-" in runtime.get("identifier", "")
+          ]
+          selected = max(
+              runtimes,
+              key=lambda runtime: tuple(int(part) for part in runtime["version"].split(".")),
+          )
+          print(selected["identifier"])
+          ')
+          ECHO_DEVICE_TYPE_ID=$(xcrun simctl list devicetypes -j | python3 -c '
+          import json
+          import sys
+
+          device_types = json.load(sys.stdin)["devicetypes"]
+          selected = next(item for item in device_types if item["name"] == "iPhone 17 Pro")
+          print(selected["identifier"])
+          ')
+          xcrun simctl create "iPhone 17 Pro" "$ECHO_DEVICE_TYPE_ID" "$ECHO_RUNTIME_ID"
 
       # ── SwiftLint ──
       - name: SwiftLint
@@ -261,6 +297,7 @@ jobs:
           # DEF-64-007: Swift Testing suites self-disable on this flag
           # (shared-DatabaseManager ordering debt).
           ECHO_SKIP_FULL_SUITE: "1"
+          NSUnbufferedIO: YES
         run: |
           set -o pipefail
           # DEF-64-004: XCUITest fixtures fail identically on local and CI
@@ -281,9 +318,6 @@ jobs:
             -skip-testing:EchoTests/PhotoTextSearchIdentityTests \
             -skip-testing:EchoTests/PhotoTextSearchIntegrationTests \
             2>&1 | tee test.log
-        env:
-          NSUnbufferedIO: YES
-
       # ── Coverage Gate (R-2.2a): enforce coverage threshold ──
       # SwiftUI Views (*View.swift) and Fixture Loaders (*FixtureLoader.swift)
       # under Echo/UI/ are excluded from coverage calculation (feature-dir

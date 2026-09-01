@@ -84,6 +84,7 @@
     "surface_family_rules": { "required": true, "description": "Discovery rich-data defaults to adaptive masonry with low-data/accessibility fallback; Focus/Task remain no-masonry" },
     "balanced_canvas": { "required": true, "description": "Home validates 0/1-19/20-plus states; Search validates below/at-least-6 displayable results; semantic order is stable" },
     "app_wide_visual_profile": { "required": true, "description": "Every AppShell/Home/Search/Detail/Settings/Onboarding/Awakening/BackgroundTask/Creation/Degradation/ResumeProgress/Translation surface uses echo-memory-canvas shared tokens/components while preserving its family layout" },
+    "warm_accent_pair": { "required": true, "description": "AccentColor and OnAccentColor use the approved light #A64B32/#FFFFFF and dark #E08A68/#1C1C1E semantic pairs; emphasized actions consume both tokens" },
     "visual_media_prohibition": { "required": true, "description": "No screenshot/screen-recording API calls permitted" }
   },
 

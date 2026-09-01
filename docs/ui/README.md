@@ -24,7 +24,7 @@
 |------|----------|
 | Phase 3 UI 实现（3.1–3.9） | `echo-memory-canvas-style.md` + `architecture.md` |
 | Phase 3F UI 任务（3F.7–3F.10） | `echo-memory-canvas-style.md` + `architecture.md` + `automation-workflow.md`（按 canonical plan §7 + §6.2.2 执行；checklist 含双设备 Live Sim Review 与 §4.6.7–4.6.10 UIAutomation 契约） |
-| Phase 4 共享视觉基础（4.0） | `echo-memory-canvas-style.md` + `architecture.md` + DesignProfile/Surface schemas + acceptance policy |
+| Phase 4 共享视觉基础（4.0） | `echo-memory-canvas-style.md` + `architecture.md` + `testing-and-artifacts.md` + DesignProfile/Surface schemas + acceptance policy |
 | Phase 4 Discovery（4.0a） | style + architecture + testing + Home/Search Surface Contracts |
 | Phase 4 Focus（4.0b） | style + architecture + testing + Detail/Creation/Translation Surface Contracts |
 | Phase 4 Task（4.0c） | style + architecture + testing + Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress Surface Contracts |

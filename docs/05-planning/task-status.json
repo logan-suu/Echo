@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-08-31T17:22:09Z",
+  "last_updated": "2026-09-01T05:00:01Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2043,7 +2043,7 @@
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
       "entry_gate": "3F.11",
-      "last_updated": "2026-08-31T17:22:09Z",
+      "last_updated": "2026-09-01T05:00:01Z",
       "tasks": [
         {
           "id": "4.0",
@@ -2062,7 +2062,7 @@
             "docs/05-planning/开发计划安排文档.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
             "3F.11"
           ],
@@ -2080,16 +2080,24 @@
             "只建立 echo-memory-canvas DesignProfile、共享 typography/color/spacing/radius/container/status/action/motion primitives 与 Apple 原生 AppShell，不修改任何领域行为",
             "共享组件必须通过语义 token 和系统 Dynamic Type 构建，禁止为各功能域暴露任意样式开关或复制常量",
             "NavigationStack、TabView、toolbar、search 与 modal chrome 保持 Apple 原生；不创建 Pinterest 风格的自定义系统 chrome",
+            "AppShell 是承载 Discovery/Focus/Task 的系统宿主，不归类为 Task surface，也不创建第四种 surface family；surface_families 字段表示共享基础必须支持三类 family",
             "本任务不改造 Home/Search/Focus/Task 具体页面；页面族分别由 4.0a/4.0b/4.0c 消费基础"
           ],
           "acceptance_evidence": [
-            "DesignProfile schema/instance 与 acceptance policy 可解析且版本一致",
-            "共享 token/component API 覆盖 typography、semantic colors、warm accent、spacing、radii、container hierarchy、status/action 与 Reduce Motion",
+            "DesignProfile schema/instance 与 acceptance policy 均可解析；instance 对其 $schema 校验通过；三者对 profile ID、surface family、no-masonry 边界与批准点的语义一致（各文档版本号独立演进，不要求数值相等）",
+            "共享 token/component API 覆盖 typography、semantic colors、warmAccent/onWarmAccent 浅色 #A64B32/#FFFFFF 与深色 #E08A68/#1C1C1E 语义色对、spacing、radii、container hierarchy、status/action 与 Reduce Motion",
             "AppShell 在 iPhone 17 Pro iOS 26.5 与 iPhone 16 Pro iOS 18.x 保持系统导航、Tab、toolbar 与 modal 行为",
             "基础组件具有 Dynamic Type、VoiceOver、increased contrast、Reduce Motion 与 zh-Hans/en-US 自动化测试"
           ],
-          "last_updated": "2026-08-31T17:22:09Z",
-          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c."
+          "last_updated": "2026-09-01T06:29:17Z",
+          "notes": "Split by human request: 4.0 owns only the shared Balanced Canvas foundation and AppShell. Surface implementation is delegated to 4.0a/4.0b/4.0c. Spec review clarified that AppShell is a host rather than a Task surface and that contract consistency means schema conformance plus semantic agreement, not equal version numbers. Delivery adds the app-wide DesignProfile environment, semantic typography/color/spacing/radius/container/status/action/motion primitives, shared accessible components, and the iOS 18 native Tab API. AC-1 review also repaired the DesignProfile schema so its required $schema field is valid under additionalProperties=false. PR review accepted the missing VoiceOver heading semantics finding and added an AC-4 regression test plus the isHeader trait. The provenance-header suggestion was rejected because the existing English birth-certificate metadata satisfies AGENTS.md sections 3.5 and 12.5. The human product owner approved the recommended semantic terracotta pair: warmAccent light/dark #A64B32/#E08A68 and onWarmAccent #FFFFFF/#1C1C1E. Specifications, UI architecture, DesignProfile contract and acceptance policy were updated before implementation. The implementation materializes AccentColor and OnAccentColor light/dark assets, exposes onWarmAccent, and removes the fixed white foreground from primary/recovery actions. Final review evidence: 22 focused/AppShell regression tests passed serially on iPhone 17 Pro, including exact asset values and 4.5:1 contrast gates; SwiftLint reported 0 violations; DesignProfile and all Surface contract checks passed; the same repaired app build installed, launched and remained running on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2. The second PR review fixed destructive-action contrast by using semantic primary text on system fill with a blocking-red border, added an AC-4 regression guard, and repaired the CI workflow duplicate env key that prevented job creation. When the repaired workflow exposed a Swift 6.1.2 frontend crash under the macos-15 default Xcode 16.4, the job was aligned with Echo's Xcode 26.x readiness baseline by pinning the officially installed Xcode 26.3 toolchain. The Xcode 26.3 test build then exposed integer-array inference in the contrast test; all RGB inputs now use explicit Double literals for cross-toolchain compilation. A subsequent runner image had the iOS 26.2 runtime but no pre-created simulator devices, so CI now idempotently creates the required iPhone 17 Pro when absent. The final CodeRabbit color-asset finding was accepted: tests now require sRGB for both light and dark entries in addition to exact components. Human Live Simulator visual approval remains required before merge.",
+          "pr": {
+            "number": 67,
+            "url": "https://github.com/logan-suu/Echo/pull/67",
+            "head": "feature/balanced-canvas-foundation-4.0",
+            "base": "dev-1.0",
+            "created_at": "2026-09-01T05:00:01Z"
+          }
         },
         {
           "id": "4.0a",
@@ -3032,6 +3040,49 @@
         "docs/05-planning/task-status.json",
         "docs/05-planning/开发计划安排文档.md",
         "docs/ui/README.md"
+      ]
+    },
+    {
+      "id": "DOC-20260831-BALANCED-CANVAS-SPEC-REVIEW",
+      "status": "resolved",
+      "detected_at": "2026-09-01T04:32:31Z",
+      "resolved_at": "2026-09-01T04:32:31Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "app-wide-profile-with-family-specific-layouts",
+      "decision": "Retain Balanced Canvas as the app-wide visual profile, treat the 60/40 wording as directional rather than numeric acceptance, classify AppShell as a system host rather than a Task surface, deliver the profile through the 4.0/4.0a/4.0b/4.0c task family, and define cross-document consistency as schema conformance plus semantic agreement rather than equal version numbers.",
+      "reason": "The prior approval row, historical task wording, AppShell family classification and equal-version acceptance phrase conflicted with the current split task model or were not objectively testable.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/ui/README.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "UIAutomation/Contracts/schemas/surface-v1.json",
+        "UIAutomation/Contracts/instances/awakening-settings-surface.json",
+        "UIAutomation/Contracts/instances/degradation-banner-surface.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260901-WARM-ACCENT-PAIR",
+      "status": "resolved",
+      "detected_at": "2026-09-01T05:29:05Z",
+      "resolved_at": "2026-09-01T05:38:38Z",
+      "decision_maker": "Human product owner",
+      "selected_option": "custom-semantic-terracotta-pair",
+      "decision": "Define the Balanced Canvas accent as a semantic light/dark pair: warmAccent #A64B32/#E08A68 and onWarmAccent #FFFFFF/#1C1C1E. Emphasized actions must consume both tokens instead of hardcoding white foreground content.",
+      "reason": "The prior Color.accentColor contract did not materialize a warm identity because AccentColor.colorset was empty, and a single white foreground was not appropriate for both approved appearances.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "UIAutomation/Contracts/schemas/design-profile-v1.json",
+        "UIAutomation/Contracts/instances/design-profile-echo-memory-canvas.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/task-status.json"
       ]
     }
   ],

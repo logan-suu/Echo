@@ -1,12 +1,30 @@
 {
+  "$schema": "https://echo-ui-automation/schemas/contracts/surface/v1",
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "awakening-settings",
   "surfaceFamily": "task",
-  "container": "NavigationStack + Form",
-  "masonry": "forbidden",
+  "responsibility": "Render awakening delivery settings for notification, location and health permissions plus geofence, emotion and anniversary controls without duplicating Core awakening rules",
+  "inputs": {
+    "authorization": "Live notification, location and health authorization/availability values",
+    "settings": "Live geofence, emotion and anniversary enablement values",
+    "runtimeStatus": "Loading, error and unavailable states from the UI adapter"
+  },
+  "outputs": {
+    "visibleContent": "Apple-native grouped permission and awakening-setting controls with shared status/action hierarchy",
+    "interactionTargets": "Toggle controls, notification request, system settings link and geofence detail presentation",
+    "accessibilityTree": "Form reading order with stable labels, values, hints and permission status"
+  },
+  "systemContainer": "NavigationStack + Form + Sheet",
+  "layoutMode": "form",
+  "masonryEnabled": false,
+  "fallbackConditions": [
+    "Masonry is always forbidden for this Task surface",
+    "Unavailable system capabilities render an explanatory status instead of a disabled visual-only control"
+  ],
   "description": "Awakening delivery settings — notification, location, health permissions and geofence/emotion/anniversary toggles",
   "relatedStories": ["US-AWK-001", "US-AWK-002", "US-AWK-003"],
   "states": ["loaded", "loading", "error", "empty-permissions", "all-disabled", "unavailable"],
   "actions": ["toggleGeofence", "toggleEmotion", "toggleAnniversary", "requestNotification", "openSystemSettings", "showGeofenceDetail", "dismissGeofenceDetail"],
-  "journeys": ["awakening-settings-basic", "awakening-settings-no-permissions", "awakening-settings-unavailable"]
+  "journeys": ["awakening-settings-basic", "awakening-settings-no-permissions", "awakening-settings-unavailable"],
+  "version": "1.0.0"
 }

@@ -189,7 +189,7 @@ enum State {
 | Masonry | ✅ 达到 Surface 真实内容阈值时默认；稳定语义顺序 | ❌ 禁止 | ❌ 禁止 |
 | 参考章节 | style §3.1, §5, §6 | style §3.2, §7.1 | style §3.3, §7.2 |
 
-每个 Surface View 头部必须声明 family 归属。交叉引用：`echo-memory-canvas-style.md`。
+每个具体 Surface View 头部必须声明 family 归属。AppShell 是系统宿主，不属于 Task surface；它只负责承载三类 family、统一系统 chrome 与应用级环境。交叉引用：`echo-memory-canvas-style.md`。
 
 ### 8.1 平衡画布组合边界
 
@@ -202,10 +202,12 @@ enum State {
 ### 8.2 全 App Profile 应用
 
 - 所有 Surface View 必须引用 `designProfileId = echo-memory-canvas`，不允许功能域自行定义平行的 color/type/spacing/radius/motion 系统。
+- 共享颜色层必须把重点色建模为 `warmAccent` / `onWarmAccent` 语义对：Asset Catalog 的 `AccentColor` / `OnAccentColor` 分别提供浅色 `#A64B32` + `#FFFFFF` 与深色 `#E08A68` + `#1C1C1E`。组件同时消费背景与前景 token，禁止假定 accent 上永久使用白色。
 - 共享视觉 primitives 由 UI Component 层提供：Memory Card、section header、metadata group、status presentation、primary/secondary action；功能域只组合，不复制样式常量。
 - Discovery/Focus/Task 的布局策略分别独立，但消费相同 token 与组件语义。Focus/Task 禁止 masonry 不代表可以保留与平衡画布无关的旧视觉皮肤。
 - AppShell 统一 NavigationStack/TabView、toolbar 与页面背景；各功能域不得自定义一套 tab、back、search 或 modal chrome。
 - 4.0 只交付共享 DesignProfile/component 与 AppShell；4.0a 覆盖 Home/Search，4.0b 覆盖 Detail/Creation/Translation，4.0c 覆盖 Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress。4.2/4.7/4.14 通过逐 Surface contract audit 证明任务族合并后没有遗漏。
+- `4.0` 的 `surface_families = [discovery, focus, task]` 表示共享基础必须支持三类 family，不表示 AppShell 同时属于三类 family，也不授权 `4.0` 修改具体功能页。
 
 ---
 

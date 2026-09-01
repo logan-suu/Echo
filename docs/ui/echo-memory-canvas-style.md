@@ -12,7 +12,7 @@
 - **Profile ID**：`echo-memory-canvas`
 - **Base Profile**：`apple-native`
 - **批准状态**：用户已批准；2026-08-31 进一步选择方案 B「平衡画布」作为唯一方向
-- **风格强度**：约 60% Pinterest-inspired 内容组织 + 40% Apple 原生交互；强度描述用于界定全 App 视觉身份，不是像素相似度目标
+- **风格强度**：“约 60% Pinterest-inspired 内容组织 + 40% Apple 原生交互”仅作为方向性简写；它不是逐页面比例、像素相似度目标或自动化验收指标。验收以 surface family、共享 token/component、系统交互和可访问性契约为准
 - **全 App 范围**：所有页面必须体现同一平衡画布视觉语言；Discovery 表达最强，Focus/Task 通过共享 token、容器、媒体处理、层级与 motion 保持一致
 - **额外灵感来源**：Pinterest 启发图片优先密度、非等高内容节奏与连续探索；**不是**产品依赖、品牌关系或复制其 UI 的许可
 - **边界**：系统导航、Tab Bar、搜索行为、菜单、编辑、权限、错误与恢复继续使用 Apple 原生交互模式；一致不等于所有页面都使用 masonry
@@ -33,9 +33,12 @@
 ### 2.3 Color
 - 使用 `Color.primary`、`.secondary`、系统 `background`、`fill`、`tint` 等 semantic colors
 - 完整适配 light、dark 和 increased contrast
-- Echo 使用温暖、克制的 accent：`Color.accentColor`
+- Echo 使用温暖、克制的陶土色语义对，通过 Asset Catalog 提供 light/dark appearance：
+  - `warmAccent`（`AccentColor` asset）：浅色 sRGB `#A64B32`；深色 sRGB `#E08A68`
+  - `onWarmAccent`（`OnAccentColor` asset）：浅色 `#FFFFFF`；深色 `#1C1C1E`
+- SwiftUI 只通过 `EchoColorToken.warmAccent` / `.onWarmAccent` 消费该色对；重点 action 不得把前景色固定为 `.white`
 - Accent 限定于：tint、选中态、重点 action 和少量状态强调
-- 必须通过对比度与色盲语义验证
+- 对比度门禁同时验证 `warmAccent` 与 `onWarmAccent` 的 appearance 配对；颜色不得作为状态或动作的唯一语义
 
 ### 2.4 SF Symbols
 - 使用 SF Symbols 及其语义化 variant（`.fill`、`.circle`、`.slash`）
@@ -94,6 +97,8 @@
 - `surfaceFamily: discovery | focus | task`
 - 所选系统容器
 - 回退条件
+
+AppShell 是 Apple 原生系统宿主，负责 NavigationStack、TabView、toolbar、search 与 modal 基础行为；它承载 Discovery/Focus/Task，但自身不是 Task surface，也不创建第四种 `surfaceFamily`。因此 AppShell 使用 DesignProfile 合约验收，不创建伪造的 AppShell Surface 合约。
 
 ### 3.5 全 App 一致性契约
 
@@ -277,7 +282,7 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 
 ### 7.3 三类 Family 的视觉一致性
 通过共享 token 和行为达成一致，不来自把同一布局套到所有页面：
-- Typography、semantic colors、warm restrained accent、radii、spacing
+- Typography、semantic colors、`warmAccent` / `onWarmAccent` 陶土色对、radii、spacing
 - Materials、metadata hierarchy、SF Symbols、system motion
 - 相同语义使用相同组件：Memory Card、section header、status presentation、primary/secondary action、metadata group
 - 页面级验收必须同时检查“符合 family 布局”与“符合全 App profile”；只满足其中之一不算通过
@@ -303,7 +308,7 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 | `echo-memory-canvas` 设计配置 | 用户 | 2026-07-25 | bootstrap 规范 §7 |
 | `apple-native` 基础 | 用户 | 2026-07-25 | bootstrap 规范 §7.1 |
 | Discovery/Focus/Task 三类映射 | 用户 | 2026-07-25 | bootstrap 规范 §7.2 |
-| 方案 B「平衡画布」（约 60% Pinterest-inspired，仅覆盖 Discovery） | 用户 | 2026-08-31 | 当前产品决策 |
+| 方案 B「平衡画布」（全 App 视觉身份；Discovery 表达最强，Focus/Task 同源但不使用 masonry） | 用户 | 2026-08-31 | 当前产品决策 |
 
 > 若要改变 profile、Apple 原生基础或三类 surface 映射，必须修订本文和 `docs/ui/echo-memory-canvas-style.md` 并重新获得用户批准。
 
