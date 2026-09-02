@@ -1,6 +1,6 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.37
+**版本**：v5.38
 **生效日期**：2026-09-01
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -1390,7 +1390,11 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 
 **Warm accent 语义色对（2026-09-01 人类批准）**：`warmAccent` 由 `AccentColor` Asset Catalog 提供，浅色外观为 sRGB `#A64B32`，深色外观为 sRGB `#E08A68`；`onWarmAccent` 分别为 `#FFFFFF` 与 `#1C1C1E`。重点 action 必须同时消费背景与前景 token，禁止在两种外观中硬编码同一前景色。
 
-**Phase 4 交付边界**：`4.0` 只建立 DesignProfile、共享 token/component API 与 Apple 原生 AppShell；`4.0a`、`4.0b`、`4.0c` 分别把该基础应用到 Discovery、Focus、Task 页面族。不得把“全 App profile”误解为由 `4.0` 单任务改造全部功能页。`4.0d`、`4.0e` 不是新的 surface family 或视觉切片：`4.0d` 补齐 US-AWK-005 媒体/音乐、下一张/记录感受、userFeelings 持久化与审计；`4.0e` 补齐 Focus 的编辑重索引、冲突持久化、原始来源删除、真实媒体/引用导航及 share handoff 审计。4.2 仅负责验证这些生产闭环，不得替代实现。
+**Phase 4 交付边界**：`4.0` 只建立 DesignProfile、共享 token/component API 与 Apple 原生 AppShell；`4.0a`、`4.0b`、`4.0c` 分别把该基础应用到 Discovery、Focus、Task 页面族。不得把“全 App profile”误解为由 `4.0` 单任务改造全部功能页。`4.0d`~`4.0g` 不是新的 surface family 或视觉切片：`4.0d` 补齐 US-AWK-005 媒体/音乐、下一张/记录感受、userFeelings 持久化与审计；`4.0e` 补齐 Focus 的编辑重索引、冲突持久化、原始来源删除、真实媒体/引用导航及 share handoff 审计；`4.0f` 把权限请求改为 PIPL 先行、照片显式连接、通知/位置/HealthKit 按唤醒功能 opt-in；`4.0g` 补齐持久化任务的 reconstruction、Continue/Restart 与重启恢复。4.0c 只负责诚实 Task 表现，4.2/4.4 仅负责验证这些生产闭环，不得替代实现。
+
+**4.0c Task 边界（2026-09-02 规格审查）**：Settings、Onboarding、AwakeningSettings、BackgroundTask、Degradation、ResumeProgress 继续使用 Apple 原生 Form/List/Sheet/Alert/confirmationDialog，并共享 `echo-memory-canvas` token、grouped container、status/action components 与 motion；masonry 始终禁止。4.0c 不得修改 Core、数据库 schema/迁移、权限请求时机、任务重建、迁移/删除/审计副作用，也不得以 fixture/Preview 成功态证明生产行为。生产依赖不存在时必须显示诚实不可用/错误。PIPL 同意/拒绝同层可见且同等醒目；迁移 UI 必须区分加密 Echo migration package 与被禁止的原始媒体导出。
+
+**UI Contract v1 兼容规则（2026-09-02）**：`.../v1` schema 表示 major version 兼容边界，允许 `1.x.y` instance 版本；minor/patch 变更不得破坏稳定 `surfaceId`/`stateId`/`actionId`/`journeyId` 引用。Journey 仅在终态观察步骤允许 `actionId: null`，其余步骤必须解析到真实 action contract。
 
 **4.0b Focus 边界（2026-09-01 规格审查）**：`4.0b` 只负责 Detail、Creation、Translation 的平衡画布表现、Focus 导航/阅读连续性及现有生产能力的诚实状态映射。它不得用 fixture 成功态证明生产能力，不得在视觉任务中新增 Core 写边界，也不得宣称已完成当前仍缺少生产接线的编辑重索引、冲突持久化或原始来源删除。Notes 交接仅通过用户可见的系统 share/export 流；禁止私有 NoteStore 直写、`notes://` 深链、伪造“已保存”Toast 或笔记链接。翻译不确定阈值统一为 NLTagger 源语言置信度 `< 0.9`。
 
@@ -1518,3 +1522,4 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.35 | 2026-09-01 | 4.0a 规格合理性复审：定义可展示真实记忆边界、Search `scanEligible`/`continuousReading` 确定性门禁、真实扫描空态与只读 Discovery adapter 范围；发现 US-AWK-005 仍为 partial，新增 4.0d 生产闭环任务并明确 4.0a/4.2 不得冒充其后端 AC。 | Codex |
 | v5.36 | 2026-09-01 | 双设备 Live Review 修正规格缺陷：明确 `.search` 是 PrivacyOperation 而非 UserPolicy 数据源；检索入口执行操作级 checkpoint 后按真实来源过滤，禁止因旧策略缺少伪来源 `search` 而整项拒绝或恢复用户已撤销授权。 | Codex |
 | v5.37 | 2026-09-01 | 4.0b 规格合理性复审：把 Focus 任务收敛为 Detail/Creation/Translation 的表现与连续性切片；修复 SYN-003 Notes 私有 API 自相矛盾、fixture/生产合同混用、翻译 `<0.7` 旧阈值与 Phase 3.8/3.9 过期标记；新增 4.0e 承担编辑重索引、冲突持久化、原始来源删除、真实媒体/引用导航与 share 审计，禁止由 4.0b 视觉任务或 4.2 测试任务冒充生产实现。 | Codex |
+| v5.38 | 2026-09-02 | 4.0c 规格合理性复审：保留 Task 平衡画布方向并收敛为六域表现切片；补齐故事/Surface 追踪，修正 US-SET-004 加密迁移包矛盾与 US-AWK-002 09:00 过期 AC；新增 4.0f 渐进式权限和 4.0g 真实断点恢复；修复 UI Contract v1 对既有 1.1 实例和终态空 action 的 schema 自相矛盾。 | Codex |

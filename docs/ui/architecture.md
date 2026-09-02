@@ -208,15 +208,19 @@ enum State {
 - Discovery/Focus/Task 的布局策略分别独立，但消费相同 token 与组件语义。Focus/Task 禁止 masonry 不代表可以保留与平衡画布无关的旧视觉皮肤。
 - AppShell 统一 NavigationStack/TabView、toolbar 与页面背景；各功能域不得自定义一套 tab、back、search 或 modal chrome。
 - 4.0 只交付共享 DesignProfile/component 与 AppShell；4.0a 覆盖 Home/Search，4.0b 覆盖 Detail/Creation/Translation，4.0c 覆盖 Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress。4.2/4.7/4.14 通过逐 Surface contract audit 证明任务族合并后没有遗漏。
+- `4.0c` 仅允许修改六个 Task domain 的 View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移、系统权限语义、任务调度和领域副作用保持只读。生产依赖缺失时必须映射为明确不可用/错误，禁止回退 fixture 或伪造成功。
+- 权限编排是独立生产边界：PIPL consent gate 先于受保护数据请求；PhotoKit 仅由用户选择连接照片资料库触发；notification/location/HealthKit 仅由对应 Awakening opt-in 触发。该修正由 `4.0f` 交付，不得夹带进 `4.0c` 视觉切片。
+- `TaskProgress` 只描述持久化进度，不能单独重建原始 queued job。继续/重新开始必须由任务类型注册表或 composition-owned launcher 重建同一类任务，并将用户选择、resume point、成功/失败写入既有审计边界；该生产闭环由 `4.0g` 交付，`4.0c`/`4.4` 不得以 prompt fixture 或只读进度证明完成。
+- Settings 迁移展示必须消费 ADR-008/ADR-010 的真实加密 migration service：`DeviceMigrationActor` 负责编排，`DeviceMigrationService.exportPackage` / `importPackage` 负责 ECHOMIG1 加密迁移包的导出与导入；禁止使用 `PhotoSearchMigrationActor` 代替设备迁移边界。迁移包与“导出全部原始媒体”是不同概念。ViewModel 不持有密钥、不推断分享目标，也不复制 package/merge/rollback 规则。
 - `4.0b` 仅允许修改 Focus View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移和领域写语义保持只读。真实 adapter 缺少编辑重索引、冲突持久化或原始来源删除边界时，UI 必须映射为明确不可用/错误，不得在视觉切片中复制写规则或以 fixture 成功代替生产行为。
 - Detail 生产媒体经既有 source adapter 在当前 UserPolicy 下解析；解析失败不回退 bundled sample。Creation 只消费 grounded output 和稳定 source anchor；Notes 交接使用系统 share sheet 且不产生 Echo 可验证的“已保存”状态。Translation 继续作为 Detail 内 cache-first 的展示层能力，NLTagger `<0.9` 或语言对不支持时保留原文。
 - `4.0` 的 `surface_families = [discovery, focus, task]` 表示共享基础必须支持三类 family，不表示 AppShell 同时属于三类 family，也不授权 `4.0` 修改具体功能页。
 
 ---
 
-## 9. Phase 3F 感知
+## 9. Phase 3F 兼容记录与 Phase 4 当前状态
 
-> `docs/05-planning/task-status.json` 的 phase 为字符串（`phase_order = ["1","2","3","3F","4","5"]`，`current_phase = "3F"`）。Phase 3F 的 UI 任务在**同一 `echo-memory-canvas` 设计 profile 与本文档全部规则**下继续执行，六层架构、单向数据流、组件边界、受保护/允许内容等既有规则全部保留。
+> `docs/05-planning/task-status.json` 的 phase 为字符串（`phase_order = ["1","2","3","3F","4","5"]`）。Phase 3F 已完成；截至 2026-09-02，`current_phase = "4"` 且 Phase 4 为 `in_progress`。下列 3F 规则作为历史兼容记录保留；当前 Task/权限/恢复边界以本章前述 `4.0c`/`4.0f`/`4.0g` 规则为准。
 
 - **Phase 3F UI 任务**：3F.7（UI→Core 全域接线）、3F.8（Awakening 与 system adapters）、3F.9（Apple Translation 与 grounded creation）、3F.10（i18n、accessibility 与 production errors）按 canonical plan §7 + §6.2.2 协议执行（任务清单 → §6.2.2 单脚本交付 → PR → 人类合并；checklist 含双设备 Live Sim Review 与 §4.6.7–4.6.10 UIAutomation 契约），**不经 `$ui-bootstrap-build-echo`**（该 skill 为 Phase 3 专用，校验 `current_phase == "3"` 精确匹配；见 `README.md`、`command-compatibility.md`）
 - **UI-adjacent Core 接线的受控例外**：§4 的「受保护内容（只读）」保持 Core 只读基线；`3F.0` 人类合并后，standing authority 允许在**任务穷尽式 Files 清单内**修改 UI-adjacent Core 接线文件（如 3F.7 的默认 live adapter 接线），超出任务明示范围仍须停止升级为独立决策

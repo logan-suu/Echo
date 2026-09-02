@@ -24,7 +24,7 @@ Echo 是一款**完全离线**的端侧 AI 记忆助手。它自动索引你的 
 > ⚠️ **Echo 不会主动上传任何内容。** 所有数据在设备本地处理。
 > 📌 **目标态**：AI 模型随 App 安装包分发、运行时无网络请求（R-005 红线）。**3F.3 已交付（2026-08-06）**：E5 真实 384d 文本推理（Unigram tokenizer + Core ML）、SigLIP2 视觉预处理与转换源工件、Whisper tiny GGUF 工件与 fail-closed 桥接、LanguageAligner（R-004 单次重试）、模型溯源登记（model-provenance-register）。SigLIP2 Core ML 转换仍追踪于 3F.3 后续任务与 model-provenance-register §3。**3F.3b 已交付（2026-08-09）**：whisper.cpp v1.9.2 运行时接入（vendored SPM 本地包 + GGML_CPU_GENERIC 构建），`WhisperASREngine` 真实转写经 `WhisperRuntimeBridge` → `NativeWhisperCInterop`，GGUF SHA-256 校验（818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7）+ `reportModelLoaded(.whisperTiny)` 上报。
 >
-> 📌 **当前状态**：核心架构（Actor 隔离、认知管线、隐私校验、反馈学习）已实现并通过测试；AI 推理层（3F.3）已接入 E5 真实推理 + SigLIP2 工件与 fail-closed 桥接，Whisper 真实转写由 3F.3b 接入（whisper.cpp v1.9.2）。数据源接入遵循 R-5.2 决策（Photos 自动 + 备忘录/语音备忘录 Share 分享）。**3F.11 发布门禁为当前 pending 门禁**：每目标合规校验器 + PrivacyInfo.xcprivacy + Release.xcconfig + Phase 3F 集成测试已就绪，等待人类审查合并后由 `3F.finalize` 记录 merge SHA 并解锁 Phase 4。
+> 📌 **当前状态（2026-09-02）**：Phase 3F 已完成并由 `3F.finalize` 解锁 Phase 4；当前 `current_phase="4"`。平衡画布 Foundation/AppShell（4.0）、Discovery（4.0a）与 Focus（4.0b）已完成，Task 页面族 4.0c 为首个 ready 任务。4.0c 规格评审将启动时渐进式权限与跨进程任务重建分别拆为 4.0f/4.0g，避免视觉任务或 fixture 冒充生产闭环。
 >
 > 📌 **3F.2 已交付（2026-08-05）**：真实来源边界——`PhotoKitSourceAdapter`（授权状态机 + 撤回即停 + 本地仅下载策略 + `.dataSourceConnected` 审计）、`PhotoKitChangeObserver`（变更去重）、`EchoShareExtension` target（Share 预览确认 → App Group 信封原子入队）、`SharedImportQueueActor`（去重 + 恰好一次消费，App 重启恢复）、`IngestPipeline.ingestShared`/`drainSharedImports`（R-006 + ExcludedAssets fail-closed + hash-only `.shareExtensionImported` 审计）。App/Extension 共享 `group.com.echo.Echo` App Group。真实模型工件推理（E5/SigLIP2/Whisper）由 3F.3 接入；真实来源 E2E 证据于 3F.11 no-fixture 门禁验证。
 >
@@ -292,18 +292,20 @@ xcodebuild test -project Echo.xcodeproj -scheme Echo \
 | **阶段 2** | 7月13日 - 9月20日   | 核心认知管线   |
 | **阶段 3** | 7月26日 - 10月18日  | UI 与集成（13 个任务，44 个故事）— UI 与可注入交互切片完成，不代表生产功能完成 |
 | **阶段 3F** | 2026-08 启动        | 功能完成与生产集成（14 个任务 3F.0..3F.11 + 3F.3a/3F.3b，Phase 4 唯一入口 3F.11） |
-| **阶段 4** | 11月16日 - 12月15日 | 质量保障与发布（锁定在 3F.11 之后，未开始） |
+| **阶段 4** | 11月16日 - 12月15日 | 质量保障与发布（22 个任务，进行中） |
 | **阶段 5** | 并行                | 创新工具预研   |
 
 详见 `docs/05-planning/开发计划安排文档.md`
 
 ---
 
-## 🚩 当前阶段：Phase 3F — 功能完成与生产集成
+## 🚩 当前阶段：Phase 4 — 质量保障与发布
 
-> **ledger 状态**：`current_phase` 为字符串 `"3F"`，`phase_order = ["1","2","3","3F","4","5"]`。Phase 3 已 `done`（"UI 与可注入交互切片完成，不代表生产功能完成"）；Phase 4 通过 `entry_gate: "3F.11"` 锁定，**尚未开始**。
+> **ledger 状态（2026-09-02）**：`current_phase` 为字符串 `"4"`，`phase_order = ["1","2","3","3F","4","5"]`。3F.11 与 post-merge finalizer 均已完成，Phase 4 为 `in_progress`；任务状态与依赖以 `docs/05-planning/task-status.json` 为唯一权威。
 
-**目标**：在默认 Echo App 路径上完成生产功能闭环（同意、真实来源、真实模型、规范存储、摄入、检索、反馈、编辑/删除、唤醒、翻译/创作、重启恢复），以 **3F.11 的无 fixture 生产 E2E 门禁** 作为 Phase 4 的唯一入口。
+**目标**：完成全 App 平衡画布、剩余生产闭环、质量/隐私/本地化/无障碍/发布合规门禁与唯一 Release Candidate。当前 4.0c 只负责六个 Task domain 的诚实表现和契约收敛；4.0f 负责 consent-first 渐进式权限，4.0g 负责真实 Continue/Restart 任务重建。
+
+### Phase 3F 已完成的生产集成记录
 
 > **3F.1 已交付（2026-08-04）**：生产 composition root（`Echo/App/AppComposition.swift`）+ deny-by-default 同意（`ConsentStoreActor`，版本与时间戳持久化）+ 事务性撤回/清除（`PurgeBoundary`，失败进 blocked 并写审计）+ 审计存储契约（必填字段 / hash-only `contentHash` / 30 天清理 / NSFileProtectionComplete）+ 显式启动状态（`requiresConsent` / `ready` / `modelUnavailable` / `routeUnavailable` / `indexUnavailable` / `purgeBlocked`）。无 CloudKit。
 

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loaded",
+  "surfaceId": "settings",
+  "dataConditions": { "viewState": "completed", "source": "live adapters" },
+  "allowedActions": ["settings.openMigrationGuide", "settings.clearCache"],
+  "expectedSemantics": { "container": "System Form with grouped sections" },
+  "version": "1.0.0"
+}

@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "actionId": "banner.openSettings",
+  "source": "user",
+  "targetIntent": "DegradationBannerView.openSystemSettings()",
   "description": "User taps settings entry; navigates to the relevant repair/settings section.",
   "impact": {
     "navigation": "settings"

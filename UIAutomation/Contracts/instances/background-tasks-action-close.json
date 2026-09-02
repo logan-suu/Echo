@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "panel.close",
+  "source": "user",
+  "targetIntent": "BackgroundTaskViewModel.closePanel()",
+  "expectedOutcome": "Dismisses the system task sheet",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

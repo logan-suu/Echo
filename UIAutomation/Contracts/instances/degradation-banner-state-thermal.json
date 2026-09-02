@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "stateId": "thermal",
+  "dataConditions": { "runtimeCondition": "thermal", "isBannerVisible": true },
+  "allowedActions": ["banner.dismiss"],
   "properties": {
     "isBannerVisible": true,
     "bannerIcon": "thermometer.high",

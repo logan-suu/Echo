@@ -1,17 +1,17 @@
 // ==========================================
 // 文件: BackgroundTaskPanelView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// i18n: User-facing strings resolve through Localizable.xcstrings (zh-Hans + en-US).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-SYS-001 (实时后台任务状态面板),
 //            docs/ui/echo-memory-canvas-style.md §13 (后台任务面板 — Task surface family),
 //            §10.1.3 (Task 空态), §11.2 (L1 Toast), §2.3 (semantic colors), §2.4 (SF Symbols)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
-// 任务: 3.5 - 实时后台任务面板
+// 任务: 4.0c - Task 平衡画布：设置、引导与运行状态页面
 // AC 覆盖: US-SYS-001 AC-1 ✅ (活跃任务列表), AC-2 ✅ (进度计数 + 百分比),
 //          AC-3 ✅ (暂停/取消交互; 暂停任务抑制自动隐藏, PR #40 W-1),
-//          AC-5 ✅ (任务列表为空时 1.5s 自动隐藏), 🔮 Core 接入 Phase 3.9
+//          AC-5 ✅ (任务列表为空时 1.5s 自动隐藏); real resume reconstruction remains Task 4.0g
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统 Sheet + List 容器
-// 生成时间: 2026-08-02
+// 生成时间: 2026-09-02
 // ==========================================
 
 import SwiftUI
@@ -45,6 +45,7 @@ struct BackgroundTaskPanelView: View {
 
     /// 环境 dismiss — 关闭系统 Sheet（Done 按钮 / AC-5 自动隐藏）
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.echoDesignProfile) private var designProfile
 
     /// 首次出现标记 — 控制 fixture 注入仅执行一次
     @State private var hasHandledLaunchArguments = false
@@ -82,6 +83,8 @@ struct BackgroundTaskPanelView: View {
                     }
                 }
         }
+        .background(EchoColorToken.groupedBackground.color)
+        .environment(\.echoDesignProfile, designProfile)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .confirmationDialog(
@@ -157,18 +160,16 @@ struct BackgroundTaskPanelView: View {
 
     /// 无活跃任务 — 居中系统 List 空态 (echo-memory-canvas §13.3 / §10.1.3)
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 40))
-                .foregroundStyle(Color.secondary)
-                .accessibilityHidden(true)
-
-            Text("No active tasks")
-                .font(.headline)
-                .foregroundStyle(Color.primary)
+        EchoContainer(level: .card) {
+            EchoStatusPresentation(
+                role: .success,
+                systemImage: "checkmark.circle",
+                title: "No active tasks"
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .padding(EchoSpacingToken.section.points)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EchoColorToken.groupedBackground.color)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("No active tasks")
         .accessibilityIdentifier("background-tasks-empty")
@@ -188,7 +189,7 @@ struct BackgroundTaskPanelView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .background(Color(.systemGroupedBackground))
+        .background(EchoColorToken.groupedBackground.color)
         .accessibilityIdentifier("background-tasks-list")
     }
 
@@ -266,28 +267,24 @@ struct BackgroundTaskPanelView: View {
     // MARK: - Error State (L2)
 
     private func errorState(_ level: BackgroundTaskViewModel.ErrorLevel) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(Color.yellow)
-                .accessibilityHidden(true)
-
-            Text(EchoStrings.tr(errorMessage(for: level)))
-                .font(.body)
-                .foregroundStyle(Color.primary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-
-            Button(action: { viewModel.retry() }) {
-                Label("Retry", systemImage: "arrow.clockwise")
-                    .font(.callout)
+        EchoContainer(level: .card) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.grouped.points) {
+                EchoStatusPresentation(
+                    role: .warning,
+                    systemImage: "exclamationmark.triangle.fill",
+                    title: "Unable to load background tasks",
+                    message: EchoStrings.tr(errorMessage(for: level))
+                )
+                Button(action: { viewModel.retry() }) {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(EchoActionButtonStyle(role: .recovery))
+                .accessibilityIdentifier("background-tasks-retry")
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentColor)
-            .accessibilityIdentifier("background-tasks-retry")
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .padding(EchoSpacingToken.section.points)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EchoColorToken.groupedBackground.color)
         .accessibilityLabel("Unable to load background tasks")
     }
 

@@ -1,6 +1,9 @@
 {
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
   "surfaceId": "awakening-settings",
   "stateId": "unavailable",
+  "dataConditions": { "fixtureId": "awakening-unavailable", "notificationPermission": "denied-permanently" },
+  "allowedActions": ["awakening.openSystemSettings"],
   "fixtureId": "awakening-unavailable",
   "description": "Notification permanently denied, all features gated",
   "expected": {
@@ -9,5 +12,6 @@
     "isEmotionEnabled": false,
     "isAnniversaryEnabled": false,
     "openSettingsButton": true
-  }
+  },
+  "version": "1.0.0"
 }

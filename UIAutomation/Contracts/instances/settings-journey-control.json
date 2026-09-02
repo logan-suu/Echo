@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "journeyId": "settings-control",
+  "steps": [
+    { "surfaceId": "settings", "stateId": "loaded", "actionId": "settings.openMigrationGuide" },
+    { "surfaceId": "settings", "stateId": "destructiveConfirmation", "actionId": "settings.startDeleteData" },
+    { "surfaceId": "settings", "stateId": "loaded", "actionId": null }
+  ],
+  "preconditionFixtures": [],
+  "assertions": [
+    { "migrationCopy": "Distinguishes encrypted Echo package data from original media" },
+    { "destructiveAction": "Uses a system confirmation before forwarding the intent" }
+  ],
+  "version": "1.0.0"
+}

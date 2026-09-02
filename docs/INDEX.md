@@ -43,6 +43,8 @@
 | 核心架构原则（Pipeline/Actor）            | `02-architecture/架构设计文档.md` §3~4                 |
 | 技术选型理由与决策                        | `02-architecture/技术选型文档.md` §1~5                 |
 | 数据流程细节（检索/摄入/同步）            | `02-architecture/数据流全链路技术说明文档.md` §2~5     |
+| 首次体验与渐进式系统权限                  | `02-architecture/架构设计文档.md` §2.3.1 + `02-architecture/数据流全链路技术说明文档.md` §1.1 |
+| 跨进程任务重建与真实断点恢复              | `02-architecture/架构设计文档.md` §6.2 + `02-architecture/数据流全链路技术说明文档.md` §8.3 |
 | 跨语言检索实现                            | `03-implementation/双语言实现说明文档.md` §4           |
 | 双语言审计与监控                          | `03-implementation/双语言实现说明文档.md` §7           |
 | 避坑规则（并发/状态/管线）                | `03-implementation/开发避坑与关键注意点手册.md` §2~4   |
@@ -94,7 +96,7 @@
 | **分代索引**           | Memory/Representation/ModelManifest/IndexGeneration/ActiveRouteSet 六表 + 每代独立 VectorStoreActor | `架构设计文档.md` §4.4 |
 | **PrivacyCheckpoint**  | 强制隐私校验，所有 Pipeline 入口必须调用                     | `架构设计文档.md` §7.1 |
 | **统一错误矩阵**       | L1~L4 分级，L2 仅手动重试                                    | `架构设计文档.md` §5   |
-| **TaskProgress**       | SQLite 表存储断点续传进度                                    | `架构设计文档.md` §6.1 |
+| **TaskProgress**       | SQLite 仅存断点进度；跨进程执行需 task reconstruction registry | `架构设计文档.md` §6.1~6.2 |
 
 ---
 

@@ -1,6 +1,9 @@
 {
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
   "surfaceId": "awakening-settings",
   "stateId": "empty-permissions",
+  "dataConditions": { "fixtureId": "awakening-no-permissions", "permissions": "not-granted" },
+  "allowedActions": ["awakening.requestNotification", "awakening.openSystemSettings"],
   "fixtureId": "awakening-no-permissions",
   "description": "No permissions granted, all features disabled",
   "expected": {
@@ -11,5 +14,6 @@
     "isEmotionEnabled": false,
     "isAnniversaryEnabled": false,
     "geofenceCount": 0
-  }
+  },
+  "version": "1.0.0"
 }

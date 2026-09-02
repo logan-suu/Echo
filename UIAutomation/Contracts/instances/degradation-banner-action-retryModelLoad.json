@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "actionId": "banner.retryModelLoad",
+  "source": "user",
+  "targetIntent": "DegradationBannerViewModel.retryModelLoad()",
   "description": "User taps Retry on the model-degradation banner. Manual only; no automatic retry (US-RES-004 AC-3).",
   "impact": {
     "state": "loading",

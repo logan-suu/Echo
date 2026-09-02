@@ -141,5 +141,12 @@
     ],
     "dynamicType": "supported"
   },
-  "version": "1.0.0"
+  "relatedStories": [
+    "US-DIS-003",
+    "US-DIS-004",
+    "US-RES-002",
+    "US-RES-003",
+    "US-RES-004"
+  ],
+  "version": "1.1.0"
 }

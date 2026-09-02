@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "stateId": "l2Recoverable",
+  "dataConditions": { "errorLevel": "L2", "retryPolicy": "manual" },
+  "allowedActions": ["banner.retryPendingOperation", "banner.dismiss"],
   "properties": {
     "isBannerVisible": true,
     "bannerIcon": "exclamationmark.circle",

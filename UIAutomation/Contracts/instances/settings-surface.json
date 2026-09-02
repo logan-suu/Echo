@@ -8,11 +8,12 @@
     "userPolicy": "Live UserPolicy and consent state",
     "sourcePermissions": "Live per-source authorization and availability",
     "storageAndCache": "Live local storage and cache summary",
+    "migration": "Live ADR-008/ADR-010 encrypted migration service state; transfer secret remains outside ViewModel persistence",
     "runtimeStatus": "Live pending operations, degradation and task state"
   },
   "outputs": {
     "visibleContent": "Grouped settings sections with shared profile headers, status presentation and action hierarchy",
-    "interactionTargets": "language, source permissions, exclusions, awakening, migration, cache, feedback, revoke consent and system settings",
+    "interactionTargets": "language, source permissions, exclusions, awakening, encrypted migration/local-backup restore, cache, feedback, revoke consent and system settings",
     "accessibilityTree": "System Form reading order with stable labels, values, hints and destructive-action semantics"
   },
   "systemContainer": "NavigationStack + Form/List + Sheet/Alert/confirmationDialog",
@@ -29,5 +30,24 @@
     "permissionLimited",
     "destructiveConfirmation"
   ],
-  "version": "1.0.0"
+  "relatedStories": [
+    "US-DIS-001",
+    "US-PRV-002",
+    "US-PRV-003",
+    "US-PRV-005",
+    "US-PRV-008",
+    "US-RES-002",
+    "US-RES-004",
+    "US-SET-001",
+    "US-SET-002",
+    "US-SET-003",
+    "US-SET-004",
+    "US-SRC-004",
+    "US-SRC-007",
+    "US-SRC-008",
+    "US-SRC-009",
+    "US-SRC-012",
+    "US-FBK-002"
+  ],
+  "version": "1.1.0"
 }

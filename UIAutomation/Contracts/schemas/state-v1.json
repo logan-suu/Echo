@@ -4,13 +4,13 @@
   "title": "State Contract",
   "description": "A deterministic UI state of a Surface",
   "type": "object",
-  "required": ["stateId", "surfaceId", "dataConditions", "allowedActions"],
+  "required": ["stateId", "surfaceId", "dataConditions", "allowedActions", "version"],
   "properties": {
     "stateId": { "type": "string", "description": "Stable identifier (e.g., 'loaded', 'empty', 'loading', 'error', 'permission-denied')" },
     "surfaceId": { "type": "string", "description": "Foreign key → surface.surfaceId" },
     "dataConditions": { "type": "object", "description": "Fixture conditions that produce this state" },
     "allowedActions": { "type": "array", "items": { "type": "string" }, "description": "actionId values valid in this state" },
     "expectedSemantics": { "type": "object", "description": "Expected accessibility labels, traits, reading order" },
-    "version": { "type": "string", "const": "1.0.0" }
+    "version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$", "description": "Schema-major-compatible contract version" }
   }
 }

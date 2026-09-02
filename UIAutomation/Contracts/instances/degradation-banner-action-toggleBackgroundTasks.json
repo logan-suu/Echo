@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "actionId": "banner.toggleBackgroundTasks",
+  "source": "user",
+  "targetIntent": "DegradationBannerViewModel.toggleBackgroundTasks()",
   "description": "User toggles 'pause background tasks during low power'. Default ON (US-RES-002 AC-3).",
   "impact": {
     "backgroundTasksPaused": "toggled",

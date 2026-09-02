@@ -1,13 +1,9 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "version": "1.0.0",
   "journeyId": "degradation-lifecycle",
   "surfaceId": "degradation-banner",
   "steps": [
-    {
-      "surfaceId": "degradation-banner",
-      "stateId": "normal",
-      "actionId": null
-    },
     {
       "surfaceId": "degradation-banner",
       "stateId": "lowPower",
@@ -16,7 +12,7 @@
     {
       "surfaceId": "degradation-banner",
       "stateId": "thermal",
-      "actionId": null
+      "actionId": "banner.dismiss"
     },
     {
       "surfaceId": "degradation-banner",
@@ -26,7 +22,7 @@
     {
       "surfaceId": "degradation-banner",
       "stateId": "normal",
-      "actionId": "banner.dismiss"
+      "actionId": null
     }
   ],
   "preconditionFixtures": [

@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "actionId": "banner.dismiss",
+  "source": "user",
+  "targetIntent": "DegradationBannerViewModel.dismissBanner()",
   "description": "User dismisses the degradation banner (all degradation types).",
   "impact": {
     "isBannerVisible": false

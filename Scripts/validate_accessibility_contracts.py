@@ -5,20 +5,25 @@ Scope: this gate owns the `degradation-banner` surface (per phase3f-execution-pl
 §3F.10 Files — UIAutomation Modify/Create lists). Strict contract resolution is
 enforced for gated surfaces; all other instances only need to parse as JSON.
 
+Checks (all v1 contracts):
+  1. Contract versions use the complete 1.x.y form.
+  2. A journey may use an explicit null actionId only on its final step.
+
 Checks (gated surfaces):
-  1. The surface contract carries a version marker (contractVersion or version).
-  2. Every surface-declared state resolves to exactly ONE state contract
+  3. The surface contract carries a version marker (contractVersion or version).
+  4. Every surface-declared state resolves to exactly ONE state contract
      file (<surface>-state-<stateId>.json).
-  3. Every declared action resolves to exactly ONE action contract file
+  5. Every declared action resolves to exactly ONE action contract file
      (<surface>-action-<shortId>.json, shortId = actionId suffix after '.').
-  4. Gated journeys reference only declared states and existing action files.
-  5. The surface declares accessibility expectations (an `accessibility`
+  6. Gated journeys reference only declared states and existing action files.
+  7. The surface declares accessibility expectations (an `accessibility`
      block, or state expectedSemantics carrying accessibility entries).
 
 Exit code 0 = all gates pass; 1 = violations found.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -27,6 +32,8 @@ INSTANCES = ROOT / "UIAutomation" / "Contracts" / "instances"
 
 # Surfaces whose contracts this task owns and must fully resolve.
 GATED_SURFACES = {"degradation-banner"}
+V1_SCHEMA_SUFFIXES = ("/surface/v1", "/state/v1", "/action/v1", "/journey/v1")
+V1_VERSION = re.compile(r"^1\.[0-9]+\.[0-9]+$")
 
 
 def load(path):
@@ -66,6 +73,19 @@ def main():
         if not isinstance(data, dict):
             errors.append(f"{path.name}: contract root must be an object")
             continue
+        schema = data.get("$schema", "")
+        if schema.endswith(V1_SCHEMA_SUFFIXES):
+            version = data.get("version")
+            if not isinstance(version, str) or V1_VERSION.fullmatch(version) is None:
+                errors.append(f"{path.name}: version must match 1.x.y")
+        if schema.endswith("/journey/v1"):
+            steps = data.get("steps", [])
+            for index, step in enumerate(steps):
+                if (isinstance(step, dict) and "actionId" in step
+                        and step["actionId"] is None and index != len(steps) - 1):
+                    errors.append(
+                        f"{path.name}: null actionId is allowed only on the final step"
+                    )
         name = path.name
         surface = data.get("surfaceId")
         if name.endswith("-surface.json"):

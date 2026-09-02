@@ -1,19 +1,19 @@
 // ==========================================
 // 文件: ResumeProgressPromptView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// i18n: User-facing strings resolve through Localizable.xcstrings (zh-Hans + en-US).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-SYS-001 AC-3 (取消后询问继续/重新开始),
 //            AC-4 (断点续传 — 继续保留进度 / 重新开始清除进度),
 //            docs/02-architecture/架构设计文档.md §6.2 (恢复流程),
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surface — Alert/confirmationDialog),
 //            §11.2 (L1 Toast) / §12.1 (L3 全屏) / §10.1.3 (Task 空态)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
-// 任务: 3.7 - 断点续传集成到长任务
+// 任务: 4.0c - Task 平衡画布：设置、引导与运行状态页面
 // AC coverage: real ProgressActor detection and X/Y presentation. Continue/restart report an
 // explicit recoverable error until Core exposes task reconstruction; fixtures stay deterministic.
 //          (2026-08-02 PR review W-1: error 态改真实布局槽位, 不再依赖零高 frame 溢出; W-3: 弹窗文案统一英文)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统 confirmationDialog 容器
-// 生成时间: 2026-08-02
+// 生成时间: 2026-09-02
 // ==========================================
 
 import SwiftUI
@@ -42,6 +42,7 @@ struct ResumeProgressPromptView: View {
     // MARK: - ViewModel
 
     @State private var viewModel: ResumeProgressViewModel
+    @Environment(\.echoDesignProfile) private var designProfile
 
     init(viewModel: ResumeProgressViewModel = ResumeProgressViewModel()) {
         _viewModel = State(initialValue: viewModel)
@@ -51,6 +52,8 @@ struct ResumeProgressPromptView: View {
 
     var body: some View {
         content
+            .background(EchoColorToken.groupedBackground.color.opacity(0.001))
+            .environment(\.echoDesignProfile, designProfile)
             .confirmationDialog(
                 dialogTitle,
                 isPresented: Binding(
@@ -94,30 +97,21 @@ struct ResumeProgressPromptView: View {
     /// 内联 L2 错误 — 进度检查失败（echo-memory-canvas §11.2 L1 Toast 语义,
     /// 此处为可交互重试的轻量提示）。
     private func errorState(_ level: ResumeProgressViewModel.ErrorLevel) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.footnote)
-                .foregroundStyle(Color.yellow)
-                .accessibilityHidden(true)
-
-            Text(EchoStrings.tr(errorMessage(for: level)))
-                .font(.footnote)
-                .foregroundStyle(Color.primary)
-                .lineLimit(2)
-
-            Spacer(minLength: 4)
-
-            Button(action: { viewModel.retry() }) {
-                Label("Retry", systemImage: "arrow.clockwise")
-                    .font(.caption)
+        EchoContainer(level: .card) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
+                EchoStatusPresentation(
+                    role: .warning,
+                    systemImage: "exclamationmark.triangle.fill",
+                    title: EchoStrings.tr("Unable to check saved progress"),
+                    message: EchoStrings.tr(errorMessage(for: level))
+                )
+                Button(action: { viewModel.retry() }) {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(EchoActionButtonStyle(role: .recovery))
+                .accessibilityIdentifier("resume-prompt-retry")
             }
-            .buttonStyle(.bordered)
-            .tint(Color.accentColor)
-            .accessibilityIdentifier("resume-prompt-retry")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Unable to check saved progress")
     }

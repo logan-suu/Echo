@@ -6,6 +6,8 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 
 > **Post-3F handoff note (2026-08-31):** DEF-001 / US-AWK-004 and DEF-002 / US-AWK-006 remain unresolved product-scope decisions. They have no Phase 4 implementation task today, so `4.10` Release Candidate is blocked until approved implementation tasks exist or the stories are formally moved out of v1 with this matrix and the specification updated together.
 
+> **Phase 4 reasonableness update (2026-09-02):** Task-surface review corrected the launch permission sequence and the persisted-task recovery contract. `4.0f` now owns consent-first contextual permission requests; `4.0g` owns production task reconstruction and truthful Continue/Restart. Baseline labels below are retained for audit history, while owner/evidence notes reflect the current handoff.
+
 ## Ownership Repair (§4.2.1)
 
 | Story | Owner Task(s) | Disposition |
@@ -37,7 +39,7 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 
 | Story | Baseline Status (2026-08-03) | Owner Task(s) | Baseline Evidence Note |
 | --- | --- | --- | --- |
-| SRC-001 | Stub | 3F.1, 3F.2, 4.2 | Onboarding has a fixture-only permission flow; no PhotoKit acquisition, Share Extension, source coordinator, or default production wiring. |
+| SRC-001 | Partial | 3F.1, 3F.2, 4.0f, 4.2 | PhotoKit acquisition and production source wiring exist, but the 2026-09-02 review found launch-time permission chaining. 4.0f owns the consent-first, explicit Connect Photos trigger and no-repeat denial/skip behavior. |
 | SRC-002 | Impossible/spec-invalid | 3F.0 | Requires MessageUI to read iMessage history, which is not a public capability. |
 | SRC-003 | Absent/unmapped | 3F.2, 4.2 | No Share Extension target or import implementation found. |
 | SRC-004 | Stub | 3F.2, 4.2 | Settings toggles mutate fixture/UI state only; AppDelegate has no BG task registration. |
@@ -72,9 +74,9 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | SYN-006 | Absent/unmapped | 3F.9, 4.2 | No emotion-intervention synthesis/prompt implementation. |
 | SYN-007 | Absent/unmapped | 3F.9, 4.2 | No term glossary runtime or Golden validation. |
 | SYN-008 | Stub | 3F.9, 4.2 | Degradation template is display simulation, not a synthesis failure fallback. |
-| AWK-001 | Partial | 3F.8, 4.2 | Geofence orchestration is callable with test stubs, but no CLLocation integration, permission delivery, notification, persistence, or default invocation. |
-| AWK-002 | Impossible/spec-invalid | 3F.0, 3F.8, 4.2 | iOS cannot guarantee an exact daily 09:00 background schedule. |
-| AWK-003 | Partial | 3F.8, 4.2 | Emotion orchestration/debounce code exists with stub providers; HealthKit, live sentiment, delivery, and persistence are absent. |
+| AWK-001 | Partial | 3F.8, 4.0f, 4.2 | Production geofence and notification adapters exist; 4.0f owns explicit feature opt-in before location/notification authorization and denial-safe UI behavior. |
+| AWK-002 | Partial | 3F.0, 3F.8, 4.0f, 4.2 | The exact 09:00 promise was corrected to an earliest-eligible best-effort window; 4.0f owns contextual notification opt-in and the UI must not promise an exact delivery time. |
+| AWK-003 | Partial | 3F.8, 4.0f, 4.2 | Production HealthKit and awakening adapters exist; 4.0f owns explicit health-context opt-in, minimum-scope authorization and non-inference of undisclosed read authorization. |
 | AWK-004 | Deferred | DEF-001 (approved deferral) | Explicit P1 Phase-4 Widget/Live Activity deferral (DEF-001). |
 | AWK-005 | Partial | 3F.7, 3F.8, 4.0d, 4.2 | 3F delivered persistent card identity, minimized notification and response→detail routing. Phase 4 task 4.0d owns media/music, next/record interactions, userFeelings persistence/edit/delete, full source navigation and cardInteraction audit; 4.2 verifies the no-fixture production loop. |
 | AWK-006 | Deferred | DEF-002 (approved deferral) | Explicit P1 Phase-4 Siri/App Intents deferral (DEF-002). |
@@ -86,12 +88,12 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | PRV-005 | Impossible/spec-invalid | 3F.0, 3F.1, 4.2, 4.9 | iOS cannot guarantee cooling-period completion while the app is not running. |
 | PRV-006 | Partial | 3F.1, 3F.4, 4.2, 4.9 | Persistence/retention intent exists in core schema and settings UI, but no production canonical-store lifecycle verifies the full deletion boundary. |
 | PRV-007 | Impossible/spec-invalid | 3F.0, 3F.4, 4.2, 4.5, 4.9 | The required 5-second cascade after original deletion cannot be guaranteed while iOS is suspended/backgrounded. |
-| PRV-008 | Stub | 3F.1, 4.2, 4.9 | Onboarding consent UI is fixture/state-only; consent persistence and withdrawal/data-purge flow are deferred. |
+| PRV-008 | Partial | 3F.1, 4.0f, 4.2, 4.9 | Consent persistence and withdrawal/purge exist; 4.0f owns the corrected consent-first permission order and verifies equally prominent, unselected Agree/Decline choices without dark patterns. |
 | DIS-001 | Absent/unmapped | 3F.10, 4.7 | No single persisted UI/AI language setting or live application-wide localization. |
 | DIS-002 | Stub | 3F.9, 4.7 | Two-string FixtureTranslationService and in-memory cache only; no Apple Translation or persistent cache. |
 | DIS-003 | Stub | 3F.10, 4.7 | State/error UI uses hardcoded English, not the required String Catalog localization. |
 | DIS-004 | Stub | 3F.10, 4.7 | Some accessibility labels exist, but no evidence of full labels, announcements, contrast, Dynamic Type, or VoiceOver-order acceptance. |
-| SYS-001 | Partial | 3F.5, 3F.7, 3F.10, 4.2, 4.4 | ProgressActor has isolated persistence and panel UI exists, but panel/default app uses fixtures and has no TaskQueue/stream integration. |
+| SYS-001 | Partial | 3F.5, 3F.7, 3F.10, 4.0g, 4.2, 4.4 | Live panel/TaskQueue/Progress wiring and audits exist, but persisted progress cannot reconstruct an executable job after restart. 4.0g owns versioned task launcher resolution and truthful Continue/Restart. |
 | RES-001 | Stub | 3F.3, 3F.5, 3F.7, 3F.10, 4.3, 4.4, 4.7 | Offline indicator UI exists; fully offline model/inference/search and reconnect synchronization do not. |
 | RES-002 | Stub | 3F.5, 3F.7, 3F.10, 4.4, 4.7 | Low-power banner/toggle is fixture display; no lightweight visual model, queue control, recall evidence, or audit. |
 | RES-003 | Stub | 3F.5, 3F.7, 3F.10, 4.4, 4.7 | Thermal banner is fixture display; no thermal monitor/degraded runtime behavior. |
@@ -99,7 +101,7 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | SET-001 | Stub | 3F.7, 3F.10, 4.7 | Language-setting surface is not wired to a persisted policy/localized application. |
 | SET-002 | Stub | 3F.7 | Permanent-retention UI copy exists, without production policy/audit enforcement. |
 | SET-003 | Stub | 3F.7 | Cache/storage values and clear actions are fixture/simulated, not real cache management. |
-| SET-004 | Stub | 3F.7 | Migration guidance UI only; executable migration contract remains unresolved. |
+| SET-004 | Partial | 3F.7, 4.0c, 4.2 | ECHOMIG1 encrypted export/import exists. The 2026-09-02 review aligned the story with that user-mediated package, explicitly excluding raw original media; 4.0c owns truthful Settings presentation and 4.2 verifies the production round-trip. |
 | FBK-001 | Partial | 3F.4, 3F.6, 4.1, 4.2 | Feedback pipeline/actor persist in isolated injected tests; default SearchViewModel has no pipeline and silently drops failures. |
 | FBK-002 | Partial | 3F.4, 3F.6, 4.1, 4.2 | Threshold/decay/clamp/re-ranking logic has isolated tests; no production query path or live Settings feedback management. |
 | FBK-003 | Partial | 3F.4, 3F.6, 4.1, 4.2 | Bad-case pipeline/actor works under injection; default UI is unwired and management/revoke surface is incomplete. |

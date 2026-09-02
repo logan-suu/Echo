@@ -3,7 +3,7 @@
 > **上游权威**：用户批准的 `echo-memory-canvas` 设计配置，扩展 `apple-native` 基础
 > **物化来源**：`Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范.md` §7
 > **不得覆盖**：Core 领域逻辑、数据库 schema、模型集成、隐私声明、CI 门禁
-> **最后同步**：2026-08-31，用户批准方案 B「平衡画布」
+> **最后同步**：2026-09-02，4.0c Task 合理性评审补充 consent-first 权限、诚实恢复状态与迁移边界
 
 ---
 
@@ -284,7 +284,11 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 - Settings、Onboarding、Awakening、BackgroundTask、Degradation 与 ResumeProgress 使用同一 grouped background、section header、状态图标、圆角映射和 accent
 - 权限、加载、空态、错误和恢复组件共享相同的图标—标题—说明—主要动作层级，状态颜色只表达语义，不创建页面品牌色
 - Onboarding 可使用更宽松的留白和单一重点插图/符号，但字体、按钮、进度、卡片和后续 App 保持同源
+- Onboarding 的 PIPL 同意先于任何受保护数据请求；相册只在用户明确选择连接资料库后请求。通知、位置与 HealthKit 必须从对应唤醒功能的明确 opt-in 动作按需请求，不得在首次启动时组成连续系统弹窗
+- 可选权限拒绝/跳过不阻止进入 App，不自动循环重试；恢复授权只通过用户主动触发的系统设置入口。同意/拒绝必须同层可见且同等醒目，不使用预选、弱化或视觉诱导
 - 错误与恢复明确说明：发生了什么、可执行动作、结果
+- ResumeProgress 只有在生产 task reconstruction/launcher 可用时才能将“继续”或“重新开始”显示为可完成动作；仅能读取 `TaskProgress` 时必须诚实显示不可用，fixture 状态不得作为生产恢复证据
+- Settings 设备迁移必须呈现加密用户中介迁移包与 Finder/iTunes 加密本地备份两条路径，明确原始媒体不进入迁移包；不得把迁移包误写成“导出全部原始记忆”
 - 不伪装成内容卡片瀑布流
 
 ### 7.3 三类 Family 的视觉一致性
@@ -471,11 +475,12 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 - Echo logo + `"Echo · 回响"` + `"你的记忆，触手可及"` + "开始"按钮
 
 ### 15.3 Step 2 PIPL 隐私同意
-- 可滚动隐私政策摘要 + "同意并继续"（accentColor 填充）/ "不同意"（次要样式）
+- 可滚动隐私政策摘要 + "同意并继续" / "不同意"；两者同层可见、同等醒目且均不预选，不以颜色、尺寸或层级诱导同意
 
-### 15.4 Step 3 权限序列
-- 照片→通知→位置→健康，每步过渡页 + 系统权限对话框
-- 拒绝后显示"前往设置"按钮
+### 15.4 Step 3 可选资料库连接
+- 仅呈现可跳过的照片资料库连接；用户明确选择“连接照片”后才请求 PhotoKit
+- 通知、位置与 HealthKit 不进入首次启动序列，只能从对应唤醒功能的明确 opt-in 动作按需请求
+- 拒绝后显示“前往设置”和“继续使用”动作；不自动请求其他权限、不循环重试，也不阻止进入 App
 
 ### 15.5 Step 4 语言选择
 - 系统 Picker，zh-Hans / en-US

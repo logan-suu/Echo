@@ -3,14 +3,14 @@
   "stateId": "error",
   "surfaceId": "resume-progress-prompt",
   "dataConditions": {
-    "pendingProgress": "unavailable (ProgressActor load failed — L2)",
+    "pendingProgress": "unavailable because ProgressActor load failed or no valid production task launcher exists — L2",
     "isError": true
   },
   "allowedActions": ["error.retry"],
   "expectedSemantics": {
-    "errorMessage": "Unable to check saved progress (L2)",
-    "retryButton": "Retry button re-runs the pending-progress check",
+    "errorMessage": "Unable to check or reconstruct the saved task (L2); no resumed/restarted success is shown",
+    "retryButton": "Retry re-runs the progress check and launcher resolution",
     "readingOrder": ["errorMessage", "retryButton"]
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

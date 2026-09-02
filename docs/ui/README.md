@@ -2,7 +2,7 @@
 
 > **责任**：告诉 Agent 针对 UI 任务读取哪份文档，而不是让 Agent 重读 bootstrap 全文
 > **无需读取本文全文**：按任务选择下表对应文档即可
-> **最后同步**：2026-08-31，方案 B「平衡画布」
+> **最后同步**：2026-09-02，方案 B「平衡画布」
 
 ---
 
@@ -28,6 +28,8 @@
 | Phase 4 Discovery（4.0a） | style + architecture + testing + Home/Search Surface Contracts |
 | Phase 4 Focus（4.0b） | style + architecture + testing + Detail/Creation/Translation Surface Contracts |
 | Phase 4 Task（4.0c） | style + architecture + testing + Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress Surface Contracts |
+| Phase 4 渐进式权限（4.0f） | style + architecture + testing + Onboarding/Awakening Surface Contracts + PRV-008/SRC-001/AWK-001~003 AC 原文 |
+| Phase 4 真实断点恢复（4.0g） | architecture + testing + BackgroundTask/ResumeProgress Surface Contracts + SYS-001 AC 原文 |
 | Phase 4 交互式唤醒卡（4.0d） | style + architecture + testing + US-AWK-005 AC 原文 + Home/Detail contracts；这是生产功能闭环，不是第四种 surface family |
 | UI 测试 | `testing-and-artifacts.md` |
 | UI 交付 | `automation-workflow.md`（§批准点 — 含 UI 审查指南：页面清单/导航路径/未实现说明） |

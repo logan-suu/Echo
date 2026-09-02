@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "settings.openMigrationGuide",
+  "source": "user",
+  "targetIntent": "SettingsView.openMigrationGuide",
+  "expectedOutcome": "Shows encrypted Echo package guidance without claiming raw-media export",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

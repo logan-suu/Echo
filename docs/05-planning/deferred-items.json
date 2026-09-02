@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.4.0",
-  "_last_updated": "2026-08-31T15:42:40Z",
+  "_last_updated": "2026-09-02T19:10:59Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -513,24 +513,26 @@
     {
       "id": "DEF-42-001",
       "pr": 42,
-      "title": "ResumeProgressViewModel.progressActor dependency is an unwired placeholder",
+      "title": "ResumeProgress can read saved progress but cannot reconstruct and relaunch production tasks",
       "severity": "🟡",
-      "location": "Echo/UI/ResumeProgress/ResumeProgressViewModel.swift:277",
-      "reason": "DI hook for Phase 3.9 Core integration; not wired in UI slice (W-4).",
-      "defer_to": "Phase 3.9 Core ProgressActor/TaskQueueActor integration",
+      "location": "Echo/UI/ResumeProgress/ResumeProgressViewModel.swift:106-240; Echo/UI/Home/HomeView.swift:81",
+      "reason": "2026-09-02 recheck: Home now injects ProgressActor.shared, so pending rows are loaded from production SQLite. However continueTask()/restartTask() intentionally return an L2 unavailable state for non-fixture progress because no composition-owned task reconstruction/launcher boundary exists. The original wiring defect is partially resolved, but US-SYS-001 AC-3/AC-4 production recovery remains incomplete.",
+      "defer_to": "Task 4.0g production task reconstruction and relaunch boundary",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-08-02T22:56:55+08:00",
+      "last_checked_at": "2026-09-02T19:10:59Z",
       "owners": [
         "iOS"
       ],
       "target_tasks": [
+        "4.0g",
         "4.4"
       ],
       "acceptance_evidence": [
-        "真实导出/状态/ProgressActor 证据"
+        "no-fixture Continue/Restart through a registered task launcher across process relaunch",
+        "accurate resume point, transactional restart reset, completion cleanup and userChoiceOnRestart audit"
       ],
-      "tracking_status": "open",
-      "recheck_trigger": "4.4 review"
+      "tracking_status": "partial",
+      "recheck_trigger": "4.0g review"
     },
     {
       "id": "DEF-42-002",

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "settings.retry",
+  "source": "user",
+  "targetIntent": "SettingsViewModel.retry()",
+  "expectedOutcome": "Reloads live settings and keeps any failure visible",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

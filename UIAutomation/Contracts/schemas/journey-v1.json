@@ -4,7 +4,7 @@
   "title": "Journey Contract",
   "description": "A cross-surface behavioral path",
   "type": "object",
-  "required": ["journeyId", "steps", "preconditionFixtures"],
+  "required": ["journeyId", "steps", "preconditionFixtures", "version"],
   "properties": {
     "journeyId": { "type": "string", "description": "Stable identifier" },
     "steps": {
@@ -15,12 +15,12 @@
         "properties": {
           "surfaceId": { "type": "string" },
           "stateId": { "type": "string" },
-          "actionId": { "type": "string" }
+          "actionId": { "type": ["string", "null"], "description": "Action that advances this step; null marks the final terminal observation-only step and is enforced by the repository contract validator" }
         }
       }
     },
     "preconditionFixtures": { "type": "array", "items": { "type": "string" }, "description": "Fixture IDs required before journey starts" },
     "assertions": { "type": "array", "items": { "type": "object" }, "description": "Observable assertions, never Core internals" },
-    "version": { "type": "string", "const": "1.0.0" }
+    "version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$", "description": "Schema-major-compatible contract version" }
   }
 }

@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "stateId": "l4Conflict",
+  "dataConditions": { "errorLevel": "L4", "conflict": true },
+  "allowedActions": ["banner.resolveConflict"],
   "properties": {
     "isBannerVisible": true,
     "bannerIcon": "arrow.triangle.2.circlepath",

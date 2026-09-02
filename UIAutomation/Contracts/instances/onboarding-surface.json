@@ -3,25 +3,26 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "onboarding",
   "surfaceFamily": "task",
-  "responsibility": "First-launch onboarding flow: welcome page (echo-memory-canvas §15.2), PIPL privacy consent summary + equal agree/decline (US-PRV-008 AC-1~3), permission sequence with iCloud download prompt (US-SRC-001 AC-6), language selection with zh-Hans mapping hint (US-SYN-001 AC-2), first model load progress (§15.6) driven by real ModelLoaderActor (3F.3) with modelLoadError/modelUnavailable recovery (US-RES-004), declined exit state. AC-4 consent persistence wired to ConsentStoreActor (3F.1) and AC-5 deregistration = transactional purge via AppComposition.revokeConsent (3F.1); Settings withdraw-consent entry full UI wiring lands in 3F.7.",
+  "responsibility": "First-launch onboarding flow: welcome, PIPL privacy consent summary with equally prominent agree/decline, optional user-initiated photo-library connection with iCloud download guidance, language selection, and first local-model load progress. Notification, location and HealthKit authorization are excluded from the approved launch sequence and are requested only after an explicit opt-in on the related Awakening surface; production orchestration remains assigned to Task 4.0f.",
   "inputs": {
     "privacySummary": "PIPL privacy policy summary with purpose/method/kind/retention/local-processing statement (US-PRV-008 AC-2)",
-    "permissionSteps": "Ordered permission sequence: photos -> notifications -> location -> health (echo-memory-canvas §15.4)",
+    "permissionSteps": "After PIPL consent, offer a skippable photo-library connection choice. Request PhotoKit only after the user explicitly chooses Connect Photos. Notification, location and HealthKit remain contextual Awakening opt-ins and never appear as a launch-time permission chain.",
     "icloudDownloadPrompt": "US-SRC-001 AC-6 first photo permission download-and-keep-original hint with Open Settings button",
     "languages": "zh-Hans | en-US picker (US-SYN-001 AC-2); traditional/other mapped to zh-Hans with one-time hint",
     "modelLoadProgress": "Determinate progress for first model load (§15.6); driven by ModelLoaderActor.overallStatus (3F.3), no fixture fallback in production"
   },
   "outputs": {
-    "visibleContent": "5-step TabView flow (welcome -> privacy consent -> permissions -> language -> model loading) presented as fullScreenCover; declined state on PIPL refuse",
-    "interactionTargets": "onboarding-start, onboarding-privacy-agree, onboarding-privacy-decline, onboarding-permission-allow, onboarding-permission-deny, onboarding-open-settings, onboarding-language-zh, onboarding-language-en, onboarding-begin-load, onboarding-declined-close",
-    "accessibilityTree": "Step indicator announced; privacy summary scrollable; agree/decline equally prominent (US-PRV-008 AC-3); language picker with selected checkmark"
+    "visibleContent": "Guided full-screen flow: welcome -> privacy consent -> optional Connect Photos choice -> language -> model loading. Decline exits; skipping photos continues without a system permission request.",
+    "interactionTargets": "onboarding-start, onboarding-privacy-agree, onboarding-privacy-decline, onboarding-permission-allow, onboarding-permission-deny, onboarding-permission-skip, onboarding-open-settings, onboarding-language-zh, onboarding-language-en, onboarding-begin-load, onboarding-declined-close",
+    "accessibilityTree": "Step indicator announced; privacy summary scrollable; agree/decline visible at the same hierarchy with neither preselected; optional photo connection and skip are explicit; language picker has a selected checkmark"
   },
   "systemContainer": "fullScreenCover + TabView (step pages) + Form (language picker) + ProgressView (model loading)",
   "layoutMode": "form",
   "masonryEnabled": false,
   "fallbackConditions": [
     "Task surface — masonry always disabled (echo-memory-canvas §3.3, §8.1)",
-    "FullScreenCover so system back is disabled; explicit Continue/Decline navigation only"
+    "FullScreenCover so system back is disabled; explicit Continue/Decline navigation only",
+    "Optional permissions never block entry and are not automatically requested again after denial or skip"
   ],
   "states": [
     "welcome",
@@ -35,5 +36,11 @@
     "completed",
     "declined"
   ],
-  "version": "1.0.0"
+  "relatedStories": [
+    "US-PRV-008",
+    "US-SRC-001",
+    "US-SYN-001",
+    "US-RES-004"
+  ],
+  "version": "1.1.0"
 }

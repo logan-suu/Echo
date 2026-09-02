@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "settings.startDeleteData",
+  "source": "user",
+  "targetIntent": "SettingsViewModel.startDeleteData()",
+  "expectedOutcome": "Closes confirmation and reports that the 24-hour deletion cooling-period service is not available in this build",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

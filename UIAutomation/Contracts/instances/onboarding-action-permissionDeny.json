@@ -3,7 +3,7 @@
   "actionId": "onboarding.permissionDeny",
   "source": "user",
   "targetIntent": "onboarding.denyPermission",
-  "expectedOutcome": "permissions -> permissionDenied state",
+  "expectedOutcome": "permissions -> permissionDenied state for PhotoKit only; onboarding remains usable and no other system permission request is triggered",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
