@@ -2214,7 +2214,7 @@
             "UIAutomation/Contracts/instances/creation-surface.json",
             "UIAutomation/Contracts/instances/translation-surface.json"
           ],
-          "status": "review",
+          "status": "done",
           "dependencies": [
             "4.0"
           ],
@@ -2242,18 +2242,26 @@
             "缺少生产 mutation boundary 的编辑、冲突或原始删除动作不会显示 fixture 成功",
             "双语、Dynamic Type、VoiceOver、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T23:33:00Z",
-          "notes": "2026-09-01 reasonableness review retained the approved Focus direction but made 4.0b executable: fixed the SYN-003 private Notes contradiction, separated production evidence from fixtures, standardized the translation uncertain threshold at <0.9, and made missing mutation boundaries honest non-success states rather than visual-task AC claims. User confirmed the revised contract; TDD implementation started at 2026-09-01T22:16:15Z. Red evidence initially reported 26 contract/behavior issues. The repaired Focus suite passed 14/14, affected Phase 3/3F regression passed 79/79, and Creation/Translation/Detail Media XCUITest passed 9/9. Debug build succeeded; SwiftLint found zero violations; 152 accessibility contracts, 360 localization keys, JSON parsing, diff checks, and prohibited-pattern scans passed. The same app product was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 with no screenshot/video capture. Human visual approval for both devices was received at 2026-09-01T22:49:59Z. Git delivery remains intentionally pending explicit $commit-pr-echo invocation. commit-pr-echo preflight passed at 2026-09-01T22:53:33Z: dev-1.0 matched origin, SwiftLint reported zero violations, the 4.0b suite passed 14/14 serially, no Actor/Pipeline watermark scope changed, and no 4.0b PR-review deferral was pending. Delivery branch: feature/focus-balanced-canvas-US-AWK-007. PR #69 was created against dev-1.0 at 2026-09-01T22:55:50Z with the complete AC coverage table and verified test evidence. PR #69 review accepted four verified findings: stale story-matrix totals, an app-owned intermediate share step, PDF-as-text export, and false MemoryID provenance for NoSource. All were fixed with direct UIActivityViewController presentation, real local PDF attachments, CreationExportService-backed Markdown semantics, corrected aggregate counts, and regression tests. Affected suites passed 35/35 serially; no review finding was deferred.",
+          "last_updated": "2026-09-02T00:06:54Z",
+          "notes": "2026-09-01 reasonableness review retained the approved Focus direction but made 4.0b executable: fixed the SYN-003 private Notes contradiction, separated production evidence from fixtures, standardized the translation uncertain threshold at <0.9, and made missing mutation boundaries honest non-success states rather than visual-task AC claims. User confirmed the revised contract; TDD implementation started at 2026-09-01T22:16:15Z. Red evidence initially reported 26 contract/behavior issues. The repaired Focus suite passed 14/14, affected Phase 3/3F regression passed 79/79, and Creation/Translation/Detail Media XCUITest passed 9/9. Debug build succeeded; SwiftLint found zero violations; 152 accessibility contracts, 360 localization keys, JSON parsing, diff checks, and prohibited-pattern scans passed. The same app product was installed and launched on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2 with no screenshot/video capture. Human visual approval for both devices was received at 2026-09-01T22:49:59Z. Git delivery remains intentionally pending explicit $commit-pr-echo invocation. commit-pr-echo preflight passed at 2026-09-01T22:53:33Z: dev-1.0 matched origin, SwiftLint reported zero violations, the 4.0b suite passed 14/14 serially, no Actor/Pipeline watermark scope changed, and no 4.0b PR-review deferral was pending. Delivery branch: feature/focus-balanced-canvas-US-AWK-007. PR #69 was created against dev-1.0 at 2026-09-01T22:55:50Z with the complete AC coverage table and verified test evidence. PR #69 review accepted four verified findings: stale story-matrix totals, an app-owned intermediate share step, PDF-as-text export, and false MemoryID provenance for NoSource. All were fixed with direct UIActivityViewController presentation, real local PDF attachments, CreationExportService-backed Markdown semantics, corrected aggregate counts, and regression tests. Affected suites passed 35/35 serially; no review finding was deferred. PR #69 was human-merged at 2026-09-02T00:05:14Z with merge commit e9074b8a63332bc734df91b65955f3100646e187. The post-merge deferred-item scan found no PR #69 entries, and dependency cascading unlocked tasks 4.0e and 4.3.",
           "status_transitions": {
-            "review_at": "2026-09-01T22:53:33Z"
+            "review_at": "2026-09-01T22:53:33Z",
+            "merged_at": "2026-09-02T00:05:14Z",
+            "done_at": "2026-09-02T00:06:54Z"
           },
           "pr": {
             "number": 69,
             "url": "https://github.com/logan-suu/Echo/pull/69",
             "head": "feature/focus-balanced-canvas-US-AWK-007",
             "base": "dev-1.0",
-            "created_at": "2026-09-01T22:55:50Z"
-          }
+            "created_at": "2026-09-01T22:55:50Z",
+            "merged_at": "2026-09-02T00:05:14Z",
+            "merge_commit": "e9074b8a63332bc734df91b65955f3100646e187",
+            "merged_by": "logan-suu"
+          },
+          "merged_at": "2026-09-02T00:05:14Z",
+          "merge_commit": "e9074b8a63332bc734df91b65955f3100646e187",
+          "merged_by": "logan-suu"
         },
         {
           "id": "4.0c",
@@ -2378,7 +2386,7 @@
             "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "4.0b"
           ],
@@ -2403,8 +2411,8 @@
             "原始来源删除成功/拒绝/失败、D-005 补偿与 ExcludedAssets 不写边界证据",
             "grounded citation → stable MemoryID Detail、NoSource 禁用、share handoff cancel/failure 与 sharePresented hash-only audit 证据"
           ],
-          "last_updated": "2026-09-01T21:56:52Z",
-          "notes": "Created by the 4.0b reasonableness review because a visual task and a later E2E test cannot substitute for the production edit/conflict/source-deletion/media/citation/share-audit behavior still marked Partial after Phase 3F."
+          "last_updated": "2026-09-02T00:06:54Z",
+          "notes": "Created by the 4.0b reasonableness review because a visual task and a later E2E test cannot substitute for the production edit/conflict/source-deletion/media/citation/share-audit behavior still marked Partial after Phase 3F. Automatically promoted from backlog to ready after dependency 4.0b completed."
         },
         {
           "id": "4.1",
@@ -2547,7 +2555,7 @@
             "docs/05-planning/开发计划安排文档.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "4.0a",
             "4.0b"
@@ -2564,7 +2572,8 @@
           "migrated_from": [
             "4.3"
           ],
-          "last_updated": "2026-08-31T16:18:55Z"
+          "last_updated": "2026-09-02T00:06:54Z",
+          "notes": "Automatically promoted from backlog to ready after dependencies 4.0a and 4.0b completed."
         },
         {
           "id": "4.4",
