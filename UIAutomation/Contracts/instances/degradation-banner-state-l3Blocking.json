@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "stateId": "l3Blocking",
+  "dataConditions": { "errorLevel": "L3", "featureAvailable": false },
+  "allowedActions": ["banner.openBlockingRecovery", "banner.openSettings"],
   "properties": {
     "isBannerVisible": true,
     "bannerIcon": "xmark.octagon",

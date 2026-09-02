@@ -12,10 +12,10 @@
   "preconditionFixtures": ["onboarding-welcome"],
   "assertions": [
     { "after": "onboarding.start", "observable": "Privacy summary visible" },
-    { "after": "onboarding.privacyAgree", "observable": "Permission step 1 (photos) visible with iCloud hint" },
-    { "after": "onboarding.permissionAllow x4", "observable": "Language picker visible" },
+    { "after": "onboarding.privacyAgree", "observable": "Optional Connect Photos choice visible with iCloud hint; no system prompt has appeared yet" },
+    { "after": "onboarding.permissionAllow", "observable": "PhotoKit authorization is requested once and the language picker follows; notification, location and HealthKit are not requested" },
     { "after": "onboarding.selectLanguage", "observable": "Begin load enabled; language recorded" },
     { "after": "onboarding.beginLoad", "observable": "Determinate progress reaches 1.0, cover dismisses" }
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

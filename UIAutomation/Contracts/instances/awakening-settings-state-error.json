@@ -1,10 +1,14 @@
 {
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
   "surfaceId": "awakening-settings",
   "stateId": "error",
+  "dataConditions": { "fixtureId": "awakening-error", "errorLevel": "l2Recoverable" },
+  "allowedActions": ["awakening.openSystemSettings"],
   "fixtureId": "awakening-error",
   "description": "System adapter failure — permission state could not be read (L2 recoverable)",
   "expected": {
     "errorLevel": "l2Recoverable",
     "retryButton": true
-  }
+  },
+  "version": "1.0.0"
 }

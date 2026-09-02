@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "loading",
+  "surfaceId": "settings",
+  "dataConditions": { "viewState": "loading" },
+  "allowedActions": [],
+  "expectedSemantics": { "status": "Loading settings" },
+  "version": "1.0.0"
+}

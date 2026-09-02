@@ -1208,6 +1208,23 @@
         }
       }
     },
+    "Best-effort daily delivery when the system first permits it": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Best-effort daily delivery when the system first permits it"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每天在系统首次允许时尽力投递"
+          }
+        }
+      }
+    },
     "Data Management": {
       "extractionState": "manual",
       "localizations": {
@@ -1238,6 +1255,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "数据迁移指引"
+          }
+        }
+      }
+    },
+    "An encrypted Echo migration package can move Echo-owned indices, settings, feedback, and exclusions. Original media stays in its system source and is not exported.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An encrypted Echo migration package can move Echo-owned indices, settings, feedback, and exclusions. Original media stays in its system source and is not exported."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加密的 Echo 迁移包可以迁移 Echo 自有的索引、设置、反馈和排除项。原始媒体仍保留在系统数据源中，不会被导出。"
+          }
+        }
+      }
+    },
+    "Transfer an encrypted Echo migration package using AirDrop or an encrypted Finder backup. Original media stays in its system source and is not exported.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfer an encrypted Echo migration package using AirDrop or an encrypted Finder backup. Original media stays in its system source and is not exported."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可通过隔空投送或加密的 Finder 备份传输 Echo 迁移包。原始媒体仍保留在系统数据源中，不会被导出。"
           }
         }
       }
@@ -5543,19 +5594,19 @@
         }
       }
     },
-    "Geofence push resets on exit+re-enter. Anniversary check runs daily at 9:00 AM. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log).": {
+    "Geofence push resets on exit+re-enter. Anniversary delivery is attempted at the earliest eligible system opportunity each day. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log).": {
       "extractionState": "manual",
       "localizations": {
         "en-US": {
           "stringUnit": {
             "state": "translated",
-            "value": "Geofence push resets on exit+re-enter. Anniversary check runs daily at 9:00 AM. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log)."
+            "value": "Geofence push resets on exit+re-enter. Anniversary delivery is attempted at the earliest eligible system opportunity each day. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "地理围栏推送在退出+重新进入时重置。纪念日检查每天上午 9:00 运行。情绪分析缓存结果 24 小时，并对新查询/感受使用 30 秒防抖。审计记录所有唤醒活动 30 天（可在审计日志中查看）。"
+            "value": "地理围栏推送在退出并重新进入时重置。纪念日投递会在系统每天首次允许的时机尝试。情绪分析缓存结果 24 小时，并对新查询或感受使用 30 秒防抖。审计记录所有唤醒活动 30 天（可在审计日志中查看）。"
           }
         }
       }

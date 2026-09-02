@@ -9,9 +9,9 @@
   ],
   "preconditionFixtures": ["onboarding-welcome"],
   "assertions": [
-    { "after": "onboarding.permissionDeny", "observable": "PermissionDenied state with Open Settings button" },
+    { "after": "onboarding.permissionDeny", "observable": "Photo permissionDenied state with Open Settings button; no notification, location or HealthKit prompt" },
     { "after": "onboarding.openSettings", "observable": "openSettingsURLString intent fired (UIApplication.openSettingsURLString)" },
-    { "alternative": "onboarding.permissionSkip", "observable": "Continues to next step without the denied permission" }
+    { "alternative": "onboarding.permissionSkip", "observable": "Continues to language without PhotoKit and without any other permission request" }
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "error",
+  "surfaceId": "settings",
+  "dataConditions": { "viewState": "error" },
+  "allowedActions": ["settings.retry"],
+  "expectedSemantics": { "status": "Visible recoverable or blocking error" },
+  "version": "1.0.0"
+}

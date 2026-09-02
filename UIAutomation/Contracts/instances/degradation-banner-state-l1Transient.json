@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "stateId": "l1Transient",
+  "dataConditions": { "errorLevel": "L1", "retryPolicy": "automatic" },
+  "allowedActions": ["banner.retryL1"],
   "properties": {
     "isBannerVisible": true,
     "bannerIcon": "arrow.clockwise",

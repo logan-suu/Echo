@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "settings.clearCache",
+  "source": "user",
+  "targetIntent": "SettingsViewModel.confirmClearCache()",
+  "expectedOutcome": "Clears only the confirmed cache categories",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

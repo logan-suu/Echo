@@ -21,6 +21,7 @@
     "orderingRule": { "type": "string", "description": "Semantic ordering and identity constraints that layout must preserve" },
     "gestureRule": { "type": "string", "description": "Surface gesture ownership and required accessible equivalents" },
     "states": { "type": "array", "items": { "type": "string" }, "description": "Array of stateId values this surface supports" },
-    "version": { "type": "string", "const": "1.0.0" }
+    "relatedStories": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^US-[A-Z]+-[0-9]{3}$" }, "description": "User-story identifiers governed by this surface" },
+    "version": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$", "description": "Schema-major-compatible contract version" }
   }
 }

@@ -1,12 +1,12 @@
 // ==========================================
 // 文件: SettingsView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// i18n: User-facing strings resolve through Localizable.xcstrings (zh-Hans + en-US).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-SRC-004/007/008/009,
 //            US-PRV-002/003/005, US-RES-004, US-SET-001/002/003/004, US-FBK-002
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surfaces), §7.2 (Task surfaces),
 //            §10.1.3 (空态), §11 (Toast/Banner)
 //            docs/ui/architecture.md §2 (单向数据流), §3 (组件边界)
-// 任务: 3.4 - SettingsView + SettingsViewModel
+// 任务: 4.0c - Task 平衡画布：设置、引导与运行状态页面
 // Runtime status: the main overview and supported destructive actions use live services.
 // Placeholder sub-pages and unavailable service boundaries are labeled/fail visibly rather than
 // presenting fixture-backed success in production.
@@ -16,7 +16,7 @@
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable), echo-memory-canvas apple-native 基础,
 //           Task surface family (Form/List, 禁止 masonry), §2.3 (semantic colors),
 //           §2.4 (SF Symbols), §2.5 (可访问性)
-// 生成时间: 2026-08-02
+// 生成时间: 2026-09-02
 // ==========================================
 
 import SwiftUI
@@ -45,6 +45,7 @@ import SwiftUI
 /// - About: 永久保留策略 (US-SET-002)
 struct SettingsView: View {
     @State private var viewModel: SettingsViewModel
+    @Environment(\.echoDesignProfile) private var designProfile
 
     /// 注入或默认构造 ViewModel；State 首次构建后复用同一实例（Nitpick：避免默认参数每次重建 VM）。
     init(viewModel: SettingsViewModel? = nil) {
@@ -56,6 +57,8 @@ struct SettingsView: View {
 
     var body: some View {
         content
+            .background(EchoColorToken.groupedBackground.color)
+            .environment(\.echoDesignProfile, designProfile)
             .navigationTitle("Settings")
             .task { await viewModel.loadSettings() }
             .alert("Clear Cache", isPresented: $viewModel.showClearCacheConfirmation) {
@@ -92,42 +95,40 @@ struct SettingsView: View {
     // MARK: - Loading State
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .tint(Color.accentColor)
-            Text("Loading settings...")
-                .font(.subheadline)
-                .foregroundStyle(Color.secondary)
+        EchoContainer(level: .card) {
+            HStack(spacing: EchoSpacingToken.normal.points) {
+                ProgressView()
+                    .tint(EchoColorToken.warmAccent.color)
+                Text("Loading settings...")
+                    .font(EchoTypographyToken.metadata.font)
+                    .foregroundStyle(EchoColorToken.secondaryText.color)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .padding(EchoSpacingToken.section.points)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EchoColorToken.groupedBackground.color)
     }
 
     // MARK: - Error State
 
     private func errorView(_ level: SettingsViewModel.ErrorLevel) -> some View {
-        VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.accentColor)
-
-            Text("Unable to Load Settings")
-                .font(.headline)
-                .foregroundStyle(Color.primary)
-
-            Text("Please try again.")
-                .font(.body)
-                .foregroundStyle(Color.secondary)
-
-            Button(action: { Task { await viewModel.retry() } }) {
-                Label("Retry", systemImage: "arrow.clockwise")
-                    .frame(maxWidth: 200)
+        EchoContainer(level: .card) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.grouped.points) {
+                EchoStatusPresentation(
+                    role: .warning,
+                    systemImage: "exclamationmark.triangle.fill",
+                    title: "Unable to Load Settings",
+                    message: "Please try again."
+                )
+                Button(action: { Task { await viewModel.retry() } }) {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(EchoActionButtonStyle(role: .recovery))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentColor)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .padding(EchoSpacingToken.section.points)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EchoColorToken.groupedBackground.color)
         .accessibilityLabel("Settings error")
         .accessibilityHint("Tap Retry to reload settings")
     }
@@ -144,7 +145,7 @@ struct SettingsView: View {
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .background(EchoColorToken.groupedBackground.color)
     }
 
     // MARK: - Settings Form
@@ -164,7 +165,7 @@ struct SettingsView: View {
             accountSection
             aboutSection
         }
-        .background(Color(.systemGroupedBackground))
+        .background(EchoColorToken.groupedBackground.color)
     }
 
     // MARK: - Language Section (US-DIS-001 / US-SET-001: single unified App Language)
@@ -699,7 +700,7 @@ struct SettingsView: View {
         } header: {
             Text("Device Migration")
         } footer: {
-            Text("Learn how to transfer your Echo data to a new device using AirDrop or encrypted Finder backup.")
+            Text("Transfer an encrypted Echo migration package using AirDrop or an encrypted Finder backup. Original media stays in its system source and is not exported.")
         }
     }
 
@@ -710,7 +711,7 @@ struct SettingsView: View {
                 .foregroundStyle(Color.secondary)
             Text("Data Migration Guide")
                 .font(.headline)
-            Text("Migration guide coming in next iteration.")
+            Text("An encrypted Echo migration package can move Echo-owned indices, settings, feedback, and exclusions. Original media stays in its system source and is not exported.")
                 .font(.subheadline)
                 .foregroundStyle(Color.secondary)
         }

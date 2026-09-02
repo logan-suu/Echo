@@ -3,7 +3,7 @@
   "actionId": "onboarding.permissionAllow",
   "source": "user",
   "targetIntent": "onboarding.allowPermission",
-  "expectedOutcome": "advance to next permission or language step",
+  "expectedOutcome": "request PhotoKit authorization for the user-selected photo connection, then advance to language; never chain notification, location or HealthKit authorization",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "destructiveConfirmation",
+  "surfaceId": "settings",
+  "dataConditions": { "confirmation": "delete all Echo data" },
+  "allowedActions": ["settings.startDeleteData"],
+  "expectedSemantics": { "container": "System alert with destructive role" },
+  "version": "1.0.0"
+}

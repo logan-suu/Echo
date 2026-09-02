@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "actionId": "banner.resolveConflict",
+  "source": "user",
+  "targetIntent": "DegradationBannerViewModel.resolveConflict()",
   "description": "L4 conflict: opens manual merge/conflict-resolution UI (AGENTS.md §4.4).",
   "impact": {
     "resolution": "manual merge UI"

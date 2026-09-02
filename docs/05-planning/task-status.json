@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-01T22:55:50Z",
+  "last_updated": "2026-09-02T20:06:28Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2206,6 +2206,9 @@
           "owner": "iOS Content Experience Lead",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/ui/echo-memory-canvas-style.md",
             "docs/ui/architecture.md",
             "docs/ui/testing-and-artifacts.md",
@@ -2267,16 +2270,41 @@
           "id": "4.0c",
           "title": "Task 平衡画布：设置、引导与运行状态页面",
           "story": [
+            "US-AWK-001",
+            "US-AWK-002",
+            "US-AWK-003",
             "US-DIS-001",
+            "US-DIS-003",
+            "US-DIS-004",
+            "US-FBK-002",
+            "US-PRV-002",
+            "US-PRV-003",
+            "US-PRV-005",
             "US-PRV-008",
             "US-RES-001",
+            "US-RES-002",
+            "US-RES-003",
             "US-RES-004",
             "US-SET-001",
+            "US-SET-002",
+            "US-SET-003",
+            "US-SET-004",
+            "US-SRC-001",
+            "US-SRC-004",
+            "US-SRC-007",
+            "US-SRC-008",
+            "US-SRC-009",
+            "US-SRC-012",
+            "US-SYN-001",
+            "US-SYN-008",
             "US-SYS-001"
           ],
           "owner": "iOS System Experience Lead",
           "documents_required": [
             "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
             "docs/ui/echo-memory-canvas-style.md",
             "docs/ui/architecture.md",
             "docs/ui/testing-and-artifacts.md",
@@ -2286,9 +2314,13 @@
             "UIAutomation/Contracts/instances/awakening-settings-surface.json",
             "UIAutomation/Contracts/instances/background-tasks-surface.json",
             "UIAutomation/Contracts/instances/degradation-banner-surface.json",
-            "UIAutomation/Contracts/instances/resume-progress-surface.json"
+            "UIAutomation/Contracts/instances/resume-progress-surface.json",
+            "UIAutomation/Contracts/schemas/surface-v1.json",
+            "UIAutomation/Contracts/schemas/state-v1.json",
+            "UIAutomation/Contracts/schemas/action-v1.json",
+            "UIAutomation/Contracts/schemas/journey-v1.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
             "4.0"
           ],
@@ -2305,15 +2337,25 @@
           "implementation_constraints": [
             "使用共享 grouped background、section header、状态图标、圆角、accent 与动作层级；masonry 始终禁止",
             "继续使用 Form/List/Sheet/Alert/confirmationDialog 和系统权限交互，不创建自定义任务 chrome",
-            "不得改变同意、授权、模型加载、后台任务、错误恢复、迁移或删除的真实状态与副作用"
+            "不得改变同意、授权、模型加载、后台任务、错误恢复、迁移或删除的真实状态与副作用",
+            "仅修改六个 Task domain 的 View、UI 值类型/薄 adapter、fixture、Surface Contracts 与测试；Core、数据库 schema/迁移、权限请求时机和任务重建保持只读",
+            "生产依赖缺失时映射为诚实不可用/错误，禁止 fixture/Preview fallback 或伪造继续、重启、迁移、授权成功",
+            "六个 Task surface 的 legacy state/action/journey 必须迁移或补齐为 v1 schema-compatible contract；稳定 ID 不重命名，终态以外不得使用空 action"
           ],
           "acceptance_evidence": [
             "六个 Task 功能域全部引用 echo-memory-canvas profile 且使用一致状态/动作组件",
-            "引导权限与真实多模型进度、后台任务暂停/取消/恢复、L1~L4 与设置行为无回归",
+            "Settings/Onboarding/AwakeningSettings/BackgroundTask/Degradation/ResumeProgress 逐 Surface contract、系统 container 与 no-masonry 证据",
+            "引导 consent、可选权限状态、真实多模型进度、后台任务暂停/取消、L1~L4、迁移与设置行为无回归；未完成的渐进式权限和任务重建显示诚实非成功态",
             "空态、加载、错误、权限受限、destructive confirmation 的语义层级一致",
-            "双语、Dynamic Type、VoiceOver、Reduce Motion、对比度与双设备无媒体 Live Simulator Review"
+            "生产路径无 fixture/Preview、无第二套 token、无 Core/数据库/权限副作用变更的静态与 journey 证据",
+            "六个 Task surface 的 surface/state/action/journey 全部通过 v1 schema 与交叉引用校验；无缺失 state/action、无孤立或悬空稳定 ID",
+            "双语、Dynamic Type、VoiceOver、Reduce Motion、light/dark、对比度与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T07:04:28Z"
+          "last_updated": "2026-09-02T20:06:28Z",
+          "notes": "2026-09-02 reasonableness review retained the approved Task visual direction but made 4.0c a truthful presentation-only slice. Story traceability now covers all six domains. Launch-time notification/location/HealthKit permission chaining and nonfunctional production Continue/Restart were removed from 4.0c acceptance ownership and assigned to 4.0f/4.0g; migration wording was aligned with ADR-008/ADR-010. The review also found legacy Task contract instances that did not satisfy the declared v1 schema or resolve all state/action references. After user confirmation, TDD implementation migrated Settings, Onboarding, AwakeningSettings, BackgroundTask, Degradation, and ResumeProgress to the shared echo-memory-canvas Task presentation while retaining native Form/List/Sheet/Alert/confirmationDialog containers and leaving Core, permission timing, and task reconstruction untouched. Settings now distinguishes encrypted Echo migration packages from prohibited original-media export; awakening schedule copy no longer promises a fixed 09:00 execution time; consent actions share equal visual prominence; motion follows the shared Reduce Motion policy. All six surface families now have schema-compatible state/action/journey graphs with stable IDs and resolved references. Red evidence initially reported 35 issues. The focused 4.0c suite passed 6/6; the cumulative Balanced Canvas regression passed 45/45; SwiftLint reported zero violations; 164 contracts validated with deterministic gated-surface resolution; the String Catalog includes both en-US and zh-Hans for the new truthful copy; JSON parsing and diff checks passed. Human visual approval was confirmed at 2026-09-02T20:01:07Z. commit-pr-echo preflight passed at 2026-09-02T20:06:28Z: branch naming and remote uniqueness were verified, GitHub CLI authentication was valid, SwiftLint reported zero violations across 85 files, the focused 4.0c suite passed 6/6 serially on iPhone 17 Pro, localization parity was 100% across 363 keys, 164 accessibility contracts validated, no Actor/Pipeline watermark scope changed, and no 4.0c PR-review deferral was pending. Delivery branch: feature/task-balanced-canvas-US-SET-001.",
+          "status_transitions": {
+            "review_at": "2026-09-02T19:56:30Z"
+          }
         },
         {
           "id": "4.0d",
@@ -2413,6 +2455,114 @@
           ],
           "last_updated": "2026-09-02T00:06:54Z",
           "notes": "Created by the 4.0b reasonableness review because a visual task and a later E2E test cannot substitute for the production edit/conflict/source-deletion/media/citation/share-audit behavior still marked Partial after Phase 3F. Automatically promoted from backlog to ready after dependency 4.0b completed."
+        },
+        {
+          "id": "4.0f",
+          "title": "渐进式权限与首次体验生产闭环",
+          "story": [
+            "US-AWK-001",
+            "US-AWK-002",
+            "US-AWK-003",
+            "US-DIS-004",
+            "US-PRV-008",
+            "US-SRC-001"
+          ],
+          "owner": "iOS Privacy Experience Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/ui/echo-memory-canvas-style.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/onboarding-surface.json",
+            "UIAutomation/Contracts/instances/awakening-settings-surface.json",
+            "UIAutomation/Contracts/schemas/surface-v1.json",
+            "UIAutomation/Contracts/schemas/state-v1.json",
+            "UIAutomation/Contracts/schemas/action-v1.json",
+            "UIAutomation/Contracts/schemas/journey-v1.json",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0c"
+          ],
+          "test_file": "EchoTests/Phase4/4.0f_ProgressivePermissionFlowTests.swift",
+          "surface_family": "task",
+          "ui_scope": [
+            "Onboarding",
+            "Awakening"
+          ],
+          "implementation_constraints": [
+            "PIPL 同意先于任何受保护数据请求；同意/拒绝同层可见且同等醒目，不预选或诱导同意",
+            "PhotoKit 只在用户明确选择连接照片资料库后请求；拒绝或跳过不阻止使用 Share Extension 路径",
+            "notification/location/HealthKit 只由对应 Awakening 功能的显式 opt-in 按需触发，App 启动或打开设置页不得自动请求",
+            "权限状态来自系统 adapter；HealthKit denied 不得被伪装成可确定读取授权，撤权后 fail closed",
+            "不得新增权限种类、扩大 HealthKit 数据范围、循环催促或用自定义 UI 复制系统权限面板"
+          ],
+          "acceptance_evidence": [
+            "无权限首次启动只出现 PIPL consent；未触发任何 PhotoKit/notification/location/HealthKit 系统请求",
+            "用户选择 Connect Photos 后才请求 PhotoKit，limited/full/denied/skip 与系统设置恢复路径可定位",
+            "geofence/emotion/anniversary 对应 opt-in 分别只请求其所需最小权限，关闭开关不触发请求",
+            "拒绝、撤权、重复进入与重启均无自动重复请求，已授权能力继续可用",
+            "双语、VoiceOver、Dynamic Type、Reduce Motion 与双设备无媒体 Live Simulator Review"
+          ],
+          "last_updated": "2026-09-02T19:10:59Z",
+          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior."
+        },
+        {
+          "id": "4.0g",
+          "title": "后台任务断点恢复生产闭环",
+          "story": [
+            "US-SYS-001"
+          ],
+          "owner": "iOS Reliability Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-011-task-progress-boundary.md",
+            "docs/ui/architecture.md",
+            "docs/ui/testing-and-artifacts.md",
+            "UIAutomation/Contracts/instances/background-tasks-surface.json",
+            "UIAutomation/Contracts/instances/resume-progress-surface.json",
+            "UIAutomation/Contracts/schemas/surface-v1.json",
+            "UIAutomation/Contracts/schemas/state-v1.json",
+            "UIAutomation/Contracts/schemas/action-v1.json",
+            "UIAutomation/Contracts/schemas/journey-v1.json",
+            "docs/05-planning/deferred-items.json",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0c"
+          ],
+          "test_file": "EchoTests/Phase4/4.0g_TaskResumeProductionTests.swift",
+          "surface_family": "task",
+          "ui_scope": [
+            "BackgroundTask",
+            "ResumeProgress"
+          ],
+          "implementation_constraints": [
+            "TaskProgress 只保存恢复数据，不得被当成可执行任务；由 composition-owned registry 按 taskType 重建 launcher",
+            "Continue 从准确 resume point 继续；Restart 事务删除旧进度后从头入队；未知、过期或不可重建类型 fail closed",
+            "任务重建、入队、暂停、取消、完成清理必须使用 TaskQueueActor/ProgressActor，跨 Actor 调用 await，禁止 Task.detached",
+            "所有异步入口执行 PrivacyCheckpoint，用户选择和结果写 hash-only audit；L2 仅手动重试",
+            "不得用 fixture prompt、仅状态翻转或伪造 resumed/restarted UI 作为生产完成证据"
+          ],
+          "acceptance_evidence": [
+            "no-fixture 任务取消→进程终止→重启→检测相同 taskType→Continue 从准确索引继续的证据",
+            "Restart 原子清理旧 TaskProgress、从 0 重新入队且完成后立即删除进度的证据",
+            "未知/过期 taskType、launcher 构造失败、磁盘错误、取消竞态与 L2 手动重试故障矩阵",
+            "backgroundTaskInterrupted 审计包含真实 action、resumePoint、userChoiceOnRestart 且无原文",
+            "双设备 no-fixture journey 与无媒体 Live Simulator Review"
+          ],
+          "last_updated": "2026-09-02T19:10:59Z",
+          "notes": "Created by the 4.0c reasonableness review. Production currently reads ProgressActor rows but Continue/Restart intentionally returns an unavailable error because no task reconstruction/launcher boundary is connected; prompt fixtures cannot satisfy US-SYS-001 AC-3/AC-4."
         },
         {
           "id": "4.1",
@@ -2521,7 +2671,9 @@
             "4.0b",
             "4.0c",
             "4.0d",
-            "4.0e"
+            "4.0e",
+            "4.0f",
+            "4.0g"
           ],
           "test_file": "EchoTests/Phase4/AllPipelinesTests.swift",
           "acceptance_evidence": [
@@ -2530,7 +2682,8 @@
             "Home 0/1~19/20+ live-data 状态与 Search <6/>=6 结果布局路径的 no-fixture 端到端记录",
             "12 个 UI 功能域在默认 App 路径使用同一 design profile 且跨 Surface 导航不出现视觉系统切换的端到端记录",
             "真实 PhotoKit 与 Share Extension 输入的 traceID 贯穿 PrivacyCheckpoint、SQLite、generation route 和审计日志",
-            "进程终止后重启恢复 active route、任务进度、翻译缓存和用户策略的日志",
+            "进程终止后重启恢复 active route、任务进度、翻译缓存和用户策略的日志；消费 4.0g 的 task launcher，不在本测试任务补写恢复逻辑",
+            "消费 4.0f 的 consent-first 渐进式权限流程，证明启动无可选权限连环弹窗且功能 opt-in 只请求最小权限",
             "Release simulator 与 CODE_SIGNING_ALLOWED=NO device build 均为 exit code 0"
           ],
           "migrated_from": [
@@ -2595,7 +2748,8 @@
           ],
           "status": "backlog",
           "dependencies": [
-            "4.0c"
+            "4.0c",
+            "4.0g"
           ],
           "test_file": "EchoTests/Phase4/DegradationRecoveryTests.swift",
           "acceptance_evidence": [
@@ -2666,7 +2820,9 @@
             "4.0b",
             "4.0c",
             "4.0d",
-            "4.0e"
+            "4.0e",
+            "4.0f",
+            "4.0g"
           ],
           "test_file": "EchoTests/Phase4/QualityGateTests.swift",
           "acceptance_evidence": [
@@ -2708,7 +2864,9 @@
             "4.0b",
             "4.0c",
             "4.0d",
-            "4.0e"
+            "4.0e",
+            "4.0f",
+            "4.0g"
           ],
           "test_file": "EchoTests/Phase4/LocalizationAccessibilityTests.swift",
           "acceptance_evidence": [
@@ -2754,7 +2912,9 @@
             "4.0b",
             "4.0c",
             "4.0d",
-            "4.0e"
+            "4.0e",
+            "4.0f",
+            "4.0g"
           ],
           "test_file": null,
           "acceptance_evidence": [
@@ -2791,9 +2951,10 @@
             "docs/05-planning/phase3f-evidence-index.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "ready",
+          "status": "backlog",
           "dependencies": [
-            "3F.11"
+            "3F.11",
+            "4.0f"
           ],
           "test_file": "EchoTests/Phase4/ReleaseComplianceTests.swift",
           "acceptance_evidence": [
@@ -2803,7 +2964,8 @@
             "Release 包零运行时下载、零分析 SDK、零用户数据外传的网络与依赖扫描报告"
           ],
           "migrated_from": [],
-          "last_updated": "2026-08-31T15:42:40Z"
+          "last_updated": "2026-09-02T19:10:59Z",
+          "notes": "2026-09-02 permission reasonableness review added 4.0f as a release-compliance prerequisite; task returned from ready to backlog until the consent-first contextual permission flow is complete."
         },
         {
           "id": "4.10",
@@ -2827,6 +2989,8 @@
             "4.0c",
             "4.0d",
             "4.0e",
+            "4.0f",
+            "4.0g",
             "4.1",
             "4.2",
             "4.3",
@@ -2959,6 +3123,8 @@
             "4.0c",
             "4.0d",
             "4.0e",
+            "4.0f",
+            "4.0g",
             "4.1",
             "4.2",
             "4.3",
@@ -2975,7 +3141,7 @@
           ],
           "test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
           "acceptance_evidence": [
-            "4.0、4.0a、4.0b、4.0c、4.0d、4.0e 与 4.1 至 4.13 全部为 done，且每项 acceptance_evidence 均有可定位制品",
+            "4.0、4.0a、4.0b、4.0c、4.0d、4.0e、4.0f、4.0g 与 4.1 至 4.13 全部为 done，且每项 acceptance_evidence 均有可定位制品",
             "EchoTests/Phase4/Phase4IntegrationTests.swift 在最终 RC 上 exit code 0",
             "Phase 1、2、3、3F、4 的累计单元与集成测试均为 0 failure",
             "最终 RC 身份、签名、SBOM、隐私、文档、P0=0 和 P1=0 的发布证据索引",
@@ -3176,6 +3342,8 @@
       "reason": "This gives Home and Search a recognizably visual, continuous discovery rhythm while preserving Echo's platform-native interaction, accessibility, privacy and task-completion boundaries.",
       "affected_documents": [
         "AGENTS.md",
+        "README.md",
+        "docs/INDEX.md",
         "docs/01-spec/用户故事与验收标准规格书.md",
         "docs/02-architecture/架构设计文档.md",
         "docs/ui/README.md",
@@ -3324,6 +3492,54 @@
         "UIAutomation/Contracts/instances/creation-state-share-handoff.json",
         "UIAutomation/Contracts/instances/memory-detail-action-translate.json",
         "UIAutomation/Contracts/instances/translation-action-toggle.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/phase3f-story-matrix.md",
+        "docs/05-planning/deferred-items.json",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260902-4-0C-REASONABLENESS",
+      "status": "resolved",
+      "detected_at": "2026-09-02T19:10:59Z",
+      "resolved_at": "2026-09-02T19:10:59Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "retain-task-direction-split-missing-production-boundaries",
+      "decision": "Retain Balanced Canvas for the six Task domains and keep 4.0c presentation-only; make its story and per-surface evidence exhaustive, adopt consent-first contextual permission requests through new task 4.0f, and assign real persisted-task reconstruction/Continue/Restart to new task 4.0g. Align migration copy with ADR-008/ADR-010 and anniversary scheduling with the existing earliest-eligible best-effort decision. Treat the /v1 contract schema as compatible with 1.x instance revisions and allow null actionId only for terminal observation-only journey steps.",
+      "reason": "The prior Task direction was visually sound but not executable as written: 4.0c listed only six stories while its six surfaces expose many more governed behaviors; onboarding requested photos, notifications, location and HealthKit in a launch-time chain despite contextual permission guidance; ResumeProgress could load SQLite rows but deliberately returned unavailable for production Continue/Restart; US-SET-004 prohibited the encrypted migration package already required by US-SRC-007 and ADR-008/010; US-AWK-002 retained a literal 09:00 AC beneath a best-effort revision note; and the /v1 schemas hard-coded version 1.0.0 despite existing approved 1.1.0 instances while journey terminal states already used actionId=null.",
+      "affected_documents": [
+        "AGENTS.md",
+        "README.md",
+        "docs/INDEX.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/架构设计文档.md",
+        "docs/02-architecture/数据流全链路技术说明文档.md",
+        "docs/03-implementation/开发避坑与关键注意点手册.md",
+        "docs/decisions/ADR-011-task-progress-boundary.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "docs/ui/README.md",
+        "UIAutomation/Contracts/schemas/surface-v1.json",
+        "UIAutomation/Contracts/schemas/state-v1.json",
+        "UIAutomation/Contracts/schemas/action-v1.json",
+        "UIAutomation/Contracts/schemas/journey-v1.json",
+        "UIAutomation/Contracts/instances/settings-surface.json",
+        "UIAutomation/Contracts/instances/onboarding-surface.json",
+        "UIAutomation/Contracts/instances/onboarding-state-permissions.json",
+        "UIAutomation/Contracts/instances/onboarding-action-permissionAllow.json",
+        "UIAutomation/Contracts/instances/onboarding-action-permissionDeny.json",
+        "UIAutomation/Contracts/instances/onboarding-action-permissionSkip.json",
+        "UIAutomation/Contracts/instances/onboarding-journey-happy-path.json",
+        "UIAutomation/Contracts/instances/onboarding-journey-permission-denied.json",
+        "UIAutomation/Contracts/instances/awakening-settings-surface.json",
+        "UIAutomation/Contracts/instances/background-tasks-surface.json",
+        "UIAutomation/Contracts/instances/degradation-banner-surface.json",
+        "UIAutomation/Contracts/instances/resume-progress-surface.json",
+        "UIAutomation/Contracts/instances/resume-progress-state-error.json",
+        "UIAutomation/Contracts/instances/resume-progress-action-continue.json",
+        "UIAutomation/Contracts/instances/resume-progress-action-restart.json",
         "UIAutomation/Policies/acceptance-policy.json",
         "docs/05-planning/开发计划安排文档.md",
         "docs/05-planning/phase3f-story-matrix.md",

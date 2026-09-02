@@ -1,6 +1,9 @@
 {
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
   "surfaceId": "awakening-settings",
   "stateId": "all-disabled",
+  "dataConditions": { "fixtureId": "awakening-all-disabled", "permissions": "granted", "awakeningTypes": "disabled" },
+  "allowedActions": ["awakening.toggleGeofence", "awakening.toggleEmotion", "awakening.toggleAnniversary"],
   "fixtureId": "awakening-all-disabled",
   "description": "All permissions granted but all three awakening types disabled by the user",
   "expected": {
@@ -11,5 +14,6 @@
     "isEmotionEnabled": false,
     "isAnniversaryEnabled": false,
     "geofenceCount": 1
-  }
+  },
+  "version": "1.0.0"
 }

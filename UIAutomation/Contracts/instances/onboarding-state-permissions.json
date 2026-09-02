@@ -5,16 +5,16 @@
   "dataConditions": {
     "currentStep": "permissions",
     "privacyConsent": "agreed",
-    "permissionStepIndex": "0..3 (photos -> notifications -> location -> health)",
+    "permissionStepIndex": "single optional photo-library connection choice",
     "language": null,
     "modelLoadProgress": null
   },
   "allowedActions": ["onboarding.permissionAllow", "onboarding.permissionDeny", "onboarding.openSettings"],
   "expectedSemantics": {
-    "permissionCards": "Each permission explains purpose; photos step shows iCloud download-and-keep-original hint (US-SRC-001 AC-6)",
-    "allowButton": "'Allow' primary — onboarding-permission-allow",
-    "denyButton": "'Not Now' secondary — onboarding-permission-deny",
+    "permissionCards": "Only the optional photo-library connection is offered here; notification, location and HealthKit authorization are deferred to explicit Awakening feature opt-ins. The photo card shows the iCloud download-and-keep-original hint (US-SRC-001 AC-6)",
+    "allowButton": "'Connect Photos' primary — onboarding-permission-allow; this explicit action may trigger PhotoKit authorization",
+    "denyButton": "'Not Now' secondary — onboarding-permission-deny; onboarding continues without requesting other system permissions",
     "openSettings": "'Open Settings' shown after deny (US-SRC-001 AC-6) — onboarding-open-settings"
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

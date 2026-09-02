@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "actionId": "banner.openBlockingRecovery",
+  "source": "user",
+  "targetIntent": "DegradationBannerViewModel.openBlockingRecovery()",
   "description": "L3 blocking: guides user to system settings repair (e.g. Settings > General > iPhone Storage > Echo).",
   "impact": {
     "navigation": "system settings",

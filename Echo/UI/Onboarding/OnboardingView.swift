@@ -8,14 +8,14 @@
 //            §3.3 (Task surfaces — Form/List/Sheet/Alert, 禁止 masonry),
 //            §2.3 (semantic colors), §2.4 (SF Symbols), §2.5 (可访问性)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
-// 任务: 3.11 - 引导流程：欢迎页 + PIPL 隐私同意 + 权限序列 + 语言选择 + 首次模型加载
+// 任务: 4.0c - Task 平衡画布：设置、引导与运行状态页面
 // AC 覆盖: US-PRV-008 AC-1 ✅ (隐私摘要展示), AC-2 ✅ (摘要含目的/方式/种类/保留期限/本地处理声明),
 //          AC-3 ✅ (同意/拒绝同等醒目 + declined 终态页 Close 退出, PR #45 review P0-2 修复),
 //          US-SRC-001 AC-6 ✅ (iCloud 提示 + Open Settings 按钮), US-SYN-001 AC-2 ✅ (zh-Hans/en-US Picker + 映射提示),
 //          首次模型加载 ✅ (4 个真实模型逐项状态 + determinate 总进度)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统容器 + SF Symbols + Dynamic Type
-// 生成时间: 2026-08-03
+// 生成时间: 2026-09-02
 // ==========================================
 
 import SwiftUI
@@ -40,11 +40,13 @@ import SwiftUI
 /// - completed / declined: 终态
 ///
 /// ## 数据流 (docs/ui/architecture.md §2.1)
-/// - User Action → OnboardingViewModel action → (🔮 Phase 3.9 Core) → State Update → View Re-render
+/// - User Action → OnboardingViewModel action → injected adapter → State Update → View Re-render
 struct OnboardingView: View {
     // MARK: - ViewModel
 
     @State private var viewModel: OnboardingViewModel
+    @Environment(\.echoDesignProfile) private var designProfile
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     /// 引导完成回调 — 宿主 (AppRootView) 关闭 fullScreenCover
     var onCompleted: (() -> Void)?
@@ -77,7 +79,14 @@ struct OnboardingView: View {
                 onCompleted?()
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: viewModel.viewState)
+        .animation(
+            EchoAccessibilityPolicy.allowsMotion(reduceMotion: accessibilityReduceMotion)
+                ? .easeInOut(duration: 0.25)
+                : nil,
+            value: viewModel.viewState
+        )
+        .background(EchoColorToken.groupedBackground.color)
+        .environment(\.echoDesignProfile, designProfile)
         .accessibilityIdentifier("onboarding-view")
     }
 
@@ -154,15 +163,14 @@ struct OnboardingView: View {
 
             // PIPL 摘要 (US-PRV-008 AC-1/AC-2) — 可滚动
             ScrollView {
-                Text(viewModel.privacySummary)
-                    .font(.callout)
-                    .lineSpacing(4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12))
-                    .accessibilityIdentifier("onboarding-privacy-summary")
+                EchoContainer(level: .card) {
+                    Text(viewModel.privacySummary)
+                        .font(EchoTypographyToken.body.font)
+                        .lineSpacing(4)
+                        .accessibilityIdentifier("onboarding-privacy-summary")
+                }
             }
-            .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(EchoColorToken.groupedBackground.color)
             .frame(maxHeight: 280)
 
             // 同意/拒绝同等醒目 (US-PRV-008 AC-3)
@@ -173,7 +181,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(consentActionStyle)
             .accessibilityIdentifier("onboarding-privacy-agree")
             .accessibilityHint("Agree to the privacy policy and continue")
 
@@ -184,13 +192,18 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(consentActionStyle)
             .accessibilityIdentifier("onboarding-privacy-decline")
             .accessibilityHint("Decline the privacy policy; Echo cannot process your memories")
 
             Spacer().frame(height: 8)
         }
         .padding(.horizontal, 24)
+    }
+
+    /// Identical treatment keeps consent and refusal at the same visual hierarchy.
+    private var consentActionStyle: EchoActionButtonStyle {
+        EchoActionButtonStyle(role: .secondary)
     }
 
     // MARK: - Step 3: Permissions (§15.4, US-SRC-001 AC-6)

@@ -1,10 +1,14 @@
 {
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
   "surfaceId": "awakening-settings",
   "stateId": "loading",
+  "dataConditions": { "fixtureId": "awakening-loading", "viewState": "loading" },
+  "allowedActions": [],
   "fixtureId": "awakening-loading",
   "description": "Initial loading state with ProgressView",
   "expected": {
     "progressIndicator": true,
     "loadingText": "Loading awakening settings..."
-  }
+  },
+  "version": "1.0.0"
 }

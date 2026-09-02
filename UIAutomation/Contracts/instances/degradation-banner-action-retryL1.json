@@ -1,7 +1,10 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "version": "1.0.0",
   "surfaceId": "degradation-banner",
   "actionId": "banner.retryL1",
+  "source": "system",
+  "targetIntent": "ErrorHandler.retryTransientOperation()",
   "description": "L1 transient error: exponential-backoff retry (1s/2s/4s, max 3) then escalation to L2. No user prompt during retry.",
   "impact": {
     "attempts": 3,

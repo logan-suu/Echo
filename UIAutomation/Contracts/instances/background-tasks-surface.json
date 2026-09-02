@@ -26,5 +26,8 @@
     "empty",
     "error"
   ],
-  "version": "1.0.0"
+  "relatedStories": [
+    "US-SYS-001"
+  ],
+  "version": "1.1.0"
 }

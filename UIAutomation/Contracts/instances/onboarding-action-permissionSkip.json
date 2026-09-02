@@ -3,7 +3,7 @@
   "actionId": "onboarding.permissionSkip",
   "source": "user",
   "targetIntent": "onboarding.skipPermission",
-  "expectedOutcome": "permissionDenied -> next step (continue without permission)",
+  "expectedOutcome": "permissionDenied -> language (continue without PhotoKit and without requesting notification, location or HealthKit)",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -1,20 +1,19 @@
 // ==========================================
 // 文件: AwakeningSettingsView.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// i18n: User-facing strings resolve through Localizable.xcstrings (zh-Hans + en-US).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 (地理围栏唤醒),
 //            US-AWK-002 (日期/纪念日唤醒), US-AWK-003 (情绪感知唤醒)
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surfaces), §7.2 (Task surfaces),
 //            §10.1.3 (空态), §11 (Toast/Banner)
 //            docs/ui/architecture.md §2 (单向数据流), §3 (组件边界)
-// 任务: 3.12 - 唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置
-// AC 覆盖: US-AWK-001 AC-5 ✅ (位置权限静默禁用/重新开启), AC-6 ✅ (审计记录查看),
-//            US-AWK-002 AC-1 ✅ (每日推送开关控制), AC-4 🔮 Phase 3.9 (无匹配不推送 — Core pipeline),
-//            US-AWK-003 AC-1 ✅ (HealthKit 权限管理)
-// Legend: ✅ implemented (UI slice) | 🔶 stub (Core integration deferred to Phase 3.9)
+// 任务: 4.0c - Task 平衡画布：设置、引导与运行状态页面
+// AC 覆盖: US-AWK-001 AC-5 ✅ (位置权限状态), AC-6 ✅ (审计记录查看),
+//            US-AWK-002 AC-1 ✅ (每日推送开关表现), US-AWK-003 AC-1 ✅ (HealthKit 权限状态)
+// Production permission orchestration remains assigned to Task 4.0f.
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable), echo-memory-canvas apple-native 基础,
 //           Task surface family (Form/List/Toggle/Picker, 禁止 masonry), §2.3~2.5 (semantic colors, SF Symbols, 可访问性),
 //           §10.1 (Views 目录)
-// 生成时间: 2026-08-03
+// 生成时间: 2026-09-02
 // ==========================================
 
 import SwiftUI
@@ -23,6 +22,7 @@ import SwiftUI
 
 struct AwakeningSettingsView: View {
     @State private var viewModel: AwakeningSettingsViewModel
+    @Environment(\.echoDesignProfile) private var designProfile
 
     /// 注入或默认构造 ViewModel；State 首次构建后复用同一实例。
     /// 3F.11 fix: 生产路径由 SettingsView 注入 live 系统适配器（真实权限状态，ADR-012 决策-2/3）。
@@ -36,6 +36,8 @@ struct AwakeningSettingsView: View {
 
     var body: some View {
         content
+            .background(EchoColorToken.groupedBackground.color)
+            .environment(\.echoDesignProfile, designProfile)
             .navigationTitle("Awakening")
             .sheet(item: $viewModel.showGeofenceDetail) { geofence in
                 geofenceDetailSheet(geofence)
@@ -77,24 +79,23 @@ struct AwakeningSettingsView: View {
     // MARK: - Error
 
     private func errorView(_ level: AwakeningSettingsViewModel.ErrorLevel) -> some View {
-        VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.accentColor)
-            Text("Failed to load settings")
-                .font(.headline)
-            Text(EchoStrings.tr(levelDescription(level)))
-                .font(.subheadline)
-                .foregroundStyle(Color.secondary)
-                .multilineTextAlignment(.center)
-            Button("Retry") {
-                Task { await viewModel.loadSettings() }
+        EchoContainer(level: .card) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.grouped.points) {
+                EchoStatusPresentation(
+                    role: .warning,
+                    systemImage: "exclamationmark.triangle.fill",
+                    title: "Failed to load settings",
+                    message: EchoStrings.tr(levelDescription(level))
+                )
+                Button("Retry") {
+                    Task { await viewModel.loadSettings() }
+                }
+                .buttonStyle(EchoActionButtonStyle(role: .recovery))
             }
-            .buttonStyle(.bordered)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
-        .padding(40)
+        .padding(EchoSpacingToken.section.points)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(EchoColorToken.groupedBackground.color)
     }
 
     private func levelDescription(_ level: AwakeningSettingsViewModel.ErrorLevel) -> String {
@@ -137,6 +138,7 @@ struct AwakeningSettingsView: View {
             geofenceManagementSection(data)
             statusSection(data)
         }
+        .background(EchoColorToken.groupedBackground.color)
     }
 
     // MARK: - Notification Section
@@ -294,7 +296,7 @@ struct AwakeningSettingsView: View {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Anniversary Awakening")
-                        Text("Daily 9:00 AM — memories from this day in past years")
+                        Text("Best-effort daily delivery when the system first permits it")
                             .font(.caption)
                             .foregroundStyle(Color.secondary)
                     }
@@ -434,7 +436,7 @@ struct AwakeningSettingsView: View {
         } header: {
             Text("Status")
         } footer: {
-            Text(EchoStrings.tr("Geofence push resets on exit+re-enter. Anniversary check runs daily at 9:00 AM. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log)."))
+            Text(EchoStrings.tr("Geofence push resets on exit+re-enter. Anniversary delivery is attempted at the earliest eligible system opportunity each day. Emotion analysis caches results for 24 hours and uses 30-second debounce for new queries/feelings. Auditing records all awakening activity for 30 days (viewable in Audit Log)."))
         }
     }
 }

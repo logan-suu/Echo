@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "permissionLimited",
+  "surfaceId": "settings",
+  "dataConditions": { "oneOrMoreSources": "denied or limited" },
+  "allowedActions": ["settings.openSystemSettings"],
+  "expectedSemantics": { "status": "Per-source permission state and recovery action" },
+  "version": "1.0.0"
+}

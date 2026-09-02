@@ -1,5 +1,6 @@
 {
-  "contractVersion": "1.0.0",
+  "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
+  "version": "1.0.0",
   "journeyId": "degradation-l1-l4",
   "surfaceId": "degradation-banner",
   "steps": [

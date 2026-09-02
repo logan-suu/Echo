@@ -3,7 +3,7 @@
   "actionId": "prompt.restart",
   "source": "user",
   "targetIntent": "ResumeProgressViewModel.restartTask()",
-  "expectedOutcome": "User chooses to restart the task fresh: stale progress record deleted (ProgressActor.delete(taskId:)) and task restarts from index 0 (US-SYS-001 AC-4; AGENTS.md §4.5)",
+  "expectedOutcome": "A registered production launcher validates taskType, atomically removes stale progress, and re-enqueues a fresh task from index 0; deletion or enqueue failure remains visible and cannot report restarted (US-SYS-001 AC-4; AGENTS.md §4.5)",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
