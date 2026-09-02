@@ -356,13 +356,13 @@
         "iOS"
       ],
       "target_tasks": [
-        "4.2"
+        "4.0e"
       ],
       "acceptance_evidence": [
         "originalTimestamp、userLocked 持久化与同步/编辑测试"
       ],
       "tracking_status": "partial",
-      "recheck_trigger": "4.2 review",
+      "recheck_trigger": "4.0e review",
       "closed_at": "2026-08-09",
       "closed_by_task": "3F.4",
       "closure_evidence": "Memory.userLocked column persisted in Memory table (DatabaseManager v5 migration) + round-trip test in EchoTests/Phase3F/3F.4_CanonicalGenerationTests.swift (EditPersistence.test_edit_fields_roundtrip). Core persistence layer delivered per acceptance_evidence. SyncPipeline skip-on-userLocked behavior wiring remains 3F.7 scope. | PR#56 二轮 CodeRabbit: 持久化部分已交付（partial），SyncPipeline skip-on-userLocked 行为仍属 3F.7 范围，不标记 closed。"
@@ -640,7 +640,7 @@
       "title": "Creation surface user-facing strings hardcoded English (i18n)",
       "severity": "🟡",
       "location": "Echo/UI/Creation/CreationView.swift, Echo/UI/Creation/CreationViewModel.swift, Echo/UI/Creation/CreationFixtureLoader.swift (template displayName)",
-      "reason": "New creation surface strings ('AI Creation', 'Choose a template', 'Generate', 'Copy', 'Export PDF / Markdown', 'Share / Print', 'Save to Notes', prompt editor labels, toast/error messages, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4. Also: creation generate/save are fixture-driven — Core CreativePipeline + NoteStore write path deferred (US-SYN-003 AC-4 real save).",
+      "reason": "New creation surface strings ('AI Creation', 'Choose a template', 'Generate', 'Copy', 'Export PDF / Markdown', 'Share / Print', 'Save to Notes', prompt editor labels, toast/error messages, accessibility labels) are hardcoded English. Consistent with Phase 3 UI slice pattern (see DEF-41-1 / DEF-42-002 / DEF-43-001); full String Catalog migration (zh-Hans + en-US) required by AGENTS.md §1.3 / §11.4. Also: creation generation was fixture-driven and Notes handoff lacked an approved public boundary. The approved resolution is grounded CreativePipeline plus a user-mediated system share/export flow; private NoteStore writes are forbidden.",
       "defer_to": "String Catalog migration task (Phase 3 wrap-up / Phase 4) + Core 创作 Pipeline 接入时",
       "deferred_at": "2026-08-02",
       "last_checked_at": "2026-08-11",

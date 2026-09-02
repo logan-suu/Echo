@@ -739,13 +739,13 @@ struct Phase3IntegrationTests {
 
             vm.toggleTranslation()
             let phase = await awaitTranslationSettled(vm)
-            #expect(phase == .translated)
+            #expect(phase == .uncertain)
 
-            // Confidence 0.55 < 0.9 → .uncertain; translated text still produced,
-            // view layer decides to keep original primary (ADR-005).
+            // Confidence 0.55 < 0.9 → no translated text is exposed or cached.
             let current = vm.memory
             #expect(current?.sourceLanguageConfidence == 0.55)
-            #expect(current?.translatedText != nil)
+            #expect(current?.translatedText == nil)
+            #expect(await cache.isEmpty)
         }
 
         @Test("Toggle off cancels translation and resets phase to idle")

@@ -3,7 +3,7 @@
   "actionId": "translation.toggle",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.toggleTranslation()",
-  "expectedOutcome": "Translation toggled: on expand triggers cache-first lookup then TranslationService (US-DIS-002 AC-1/AC-2/AC-4); on collapse returns to original. Confidence <0.7 retains original + language label (AC-3). Success writes to TranslationCache TTL=7d (AC-5).",
+  "expectedOutcome": "Translation toggled: on expand triggers cache-first lookup then TranslationService (US-DIS-002 AC-1/AC-2/AC-4); on collapse returns to original. NLTagger source-language confidence <0.9 retains original + language label (AC-3, ADR-005). Success writes to TranslationCache TTL=7d (AC-5).",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -3,14 +3,14 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "memory-detail",
   "surfaceFamily": "focus",
-  "responsibility": "Render a single memory detail with content, grouped metadata, on-demand translation toggle (US-DIS-002), edit entry (US-AWK-007), L4 conflict resolution, deletion confirmation (US-PRV-004), and creation preview/save with citation anchors (US-SYN-002/003/004)",
+  "responsibility": "Render one production memory as a Focus surface with single-column primary content, grouped metadata, on-demand translation, honest mutation availability, deletion confirmation, and grounded creation navigation without claiming unsupported Core writes",
   "inputs": {
     "memoryId": "UUID — memory identifier",
     "memory": "MemoryDetailModel mapped from CanonicalMemory (content, sourceType, timestamp, locale, edit state, conflict state). sourceType supports photo / note / voice / video_frame / video_audio",
     "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US)"
   },
   "outputs": {
-    "visibleContent": "Memory original text, translated text (toggleable), grouped metadata (source/time/location), citation anchors, edit entry. Media memories render previews from bundled deterministic samples: photo → Image, video → VideoPlayer, voice → audio player (Echo/Resources/MediaSamples/)",
+    "visibleContent": "Memory original text, translated text (toggleable), grouped metadata (source/time/location), citation anchors and available actions. Production media is resolved from the authorized local source adapter; unresolved/revoked/missing media shows an honest localized fallback. Bundled samples are Preview/test-only and prohibited as production evidence.",
     "interactionTargets": "translateToggle, editButton, deleteButton, conflictActionButtons, saveButton, citationAnchor, retryButton, mediaPlayPause",
     "accessibilityTree": "Content in reading order; grouped metadata; media preview with label; each citation anchor as separate element"
   },
@@ -34,5 +34,5 @@
     "memory-detail-voice-loaded (voice transcript)",
     "memory-detail-video-loaded (video_frame)"
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

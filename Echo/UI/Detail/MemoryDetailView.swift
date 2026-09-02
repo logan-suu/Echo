@@ -5,8 +5,8 @@
 //            §7.1 (Focus 共享表达), §10.1.2 (数据加载失败空态), §12.2 (L4 冲突全屏),
 //            §14.5 (Bad Case 标记), docs/ui/architecture.md §3 (Surface View), §8 (Focus family)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-007, US-SYN-002/003, US-PRV-004, US-DIS-002
-// 任务: 3.3 - MemoryDetailView + ViewModel + Edit + Conflict + Creation + Translation
-// AC 覆盖: US-AWK-007 AC-1 ✅ (编辑入口 + 表单), AC-4 ✅ (冲突解决 UI),
+// Task: 4.0b - Balanced Canvas Focus surfaces for Detail, Creation, and Translation
+// AC coverage: US-AWK-007 AC-1 ✅ (honest edit entry), AC-4 ✅ (honest conflict UI),
 //          US-DIS-002 AC-3 ✅ (源语言检测不确定保留原文为主, ADR-005), AC-4 ✅ (原文/译文切换), US-PRV-004 AC-1 ✅ (删除双选项弹窗),
 //          US-SYN-002 AC-1 ✅ (溯源锚点渲染), US-SYN-003 AC-3 ✅ (创作预览/复制)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.3 (Focus 禁止 masonry),
@@ -42,6 +42,7 @@ struct MemoryDetailView: View {
     // MARK: - ViewModel
 
     @State private var viewModel: MemoryDetailViewModel
+    @Environment(\.echoDesignProfile) private var designProfile
     /// 待加载的记忆 ID（从 Search/Home 导航传入）
     @State private var pendingMemoryID: UUID?
     /// 首次出现标记 — 控制 fixture 注入仅执行一次 (2026-08-02 回归修复)
@@ -68,7 +69,7 @@ struct MemoryDetailView: View {
         ZStack {
             contentView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
+                .background(EchoColorToken.canvasBackground.color)
         }
         .navigationTitle("Memory")
         .navigationBarTitleDisplayMode(.inline)
@@ -133,6 +134,7 @@ struct MemoryDetailView: View {
             Text("Choose how to remove this memory. Your photos and files in the system library are kept unless you choose to delete the original.")
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.viewState)
+        .accessibilityIdentifier("memory-detail-surface-\(designProfile.id)")
     }
 
     // MARK: - Launch Argument Fixture Injection
@@ -209,7 +211,7 @@ struct MemoryDetailView: View {
             errorView(level: level)
 
         case .cancelled:
-            Color(.systemBackground)
+            EchoColorToken.canvasBackground.color
                 .onAppear { viewModel.dismissError() }
         }
     }
@@ -222,12 +224,12 @@ struct MemoryDetailView: View {
             Spacer()
 
             ProgressView()
-                .tint(Color.accentColor)
+                .tint(EchoColorToken.warmAccent.color)
                 .controlSize(.large)
 
             Text("Loading memory…")
-                .font(.subheadline)
-                .foregroundStyle(Color.secondary)
+                .font(EchoTypographyToken.metadata.font)
+                .foregroundStyle(EchoColorToken.secondaryText.color)
 
             Spacer().frame(height: 80)
         }
@@ -242,19 +244,14 @@ struct MemoryDetailView: View {
         VStack(spacing: 12) {
             Spacer()
 
-            Image(systemName: "tray")
-                .font(.system(size: 44))
-                .foregroundStyle(Color.secondary)
-                .accessibilityHidden(true)
-
-            Text("Unable to load memory")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.primary)
-
-            Text("Please try again later.")
-                .font(.body)
-                .foregroundStyle(Color.secondary)
+            EchoContainer(level: .section) {
+                EchoStatusPresentation(
+                    role: .warning,
+                    systemImage: "tray",
+                    title: "Unable to load memory",
+                    message: "Please try again later."
+                )
+            }
 
             Button {
                 viewModel.retry()
@@ -262,7 +259,7 @@ struct MemoryDetailView: View {
                 Label("Retry", systemImage: "arrow.clockwise")
                     .font(.callout)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(EchoActionButtonStyle(role: .recovery))
             .accessibilityIdentifier("memory-detail-retry-button")
 
             Spacer().frame(height: 80)
@@ -279,19 +276,14 @@ struct MemoryDetailView: View {
         VStack(spacing: 12) {
             Spacer()
 
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 44))
-                .foregroundStyle(Color.green)
-                .accessibilityHidden(true)
-
-            Text("Memory removed")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.primary)
-
-            Text("This memory has been removed from Echo.")
-                .font(.body)
-                .foregroundStyle(Color.secondary)
+            EchoContainer(level: .section) {
+                EchoStatusPresentation(
+                    role: .success,
+                    systemImage: "checkmark.circle",
+                    title: "Memory removed",
+                    message: "This memory has been removed from Echo."
+                )
+            }
 
             Spacer().frame(height: 80)
         }
@@ -305,7 +297,7 @@ struct MemoryDetailView: View {
     /// 记忆详情内容 — 单列内容流 + grouped metadata (echo-memory-canvas §3.2)
     private func detailContent(_ memory: MemoryDetailModel) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.section.points) {
                 // 媒体预览 (US-RET-001: photo/image, video/player, voice/audio)
                 mediaPreview(memory)
 
@@ -325,7 +317,7 @@ struct MemoryDetailView: View {
                 // 删除入口 (US-PRV-004)
                 deleteSection
             }
-            .padding(16)
+            .padding(EchoSpacingToken.grouped.points)
         }
         .scrollContentBackground(.hidden)
     }
@@ -342,7 +334,7 @@ struct MemoryDetailView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(.rect(cornerRadius: EchoRadiusToken.image.points))
                     .accessibilityLabel("\(memory.title) photo")
             } else if viewModel.isFixtureBacked,
                       let name = memory.mediaAssetName,
@@ -351,8 +343,15 @@ struct MemoryDetailView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(.rect(cornerRadius: EchoRadiusToken.image.points))
                     .accessibilityLabel("\(memory.title) photo")
+            } else if viewModel.photoResolutionPhase == .loading {
+                EchoContainer(level: .section) {
+                    ProgressView("Loading local photo…")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                FocusMediaUnavailableView(kind: .image)
             }
 
         case .video:
@@ -361,8 +360,10 @@ struct MemoryDetailView: View {
                let url = Bundle.main.url(forResource: name, withExtension: "mp4") {
                 VideoPlayer(player: AVPlayer(url: url))
                     .frame(height: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(.rect(cornerRadius: EchoRadiusToken.image.points))
                     .accessibilityLabel("\(memory.title) video")
+            } else {
+                FocusMediaUnavailableView(kind: .video)
             }
 
         case .audio:
@@ -370,6 +371,8 @@ struct MemoryDetailView: View {
                let name = memory.mediaAssetName,
                let url = Bundle.main.url(forResource: name, withExtension: "wav") {
                 AudioPlayerView(url: url, memoryTitle: memory.title)
+            } else {
+                FocusMediaUnavailableView(kind: .audio)
             }
 
         case .none:
@@ -379,27 +382,29 @@ struct MemoryDetailView: View {
 
     /// 主内容本体 — 标题 + 原文/译文
     private func memoryContent(_ memory: MemoryDetailModel) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(memory.title)
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.primary)
+        EchoContainer(level: .canvas) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
+                Text(memory.title)
+                    .font(EchoTypographyToken.title.font)
+                    .foregroundStyle(EchoColorToken.primaryText.color)
 
-            // 译文切换 (US-DIS-002 AC-4)
-            if memory.needsTranslation {
-                translationSection(memory)
-            } else {
-                Text(memory.originalText)
-                    .font(.body)
-                    .foregroundStyle(Color.primary)
-                    .textSelection(.enabled)
+                // 译文切换 (US-DIS-002 AC-4)
+                if memory.needsTranslation {
+                    translationSection(memory)
+                } else {
+                    Text(memory.originalText)
+                        .font(EchoTypographyToken.body.font)
+                        .foregroundStyle(EchoColorToken.primaryText.color)
+                        .textSelection(.enabled)
+                }
             }
         }
     }
 
     /// 翻译区 — 原文/译文切换 (US-DIS-002)
     private func translationSection(_ memory: MemoryDetailModel) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        EchoContainer(level: .section) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
             // 切换按钮
             Button {
                 viewModel.toggleTranslation()
@@ -408,9 +413,9 @@ struct MemoryDetailView: View {
                     memory.translationVisible ? "Show original" : "Show translation",
                     systemImage: "character.book.closed"
                 )
-                .font(.callout)
+                .font(EchoTypographyToken.action.font)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(EchoActionButtonStyle(role: .secondary))
             .accessibilityIdentifier("memory-detail-translation-toggle")
             .accessibilityValue(memory.translationVisible ? "Translation shown" : "Original shown")
 
@@ -422,56 +427,58 @@ struct MemoryDetailView: View {
                         ProgressView()
                             .controlSize(.small)
                         Text("Translating…")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.secondary)
+                            .font(EchoTypographyToken.metadata.font)
+                            .foregroundStyle(EchoColorToken.secondaryText.color)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Translating memory")
 
                 case .translated:
                     if let translated = memory.translatedText {
-                        // US-DIS-002 AC-3 (ADR-005): 源语言检测不确定 (<0.9) 时
-                        // 保留原文为主 + 语言标签，不提供译文 (翻译方向可能错误)。
-                        if let confidence = memory.sourceLanguageConfidence, confidence < 0.9 {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(memory.originalText)
-                                    .font(.body)
-                                    .foregroundStyle(Color.primary)
-                                    .textSelection(.enabled)
+                        VStack(alignment: .leading, spacing: EchoSpacingToken.compact.points) {
+                            Text(translated)
+                                .font(EchoTypographyToken.body.font)
+                                .foregroundStyle(EchoColorToken.primaryText.color)
+                                .textSelection(.enabled)
 
-                                Text("Detected · \(memory.sourceLanguage)")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            .accessibilityElement(children: .contain)
-                            .accessibilityLabel("Original: \(memory.originalText)")
-                        } else {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(translated)
-                                    .font(.body)
-                                    .foregroundStyle(Color.primary)
-                                    .textSelection(.enabled)
-
-                                Text("Translated · \(memory.preferredLanguage)")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            .accessibilityElement(children: .contain)
-                            .accessibilityLabel(String(format: EchoStrings.tr("Translated: %@"), translated))
+                            Text("Translated · \(memory.preferredLanguage)")
+                                .font(EchoTypographyToken.caption.font)
+                                .foregroundStyle(EchoColorToken.secondaryText.color)
                         }
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel(
+                            String(format: EchoStrings.tr("Translated: %@"), translated)
+                        )
+                    }
+
+                case .uncertain:
+                    if let confidence = memory.sourceLanguageConfidence, confidence < 0.9 {
+                        originalLanguagePresentation(memory)
+                    }
+
+                case .unavailable(let message):
+                    VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
+                        originalLanguagePresentation(memory)
+                        EchoStatusPresentation(
+                            role: .informational,
+                            systemImage: "character.book.closed",
+                            title: "Translation unavailable",
+                            message: EchoStrings.tr(message)
+                        )
                     }
 
                 case .error(let message):
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle")
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(EchoColorToken.warning.color)
                         Text(EchoStrings.tr(message))
-                            .font(.subheadline)
-                            .foregroundStyle(Color.secondary)
+                            .font(EchoTypographyToken.metadata.font)
+                            .foregroundStyle(EchoColorToken.secondaryText.color)
                         Button("Retry") {
                             viewModel.retryTranslation()
                         }
-                        .font(.callout)
+                        .font(EchoTypographyToken.action.font)
+                        .buttonStyle(EchoActionButtonStyle(role: .recovery))
                         .accessibilityIdentifier("memory-detail-translation-retry")
                     }
                     .accessibilityElement(children: .contain)
@@ -479,46 +486,56 @@ struct MemoryDetailView: View {
                 }
             } else {
                 Text(memory.originalText)
-                    .font(.body)
-                    .foregroundStyle(Color.primary)
+                    .font(EchoTypographyToken.body.font)
+                    .foregroundStyle(EchoColorToken.primaryText.color)
                     .textSelection(.enabled)
+            }
             }
         }
     }
 
+    private func originalLanguagePresentation(_ memory: MemoryDetailModel) -> some View {
+        VStack(alignment: .leading, spacing: EchoSpacingToken.compact.points) {
+            Text(memory.originalText)
+                .font(EchoTypographyToken.body.font)
+                .foregroundStyle(EchoColorToken.primaryText.color)
+                .textSelection(.enabled)
+
+            Text("Detected · \(memory.sourceLanguage)")
+                .font(EchoTypographyToken.caption.font)
+                .foregroundStyle(EchoColorToken.secondaryText.color)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Original: \(memory.originalText)")
+    }
+
     /// grouped metadata — 来源/时间/语言/地点/标签 (echo-memory-canvas §4.7, US-RET-004)
     private func metadataGroup(_ memory: MemoryDetailModel) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Details")
-                .font(.headline)
-                .foregroundStyle(Color.primary)
-                .accessibilityAddTraits(.isHeader)
+        EchoContainer(level: .section) {
+            EchoSectionHeader(title: "Details")
+            EchoMetadataGroup {
+                LabeledContent("Source", value: memory.sourceTypeLabel)
+                LabeledContent("Date", value: memory.dateDescription)
+                LabeledContent("Language", value: memory.sourceLanguage)
 
-            LabeledContent("Source", value: memory.sourceTypeLabel)
-            LabeledContent("Date", value: memory.dateDescription)
-            LabeledContent("Language", value: memory.sourceLanguage)
-
-            if let location = memory.location, !location.isEmpty {
-                LabeledContent("Location") {
-                    Label(location, systemImage: "mappin.and.ellipse")
-                        .foregroundStyle(Color.secondary)
-                        .labelStyle(.titleAndIcon)
+                if let location = memory.location, !location.isEmpty {
+                    LabeledContent("Location") {
+                        Label(location, systemImage: "mappin.and.ellipse")
+                            .labelStyle(.titleAndIcon)
+                    }
                 }
-            }
 
-            if !memory.tags.isEmpty {
-                LabeledContent("Tags") {
-                    Text(memory.tags.joined(separator: ", "))
-                        .foregroundStyle(Color.secondary)
+                if !memory.tags.isEmpty {
+                    LabeledContent("Tags") {
+                        Text(memory.tags.joined(separator: ", "))
+                    }
                 }
-            }
 
-            if memory.userEdited {
-                LabeledContent("Status", value: "Edited")
+                if memory.userEdited {
+                    LabeledContent("Status", value: "Edited")
+                }
             }
         }
-        .padding(14)
-        .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Memory details: \(memory.sourceTypeLabel), \(memory.dateDescription), \(memory.sourceLanguage)")
     }
@@ -594,8 +611,7 @@ struct MemoryDetailView: View {
                 .font(.callout)
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
-        .tint(.red)
+        .buttonStyle(EchoActionButtonStyle(role: .destructive))
         .accessibilityIdentifier("memory-detail-delete-button")
         .accessibilityHint("Opens a dialog to remove this memory from Echo or delete the original file")
     }
@@ -605,19 +621,18 @@ struct MemoryDetailView: View {
     /// L4 冲突视图 — 双栏对比 + 三个操作按钮
     private func conflictView(_ conflict: MemoryConflictModel) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // 冲突标题
-                Label("Content conflict", systemImage: "exclamationmark.triangle.fill")
-                    .font(.headline)
-                    .foregroundStyle(Color.orange)
-                    .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: EchoSpacingToken.section.points) {
+                EchoContainer(level: .section) {
+                    EchoStatusPresentation(
+                        role: .conflict,
+                        systemImage: "exclamationmark.triangle.fill",
+                        title: "Content conflict",
+                        message: "The external source changed while you were editing. No production resolution has been saved."
+                    )
+                }
 
-                Text("The external source was modified while you were editing. Your edits are not saved.")
-                    .font(.body)
-                    .foregroundStyle(Color.secondary)
-
-                // 双栏对比视图
-                HStack(alignment: .top, spacing: 12) {
+                // A single-column comparison preserves Focus reading order and Dynamic Type.
+                VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
                     conflictColumn(title: "Your edit", content: conflict.localDraft)
                     conflictColumn(title: "External version", content: conflict.externalVersion)
                 }
@@ -631,7 +646,7 @@ struct MemoryDetailView: View {
                             .font(.callout)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(EchoActionButtonStyle(role: .primary))
                     .accessibilityIdentifier("memory-conflict-keep-local")
 
                     Button {
@@ -641,40 +656,38 @@ struct MemoryDetailView: View {
                             .font(.callout)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(EchoActionButtonStyle(role: .secondary))
                     .accessibilityIdentifier("memory-conflict-keep-external")
 
-                    Button {
-                        // 🔮 Phase 3.9+: 差异合并界面
-                    } label: {
+                    Button { } label: {
                         Label("View diff and merge", systemImage: "rectangle.split.3x1")
                             .font(.callout)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(EchoActionButtonStyle(role: .secondary))
+                    .disabled(true)
                     .accessibilityIdentifier("memory-conflict-merge")
+                    .accessibilityHint("Merge is unavailable until the production conflict boundary is connected")
                 }
             }
-            .padding(16)
+            .padding(EchoSpacingToken.grouped.points)
         }
         .scrollContentBackground(.hidden)
     }
 
     /// 冲突对比列
     private func conflictColumn(title: String, content: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.secondary)
+        EchoContainer(level: .card) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.compact.points) {
+                Text(title)
+                    .font(EchoTypographyToken.caption.font.weight(.semibold))
+                    .foregroundStyle(EchoColorToken.secondaryText.color)
 
-            Text(content)
-                .font(.body)
-                .foregroundStyle(Color.primary)
+                Text(content)
+                    .font(EchoTypographyToken.body.font)
+                    .foregroundStyle(EchoColorToken.primaryText.color)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Color(.systemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .combine)
     }
 
@@ -686,41 +699,30 @@ struct MemoryDetailView: View {
         VStack(spacing: 16) {
             Spacer()
 
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(Color.yellow)
-                .symbolRenderingMode(.hierarchical)
-                .accessibilityHidden(true)
-
-            Text(EchoStrings.tr(errorTitle(for: level)))
-                .font(.headline)
-                .foregroundStyle(Color.primary)
-
-            Text(EchoStrings.tr(errorMessage(for: level)))
-                .font(.body)
-                .foregroundStyle(Color.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+            EchoContainer(level: .section) {
+                EchoStatusPresentation(
+                    role: isRecoverable(level) ? .warning : .blocking,
+                    systemImage: "exclamationmark.triangle.fill",
+                    title: EchoStrings.tr(errorTitle(for: level)),
+                    message: EchoStrings.tr(errorMessage(for: level))
+                )
+            }
 
             if isRecoverable(level) {
                 Button {
                     viewModel.retry()
                 } label: {
                     Label("Retry", systemImage: "arrow.clockwise")
-                        .font(.callout)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 10))
-                        .foregroundStyle(Color.white)
+                        .font(EchoTypographyToken.action.font)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(EchoActionButtonStyle(role: .recovery))
                 .accessibilityIdentifier("memory-detail-retry-button")
             }
 
             Spacer().frame(height: 80)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
+        .background(EchoColorToken.canvasBackground.color)
     }
 
     // MARK: - Helpers
@@ -744,6 +746,44 @@ struct MemoryDetailView: View {
         switch level {
         case .l2Recoverable: return true
         case .l3Blocking:    return false
+        }
+    }
+}
+
+private struct FocusMediaUnavailableView: View {
+    let kind: MediaKind
+
+    var body: some View {
+        EchoContainer(level: .section) {
+            EchoStatusPresentation(
+                role: .informational,
+                systemImage: systemImage,
+                title: "Media unavailable",
+                message: message
+            )
+        }
+        .accessibilityIdentifier("memory-detail-media-unavailable")
+    }
+
+    private var systemImage: String {
+        switch kind {
+        case .image: "photo"
+        case .video: "video"
+        case .audio: "waveform"
+        case .none: "doc.text"
+        }
+    }
+
+    private var message: String {
+        switch kind {
+        case .image:
+            "This local photo could not be resolved with the current permission."
+        case .video:
+            "Video playback is unavailable until the local source is connected."
+        case .audio:
+            "Audio playback is unavailable until the local source is connected."
+        case .none:
+            "This memory has no media attachment."
         }
     }
 }

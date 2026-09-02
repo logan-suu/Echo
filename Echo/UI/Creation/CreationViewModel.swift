@@ -6,11 +6,12 @@
 //            docs/ui/echo-memory-canvas-style.md §3.2 (Focus surfaces — 单列 + grouped metadata),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.9 - 整合所有 ViewModel 与 Pipeline + 创作保存 UI
-// AC 覆盖: US-SYN-003 AC-1 ✅ (模板选择), AC-2 ✅ (引用检索结果, 溯源锚点), AC-3 ✅ (预览/复制/导出),
-//          AC-4 ✅ (保存到备忘录按钮), AC-5 ✅ (保存成功 Toast+链接 / 失败 L2 Toast+重试),
+// AC coverage: US-SYN-003 AC-1 ✅ (template selection), AC-2 ✅ (grounded citations),
+//              AC-3 ✅ (preview/copy/export), AC-4 ✅ (system share handoff),
+//              AC-5 ✅ (visible L2 recovery when payload preparation fails),
 //          US-SYN-004 AC-4 ✅ (分享/导出/打印), AC-5 ✅ (保存逻辑与 SYN-003 一致, 标题含报告周期),
 //          US-SYN-005 AC-4 ✅ (Prompt 草稿可编辑确认), AC-6 ✅ (重置为默认 Prompt)
-//          PR #44 review: W-3 ✅ (saveTask 与 generateTask 分离, 取消保存恢复 .generated)
+//              Task 4.0b ✅ (truthful NoSource export, native share UI, real PDF attachment)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
@@ -19,6 +20,35 @@
 
 import Foundation
 import SwiftUI
+
+struct CreationSharePayload: Identifiable, Equatable, Sendable {
+    enum Kind: Equatable, Sendable {
+        case text
+        case markdown
+        case pdf
+        case notesHandoff
+    }
+
+    let id: UUID
+    let kind: Kind
+    let text: String
+    let previewTitle: String
+    let attachmentURL: URL?
+
+    init(
+        id: UUID = UUID(),
+        kind: Kind,
+        text: String,
+        previewTitle: String,
+        attachmentURL: URL? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.text = text
+        self.previewTitle = previewTitle
+        self.attachmentURL = attachmentURL
+    }
+}
 
 // MARK: - CreationViewModel
 
@@ -40,8 +70,8 @@ import SwiftUI
 /// idle → generating → generated
 ///                     → empty
 ///                     → error(L2)
-/// generated → saving → saved
-///                    → error(L2, save)
+/// generated → share handoff (system-owned) → generated
+///                                → error(L2, preparation/presentation)
 /// ```
 @MainActor
 @Observable
@@ -60,10 +90,6 @@ final class CreationViewModel {
         case empty
         /// 错误状态 — L2 重试
         case error(ErrorLevel)
-        /// 保存到备忘录中
-        case saving
-        /// 已保存 — Toast + 链接
-        case saved
     }
 
     /// 错误等级 — 对应 AGENTS.md §4.4 L1~L4
@@ -109,22 +135,31 @@ final class CreationViewModel {
 
     /// 导出格式确认弹窗是否呈现
     var isExportPickerPresented: Bool = false
-    /// 分享 Sheet 是否呈现
-    var isSharePresented: Bool = false
+    /// Prepared local payload for the user-mediated system share handoff.
+    var sharePayload: CreationSharePayload? {
+        didSet {
+            guard let previousURL = oldValue?.attachmentURL,
+                  previousURL != sharePayload?.attachmentURL else { return }
+            try? FileManager.default.removeItem(at: previousURL)
+        }
+    }
 
-    // MARK: - Toast State (US-SYN-003 AC-5)
-
-    /// 保存成功 Toast 消息
-    private(set) var saveToastMessage: String?
-    /// 已保存笔记链接
-    private(set) var noteLink: String?
+    /// Compatibility binding used by existing integration tests and dismissal paths.
+    var isSharePresented: Bool {
+        get { sharePayload != nil }
+        set {
+            if !newValue {
+                sharePayload = nil
+            }
+        }
+    }
 
     // MARK: - Dependencies
 
     /// 当前活跃的生成 Task
     private var generateTask: Task<Void, Never>?
-    /// 当前活跃的保存 Task — 与 generateTask 分离 (PR #44 review W-3)
-    private var saveTask: Task<Void, Never>?
+    /// Currently active PDF generation task.
+    private var exportTask: Task<Void, Never>?
     /// UI 切片模式模拟创作源 — fixture 注入
     private var stubCreation: CreationModel?
     /// Production creation pipeline. A missing runtime must fail closed and never load fixture output.
@@ -270,9 +305,7 @@ final class CreationViewModel {
             periodType: output.periodType,
             paragraphs: paragraphs,
             sourceMemoryCount: output.sourceMemoryCount,
-            emptyReason: output.emptyReason,
-            noteLink: nil,
-            savePhase: .none
+            emptyReason: output.emptyReason
         )
     }
 
@@ -305,13 +338,21 @@ final class CreationViewModel {
     /// 3F.9 (ADR-013 决策 4): 经 `CreationExportService` 生成导出内容后呈现系统 share sheet。
     func export(format: ExportFormat) {
         isExportPickerPresented = false
-        isSharePresented = true
+        exportTask?.cancel()
+        switch format {
+        case .pdf:
+            exportTask = Task { [weak self] in
+                await self?.preparePDFSharePayload()
+            }
+        case .markdown:
+            prepareSharePayload(kind: .markdown)
+        }
     }
 
     /// 呈现分享/打印 Sheet (US-SYN-004 AC-4)。
     func presentShare() {
         guard viewState == .generated else { return }
-        isSharePresented = true
+        prepareSharePayload(kind: .text)
     }
 
     /// 保存到备忘录 (US-SYN-003 AC-4)。
@@ -320,15 +361,98 @@ final class CreationViewModel {
     /// 禁止 `notes://` 深链与私有 NoteStore 直写。直接呈现系统分享面板，由用户选择保存到备忘录。
     func saveToNotes() {
         guard viewState == .generated else { return }
-        isSharePresented = true
+        prepareSharePayload(kind: .notesHandoff)
     }
 
-    /// 打开已保存的笔记链接 (US-SYN-003 AC-5)。
-    ///
-    /// 🔮 Phase 3.9+: 跳转至该笔记。当前 UI 切片保留链接展示。
-    func openNote() {
-        guard let link = noteLink, let url = URL(string: link) else { return }
-        UIApplication.shared.open(url)
+    private func prepareSharePayload(kind: CreationSharePayload.Kind) {
+        guard viewState == .generated, let creation else {
+            sharePayload = nil
+            viewState = .error(.l2Recoverable(
+                message: "Unable to prepare this creation for sharing. Please try again."
+            ))
+            return
+        }
+
+        let output = Self.creativeOutput(from: creation)
+        let text: String
+        switch kind {
+        case .markdown:
+            text = CreationExportService.markdown(from: output)
+        case .text, .notesHandoff:
+            text = CreationExportService.shareText(from: output)
+        case .pdf:
+            assertionFailure("PDF payloads must be prepared by preparePDFSharePayload()")
+            return
+        }
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            sharePayload = nil
+            viewState = .error(.l2Recoverable(
+                message: "Unable to prepare this creation for sharing. Please try again."
+            ))
+            return
+        }
+
+        sharePayload = CreationSharePayload(
+            kind: kind,
+            text: text,
+            previewTitle: creation.title ?? "Echo Creation"
+        )
+    }
+
+    private func preparePDFSharePayload() async {
+        guard viewState == .generated, let creation else {
+            sharePayload = nil
+            viewState = .error(.l2Recoverable(
+                message: "Unable to prepare this creation for sharing. Please try again."
+            ))
+            return
+        }
+
+        do {
+            let data = try await CreationExportService.pdf(from: Self.creativeOutput(from: creation))
+            try Task.checkCancellation()
+            let fileURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("Echo-Creation-\(UUID().uuidString)")
+                .appendingPathExtension("pdf")
+            try data.write(to: fileURL, options: .atomic)
+            if Task.isCancelled {
+                try? FileManager.default.removeItem(at: fileURL)
+                return
+            }
+            sharePayload = CreationSharePayload(
+                kind: .pdf,
+                text: "",
+                previewTitle: creation.title ?? "Echo Creation",
+                attachmentURL: fileURL
+            )
+        } catch is CancellationError {
+            return
+        } catch {
+            sharePayload = nil
+            viewState = .error(.l2Recoverable(
+                message: "Unable to prepare this creation for sharing. Please try again."
+            ))
+        }
+    }
+
+    private static func creativeOutput(from creation: CreationModel) -> CreativeOutput {
+        let template = CreativeTemplate(rawValue: creation.selectedTemplate.rawValue) ?? .letter
+        return CreativeOutput(
+            template: template,
+            title: creation.title,
+            periodType: creation.periodType,
+            paragraphs: creation.paragraphs.map { paragraph in
+                GroundedParagraph(
+                    id: paragraph.id,
+                    text: paragraph.text,
+                    anchor: paragraph.citation.map {
+                        SourceAnchor(memoryID: $0.memoryId, hasSource: $0.hasSource)
+                    }
+                )
+            },
+            sourceMemoryCount: creation.sourceMemoryCount,
+            emptyReason: creation.emptyReason
+        )
     }
 
     /// 重试 (L2 恢复路径) — error → generating; empty → generating。
@@ -390,12 +514,6 @@ final class CreationViewModel {
         } else {
             viewState = .generated
         }
-        noteLink = model.noteLink
-        if model.savePhase == .saved {
-            // ADR-013 决策 4: 无 notes:// 深链 — saved 态保留 Toast，不提供伪造链接
-            saveToastMessage = "Saved to Notes: \(model.title ?? "Echo creation")"
-            viewState = .saved
-        }
     }
 
     /// 注入 Prompt 草稿态 (Preview / 测试)。
@@ -430,7 +548,8 @@ final class CreationViewModel {
     func onDisappear() {
         generateTask?.cancel()
         generateTask = nil
-        saveTask?.cancel()
-        saveTask = nil
+        exportTask?.cancel()
+        exportTask = nil
+        sharePayload = nil
     }
 }

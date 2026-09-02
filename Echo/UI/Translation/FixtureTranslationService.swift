@@ -21,6 +21,7 @@ import Foundation
 /// - 已知文本 → 固定译文 + 固定置信度
 /// - 未知文本 → 抛 L2 错误 (translation.serviceUnavailable)
 struct FixtureTranslationService: TranslationService {
+    private static let unsupportedText = "这是一条语言对不受支持的记忆，保留原文与语言标签。"
     /// 确定性 zh-Hans → en-US 翻译表。
     /// 键为源文本，值为 (译文, 源语言检测置信度)。
     private static let zhEnMap: [String: (String, Double)] = [
@@ -38,6 +39,9 @@ struct FixtureTranslationService: TranslationService {
     ) async throws -> TranslationResult {
         guard targetLanguage == "en-US" else {
             throw TranslationError.unsupportedLanguage(targetLanguage)
+        }
+        guard text != Self.unsupportedText else {
+            throw TranslationError.unsupportedLanguage("zh-Hans→en-US")
         }
         guard let (translatedText, sourceLanguageConfidence) = Self.zhEnMap[text] else {
             throw TranslationError.serviceUnavailable
