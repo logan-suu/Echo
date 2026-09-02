@@ -67,6 +67,8 @@ struct TaskBalancedCanvasTests {
         let resume = try loadSource("Echo/UI/ResumeProgress/ResumeProgressViewModel.swift")
         let plan = try loadSource("docs/05-planning/开发计划安排文档.md")
         let style = try loadSource("docs/ui/echo-memory-canvas-style.md")
+        let uiReadme = try loadSource("docs/ui/README.md")
+        let uiArchitecture = try loadSource("docs/ui/architecture.md")
 
         #expect(onboarding.components(separatedBy: ".buttonStyle(consentActionStyle)").count - 1 == 2)
         #expect(settings.contains("encrypted Echo migration package"))
@@ -81,6 +83,10 @@ struct TaskBalancedCanvasTests {
         #expect(settings.contains("message: EchoStrings.tr(\"Please try again.\")"))
         let resumePrompt = try loadSource("Echo/UI/ResumeProgress/ResumeProgressPromptView.swift")
         #expect(resumePrompt.contains("title: EchoStrings.tr(\"Unable to check saved progress\")"))
+        #expect(uiReadme.contains("最后同步**：2026-09-02"))
+        #expect(uiArchitecture.contains("`DeviceMigrationActor` 负责编排"))
+        #expect(uiArchitecture.contains("`DeviceMigrationService.exportPackage` / `importPackage`"))
+        #expect(uiArchitecture.contains("禁止使用 `PhotoSearchMigrationActor`"))
     }
 
     @Test("AC-5: custom Task motion respects Reduce Motion")

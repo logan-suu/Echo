@@ -211,7 +211,7 @@ enum State {
 - `4.0c` 仅允许修改六个 Task domain 的 View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移、系统权限语义、任务调度和领域副作用保持只读。生产依赖缺失时必须映射为明确不可用/错误，禁止回退 fixture 或伪造成功。
 - 权限编排是独立生产边界：PIPL consent gate 先于受保护数据请求；PhotoKit 仅由用户选择连接照片资料库触发；notification/location/HealthKit 仅由对应 Awakening opt-in 触发。该修正由 `4.0f` 交付，不得夹带进 `4.0c` 视觉切片。
 - `TaskProgress` 只描述持久化进度，不能单独重建原始 queued job。继续/重新开始必须由任务类型注册表或 composition-owned launcher 重建同一类任务，并将用户选择、resume point、成功/失败写入既有审计边界；该生产闭环由 `4.0g` 交付，`4.0c`/`4.4` 不得以 prompt fixture 或只读进度证明完成。
-- Settings 迁移展示必须消费 ADR-008/ADR-010 的真实加密 migration service；迁移包与“导出全部原始媒体”是不同概念。ViewModel 不持有密钥、不推断分享目标，也不复制 package/merge/rollback 规则。
+- Settings 迁移展示必须消费 ADR-008/ADR-010 的真实加密 migration service：`DeviceMigrationActor` 负责编排，`DeviceMigrationService.exportPackage` / `importPackage` 负责 ECHOMIG1 加密迁移包的导出与导入；禁止使用 `PhotoSearchMigrationActor` 代替设备迁移边界。迁移包与“导出全部原始媒体”是不同概念。ViewModel 不持有密钥、不推断分享目标，也不复制 package/merge/rollback 规则。
 - `4.0b` 仅允许修改 Focus View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移和领域写语义保持只读。真实 adapter 缺少编辑重索引、冲突持久化或原始来源删除边界时，UI 必须映射为明确不可用/错误，不得在视觉切片中复制写规则或以 fixture 成功代替生产行为。
 - Detail 生产媒体经既有 source adapter 在当前 UserPolicy 下解析；解析失败不回退 bundled sample。Creation 只消费 grounded output 和稳定 source anchor；Notes 交接使用系统 share sheet 且不产生 Echo 可验证的“已保存”状态。Translation 继续作为 Detail 内 cache-first 的展示层能力，NLTagger `<0.9` 或语言对不支持时保留原文。
 - `4.0` 的 `surface_families = [discovery, focus, task]` 表示共享基础必须支持三类 family，不表示 AppShell 同时属于三类 family，也不授权 `4.0` 修改具体功能页。
