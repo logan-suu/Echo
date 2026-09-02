@@ -2320,7 +2320,7 @@
             "UIAutomation/Contracts/schemas/action-v1.json",
             "UIAutomation/Contracts/schemas/journey-v1.json"
           ],
-          "status": "review",
+          "status": "done",
           "dependencies": [
             "4.0"
           ],
@@ -2351,18 +2351,25 @@
             "六个 Task surface 的 surface/state/action/journey 全部通过 v1 schema 与交叉引用校验；无缺失 state/action、无孤立或悬空稳定 ID",
             "双语、Dynamic Type、VoiceOver、Reduce Motion、light/dark、对比度与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-02T20:56:20Z",
-          "notes": "2026-09-02 reasonableness review retained the approved Task visual direction but made 4.0c a truthful presentation-only slice. Story traceability now covers all six domains. Launch-time notification/location/HealthKit permission chaining and nonfunctional production Continue/Restart were removed from 4.0c acceptance ownership and assigned to 4.0f/4.0g; migration wording was aligned with ADR-008/ADR-010. The review also found legacy Task contract instances that did not satisfy the declared v1 schema or resolve all state/action references. After user confirmation, TDD implementation migrated Settings, Onboarding, AwakeningSettings, BackgroundTask, Degradation, and ResumeProgress to the shared echo-memory-canvas Task presentation while retaining native Form/List/Sheet/Alert/confirmationDialog containers and leaving Core, permission timing, and task reconstruction untouched. Settings now distinguishes encrypted Echo migration packages from prohibited original-media export; awakening schedule copy no longer promises a fixed 09:00 execution time; consent actions share equal visual prominence; motion follows the shared Reduce Motion policy. All six surface families now have schema-compatible state/action/journey graphs with stable IDs and resolved references. Red evidence initially reported 35 issues. The focused 4.0c suite passed 6/6; the cumulative Balanced Canvas regression passed 45/45; SwiftLint reported zero violations; 164 contracts validated with deterministic gated-surface resolution; the String Catalog includes both en-US and zh-Hans for the new truthful copy; JSON parsing and diff checks passed. Human visual approval was confirmed at 2026-09-02T20:01:07Z. commit-pr-echo preflight passed at 2026-09-02T20:06:28Z: branch naming and remote uniqueness were verified, GitHub CLI authentication was valid, SwiftLint reported zero violations across 85 files, the focused 4.0c suite passed 6/6 serially on iPhone 17 Pro, localization parity was 100% across 363 keys, 164 accessibility contracts validated, no Actor/Pipeline watermark scope changed, and no 4.0c PR-review deferral was pending. Delivery branch: feature/task-balanced-canvas-US-SET-001. PR #70 was created against dev-1.0 at 2026-09-02T20:08:22Z with the complete task-level AC coverage table and verified scope exclusions for 4.0f/4.0g. PR review at 2026-09-02T20:41:18Z audited all 14 inline CodeRabbit comments. Thirteen comments were valid or partially valid and were repaired: stale restart and permission documentation, nonlocalized status strings, malformed v1 version acceptance, missing retry/action bindings, inaccurate awakening/onboarding/settings outcomes, terminal null enforcement, and task-scoped acceptance gates with machine-readable permission requirements. The onboarding.permissionSkip suggestion was rejected because that action is executable only from permissionDenied, where it was already declared; adding it to permissions would make the contract false. The missing 4.0f production implementation is an existing explicit follow-up task, not a 4.0c deferral. Review Red reproduced 11 issues; repaired Task tests passed 6/6 and cumulative Balanced Canvas tests passed 45/45 serially. SwiftLint remained at zero violations, localization stayed at 363-key parity, and the strengthened validator passed all 165 contracts. Follow-up review at 2026-09-02T20:56:20Z audited the two summary-only comments omitted from the inline pass: the stale docs/ui synchronization date and ambiguous migration boundary were valid and fixed with regression assertions. The docstring-coverage warning was rejected as non-project-gating boilerplate for private SwiftUI builders and direct action methods. Focused Red reproduced four issues, then Green passed 6/6. No review finding was deferred.",
+          "last_updated": "2026-09-02T21:45:10Z",
+          "notes": "2026-09-02 reasonableness review retained the approved Task visual direction but made 4.0c a truthful presentation-only slice. Story traceability now covers all six domains. Launch-time notification/location/HealthKit permission chaining and nonfunctional production Continue/Restart were removed from 4.0c acceptance ownership and assigned to 4.0f/4.0g; migration wording was aligned with ADR-008/ADR-010. The review also found legacy Task contract instances that did not satisfy the declared v1 schema or resolve all state/action references. After user confirmation, TDD implementation migrated Settings, Onboarding, AwakeningSettings, BackgroundTask, Degradation, and ResumeProgress to the shared echo-memory-canvas Task presentation while retaining native Form/List/Sheet/Alert/confirmationDialog containers and leaving Core, permission timing, and task reconstruction untouched. Settings now distinguishes encrypted Echo migration packages from prohibited original-media export; awakening schedule copy no longer promises a fixed 09:00 execution time; consent actions share equal visual prominence; motion follows the shared Reduce Motion policy. All six surface families now have schema-compatible state/action/journey graphs with stable IDs and resolved references. Red evidence initially reported 35 issues. The focused 4.0c suite passed 6/6; the cumulative Balanced Canvas regression passed 45/45; SwiftLint reported zero violations; 164 contracts validated with deterministic gated-surface resolution; the String Catalog includes both en-US and zh-Hans for the new truthful copy; JSON parsing and diff checks passed. Human visual approval was confirmed at 2026-09-02T20:01:07Z. commit-pr-echo preflight passed at 2026-09-02T20:06:28Z: branch naming and remote uniqueness were verified, GitHub CLI authentication was valid, SwiftLint reported zero violations across 85 files, the focused 4.0c suite passed 6/6 serially on iPhone 17 Pro, localization parity was 100% across 363 keys, 164 accessibility contracts validated, no Actor/Pipeline watermark scope changed, and no 4.0c PR-review deferral was pending. Delivery branch: feature/task-balanced-canvas-US-SET-001. PR #70 was created against dev-1.0 at 2026-09-02T20:08:22Z with the complete task-level AC coverage table and verified scope exclusions for 4.0f/4.0g. PR review at 2026-09-02T20:41:18Z audited all 14 inline CodeRabbit comments. Thirteen comments were valid or partially valid and were repaired: stale restart and permission documentation, nonlocalized status strings, malformed v1 version acceptance, missing retry/action bindings, inaccurate awakening/onboarding/settings outcomes, terminal null enforcement, and task-scoped acceptance gates with machine-readable permission requirements. The onboarding.permissionSkip suggestion was rejected because that action is executable only from permissionDenied, where it was already declared; adding it to permissions would make the contract false. The missing 4.0f production implementation is an existing explicit follow-up task, not a 4.0c deferral. Review Red reproduced 11 issues; repaired Task tests passed 6/6 and cumulative Balanced Canvas tests passed 45/45 serially. SwiftLint remained at zero violations, localization stayed at 363-key parity, and the strengthened validator passed all 165 contracts. Follow-up review at 2026-09-02T20:56:20Z audited the two summary-only comments omitted from the inline pass: the stale docs/ui synchronization date and ambiguous migration boundary were valid and fixed with regression assertions. The docstring-coverage warning was rejected as non-project-gating boilerplate for private SwiftUI builders and direct action methods. Focused Red reproduced four issues, then Green passed 6/6. No review finding was deferred. PR #70 was human-merged at 2026-09-02T21:41:33Z with merge commit 5f7bd2c191c32c76e260e4081c1ef3600f0285a4; post-merge finalization promoted dependent tasks 4.0f and 4.0g to ready.",
           "status_transitions": {
-            "review_at": "2026-09-02T19:56:30Z"
+            "review_at": "2026-09-02T19:56:30Z",
+            "done_at": "2026-09-02T21:41:33Z"
           },
           "pr": {
             "number": 70,
             "url": "https://github.com/logan-suu/Echo/pull/70",
             "head": "feature/task-balanced-canvas-US-SET-001",
             "base": "dev-1.0",
-            "created_at": "2026-09-02T20:08:22Z"
-          }
+            "created_at": "2026-09-02T20:08:22Z",
+            "merged_at": "2026-09-02T21:41:33Z",
+            "merge_commit": "5f7bd2c191c32c76e260e4081c1ef3600f0285a4",
+            "merged_by": "logan-suu"
+          },
+          "merged_at": "2026-09-02T21:41:33Z",
+          "merge_commit": "5f7bd2c191c32c76e260e4081c1ef3600f0285a4",
+          "merged_by": "logan-suu"
         },
         {
           "id": "4.0d",
@@ -2492,7 +2499,7 @@
             "UIAutomation/Contracts/schemas/journey-v1.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "4.0c"
           ],
@@ -2516,8 +2523,8 @@
             "拒绝、撤权、重复进入与重启均无自动重复请求，已授权能力继续可用",
             "双语、VoiceOver、Dynamic Type、Reduce Motion 与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-02T19:10:59Z",
-          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior."
+          "last_updated": "2026-09-02T21:45:10Z",
+          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior. Automatically promoted from backlog to ready after dependency 4.0c completed."
         },
         {
           "id": "4.0g",
@@ -2544,7 +2551,7 @@
             "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "4.0c"
           ],
@@ -2568,8 +2575,8 @@
             "backgroundTaskInterrupted 审计包含真实 action、resumePoint、userChoiceOnRestart 且无原文",
             "双设备 no-fixture journey 与无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-02T19:10:59Z",
-          "notes": "Created by the 4.0c reasonableness review. Production currently reads ProgressActor rows but Continue/Restart intentionally returns an unavailable error because no task reconstruction/launcher boundary is connected; prompt fixtures cannot satisfy US-SYS-001 AC-3/AC-4."
+          "last_updated": "2026-09-02T21:45:10Z",
+          "notes": "Created by the 4.0c reasonableness review. Production currently reads ProgressActor rows but Continue/Restart intentionally returns an unavailable error because no task reconstruction/launcher boundary is connected; prompt fixtures cannot satisfy US-SYS-001 AC-3/AC-4. Automatically promoted from backlog to ready after dependency 4.0c completed."
         },
         {
           "id": "4.1",
