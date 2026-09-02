@@ -4,7 +4,7 @@
   "title": "Action Contract",
   "description": "A user or system event on a Surface",
   "type": "object",
-  "required": ["actionId", "source", "targetIntent"],
+  "required": ["actionId", "source", "targetIntent", "version"],
   "properties": {
     "actionId": { "type": "string", "description": "Stable identifier" },
     "source": { "type": "string", "enum": ["user", "system"], "description": "Origin of the action" },

@@ -4,7 +4,7 @@
   "title": "State Contract",
   "description": "A deterministic UI state of a Surface",
   "type": "object",
-  "required": ["stateId", "surfaceId", "dataConditions", "allowedActions"],
+  "required": ["stateId", "surfaceId", "dataConditions", "allowedActions", "version"],
   "properties": {
     "stateId": { "type": "string", "description": "Stable identifier (e.g., 'loaded', 'empty', 'loading', 'error', 'permission-denied')" },
     "surfaceId": { "type": "string", "description": "Foreign key → surface.surfaceId" },

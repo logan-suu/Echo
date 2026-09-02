@@ -65,6 +65,8 @@ struct TaskBalancedCanvasTests {
         let settings = try loadSource("Echo/UI/Settings/SettingsView.swift")
         let awakening = try loadSource("Echo/UI/Awakening/AwakeningSettingsView.swift")
         let resume = try loadSource("Echo/UI/ResumeProgress/ResumeProgressViewModel.swift")
+        let plan = try loadSource("docs/05-planning/开发计划安排文档.md")
+        let style = try loadSource("docs/ui/echo-memory-canvas-style.md")
 
         #expect(onboarding.components(separatedBy: ".buttonStyle(consentActionStyle)").count - 1 == 2)
         #expect(settings.contains("encrypted Echo migration package"))
@@ -73,6 +75,12 @@ struct TaskBalancedCanvasTests {
         #expect(!awakening.contains("runs daily at 9:00 AM"))
         #expect(resume.contains("Task continuation is unavailable because no production task reconstruction boundary is connected."))
         #expect(resume.contains("Task restart is unavailable because no production task launcher is connected."))
+        #expect(!plan.contains("重启恢复的基本闭环"))
+        #expect(!style.contains("照片→通知→位置→健康"))
+        #expect(settings.contains("title: EchoStrings.tr(\"Unable to Load Settings\")"))
+        #expect(settings.contains("message: EchoStrings.tr(\"Please try again.\")"))
+        let resumePrompt = try loadSource("Echo/UI/ResumeProgress/ResumeProgressPromptView.swift")
+        #expect(resumePrompt.contains("title: EchoStrings.tr(\"Unable to check saved progress\")"))
     }
 
     @Test("AC-5: custom Task motion respects Reduce Motion")
@@ -149,6 +157,78 @@ struct TaskBalancedCanvasTests {
 
         #expect(referencedActionIDs.isSubset(of: declaredActionIDs))
         #expect(declaredActionIDs.isSubset(of: referencedActionIDs))
+
+        #expect(isV1Compatible("1.0.0"))
+        #expect(isV1Compatible("1.12.3"))
+        #expect(!isV1Compatible("1"))
+        #expect(!isV1Compatible("1.alpha"))
+        #expect(!isV1Compatible("1.0.0.0"))
+
+        for schema in ["surface", "state", "action", "journey"] {
+            let contract = try loadJSON("UIAutomation/Contracts/schemas/\(schema)-v1.json")
+            let required = try #require(contract["required"] as? [String])
+            #expect(required.contains("version"))
+        }
+
+        let awakeningError = try loadJSON(
+            "UIAutomation/Contracts/instances/awakening-settings-state-error.json"
+        )
+        #expect(awakeningError["allowedActions"] as? [String] == ["awakening.retry"])
+        let awakeningRetry = try loadJSON(
+            "UIAutomation/Contracts/instances/awakening-settings-action-retry.json"
+        )
+        #expect(awakeningRetry["targetIntent"] as? String == "AwakeningSettingsViewModel.loadSettings()")
+        let awakeningSurface = try loadJSON(
+            "UIAutomation/Contracts/instances/awakening-settings-surface.json"
+        )
+        let awakeningOutputs = try #require(awakeningSurface["outputs"] as? [String: Any])
+        let awakeningTargets = try #require(awakeningOutputs["interactionTargets"] as? String)
+        #expect(awakeningTargets.contains("Task 4.0f"))
+
+        let deleteAction = try loadJSON(
+            "UIAutomation/Contracts/instances/settings-action-startDeleteData.json"
+        )
+        let deleteOutcome = try #require(deleteAction["expectedOutcome"] as? String)
+        #expect(deleteOutcome.contains("not available"))
+
+        let closeAction = try loadJSON(
+            "UIAutomation/Contracts/instances/background-tasks-action-close.json"
+        )
+        #expect(closeAction["targetIntent"] as? String == "BackgroundTaskViewModel.closePanel()")
+        let backgroundSource = try loadSource("Echo/UI/BackgroundTask/BackgroundTaskPanelView.swift")
+        #expect(backgroundSource.contains("viewModel.closePanel()"))
+
+        let settingsAction = try loadJSON(
+            "UIAutomation/Contracts/instances/degradation-banner-action-openSettings.json"
+        )
+        #expect(settingsAction["targetIntent"] as? String == "DegradationBannerView.openSystemSettings()")
+        let degradationSource = try loadSource("Echo/UI/Degradation/DegradationBannerView.swift")
+        #expect(degradationSource.contains("private func openSystemSettings()"))
+
+        let onboardingSurface = try loadJSON(
+            "UIAutomation/Contracts/instances/onboarding-surface.json"
+        )
+        let onboardingOutputs = try #require(onboardingSurface["outputs"] as? [String: Any])
+        let visibleContent = try #require(onboardingOutputs["visibleContent"] as? String)
+        #expect(visibleContent.contains(
+            "privacy consent -> optional Connect Photos choice -> language"
+        ))
+
+        let validator = try loadSource("Scripts/validate_accessibility_contracts.py")
+        #expect(validator.contains("null actionId is allowed only on the final step"))
+
+        let acceptancePolicy = try loadJSON("UIAutomation/Policies/acceptance-policy.json")
+        let gates = try #require(acceptancePolicy["verification_gates"] as? [String: Any])
+        #expect(gates["task_truthfulness"] == nil)
+        for (gateID, taskID) in [
+            ("task_presentation_truthfulness", "4.0c"),
+            ("task_progressive_permissions", "4.0f"),
+            ("task_recovery_truthfulness", "4.0g"),
+        ] {
+            let gate = try #require(gates[gateID] as? [String: Any])
+            #expect(gate["applicableTaskIds"] as? [String] == [taskID])
+            #expect(gate["requiredAssertions"] is [String: Any])
+        }
     }
 
     private var taskViewPaths: [String] {
@@ -163,7 +243,10 @@ struct TaskBalancedCanvasTests {
     }
 
     private func isV1Compatible(_ version: String?) -> Bool {
-        version?.split(separator: ".").first == "1"
+        guard let version else { return false }
+        let parts = version.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 3, parts[0] == "1" else { return false }
+        return parts.dropFirst().allSatisfy { !$0.isEmpty && $0.allSatisfy(\.isNumber) }
     }
 
     private func loadJSON(_ relativePath: String) throws -> [String: Any] {

@@ -117,8 +117,8 @@ struct SettingsView: View {
                 EchoStatusPresentation(
                     role: .warning,
                     systemImage: "exclamationmark.triangle.fill",
-                    title: "Unable to Load Settings",
-                    message: "Please try again."
+                    title: EchoStrings.tr("Unable to Load Settings"),
+                    message: EchoStrings.tr("Please try again.")
                 )
                 Button(action: { Task { await viewModel.retry() } }) {
                     Label("Retry", systemImage: "arrow.clockwise")

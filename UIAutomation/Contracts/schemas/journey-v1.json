@@ -4,7 +4,7 @@
   "title": "Journey Contract",
   "description": "A cross-surface behavioral path",
   "type": "object",
-  "required": ["journeyId", "steps", "preconditionFixtures"],
+  "required": ["journeyId", "steps", "preconditionFixtures", "version"],
   "properties": {
     "journeyId": { "type": "string", "description": "Stable identifier" },
     "steps": {
@@ -15,7 +15,7 @@
         "properties": {
           "surfaceId": { "type": "string" },
           "stateId": { "type": "string" },
-          "actionId": { "type": ["string", "null"], "description": "Action that advances this step; null marks a terminal observation-only step" }
+          "actionId": { "type": ["string", "null"], "description": "Action that advances this step; null marks the final terminal observation-only step and is enforced by the repository contract validator" }
         }
       }
     },

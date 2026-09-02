@@ -102,7 +102,7 @@ struct ResumeProgressPromptView: View {
                 EchoStatusPresentation(
                     role: .warning,
                     systemImage: "exclamationmark.triangle.fill",
-                    title: "Unable to check saved progress",
+                    title: EchoStrings.tr("Unable to check saved progress"),
                     message: EchoStrings.tr(errorMessage(for: level))
                 )
                 Button(action: { viewModel.retry() }) {

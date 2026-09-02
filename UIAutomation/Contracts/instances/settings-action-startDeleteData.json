@@ -3,7 +3,7 @@
   "actionId": "settings.startDeleteData",
   "source": "user",
   "targetIntent": "SettingsViewModel.startDeleteData()",
-  "expectedOutcome": "Starts the documented cooling period after explicit confirmation",
+  "expectedOutcome": "Closes confirmation and reports that the 24-hour deletion cooling-period service is not available in this build",
   "requiresConfirmation": true,
   "version": "1.0.0"
 }

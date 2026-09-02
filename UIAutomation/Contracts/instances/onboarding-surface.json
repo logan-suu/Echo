@@ -3,7 +3,7 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "onboarding",
   "surfaceFamily": "task",
-  "responsibility": "First-launch onboarding flow: welcome, PIPL privacy consent summary with equally prominent agree/decline, language selection, optional user-initiated photo-library connection with iCloud download guidance, and first local-model load progress. Notification, location and HealthKit authorization are excluded from the launch sequence and are requested only after an explicit opt-in on the related Awakening surface.",
+  "responsibility": "First-launch onboarding flow: welcome, PIPL privacy consent summary with equally prominent agree/decline, optional user-initiated photo-library connection with iCloud download guidance, language selection, and first local-model load progress. Notification, location and HealthKit authorization are excluded from the approved launch sequence and are requested only after an explicit opt-in on the related Awakening surface; production orchestration remains assigned to Task 4.0f.",
   "inputs": {
     "privacySummary": "PIPL privacy policy summary with purpose/method/kind/retention/local-processing statement (US-PRV-008 AC-2)",
     "permissionSteps": "After PIPL consent, offer a skippable photo-library connection choice. Request PhotoKit only after the user explicitly chooses Connect Photos. Notification, location and HealthKit remain contextual Awakening opt-ins and never appear as a launch-time permission chain.",
@@ -12,7 +12,7 @@
     "modelLoadProgress": "Determinate progress for first model load (§15.6); driven by ModelLoaderActor.overallStatus (3F.3), no fixture fallback in production"
   },
   "outputs": {
-    "visibleContent": "Guided full-screen flow: welcome -> privacy consent -> language -> optional Connect Photos choice -> model loading. Decline exits; skipping photos continues without a system permission request.",
+    "visibleContent": "Guided full-screen flow: welcome -> privacy consent -> optional Connect Photos choice -> language -> model loading. Decline exits; skipping photos continues without a system permission request.",
     "interactionTargets": "onboarding-start, onboarding-privacy-agree, onboarding-privacy-decline, onboarding-permission-allow, onboarding-permission-deny, onboarding-permission-skip, onboarding-open-settings, onboarding-language-zh, onboarding-language-en, onboarding-begin-load, onboarding-declined-close",
     "accessibilityTree": "Step indicator announced; privacy summary scrollable; agree/decline visible at the same hierarchy with neither preselected; optional photo connection and skip are explicit; language picker has a selected checkmark"
   },

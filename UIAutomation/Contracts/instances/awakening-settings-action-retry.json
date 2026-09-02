@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.retry",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.loadSettings()",
+  "expectedOutcome": "Retries loading live awakening settings and permission state",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

@@ -3,7 +3,7 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "awakening-settings",
   "surfaceFamily": "task",
-  "responsibility": "Render awakening delivery settings and request notification, location or HealthKit authorization only after the user explicitly enables the corresponding awakening capability, without duplicating Core awakening rules",
+  "responsibility": "Render live awakening delivery settings and permission state without duplicating Core awakening rules; contextual notification, location and HealthKit request orchestration remains assigned to Task 4.0f",
   "inputs": {
     "authorization": "Live notification, location and health authorization/availability values",
     "settings": "Live geofence, emotion and anniversary enablement values",
@@ -11,7 +11,7 @@
   },
   "outputs": {
     "visibleContent": "Apple-native grouped permission and awakening-setting controls with shared status/action hierarchy",
-    "interactionTargets": "Explicit opt-in toggles that contextually trigger the minimum related system permission, plus a user-initiated system-settings recovery link and geofence detail presentation",
+    "interactionTargets": "Available toggles change live awakening settings; unavailable location and HealthKit controls remain disabled and expose a user-initiated system-settings recovery action. Contextual in-app permission requests remain assigned to Task 4.0f.",
     "accessibilityTree": "Form reading order with stable labels, values, hints and permission status"
   },
   "systemContainer": "NavigationStack + Form + Sheet",
@@ -25,7 +25,7 @@
   "description": "Awakening delivery settings — notification, location, health permissions and geofence/emotion/anniversary toggles",
   "relatedStories": ["US-AWK-001", "US-AWK-002", "US-AWK-003"],
   "states": ["loaded", "loading", "error", "empty-permissions", "all-disabled", "unavailable"],
-  "actions": ["toggleGeofence", "toggleEmotion", "toggleAnniversary", "requestNotification", "openSystemSettings", "showGeofenceDetail", "dismissGeofenceDetail"],
+  "actions": ["toggleGeofence", "toggleEmotion", "toggleAnniversary", "requestNotification", "openSystemSettings", "showGeofenceDetail", "dismissGeofenceDetail", "retry"],
   "journeys": ["awakening-settings-basic", "awakening-settings-no-permissions", "awakening-settings-unavailable"],
   "version": "1.1.0"
 }

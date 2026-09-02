@@ -65,65 +65,67 @@ struct DegradationBannerView: View {
         EchoContainer(level: .emphasized) {
             HStack(spacing: EchoSpacingToken.normal.points) {
                 Image(systemName: degradation.iconName)
-                .font(.callout)
-                .foregroundStyle(degradation.tint)
-                .accessibilityHidden(true)
-
-            Text(EchoStrings.tr(degradation.message))
-                .font(.caption)
-                .foregroundStyle(.primary)
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
-                .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1.0 : 0.85)
-
-            Spacer(minLength: 8)
-
-            if degradation.showToggle {
-                Toggle(isOn: Binding(get: { degradation.backgroundTasksPaused },
-                                     set: { _ in viewModel.toggleBackgroundTasks() })) {
-                    EmptyView()
-                }
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .scaleEffect(0.7)
-                .frame(width: 34, height: 24)
-                .accessibilityLabel("Pause background tasks during low power")
-            }
-
-            if degradation.showRetry {
-                Button(action: { viewModel.retryModelLoad() }) {
-                    Text("Retry")
-                        .font(.caption.weight(.medium))
-                }
-                .buttonStyle(EchoActionButtonStyle(role: .recovery))
-                .controlSize(.small)
-                .accessibilityLabel("Retry model load")
-            }
-
-            if degradation.showSettings {
-                Button {
-                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                    UIApplication.shared.open(url)
-                } label: {
-                    Text("Settings")
-                        .font(.caption)
-                }
-                .buttonStyle(EchoActionButtonStyle(role: .secondary))
-                .controlSize(.small)
-                .tint(degradation.tint)
-                .accessibilityLabel("Open settings for model recovery")
-            }
-
-            Button(action: { viewModel.dismissBanner() }) {
-                Image(systemName: "xmark.circle.fill")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss banner")
+                    .foregroundStyle(degradation.tint)
+                    .accessibilityHidden(true)
+
+                Text(EchoStrings.tr(degradation.message))
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
+                    .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1.0 : 0.85)
+
+                Spacer(minLength: 8)
+
+                if degradation.showToggle {
+                    Toggle(isOn: Binding(get: { degradation.backgroundTasksPaused },
+                                         set: { _ in viewModel.toggleBackgroundTasks() })) {
+                        EmptyView()
+                    }
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .scaleEffect(0.7)
+                    .frame(width: 34, height: 24)
+                    .accessibilityLabel("Pause background tasks during low power")
+                }
+
+                if degradation.showRetry {
+                    Button(action: { viewModel.retryModelLoad() }) {
+                        Text("Retry")
+                            .font(.caption.weight(.medium))
+                    }
+                    .buttonStyle(EchoActionButtonStyle(role: .recovery))
+                    .controlSize(.small)
+                    .accessibilityLabel("Retry model load")
+                }
+
+                if degradation.showSettings {
+                    Button(action: openSystemSettings) {
+                        Text("Settings")
+                            .font(.caption)
+                    }
+                    .buttonStyle(EchoActionButtonStyle(role: .secondary))
+                    .controlSize(.small)
+                    .tint(degradation.tint)
+                    .accessibilityLabel("Open settings for model recovery")
+                }
+
+                Button(action: { viewModel.dismissBanner() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss banner")
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Degradation banner: \(degradation.type.rawValue)")
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func handleLaunchArguments() {
