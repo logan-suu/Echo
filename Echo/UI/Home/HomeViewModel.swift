@@ -1,12 +1,13 @@
 // ==========================================
 // 文件: HomeViewModel.swift
-// i18n: AwakeningCardModel title/subtitle strings are hardcoded English. String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
+// i18n: User-facing strings resolve through Localizable.xcstrings (zh-Hans + en-US).
 // 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 AC-4 (唤醒卡片),
 //            US-AWK-002 AC-3 (纪念日唤醒), US-AWK-003 AC-4 (情绪唤醒卡片),
 //            US-AWK-005 AC-1~3 (交互式卡片展示), US-RES-001 AC-3 (离线标识)
 //            docs/ui/echo-memory-canvas-style.md §10.1 (空态/加载态), §16.1 (离线指示器)
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.1 - HomeView + HomeViewModel + Awakening Cards + Offline Indicator; 4.0a - Discovery live adapter
+//       4.0d - Interactive card navigation, feelings, offline music and audit intents
 // AC 覆盖: US-AWK-001 AC-4 ✅ (唤醒卡片展示), US-AWK-002 AC-3 ✅ (纪念日卡片),
 //          US-AWK-003 AC-4 ✅ (情绪唤醒卡片), US-AWK-005 AC-1 ✅ (卡片展示),
 //          US-RES-001 AC-3 ✅ (离线模式标识), AC-2 ❌ (无网络时仅缓存, Phase 4)
@@ -16,7 +17,7 @@
 //           §8.2 (状态流转: idle→loading→completed/error/cancelled),
 //           §4.2 (Actor 隔离 — 仅持有不可变引用), §8.2 (禁止 idle→completed 直接跳转),
 //           docs/ui/architecture.md §2.2 (错误传播路径), §6 (ViewModel 状态枚举)
-// 生成时间: 2026-07-26; 2026-09-01 (4.0a)
+// 生成时间: 2026-07-26; 2026-09-02 (4.0d)
 // ==========================================
 
 import SwiftUI
@@ -193,6 +194,13 @@ final class HomeViewModel {
         case l3Blocking(message: String)
     }
 
+    enum InteractionState: Equatable, Sendable {
+        case idle
+        case loading
+        case completed
+        case error(String)
+    }
+
     // MARK: - Published State
 
     /// 统一视图状态
@@ -211,6 +219,10 @@ final class HomeViewModel {
     private(set) var canOfferSearchSuggestions = false
     /// 离线模式标识 (US-RES-001 AC-3)
     private(set) var isOffline: Bool = false
+    private(set) var interactionState: InteractionState = .idle
+    private(set) var awakeningMusic: [UUID: MusicSuggestion] = [:]
+    private(set) var userFeelings: [UUID: [UserFeeling]] = [:]
+    private var cardNavigators: [UUID: AwakeningCardNavigator] = [:]
 
     // MARK: - Dependencies (Immutable Actor References)
 
@@ -224,9 +236,13 @@ final class HomeViewModel {
     /// 4.0a read-only adapter: canonical memories + UserPolicy + ProgressActor + source metadata.
     private let discoveryAdapter: (any HomeDiscoveryServing)?
     private let searchCapability: (any HomeSearchCapabilityServing)?
+    private let interactionActor: AwakeningCardInteractionActor?
+    private let feelingStore: MemoryFeelingActor?
+    private let musicService: AwakeningMusicService?
 
     /// 当前活跃的加载 Task
     private var loadingTask: Task<Void, Never>?
+    private var interactionTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
@@ -239,12 +255,18 @@ final class HomeViewModel {
         awakeningPipeline: AwakeningPipeline? = nil,
         cardRepository: AwakeningCardRepositoryActor? = nil,
         discoveryAdapter: (any HomeDiscoveryServing)? = nil,
-        searchCapability: (any HomeSearchCapabilityServing)? = nil
+        searchCapability: (any HomeSearchCapabilityServing)? = nil,
+        interactionActor: AwakeningCardInteractionActor? = nil,
+        feelingStore: MemoryFeelingActor? = nil,
+        musicService: AwakeningMusicService? = nil
     ) {
         self.awakeningPipeline = awakeningPipeline
         self.cardRepository = cardRepository
         self.discoveryAdapter = discoveryAdapter
         self.searchCapability = searchCapability
+        self.interactionActor = interactionActor
+        self.feelingStore = feelingStore
+        self.musicService = musicService
     }
 
     deinit {}
@@ -298,6 +320,7 @@ final class HomeViewModel {
 
                 if let loadedAwakeningCards {
                     self.awakeningCards = loadedAwakeningCards
+                    self.synchronizeNavigators(with: loadedAwakeningCards)
                 }
                 if let discoverySnapshot {
                     self.discoveryCards = discoverySnapshot.cards
@@ -306,6 +329,7 @@ final class HomeViewModel {
                     self.hasAuthorizedSource = discoverySnapshot.hasAuthorizedSource
                 }
                 self.canOfferSearchSuggestions = canOfferSearchSuggestions
+                await self.loadInteractionContext(for: self.awakeningCards)
                 self.viewState = .completed
             } catch is CancellationError {
                 self.viewState = .cancelled
@@ -361,6 +385,192 @@ final class HomeViewModel {
     func appendAwakeningCard(_ card: AwakeningCard) {
         let model = AwakeningCardModel(from: card)
         awakeningCards.insert(model, at: 0)
+        cardNavigators[model.id] = AwakeningCardNavigator(memoryIDs: model.memoryIds)
+    }
+
+    func currentMemoryID(for card: AwakeningCardModel) -> UUID? {
+        cardNavigators[card.id]?.currentMemoryID ?? card.memoryIds.first
+    }
+
+    func canAdvance(_ card: AwakeningCardModel) -> Bool {
+        cardNavigators[card.id]?.canAdvance ?? (card.memoryIds.count > 1)
+    }
+
+    func presentations(for card: AwakeningCardModel) -> [DiscoveryCardPresentation] {
+        let ids = Set(card.memoryIds)
+        return discoveryCards.filter { ids.contains($0.id) }
+    }
+
+    func currentPresentation(for card: AwakeningCardModel) -> DiscoveryCardPresentation? {
+        guard let memoryID = currentMemoryID(for: card) else { return nil }
+        return discoveryCards.first { $0.id == memoryID }
+    }
+
+    func musicSuggestion(for card: AwakeningCardModel) -> MusicSuggestion? {
+        awakeningMusic[card.id]
+    }
+
+    func feelings(for card: AwakeningCardModel) -> [UserFeeling] {
+        guard let memoryID = currentMemoryID(for: card) else { return [] }
+        return userFeelings[memoryID] ?? []
+    }
+
+    var interactionErrorMessage: String? {
+        guard case .error(let message) = interactionState else { return nil }
+        return message
+    }
+
+    func focusRoute(for card: AwakeningCardModel) -> AwakeningFocusRoute? {
+        guard let memoryID = currentMemoryID(for: card) else { return nil }
+        guard let presentation = discoveryCards.first(where: { $0.id == memoryID }) else {
+            return .unavailable(memoryID: memoryID)
+        }
+        return AwakeningFocusRoute.resolve(
+            memoryID: memoryID,
+            sourceType: presentation.sourceType,
+            sourceLocator: presentation.sourceLocator
+        )
+    }
+
+    func advance(_ card: AwakeningCardModel) {
+        interactionState = .loading
+        interactionTask?.cancel()
+        interactionTask = Task { [weak self] in
+            guard let self, var navigator = self.cardNavigators[card.id],
+                  let nextMemoryID = navigator.advance() else {
+                self?.interactionState = .idle
+                return
+            }
+            do {
+                try await self.interactionActor?.record(
+                    action: .next,
+                    cardID: card.id,
+                    memoryID: nextMemoryID,
+                    traceID: UUID().uuidString
+                )
+                guard !Task.isCancelled else { return }
+                self.cardNavigators[card.id] = navigator
+                await self.loadInteractionContext(for: [card])
+                self.interactionState = .completed
+            } catch {
+                self.interactionState = .error("Unable to show the next memory. Please try again.")
+            }
+        }
+    }
+
+    func recordFeeling(_ text: String, for card: AwakeningCardModel) {
+        interactionState = .loading
+        guard let memoryID = currentMemoryID(for: card), let interactionActor else {
+            interactionState = .error("This memory is no longer available.")
+            return
+        }
+        interactionTask?.cancel()
+        interactionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                _ = try await interactionActor.recordFeeling(
+                    text,
+                    cardID: card.id,
+                    memoryID: memoryID,
+                    traceID: UUID().uuidString
+                )
+                self.userFeelings[memoryID] = try await self.feelingStore?.fetch(
+                    memoryID: memoryID
+                ) ?? []
+                self.interactionState = .completed
+            } catch {
+                self.interactionState = .error("Unable to save this feeling. Please try again.")
+            }
+        }
+    }
+
+    func updateFeeling(_ feeling: UserFeeling, text: String) {
+        interactionState = .loading
+        interactionTask?.cancel()
+        interactionTask = Task { [weak self] in
+            guard let self, let feelingStore else { return }
+            do {
+                _ = try await feelingStore.update(
+                    feelingID: feeling.feelingID,
+                    text: text,
+                    traceID: UUID().uuidString
+                )
+                self.userFeelings[feeling.memoryID] = try await feelingStore.fetch(
+                    memoryID: feeling.memoryID
+                )
+                self.interactionState = .completed
+            } catch {
+                self.interactionState = .error("Unable to update this feeling. Please try again.")
+            }
+        }
+    }
+
+    func deleteFeeling(_ feeling: UserFeeling) {
+        interactionState = .loading
+        interactionTask?.cancel()
+        interactionTask = Task { [weak self] in
+            guard let self, let feelingStore else { return }
+            do {
+                try await feelingStore.delete(
+                    feelingID: feeling.feelingID,
+                    traceID: UUID().uuidString
+                )
+                self.userFeelings[feeling.memoryID] = try await feelingStore.fetch(
+                    memoryID: feeling.memoryID
+                )
+                self.interactionState = .completed
+            } catch {
+                self.interactionState = .error("Unable to delete this feeling. Please try again.")
+            }
+        }
+    }
+
+    func recordJump(for card: AwakeningCardModel) {
+        interactionState = .loading
+        guard let memoryID = currentMemoryID(for: card) else {
+            interactionState = .error("This memory is no longer available.")
+            return
+        }
+        interactionTask?.cancel()
+        interactionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.interactionActor?.record(
+                    action: .jump,
+                    cardID: card.id,
+                    memoryID: memoryID,
+                    traceID: UUID().uuidString
+                )
+                self.interactionState = .completed
+            } catch {
+                self.interactionState = .error("Unable to open this memory. Please try again.")
+            }
+        }
+    }
+
+    func matchDeviceMusic(for card: AwakeningCardModel) {
+        interactionState = .loading
+        guard let memoryID = currentMemoryID(for: card), let musicService else {
+            interactionState = .idle
+            return
+        }
+        interactionTask?.cancel()
+        interactionTask = Task { [weak self] in
+            guard let self else { return }
+            let year = self.currentPresentation(for: card).map {
+                Calendar.current.component(.year, from: Date(timeIntervalSince1970: $0.timestamp))
+            }
+            self.awakeningMusic[card.id] = await musicService.suggestion(
+                memoryID: memoryID,
+                year: year,
+                matchDeviceMusic: true
+            )
+            self.interactionState = .completed
+        }
+    }
+
+    func dismissInteractionError() {
+        interactionState = .idle
     }
 
     /// 设置离线模式状态 (US-RES-001 AC-3)。
@@ -383,6 +593,8 @@ final class HomeViewModel {
     func cancelLoading() {
         loadingTask?.cancel()
         loadingTask = nil
+        interactionTask?.cancel()
+        interactionTask = nil
         viewState = .cancelled
     }
 
@@ -398,5 +610,32 @@ final class HomeViewModel {
     /// 视图消失时调用 — 取消正在进行的任务。
     func onDisappear() {
         cancelLoading()
+    }
+
+    private func synchronizeNavigators(with cards: [AwakeningCardModel]) {
+        let valid = Set(cards.map(\.id))
+        cardNavigators = cardNavigators.filter { valid.contains($0.key) }
+        for card in cards where cardNavigators[card.id] == nil {
+            cardNavigators[card.id] = AwakeningCardNavigator(memoryIDs: card.memoryIds)
+        }
+    }
+
+    private func loadInteractionContext(for cards: [AwakeningCardModel]) async {
+        for card in cards {
+            guard let memoryID = currentMemoryID(for: card) else { continue }
+            if let feelingStore {
+                userFeelings[memoryID] = (try? await feelingStore.fetch(memoryID: memoryID)) ?? []
+            }
+            if let musicService {
+                let year = currentPresentation(for: card).map {
+                    Calendar.current.component(.year, from: Date(timeIntervalSince1970: $0.timestamp))
+                }
+                awakeningMusic[card.id] = await musicService.suggestion(
+                    memoryID: memoryID,
+                    year: year,
+                    matchDeviceMusic: false
+                )
+            }
+        }
     }
 }

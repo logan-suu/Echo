@@ -3,9 +3,11 @@
 // 对应规格: docs/02-architecture/架构设计文档.md §5.1 (存储层次), §4.2 (Actor 隔离)
 //            AGENTS.md §5 (数据持久化契约)
 // 任务: 1.4 - 集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表
+//      4.0d - MemoryFeeling relationship and card interaction audit migration
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), R-007 (禁止 @unchecked Sendable)
-// AC 覆盖: D-005 deletion journal persists phase, vector plan, and exclusion intent.
-// 生成时间: 2026-07-04
+// AC 覆盖: D-005 deletion journal persists phase, vector plan, and exclusion intent;
+//          US-AWK-005 AC-4/5 (feeling cascade and structured interaction audit)
+// 生成时间: 2026-07-04; 更新: 2026-09-02 (4.0d)
 // ==========================================
 
 import Foundation
@@ -50,6 +52,12 @@ public actor DatabaseManager {
         let echoDir = appSupport.appendingPathComponent("Echo", isDirectory: true)
         try? FileManager.default.createDirectory(at: echoDir, withIntermediateDirectories: true)
         self.dbURL = echoDir.appendingPathComponent("db.sqlite")
+    }
+
+    /// Creates an isolated database instance for deterministic tests and bounded tools.
+    /// Production composition continues to use ``shared`` exclusively.
+    internal init(databaseURL: URL) {
+        self.dbURL = databaseURL
     }
 
     // MARK: - Connection Management
@@ -139,7 +147,11 @@ public actor DatabaseManager {
                 affectedCount INTEGER,
                 excludedWritten INTEGER,
                 sourceLanguage TEXT,
-                elapsedMs INTEGER
+                elapsedMs INTEGER,
+                action TEXT,
+                cardIdDigest TEXT,
+                memoryIdDigest TEXT,
+                feelingAssociatedToSource INTEGER
             )
             """)
         try execute(sql: """
@@ -171,6 +183,18 @@ public actor DatabaseManager {
         }
         if !auditColumns.contains("subjectHash") {
             try execute(sql: "ALTER TABLE AuditLog ADD COLUMN subjectHash TEXT")
+        }
+        if !auditColumns.contains("action") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN action TEXT")
+        }
+        if !auditColumns.contains("cardIdDigest") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN cardIdDigest TEXT")
+        }
+        if !auditColumns.contains("memoryIdDigest") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN memoryIdDigest TEXT")
+        }
+        if !auditColumns.contains("feelingAssociatedToSource") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN feelingAssociatedToSource INTEGER")
         }
         try execute(sql: "CREATE INDEX IF NOT EXISTS idx_auditlog_subject_hash ON AuditLog(subjectHash)")
         // WP3 steps 3i-3t2 (photo-text-search): D-005 resumable deletion journal
@@ -236,6 +260,17 @@ public actor DatabaseManager {
         if !memoryColumns.contains("userLocked") {
             try execute(sql: "ALTER TABLE Memory ADD COLUMN userLocked INTEGER NOT NULL DEFAULT 0")
         }
+        // 4.0d: editable feelings are relational children, never canonical/search payloads.
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS MemoryFeeling (
+                feelingId TEXT PRIMARY KEY NOT NULL,
+                memoryId TEXT NOT NULL REFERENCES Memory(memoryId) ON DELETE CASCADE,
+                text TEXT NOT NULL,
+                createdAt REAL NOT NULL,
+                updatedAt REAL NOT NULL
+            )
+            """)
+        try execute(sql: "CREATE INDEX IF NOT EXISTS idx_memoryfeeling_memory ON MemoryFeeling(memoryId)")
         // CR-18 (PR#57): memoryIDs(forSourceLocator:) 按 sourceLocator 全表扫查询索引（idempotent）
         try execute(sql: "CREATE INDEX IF NOT EXISTS idx_memory_sourcelocator ON Memory(sourceLocator)")
         // 一个记忆的多种表示 (R-A.1): modality-specific representations
