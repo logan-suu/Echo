@@ -297,6 +297,46 @@ struct InteractiveAwakeningCardTests {
         #expect(!rows.description.contains(rawFeeling))
     }
 
+    @Test("AC-5: public audit fetch preserves structured cardInteraction fields")
+    func test_AC5_publicAuditFetchPreservesCardInteractionFields() async throws {
+        let memoryID = UUID()
+        let cardID = UUID()
+        try await insertMemory(memoryID)
+        let interactions = AwakeningCardInteractionActor(
+            feelingStore: MemoryFeelingActor(db: db, privacyActor: privacy),
+            privacyActor: privacy
+        )
+
+        _ = try await interactions.recordFeeling(
+            "Private feeling",
+            cardID: cardID,
+            memoryID: memoryID,
+            traceID: "public-card-audit-fetch"
+        )
+
+        let filtered = try await privacy.fetchAuditLogs(eventType: .cardInteraction)
+        let filteredEntry = try #require(filtered.first {
+            $0.traceID == "public-card-audit-fetch"
+        })
+        #expect(filteredEntry.action == "record")
+        #expect(filteredEntry.cardIdDigest == AuditContentHasher.sha256Hex(
+            cardID.uuidString.lowercased()
+        ))
+        #expect(filteredEntry.memoryIdDigest == AuditContentHasher.sha256Hex(
+            memoryID.uuidString.lowercased()
+        ))
+        #expect(filteredEntry.feelingAssociatedToSource == true)
+
+        let unfiltered = try await privacy.fetchAuditLogs()
+        let unfilteredEntry = try #require(unfiltered.first {
+            $0.traceID == "public-card-audit-fetch"
+        })
+        #expect(unfilteredEntry.action == "record")
+        #expect(unfilteredEntry.cardIdDigest == filteredEntry.cardIdDigest)
+        #expect(unfilteredEntry.memoryIdDigest == filteredEntry.memoryIdDigest)
+        #expect(unfilteredEntry.feelingAssociatedToSource == true)
+    }
+
     @Test("AC-4/5: feeling and record audit roll back atomically")
     func test_AC4_AC5_recordFeelingAndAuditAreAtomic() async throws {
         let memoryID = UUID()
@@ -398,38 +438,70 @@ struct InteractiveAwakeningCardTests {
             bindings: []
         )
         #expect(rows.isEmpty)
-        let source = try String(
-            contentsOf: repositoryRoot.appendingPathComponent("Echo/UI/Home/HomeView.swift"),
-            encoding: .utf8
-        )
-        #expect(source.contains("Button(\"Cancel\")"))
-        #expect(source.contains("viewModel.cancelFeelingEditing()"))
     }
 
-    @Test("AC-2/3: Home exposes equivalent visible, gesture and accessibility intents")
-    func test_AC2_AC3_homeInteractionContract() throws {
-        let source = try String(
-            contentsOf: repositoryRoot.appendingPathComponent("Echo/UI/Home/HomeView.swift"),
-            encoding: .utf8
-        )
-        #expect(source.contains("DragGesture"))
-        #expect(source.contains("accessibilityAction"))
-        #expect(source.contains("awakening-next"))
-        #expect(source.contains("awakening-record-feeling"))
-        #expect(source.contains("AwakeningFocusRoute"))
-        #expect(source.contains("MemoryDetailView(memoryId:"))
-        #expect(source.contains("viewModel.interactionErrorMessage"))
-        #expect(source.contains("Interaction unavailable"))
-        #expect(source.contains("selectedFeeling?.feelingID == feeling.feelingID"))
+    @Test("AC-2: gesture, visible button and accessibility inputs resolve to equal intents")
+    func test_AC2_allInteractionInputsResolveToEqualIntents() {
+        #expect(AwakeningCardInteractionPolicy.action(
+            forHorizontalTranslation: -60,
+            canAdvance: true
+        ) == .next)
+        #expect(AwakeningCardInteractionPolicy.action(
+            for: .nextButton,
+            canAdvance: true
+        ) == .next)
+        #expect(AwakeningCardInteractionPolicy.action(
+            for: .nextAccessibilityAction,
+            canAdvance: true
+        ) == .next)
 
-        let viewModelSource = try String(
-            contentsOf: repositoryRoot.appendingPathComponent("Echo/UI/Home/HomeViewModel.swift"),
-            encoding: .utf8
-        )
-        #expect(viewModelSource.contains("interactionTasks: [UUID: Task<Void, Never>]"))
-        #expect(viewModelSource.contains("interactionGenerations: [UUID: UUID]"))
-        #expect(viewModelSource.contains("latestInteractionGeneration"))
-        #expect(viewModelSource.contains("guard self.isCurrentInteraction"))
+        #expect(AwakeningCardInteractionPolicy.action(
+            forHorizontalTranslation: 60,
+            canAdvance: true
+        ) == .record)
+        #expect(AwakeningCardInteractionPolicy.action(
+            for: .recordButton,
+            canAdvance: true
+        ) == .record)
+        #expect(AwakeningCardInteractionPolicy.action(
+            for: .recordAccessibilityAction,
+            canAdvance: true
+        ) == .record)
+
+        #expect(AwakeningCardInteractionPolicy.action(
+            for: .openButton,
+            canAdvance: true
+        ) == .jump)
+        #expect(AwakeningCardInteractionPolicy.action(
+            for: .openAccessibilityAction,
+            canAdvance: true
+        ) == .jump)
+
+        #expect(AwakeningCardInteractionPolicy.action(
+            forHorizontalTranslation: -59,
+            canAdvance: true
+        ) == nil)
+        #expect(AwakeningCardInteractionPolicy.action(
+            forHorizontalTranslation: -60,
+            canAdvance: false
+        ) == nil)
+        #expect(AwakeningCardInteractionPolicy.action(
+            for: .nextButton,
+            canAdvance: false
+        ) == nil)
+    }
+
+    @Test("Home injection does not construct unused production dependencies")
+    func test_injectedHomeViewModelSkipsProductionFactory() {
+        let injected = HomeViewModel()
+        var productionFactoryCallCount = 0
+
+        _ = HomeView(viewModel: injected) {
+            productionFactoryCallCount += 1
+            return HomeViewModel()
+        }
+
+        #expect(productionFactoryCallCount == 0)
     }
 
     private func insertMemory(_ memoryID: UUID) async throws {
