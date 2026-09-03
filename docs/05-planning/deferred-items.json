@@ -2,7 +2,7 @@
   "_description": "Echo 项目延期/暂缓条目追踪。仅记录当前确实无法解决的任务。与 task-status.json 同级维护。",
   "_rule": "每次 Phase 集成测试时必须扫描本文件，检查延期任务是否已被顺带解决或当前可解决。",
   "_version": "1.4.0",
-  "_last_updated": "2026-09-02T19:10:59Z",
+  "_last_updated": "2026-09-03T02:26:44Z",
   "deferred_to_phase_4": [
     {
       "id": "DEF-001",
@@ -1484,6 +1484,39 @@
       "defer_to": "Dedicated test-isolation triage round after PR #64 merge",
       "deferred_at": "2026-08-30",
       "last_checked_at": "2026-08-30T17:02:15Z"
+    },
+    {
+      "id": "DEF-71-001",
+      "pr": 71,
+      "title": "Public audit-log fetch omits card-interaction fields",
+      "severity": "🟠",
+      "location": "Echo/Core/Actors/PrivacyActor.swift:fetchAuditLogs",
+      "reason": "A CodeRabbit summary-only finding surfaced after the human merge and was absent from the inline review feed. Both SELECT projections omit action, cardIdDigest, memoryIdDigest, and feelingAssociatedToSource even though the schema, writer, and AuditLogEntry.fromRow support them. Public fetchAuditLogs callers therefore receive nil for persisted card-interaction details. This does not invalidate the PR's direct database persistence evidence, but it is a real retrieval defect and must not be treated as completed AC-5 evidence.",
+      "defer_to": "Immediate follow-up before task 4.2 integration testing; extend both SELECT projections and add a public fetchAuditLogs regression test for cardInteraction fields",
+      "deferred_at": "2026-09-02",
+      "last_checked_at": "2026-09-03T02:26:44Z"
+    },
+    {
+      "id": "DEF-71-002",
+      "pr": 71,
+      "title": "HomeView constructs unused awakening dependencies on every initialization",
+      "severity": "🟡",
+      "location": "Echo/UI/Home/HomeView.swift:init",
+      "reason": "A CodeRabbit summary-only finding surfaced after the human merge and was absent from the inline review feed. HomeView.init eagerly creates MemoryFeelingActor and loads/decodes the bundled music manifest before applying the injected-viewModel nil coalescing. When AppRootView supplies a view model, that work is unused and repeated SwiftUI reconstruction can create unnecessary actor and I/O overhead. The issue affects efficiency rather than functional correctness.",
+      "defer_to": "Task 4.3 performance benchmark or an earlier Home composition cleanup; construct default dependencies only inside the nil branch and cover injected-viewModel initialization",
+      "deferred_at": "2026-09-02",
+      "last_checked_at": "2026-09-03T02:26:44Z"
+    },
+    {
+      "id": "DEF-71-003",
+      "pr": 71,
+      "title": "Awakening interaction tests rely on source-text assertions",
+      "severity": "🟡",
+      "location": "EchoTests/Phase4/4.0d_InteractiveAwakeningCardTests.swift:test_AC2_gestureAccessibilityAndStableNextEvidence and test_AC3_cardRoutesToTypedFocusSurface",
+      "reason": "A CodeRabbit summary-only finding surfaced after the human merge and was absent from the inline review feed. Several AC-2/AC-3 checks use source.contains assertions, which prove that tokens exist in source but do not execute gesture direction, accessibility actions, button equivalence, navigation, or fallback behavior. Production behavior also has lower-level tests, so this is an evidence-strength gap rather than a demonstrated runtime failure.",
+      "defer_to": "Task 4.2 end-to-end integration testing; replace source-text checks with behavior-level or XCUITest coverage while preserving the no-persisted-screenshot/video rule",
+      "deferred_at": "2026-09-02",
+      "last_checked_at": "2026-09-03T02:26:44Z"
     }
   ]
 }
