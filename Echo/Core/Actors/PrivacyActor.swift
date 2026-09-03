@@ -11,6 +11,7 @@
 //          AC-3 (Denial Response), AC-4 (缓存失效), AC-5 (重新授权不清除排除表),
 //          AC-6 (审计记录 .denied/.reauthorized),
 //          AC-7 (search is an operation, not an authorized source type),
+//          US-AWK-005 AC-5 (结构化卡片交互字段写入与公开读取),
 //          PR review 修复: 同意闸门仅 .denied 短路，.allowed 落入 per-source 授权检查 (US-PRV-001)
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), §7.1 (PrivacyCheckpoint 强制注入),
 //           §7.3 (审计日志), §5.4 (30天保留), R-006 (审计强制覆盖),
@@ -496,11 +497,12 @@ public actor PrivacyActor {
     ) async throws -> [AuditLogEntry] {
         let sql: String
         let bindings: [DBBinding]
-        if let eventType = eventType {
+        if let eventType {
             sql = """
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
-                       frameCount, audioTranscriptLength, hasAudio, contentHash
+                       frameCount, audioTranscriptLength, hasAudio, contentHash,
+                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource
                 FROM AuditLog WHERE eventType = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.text(eventType.rawValue), .int(Int64(limit)), .int(Int64(offset))]
@@ -508,7 +510,8 @@ public actor PrivacyActor {
             sql = """
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
-                       frameCount, audioTranscriptLength, hasAudio, contentHash
+                       frameCount, audioTranscriptLength, hasAudio, contentHash,
+                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource
                 FROM AuditLog ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.int(Int64(limit)), .int(Int64(offset))]

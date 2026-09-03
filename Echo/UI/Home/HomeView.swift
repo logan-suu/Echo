@@ -22,6 +22,48 @@
 
 import SwiftUI
 
+enum AwakeningCardInput: Sendable, Equatable {
+    case nextButton
+    case recordButton
+    case openButton
+    case nextAccessibilityAction
+    case recordAccessibilityAction
+    case openAccessibilityAction
+}
+
+enum AwakeningCardInteractionPolicy {
+    private static let swipeThreshold = 60.0
+
+    static func action(
+        for input: AwakeningCardInput,
+        canAdvance: Bool
+    ) -> AwakeningCardAction? {
+        switch input {
+        case .nextButton, .nextAccessibilityAction:
+            canAdvance ? .next : nil
+
+        case .recordButton, .recordAccessibilityAction:
+            .record
+
+        case .openButton, .openAccessibilityAction:
+            .jump
+        }
+    }
+
+    static func action(
+        forHorizontalTranslation translation: Double,
+        canAdvance: Bool
+    ) -> AwakeningCardAction? {
+        if translation <= -swipeThreshold {
+            return canAdvance ? .next : nil
+        }
+        if translation >= swipeThreshold {
+            return .record
+        }
+        return nil
+    }
+}
+
 // MARK: - HomeView
 
 /// Home 主视图 — 记忆发现与唤醒卡片主页。
@@ -88,14 +130,19 @@ struct HomeView: View {
 
     init(
         viewModel: HomeViewModel? = nil,
-        appViewModel: AppViewModel? = nil
+        appViewModel: AppViewModel? = nil,
+        makeDefaultViewModel: @MainActor () -> HomeViewModel = Self.makeProductionViewModel
     ) {
         self.appViewModel = appViewModel
+        _viewModel = State(initialValue: viewModel ?? makeDefaultViewModel())
+    }
+
+    private static func makeProductionViewModel() -> HomeViewModel {
         let feelingStore = MemoryFeelingActor()
         let musicService = try? AwakeningMusicService(
             library: BundledMusicLibrary.loadFromBundleOrRepository()
         )
-        let resolvedViewModel = viewModel ?? HomeViewModel(
+        return HomeViewModel(
             cardRepository: AwakeningCardRepositoryActor(),
             discoveryAdapter: HomeDiscoveryAdapter(
                 memoryReader: LiveAppAdapters.makeCanonicalRepository(),
@@ -108,7 +155,6 @@ struct HomeView: View {
             feelingStore: feelingStore,
             musicService: musicService
         )
-        _viewModel = State(initialValue: resolvedViewModel)
     }
 
     /// 3F.11 fix: 面板关闭后重建时注入真实 ProgressActor（US-SYS-001 AC-2）
@@ -681,10 +727,11 @@ struct AwakeningCardView: View {
         .contentShape(.rect)
         .simultaneousGesture(
             DragGesture(minimumDistance: 32).onEnded { value in
-                if value.translation.width <= -60, canAdvance {
-                    onNext()
-                } else if value.translation.width >= 60 {
-                    onRecordFeeling()
+                if let action = AwakeningCardInteractionPolicy.action(
+                    forHorizontalTranslation: Double(value.translation.width),
+                    canAdvance: canAdvance
+                ) {
+                    perform(action)
                 }
             }
         )
@@ -692,11 +739,14 @@ struct AwakeningCardView: View {
         .accessibilityLabel(cardAccessibilityLabel)
         .accessibilityHint("Use the actions to open, advance, or record a feeling")
         .accessibilityAction(named: Text("Next memory")) {
-            guard canAdvance else { return }
-            onNext()
+            perform(.nextAccessibilityAction)
         }
-        .accessibilityAction(named: Text("Record feeling")) { onRecordFeeling() }
-        .accessibilityAction(named: Text("Open memory")) { onJump() }
+        .accessibilityAction(named: Text("Record feeling")) {
+            perform(.recordAccessibilityAction)
+        }
+        .accessibilityAction(named: Text("Open memory")) {
+            perform(.openAccessibilityAction)
+        }
     }
 
     @ViewBuilder
@@ -740,20 +790,26 @@ struct AwakeningCardView: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        Button(action: onJump) {
+        Button {
+            perform(.openButton)
+        } label: {
             Label("Open", systemImage: "arrow.up.right.square")
         }
         .buttonStyle(EchoActionButtonStyle(role: .primary))
         .accessibilityIdentifier("awakening-open")
 
-        Button(action: onNext) {
+        Button {
+            perform(.nextButton)
+        } label: {
             Label("Next", systemImage: "arrow.right")
         }
         .buttonStyle(EchoActionButtonStyle(role: .secondary))
         .disabled(!canAdvance)
         .accessibilityIdentifier("awakening-next")
 
-        Button(action: onRecordFeeling) {
+        Button {
+            perform(.recordButton)
+        } label: {
             Label("Record feeling", systemImage: "heart.text.square")
         }
         .buttonStyle(EchoActionButtonStyle(role: .secondary))
@@ -764,6 +820,27 @@ struct AwakeningCardView: View {
         }
         .buttonStyle(EchoActionButtonStyle(role: .secondary))
         .accessibilityIdentifier("awakening-device-music")
+    }
+
+    private func perform(_ input: AwakeningCardInput) {
+        guard let action = AwakeningCardInteractionPolicy.action(
+            for: input,
+            canAdvance: canAdvance
+        ) else { return }
+        perform(action)
+    }
+
+    private func perform(_ action: AwakeningCardAction) {
+        switch action {
+        case .next:
+            onNext()
+
+        case .record:
+            onRecordFeeling()
+
+        case .jump:
+            onJump()
+        }
     }
 
     // MARK: - Icon
