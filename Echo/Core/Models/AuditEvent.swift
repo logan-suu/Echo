@@ -133,6 +133,9 @@ public struct AuditLogEntry: Sendable, Codable {
     public nonisolated let cardIdDigest: String?
     public nonisolated let memoryIdDigest: String?
     public nonisolated let feelingAssociatedToSource: Bool?
+    public nonisolated let editedFields: [String]?
+    public nonisolated let reindexed: Bool?
+    public nonisolated let conflictResolvedWith: String?
 
     public nonisolated init(
         id: Int64 = 0,
@@ -153,7 +156,10 @@ public struct AuditLogEntry: Sendable, Codable {
         action: String? = nil,
         cardIdDigest: String? = nil,
         memoryIdDigest: String? = nil,
-        feelingAssociatedToSource: Bool? = nil
+        feelingAssociatedToSource: Bool? = nil,
+        editedFields: [String]? = nil,
+        reindexed: Bool? = nil,
+        conflictResolvedWith: String? = nil
     ) {
         self.id = id
         self.eventType = eventType
@@ -174,6 +180,9 @@ public struct AuditLogEntry: Sendable, Codable {
         self.cardIdDigest = cardIdDigest
         self.memoryIdDigest = memoryIdDigest
         self.feelingAssociatedToSource = feelingAssociatedToSource
+        self.editedFields = editedFields
+        self.reindexed = reindexed
+        self.conflictResolvedWith = conflictResolvedWith
     }
 
     /// 从数据库查询结果行构造 AuditLogEntry（用于 fetchAuditLogs）
@@ -203,7 +212,10 @@ public struct AuditLogEntry: Sendable, Codable {
             action: row["action"]?.stringValue,
             cardIdDigest: row["cardIdDigest"]?.stringValue,
             memoryIdDigest: row["memoryIdDigest"]?.stringValue,
-            feelingAssociatedToSource: row["feelingAssociatedToSource"]?.intValue.map { $0 != 0 }
+            feelingAssociatedToSource: row["feelingAssociatedToSource"]?.intValue.map { $0 != 0 },
+            editedFields: row["editedFields"]?.stringValue?.split(separator: ",").map(String.init),
+            reindexed: row["reindexed"]?.intValue.map { $0 != 0 },
+            conflictResolvedWith: row["conflictResolvedWith"]?.stringValue
         )
     }
 }

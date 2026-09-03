@@ -131,7 +131,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             excludedAssets: .shared,
             progressActor: .shared,
             canonicalRepository: canonicalRepository,
-            generationRegistry: registry
+            generationRegistry: registry,
+            memoryEditActor: composition.memoryEditActor
         )
         await sync.registerPhotoLibraryObserver()
         syncPipeline = sync        // Share 队列排空（US-SRC-001/003, ADR-008 §决策-3）— 恰好一次消费

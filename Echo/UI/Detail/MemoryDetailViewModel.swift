@@ -5,8 +5,8 @@
 //            US-SYN-002 (溯源锚点), US-SYN-003 (创作预览), US-PRV-004 (删除确认), US-DIS-002 (按需翻译)
 //            docs/ui/echo-memory-canvas-style.md §3.2 (Focus surfaces — 单列 + grouped metadata),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
-// 任务: 3.3 - MemoryDetailView + ViewModel + Edit + Conflict + Creation + Translation
-// AC coverage: US-AWK-007 editing/conflict UI is fixture-only until a Core mutation boundary exists;
+// 任务: 3.3 + 4.0e - MemoryDetail UI and production edit/conflict closure
+// AC coverage: US-AWK-007 editing/re-index/conflict actions use the live MemoryEditActor boundary;
 //          US-DIS-002 AC-1 ✅ (展开详情触发), AC-2 ✅ (cache-first + TranslationService fallback),
 //          AC-3 ✅ (源语言检测不确定 <0.9 保留原文为主, ADR-005), AC-4 ✅ (原文/译文切换), AC-5 ✅ (缓存写入 TTL=7d),
 //          US-PRV-004 remove-from-Echo uses CanonicalMemoryRepositoryActor in production;
@@ -15,7 +15,7 @@
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
 //           §8.2 (状态流转), §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
 //           §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
-// 生成时间: 2026-08-01
+// 生成时间: 2026-08-01 | 更新: 2026-09-03 (4.0e production edit boundary)
 // PR#65 third review fix: production loads clear stale fixture/content state and retry the
 //                        exact requested memory through an injectable repository boundary.
 // ==========================================
@@ -36,6 +36,21 @@ protocol MemoryDetailRepository: Sendable {
 }
 
 extension CanonicalMemoryRepositoryActor: MemoryDetailRepository {}
+
+protocol MemoryEditServicing: Sendable {
+    func loadSnapshot(memoryID: UUID, traceID: String) async throws -> MemoryEditSnapshot?
+    func beginEditing(memoryID: UUID, traceID: String) async throws
+    func save(_ request: MemoryEditRequest, traceID: String) async throws -> MemoryEditResult
+    func resolveConflict(memoryID: UUID, resolution: MemoryConflictResolution, traceID: String) async throws
+}
+
+extension MemoryEditActor: MemoryEditServicing {}
+
+protocol MemorySyncLockChecking: Sendable {
+    func isMemoryLockedForSync(memoryId: String) async -> Bool
+}
+
+extension SyncPipeline: MemorySyncLockChecking {}
 
 // MARK: - Memory Detail UI Model
 
@@ -74,6 +89,8 @@ struct MemoryDetailModel: Identifiable, Sendable, Equatable {
     var title: String
     /// 正文内容（备忘录/语音转写文本）
     var originalText: String
+    /// User-authored description, kept separate from source text.
+    var userDescription: String
     /// 源语言
     let sourceLanguage: String
     /// 首选语言 (UserPolicy.preferredLanguage)
@@ -118,6 +135,7 @@ struct MemoryDetailModel: Identifiable, Sendable, Equatable {
         sourceType: String,
         title: String,
         originalText: String,
+        userDescription: String? = nil,
         sourceLanguage: String,
         preferredLanguage: String,
         timestamp: Date,
@@ -135,6 +153,7 @@ struct MemoryDetailModel: Identifiable, Sendable, Equatable {
         self.sourceType = sourceType
         self.title = title
         self.originalText = originalText
+        self.userDescription = userDescription ?? originalText
         self.sourceLanguage = sourceLanguage
         self.preferredLanguage = preferredLanguage
         self.timestamp = timestamp
@@ -247,6 +266,8 @@ final class MemoryDetailViewModel {
         case l2Recoverable(message: String)
         /// L3 阻断: 全屏引导页
         case l3Blocking(message: String)
+        /// L4 数据冲突: 后台同步正在更新同一条记忆
+        case l4Conflict(message: String)
     }
 
     /// 冲突解决选择 (US-AWK-007 AC-4)
@@ -255,6 +276,7 @@ final class MemoryDetailViewModel {
         case local
         /// 使用外部新版本
         case external
+        case merge
     }
 
     // MARK: - Published State
@@ -308,6 +330,9 @@ final class MemoryDetailViewModel {
     private(set) var photoResolutionPhase: MediaResolutionPhase = .idle
     /// WP7: canonical 仓库——生产 load 接线（route ENABLED 后详情真实加载）
     private let canonicalRepository: (any MemoryDetailRepository)?
+    private let memoryEditService: (any MemoryEditServicing)?
+    private let syncLockChecker: (any MemorySyncLockChecking)?
+    private var isResolvingMerge = false
 
     // MARK: - Translation State (US-DIS-002)
 
@@ -335,11 +360,15 @@ final class MemoryDetailViewModel {
     init(
         translationService: any TranslationService = AppleTranslationService(),
         translationCache: any TranslationCaching = MemoryDetailViewModel.defaultPersistentCache(),
-        canonicalRepository: (any MemoryDetailRepository)? = nil
+        canonicalRepository: (any MemoryDetailRepository)? = nil,
+        memoryEditService: (any MemoryEditServicing)? = nil,
+        syncLockChecker: (any MemorySyncLockChecking)? = nil
     ) {
         self.translationService = translationService
         self.translationCache = translationCache
         self.canonicalRepository = canonicalRepository
+        self.memoryEditService = memoryEditService
+        self.syncLockChecker = syncLockChecker
     }
 
     deinit {}
@@ -379,6 +408,22 @@ final class MemoryDetailViewModel {
         )
     }
 
+    static func makeDetailModel(from snapshot: MemoryEditSnapshot) -> MemoryDetailModel {
+        var model = makeDetailModel(from: snapshot.memory)
+        if let edit = snapshot.edit {
+            if !edit.title.isEmpty { model.title = edit.title }
+            model.userDescription = edit.description
+            model.tags = edit.tags
+        }
+        if let conflict = snapshot.conflict {
+            model.conflict = MemoryConflictModel(
+                localDraft: snapshot.edit?.description ?? snapshot.memory.canonicalText ?? "",
+                externalVersion: conflict.externalVersionSummary
+            )
+        }
+        return model
+    }
+
     private static func sourceTitle(_ sourceType: String) -> String {
         switch sourceType {
         case "photo": "Photo"
@@ -406,6 +451,24 @@ final class MemoryDetailViewModel {
 
             guard !Task.isCancelled else {
                 self.viewState = .cancelled
+                return
+            }
+
+            if let editService = memoryEditService {
+                do {
+                    guard let snapshot = try await editService.loadSnapshot(
+                        memoryID: memoryId,
+                        traceID: UUID().uuidString
+                    ) else {
+                        self.viewState = .error(.l2Recoverable(message: "This memory is no longer available."))
+                        return
+                    }
+                    guard !Task.isCancelled else { self.viewState = .cancelled; return }
+                    self.memory = Self.makeDetailModel(from: snapshot)
+                    self.viewState = .completed
+                } catch {
+                    self.viewState = .error(.l2Recoverable(message: "Unable to load this memory. Please try again."))
+                }
                 return
             }
 
@@ -620,10 +683,18 @@ final class MemoryDetailViewModel {
         // AC-4: 外部数据源已变更时，阻止直接编辑，先解决冲突
         guard current.conflict == nil else { return }
         editTitle = current.title
-        editDescription = current.originalText
+        editDescription = current.userDescription
         editTags = current.tags.joined(separator: ", ")
         editTimestamp = current.timestamp
         isEditing = true
+        if !isFixtureBacked, let memoryEditService {
+            Task {
+                try? await memoryEditService.beginEditing(
+                    memoryID: current.id,
+                    traceID: UUID().uuidString
+                )
+            }
+        }
     }
 
     /// 保存编辑 (US-AWK-007 AC-2)。
@@ -631,13 +702,54 @@ final class MemoryDetailViewModel {
     /// Fixture previews may mutate their local display copy. Production fails visibly until
     /// the canonical repository exposes an edit/re-index transaction boundary.
     func saveEdit() {
-        guard var current = memory else { return }
+        viewState = .loading
+        guard var current = memory else { viewState = .idle; return }
 
-        guard isFixtureBacked else {
+        if !isFixtureBacked {
+            guard let memoryEditService else {
+                isEditing = false
+                viewState = .error(.l2Recoverable(message: "Editing is unavailable because the production memory update boundary is not connected."))
+                return
+            }
+            let request = MemoryEditRequest(
+                memoryID: current.id,
+                title: editTitle,
+                description: editDescription,
+                tags: editTags.split(separator: ",").map(String.init),
+                timestamp: editTimestamp
+            )
+            let merge = isResolvingMerge
             isEditing = false
-            viewState = .error(.l2Recoverable(
-                message: "Editing is unavailable because the production memory update boundary is not connected."
-            ))
+            isResolvingMerge = false
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    if await self.syncLockChecker?.isMemoryLockedForSync(
+                        memoryId: current.id.uuidString
+                    ) == true {
+                        throw MemoryEditError.syncInProgress
+                    }
+                    if merge {
+                        try await memoryEditService.resolveConflict(
+                            memoryID: current.id,
+                            resolution: .merge(request),
+                            traceID: UUID().uuidString
+                        )
+                        guard let snapshot = try await memoryEditService.loadSnapshot(memoryID: current.id, traceID: UUID().uuidString) else { throw MemoryEditError.memoryNotFound }
+                        self.memory = Self.makeDetailModel(from: snapshot)
+                    } else {
+                        let result = try await memoryEditService.save(request, traceID: UUID().uuidString)
+                        self.memory = Self.makeDetailModel(from: result.snapshot)
+                    }
+                    self.viewState = .completed
+                } catch MemoryEditError.syncInProgress {
+                    self.viewState = .error(.l4Conflict(
+                        message: "This memory is being updated. Please edit it again after synchronization finishes."
+                    ))
+                } catch {
+                    self.viewState = .error(.l2Recoverable(message: error.localizedDescription))
+                }
+            }
             return
         }
 
@@ -652,6 +764,7 @@ final class MemoryDetailViewModel {
             current.title = trimmedTitle
         }
         current.originalText = editDescription
+        current.userDescription = editDescription
         current.tags = editTags
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -661,6 +774,7 @@ final class MemoryDetailViewModel {
 
         memory = current
         isEditing = false
+        viewState = .completed
     }
 
     /// 呈现删除确认弹窗 (US-PRV-004 AC-1)。
@@ -738,12 +852,43 @@ final class MemoryDetailViewModel {
     ///
     /// - keep: 保留用户编辑（.local）或使用外部版本（.external）
     func resolveConflict(keep: ConflictResolution) {
-        guard var current = memory, let conflict = current.conflict else { return }
+        viewState = .loading
+        guard var current = memory, let conflict = current.conflict else {
+            viewState = .completed
+            return
+        }
 
-        guard isFixtureBacked else {
-            viewState = .error(.l2Recoverable(
-                message: "Conflict resolution is unavailable because the production update boundary is not connected."
-            ))
+        if !isFixtureBacked {
+            guard let memoryEditService else {
+                viewState = .error(.l2Recoverable(message: "Conflict resolution is unavailable because the production update boundary is not connected."))
+                return
+            }
+            if keep == .merge {
+                editTitle = current.title
+                editDescription = conflict.localDraft + "\n\n" + conflict.externalVersion
+                editTags = current.tags.joined(separator: ", ")
+                editTimestamp = current.timestamp
+                isResolvingMerge = true
+                isEditing = true
+                viewState = .completed
+                return
+            }
+            let coreResolution: MemoryConflictResolution = keep == .local ? .local : .external
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    try await memoryEditService.resolveConflict(
+                        memoryID: current.id,
+                        resolution: coreResolution,
+                        traceID: UUID().uuidString
+                    )
+                    guard let snapshot = try await memoryEditService.loadSnapshot(memoryID: current.id, traceID: UUID().uuidString) else { throw MemoryEditError.memoryNotFound }
+                    self.memory = Self.makeDetailModel(from: snapshot)
+                    self.viewState = .completed
+                } catch {
+                    self.viewState = .error(.l2Recoverable(message: error.localizedDescription))
+                }
+            }
             return
         }
 
@@ -757,9 +902,17 @@ final class MemoryDetailViewModel {
             // 使用外部新版本
             current.originalText = conflict.externalVersion
             current.conflict = nil
+        case .merge:
+            editTitle = current.title
+            editDescription = conflict.localDraft + "\n\n" + conflict.externalVersion
+            editTags = current.tags.joined(separator: ", ")
+            editTimestamp = current.timestamp
+            isResolvingMerge = true
+            isEditing = true
         }
 
         memory = current
+        viewState = .completed
     }
 
     /// 重试加载 (L2 恢复路径)。

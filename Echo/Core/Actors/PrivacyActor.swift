@@ -381,7 +381,10 @@ public actor PrivacyActor {
         action: String? = nil,
         cardIdDigest: String? = nil,
         memoryIdDigest: String? = nil,
-        feelingAssociatedToSource: Bool? = nil
+        feelingAssociatedToSource: Bool? = nil,
+        editedFields: [String]? = nil,
+        reindexed: Bool? = nil,
+        conflictResolvedWith: String? = nil
     ) async throws {
         let write = Self.makeAuditWrite(
             eventType: eventType,
@@ -402,7 +405,10 @@ public actor PrivacyActor {
             action: action,
             cardIdDigest: cardIdDigest,
             memoryIdDigest: memoryIdDigest,
-            feelingAssociatedToSource: feelingAssociatedToSource
+            feelingAssociatedToSource: feelingAssociatedToSource,
+            editedFields: editedFields,
+            reindexed: reindexed,
+            conflictResolvedWith: conflictResolvedWith
         )
         try await db.executeWrite(sql: write.sql, bindings: write.bindings)
     }
@@ -427,14 +433,17 @@ public actor PrivacyActor {
         cardIdDigest: String? = nil,
         memoryIdDigest: String? = nil,
         feelingAssociatedToSource: Bool? = nil,
+        editedFields: [String]? = nil,
+        reindexed: Bool? = nil,
+        conflictResolvedWith: String? = nil,
         timestamp: Date = Date()
     ) -> DatabaseManager.DBWrite {
         // Hash content fields before persistence (AGENTS.md §5.4).
         let contentHash = content.map { AuditContentHasher.sha256Hex($0) }
         return DatabaseManager.DBWrite(
             sql: """
-                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash, subjectKind, subjectHash, action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash, subjectKind, subjectHash, action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource, editedFields, reindexed, conflictResolvedWith)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             bindings: [
                 .text(eventType.rawValue),
@@ -457,6 +466,9 @@ public actor PrivacyActor {
                 cardIdDigest.map { .text($0) } ?? .null,
                 memoryIdDigest.map { .text($0) } ?? .null,
                 feelingAssociatedToSource.map { .int($0 ? 1 : 0) } ?? .null,
+                editedFields.map { .text($0.sorted().joined(separator: ",")) } ?? .null,
+                reindexed.map { .int($0 ? 1 : 0) } ?? .null,
+                conflictResolvedWith.map { .text($0) } ?? .null,
             ]
         )
     }
@@ -502,7 +514,8 @@ public actor PrivacyActor {
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
                        frameCount, audioTranscriptLength, hasAudio, contentHash,
-                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource
+                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource,
+                       editedFields, reindexed, conflictResolvedWith
                 FROM AuditLog WHERE eventType = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.text(eventType.rawValue), .int(Int64(limit)), .int(Int64(offset))]
@@ -511,7 +524,8 @@ public actor PrivacyActor {
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
                        frameCount, audioTranscriptLength, hasAudio, contentHash,
-                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource
+                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource,
+                       editedFields, reindexed, conflictResolvedWith
                 FROM AuditLog ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
             bindings = [.int(Int64(limit)), .int(Int64(offset))]

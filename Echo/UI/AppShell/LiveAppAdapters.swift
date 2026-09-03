@@ -147,6 +147,21 @@ public enum LiveAppAdapters {
         )
     }
 
+    /// Shared production edit boundary used by Detail and Sync.
+    public static func makeMemoryEditActor(
+        composition: AppComposition = .shared
+    ) -> MemoryEditActor {
+        composition.memoryEditActor
+    }
+
+    /// Current production sync lock boundary used to block conflicting Detail saves.
+    @MainActor
+    public static func makeSyncPipeline(
+        composition: AppComposition = .shared
+    ) -> SyncPipeline? {
+        composition.productionSyncPipeline
+    }
+
     // MARK: - Private Helpers
 
     /// 异步解析活跃 text generation 向量存储（内部辅助，无需公开）。
@@ -157,5 +172,3 @@ public enum LiveAppAdapters {
         return await registry.vectorStore(for: route.textGeneration)
     }
 }
-
-

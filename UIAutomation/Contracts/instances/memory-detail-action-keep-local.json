@@ -3,7 +3,7 @@
   "actionId": "detail.keepLocal",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.resolveConflict(keep: .local)",
-  "expectedOutcome": "When the production conflict transaction boundary is connected, retain the user edit, persist userLocked and make future automatic sync skip it; otherwise fail visibly as unavailable. Fixture mutation is not production evidence (US-AWK-007 AC-4).",
+  "expectedOutcome": "Persist the local edit, clear MemoryEditConflict and set userLocked=true so automatic sync skips the memory until explicit resync or external restore (US-AWK-007 AC-4, ADR-017).",
   "requiresConfirmation": false,
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

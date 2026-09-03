@@ -3,14 +3,15 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "memory-detail",
   "surfaceFamily": "focus",
-  "responsibility": "Render one production memory as a Focus surface with single-column primary content, grouped metadata, on-demand translation, honest mutation availability, deletion confirmation, and grounded creation navigation without claiming unsupported Core writes",
+  "responsibility": "Render one production memory as a Focus surface with single-column content, persisted MemoryUserEdit/conflict state, capability-gated source actions, on-demand translation and grounded citation navigation. Original-source deletion is offered only for writable resolvable PhotoKit photo/video.",
   "inputs": {
     "memoryId": "UUID — memory identifier",
-    "memory": "MemoryDetailModel mapped from CanonicalMemory (content, sourceType, timestamp, locale, edit state, conflict state). sourceType supports photo / note / voice / video_frame / video_audio",
-    "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US)"
+    "memory": "MemoryDetailModel mapped from CanonicalMemory + MemoryUserEdit + MemoryEditConflict. Original source content remains separate from user title/multiline description/normalized tags.",
+    "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US)",
+    "sourceDeletionCapability": "removeFromEchoOnly | photoLibraryDeletable; note/voice/thirdParty Share Extension sources never claim source-app deletion authority"
   },
   "outputs": {
-    "visibleContent": "Memory original text, translated text (toggleable), grouped metadata (source/time/location), citation anchors and available actions. Production media is resolved from the authorized local source adapter; unresolved/revoked/missing media shows an honest localized fallback. Bundled samples are Preview/test-only and prohibited as production evidence.",
+    "visibleContent": "Original source content plus user edit overlay, translated text, grouped metadata, verified citation anchors and capability-gated actions. Production media is resolved under current UserPolicy; unresolved/revoked/missing media shows an honest localized fallback. Bundled samples are Preview/test-only.",
     "interactionTargets": "translateToggle, editButton, deleteButton, conflictActionButtons, saveButton, citationAnchor, retryButton, mediaPlayPause",
     "accessibilityTree": "Content in reading order; grouped metadata; media preview with label; each citation anchor as separate element"
   },
@@ -34,5 +35,5 @@
     "memory-detail-voice-loaded (voice transcript)",
     "memory-detail-video-loaded (video_frame)"
   ],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

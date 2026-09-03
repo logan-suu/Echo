@@ -1,6 +1,6 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.39
+**版本**：v5.40
 **生效日期**：2026-09-01
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -553,6 +553,8 @@ let checkpoint = await PrivacyActor.shared.validate(
 | `.memoryDeleted`                  | 记忆删除                 | preservedOriginal, excludedAssetWritten                   |
 | `.cascadeDeleteFromOriginal`      | 原始文件级联清除         | assetId, memoryId, excludedAutoCleaned                    |
 | `.memoryEdited`                   | 手动编辑记忆             | editedFields, reindexed, conflictResolvedWith             |
+| `.creationSharePresented`         | 本地导出后呈现系统分享面板 | exportFormat, sharePresented, periodType（可选）；不记录目标 App/完成状态 |
+| `.narrativeReportGenerated`       | 月度/年度报告生成         | periodType, dataSourcesUsed, periodKeyDigest               |
 | `.cardInteraction`               | 交互式唤醒卡动作       | action=next/record/jump, cardIdDigest, memoryIdDigest, feelingAssociatedToSource（hash-only，禁止感受原文） |
 | `.feedbackReceived`               | 反馈收集                 | sentiment, decayFactor                                    |
 | `.feedbackReset`                  | 清除所有反馈             | -                                                         |
@@ -1391,7 +1393,7 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 
 **Warm accent 语义色对（2026-09-01 人类批准）**：`warmAccent` 由 `AccentColor` Asset Catalog 提供，浅色外观为 sRGB `#A64B32`，深色外观为 sRGB `#E08A68`；`onWarmAccent` 分别为 `#FFFFFF` 与 `#1C1C1E`。重点 action 必须同时消费背景与前景 token，禁止在两种外观中硬编码同一前景色。
 
-**Phase 4 交付边界**：`4.0` 只建立 DesignProfile、共享 token/component API 与 Apple 原生 AppShell；`4.0a`、`4.0b`、`4.0c` 分别把该基础应用到 Discovery、Focus、Task 页面族。不得把“全 App profile”误解为由 `4.0` 单任务改造全部功能页。`4.0d`~`4.0g` 不是新的 surface family 或视觉切片：`4.0d` 补齐 US-AWK-005 媒体/音乐、下一张/记录感受、userFeelings 持久化与审计；`4.0e` 补齐 Focus 的编辑重索引、冲突持久化、原始来源删除、真实媒体/引用导航及 share handoff 审计；`4.0f` 把权限请求改为 PIPL 先行、照片显式连接、通知/位置/HealthKit 按唤醒功能 opt-in；`4.0g` 补齐持久化任务的 reconstruction、Continue/Restart 与重启恢复。4.0c 只负责诚实 Task 表现，4.2/4.4 仅负责验证这些生产闭环，不得替代实现。
+**Phase 4 交付边界**：`4.0` 只建立 DesignProfile、共享 token/component API 与 Apple 原生 AppShell；`4.0a`、`4.0b`、`4.0c` 分别把该基础应用到 Discovery、Focus、Task 页面族。不得把“全 App profile”误解为由 `4.0` 单任务改造全部功能页。生产闭环按独立边界交付：`4.0d` 为 US-AWK-005 唤醒卡；`4.0e` 为编辑/重索引/持久冲突；`4.0f` 为渐进式权限；`4.0g` 为任务重建；`4.0h` 为真实来源解析与 PhotoKit 删除 saga；`4.0i` 为可验证引用、稳定 Detail 路由与系统分享审计；`4.0j` 为月度/年度报告持久调度。4.0c 只负责诚实 Task 表现，4.2/4.4 仅负责验证这些生产闭环，不得替代实现。
 
 **4.0c Task 边界（2026-09-02 规格审查）**：Settings、Onboarding、AwakeningSettings、BackgroundTask、Degradation、ResumeProgress 继续使用 Apple 原生 Form/List/Sheet/Alert/confirmationDialog，并共享 `echo-memory-canvas` token、grouped container、status/action components 与 motion；masonry 始终禁止。4.0c 不得修改 Core、数据库 schema/迁移、权限请求时机、任务重建、迁移/删除/审计副作用，也不得以 fixture/Preview 成功态证明生产行为。生产依赖不存在时必须显示诚实不可用/错误。PIPL 同意/拒绝同层可见且同等醒目；迁移 UI 必须区分加密 Echo migration package 与被禁止的原始媒体导出。
 
@@ -1399,7 +1401,9 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 
 **4.0b Focus 边界（2026-09-01 规格审查）**：`4.0b` 只负责 Detail、Creation、Translation 的平衡画布表现、Focus 导航/阅读连续性及现有生产能力的诚实状态映射。它不得用 fixture 成功态证明生产能力，不得在视觉任务中新增 Core 写边界，也不得宣称已完成当前仍缺少生产接线的编辑重索引、冲突持久化或原始来源删除。Notes 交接仅通过用户可见的系统 share/export 流；禁止私有 NoteStore 直写、`notes://` 深链、伪造“已保存”Toast 或笔记链接。翻译不确定阈值统一为 NLTagger 源语言置信度 `< 0.9`。
 
-**4.0d 交互式唤醒卡边界（2026-09-02 规格审查）**：音乐建议默认且始终可从随 App 打包的离线年份曲库产生；仅当用户在卡片中显式选择“匹配此设备音乐”后，才可请求媒体库权限并通过 `MPMediaQuery` 读取 `isCloudItem == false` 的本地曲目元数据。禁止 `MusicCatalog*`、personal recommendations、recently played 和任意 MusicKit Web Service，禁止上传记忆派生数据。领域 API 可暴露 `userFeelings` 集合，但物理存储必须为以 `memoryId` 为外键的 `MemoryFeeling` 关系表；感受不创建 Memory/Representation，不进入搜索或翻译索引。`next` 按稳定唤醒顺序前进，`record` 仅在事务成功后成立；`.cardInteraction` 仅记录 action、hash-only card/memory digest 与布尔 `feelingAssociatedToSource`。`4.0d` 只负责 card→typed Focus 路由，Focus 内 source anchor/原来源操作仍由 `4.0e` 唯一交付。详见 ADR-016。
+**4.0d 交互式唤醒卡边界（2026-09-02 规格审查）**：音乐建议默认且始终可从随 App 打包的离线年份曲库产生；仅当用户在卡片中显式选择“匹配此设备音乐”后，才可请求媒体库权限并通过 `MPMediaQuery` 读取 `isCloudItem == false` 的本地曲目元数据。禁止 `MusicCatalog*`、personal recommendations、recently played 和任意 MusicKit Web Service，禁止上传记忆派生数据。领域 API 可暴露 `userFeelings` 集合，但物理存储必须为以 `memoryId` 为外键的 `MemoryFeeling` 关系表；感受不创建 Memory/Representation，不进入搜索或翻译索引。`next` 按稳定唤醒顺序前进，`record` 仅在事务成功后成立；`.cardInteraction` 仅记录 action、hash-only card/memory digest 与布尔 `feelingAssociatedToSource`。`4.0d` 只负责 card→typed Focus 路由，Focus 内真实来源解析/删除由 `4.0h` 交付，可验证 source anchor 与分享审计由 `4.0i` 交付。详见 ADR-016/017。
+
+**4.0e~4.0j Focus 生产边界（2026-09-03 规格审查）**：`4.0e` 使用 `MemoryUserEdit`/`MemoryEditConflict` 关系交付多行纯文本编辑、成功后发布的新表示与持久冲突，不覆盖原始来源文本；`4.0h` 仅允许对可写 PhotoKit photo/video 发起原始删除，系统删除与 Echo D-005 清理采用持久 saga，Share Extension note/voice/thirdParty 不显示原始删除能力；`4.0i` 要求模型显式返回且 allow-list 校验 source MemoryID，禁止 round-robin 伪绑定，并把 `.creativeGeneration` 与结构化布尔 `.creationSharePresented` 审计分离；`4.0j` 以持久周期键和 TaskQueueActor earliest-eligible 生成月报/年报，不承诺精确后台时刻或伪造不可用分区。详见 ADR-017。
 
 ### 17.3 双状态模型
 
@@ -1527,3 +1531,4 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.37 | 2026-09-01 | 4.0b 规格合理性复审：把 Focus 任务收敛为 Detail/Creation/Translation 的表现与连续性切片；修复 SYN-003 Notes 私有 API 自相矛盾、fixture/生产合同混用、翻译 `<0.7` 旧阈值与 Phase 3.8/3.9 过期标记；新增 4.0e 承担编辑重索引、冲突持久化、原始来源删除、真实媒体/引用导航与 share 审计，禁止由 4.0b 视觉任务或 4.2 测试任务冒充生产实现。 | Codex |
 | v5.38 | 2026-09-02 | 4.0c 规格合理性复审：保留 Task 平衡画布方向并收敛为六域表现切片；补齐故事/Surface 追踪，修正 US-SET-004 加密迁移包矛盾与 US-AWK-002 09:00 过期 AC；新增 4.0f 渐进式权限和 4.0g 真实断点恢复；修复 UI Contract v1 对既有 1.1 实例和终态空 action 的 schema 自相矛盾。 | Codex |
 | v5.39 | 2026-09-02 | 4.0d 规格合理性复审：禁止与 R-001/R-005 冲突的 MusicKit Web Service 推荐，改为 Bundle 离线默认 + 显式 opt-in 后的设备非云端曲目匹配；将 userFeelings 物理存储明确为 MemoryFeeling 关系表；固定 next/record/jump 与 hash-only 审计语义；拆清 4.0d card→Focus 与 4.0e source-anchor 任务边界。 | Codex |
+| v5.40 | 2026-09-03 | 4.0e 规格合理性复审（ADR-017）：将巨型 Focus 闭环拆为 4.0e 编辑/冲突、4.0h 来源解析与 PhotoKit 删除 saga、4.0i 可验证引用与分享审计、4.0j 叙事报告调度；明确 Share Extension 来源不可删除、禁止 round-robin 引用、sharePresented 为结构化布尔、v1 描述为多行纯文本。 | Codex |

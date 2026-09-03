@@ -196,6 +196,15 @@ public actor DatabaseManager {
         if !auditColumns.contains("feelingAssociatedToSource") {
             try execute(sql: "ALTER TABLE AuditLog ADD COLUMN feelingAssociatedToSource INTEGER")
         }
+        if !auditColumns.contains("editedFields") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN editedFields TEXT")
+        }
+        if !auditColumns.contains("reindexed") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN reindexed INTEGER")
+        }
+        if !auditColumns.contains("conflictResolvedWith") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN conflictResolvedWith TEXT")
+        }
         try execute(sql: "CREATE INDEX IF NOT EXISTS idx_auditlog_subject_hash ON AuditLog(subjectHash)")
         // WP3 steps 3i-3t2 (photo-text-search): D-005 resumable deletion journal
         try execute(sql: """
@@ -260,6 +269,23 @@ public actor DatabaseManager {
         if !memoryColumns.contains("userLocked") {
             try execute(sql: "ALTER TABLE Memory ADD COLUMN userLocked INTEGER NOT NULL DEFAULT 0")
         }
+        // 4.0e: user-authored fields remain separate from immutable source text.
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS MemoryUserEdit (
+                memoryId TEXT PRIMARY KEY NOT NULL REFERENCES Memory(memoryId) ON DELETE CASCADE,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                tagsJSON TEXT NOT NULL,
+                updatedAt REAL NOT NULL
+            )
+            """)
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS MemoryEditConflict (
+                memoryId TEXT PRIMARY KEY NOT NULL REFERENCES Memory(memoryId) ON DELETE CASCADE,
+                externalVersionSummary TEXT NOT NULL,
+                detectedAt REAL NOT NULL
+            )
+            """)
         // 4.0d: editable feelings are relational children, never canonical/search payloads.
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS MemoryFeeling (

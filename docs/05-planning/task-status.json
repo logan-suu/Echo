@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-03T03:12:26Z",
+  "last_updated": "2026-09-03T23:24:33Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -1141,25 +1141,25 @@
             "参考输出、损坏恢复与零网络证据"
           ],
           "last_updated": "2026-08-07T03:22:45Z",
-      "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. PR #52 review fixes (2026-08-06): CI skip for model-dependent suites, AC-8 audit wiring via PrivacyActor.writeAuditLog, dead-code removal, forced-unwrap guards. DEF-52-001 (LanguageAligner hardcoded strings) deferred to 3F.10. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json. PR #52 merged 2026-08-07. PR #65 post-delivery review associates the ModelLoaderActor real multi-model progress wiring with the original 3F.3 model-runtime scope; out-of-scope ASR/Embedder service edits were removed during review.",
-      "pr": "https://github.com/logan-suu/Echo/pull/52",
-      "post_delivery_prs": [
-        {
-          "number": 65,
-          "url": "https://github.com/logan-suu/Echo/pull/65",
-          "head": "fix/production-real-data-wiring-US-SYS-001",
-          "base": "dev-1.0",
-          "kind": "post-delivery model progress wiring fix",
-          "status": "merged",
-          "merged_at": "2026-08-31T15:20:39Z",
-          "merge_commit": "bd18819bf2583cc8f6bd97e2759c2b96c3e923ae",
-          "merged_by": "logan-suu",
-          "stories": [
-            "US-RES-004"
-          ]
-        }
-      ],
-      "migrated_from": [
+          "notes": "Migrated from 4.21 and 4.22; ADR-009 governs. 3F.3 delivered 2026-08-06: E5 real 384d inference (Unigram tokenizer + CoreMLInferenceAdapter), SigLIP2 preprocessing + conversion-source provenance, Whisper tiny GGUF artifact + fail-closed bridge, LanguageAligner (R-004 one-retry), model-provenance-register.md created; DEF-34-003/004 closed, DEF-35-001 partial. PR #52 review fixes (2026-08-06): CI skip for model-dependent suites, AC-8 audit wiring via PrivacyActor.writeAuditLog, dead-code removal, forced-unwrap guards. DEF-52-001 (LanguageAligner hardcoded strings) deferred to 3F.10. SigLIP2 Core ML conversion + whisper.cpp runtime tracked as pending in model-manifest.json. PR #52 merged 2026-08-07. PR #65 post-delivery review associates the ModelLoaderActor real multi-model progress wiring with the original 3F.3 model-runtime scope; out-of-scope ASR/Embedder service edits were removed during review.",
+          "pr": "https://github.com/logan-suu/Echo/pull/52",
+          "post_delivery_prs": [
+            {
+              "number": 65,
+              "url": "https://github.com/logan-suu/Echo/pull/65",
+              "head": "fix/production-real-data-wiring-US-SYS-001",
+              "base": "dev-1.0",
+              "kind": "post-delivery model progress wiring fix",
+              "status": "merged",
+              "merged_at": "2026-08-31T15:20:39Z",
+              "merge_commit": "bd18819bf2583cc8f6bd97e2759c2b96c3e923ae",
+              "merged_by": "logan-suu",
+              "stories": [
+                "US-RES-004"
+              ]
+            }
+          ],
+          "migrated_from": [
             "4.21",
             "4.22"
           ]
@@ -1656,15 +1656,15 @@
                 "EchoTests/Phase3F/PhotoTextSearchIdentityTests.swift"
               ],
               "notes": "Third review round: all five remaining findings were verified as valid and fixed. Durable vector cleanup now fails before the vectorsDeleted phase, resumed deletion removes the exact persisted journal row, production detail reloads clear stale fixture/content and retry the same ID through a recording repository seam, and explicit onboarding fixtures take precedence over injected live model loading. No finding was deferred.",
-        "verification": [
-          "SwiftLint strict: 0 violations in configured scope and changed production Swift files",
-          "Focused model/permission/background/resume suites: 117/117 passed",
-          "PR review regression suites: 92/92 focused background/resume/detail/onboarding tests passed; CreationViewModel 19/19 and Onboarding 29/29 passed",
-          "Full EchoUITests bundle after review fixes: 44 executed, 1 consent-state skip, 0 failures",
-          "Full scheme after deletion and second-round review fixes: 1,292 total, 1,287 passed, 4 expected failures, 1 consent-state skip, 0 failures",
-          "Third review affected suites: 75/75 passed, including two newly discoverable deletion regression tests",
-          "PhotoTextSearchIdentity named suite: 17/17 passed",
-          "No-fixture production E2E: 1 passed, 1 skipped because consent was already persisted, 0 failed",
+              "verification": [
+                "SwiftLint strict: 0 violations in configured scope and changed production Swift files",
+                "Focused model/permission/background/resume suites: 117/117 passed",
+                "PR review regression suites: 92/92 focused background/resume/detail/onboarding tests passed; CreationViewModel 19/19 and Onboarding 29/29 passed",
+                "Full EchoUITests bundle after review fixes: 44 executed, 1 consent-state skip, 0 failures",
+                "Full scheme after deletion and second-round review fixes: 1,292 total, 1,287 passed, 4 expected failures, 1 consent-state skip, 0 failures",
+                "Third review affected suites: 75/75 passed, including two newly discoverable deletion regression tests",
+                "PhotoTextSearchIdentity named suite: 17/17 passed",
+                "No-fixture production E2E: 1 passed, 1 skipped because consent was already persisted, 0 failed",
                 "Release simulator build: succeeded",
                 "Release compliance: Echo and EchoShareExtension clean"
               ]
@@ -2409,14 +2409,14 @@
             "交付 US-AWK-005 AC-1~5 的真实生产闭环，不得以 fixture、通知占位文案或仅导航到详情冒充卡片完成",
             "userFeelings 是领域扩展集合，物理存储为以 memoryId 为外键的 MemoryFeeling 关系表；不嵌入 canonical JSON，不创建 Memory/Representation，不进入检索/翻译索引；新增/编辑/删除/原 memory 级联删除必须事务化",
             "左滑下一张、右滑记录感受仅属于专用 AwakeningCard variant；同时提供等价可见按钮和 accessibility actions；next 按稳定唤醒顺序前进，无后继项时禁用，record 仅在事务提交成功后成立",
-            "媒体缩略图和 card→Focus 路由来自真实系统 adapter；无媒体/来源撤权时诚实降级。4.0d 不复制 4.0e 的 Focus source-anchor/原来源操作边界",
+            "媒体缩略图来自真实系统 adapter；card→Focus 发出稳定 intent，无媒体/来源撤权时诚实降级。4.0d 不复制 4.0h 的来源生命周期或 4.0i 的 source-anchor/Detail 路由边界",
             "音乐建议默认从随包离线年份曲库产生；仅用户显式选择后请求媒体库权限并通过 MPMediaQuery 读取 isCloudItem=false 的设备曲目。禁止 MusicKit catalog/personal/recently-played 网络请求和任何记忆派生数据上传",
             "所有新增异步入口遵循 PrivacyCheckpoint、Actor isolation、L1~L4 与 hash-only audit；禁止 Combine、Task.detached、@unchecked Sendable 和 nonisolated(unsafe)"
           ],
           "acceptance_evidence": [
             "AC-1：真实文案、仅媒体记忆的 1~3 个真实缩略图、带 supportedYears/fallback/provenance-license 的随包元数据库与 memoryId digest 稳定选择，以及显式 opt-in 后仅设备非云端曲目的本地匹配证据；Bundle 无音频/封面/歌词/URL，MusicKit catalog/personal/recently-played 扫描为 0",
             "AC-2：左滑下一张、右滑记录感受及等价按钮/accessibility actions 触发相同 intent；稳定顺序、无后继项禁用、取消不写库/不审计",
-            "AC-3：照片/视频、备忘录文案和语音通过稳定 memoryId/sourceLocator 进入正确 Echo Focus surface；不可解析时诚实不可用，真实 source anchor 证据归 4.0e",
+            "AC-3：照片/视频、备忘录文案和语音发出稳定 memoryId/sourceLocator Focus intent；不可解析时诚实不可用，真实来源解析归 4.0h，source anchor 与 Detail 路由证据归 4.0i",
             "AC-4：MemoryFeeling 关系表新增、查看、编辑、删除、原 memory 级联删除、重启持久化、不可搜索/不可翻译索引及下一次个性化刷新边界测试",
             "AC-5：AuditEvent.cardInteraction 枚举与 action=next/record/jump、hash-only card/memory digest、布尔 feelingAssociatedToSource 的持久化证据；无感受原文/媒体库内容",
             "双语、Dynamic Type、VoiceOver、Reduce Motion、权限 denied/restricted/empty/failure 回退与双设备无媒体 Live Simulator Review"
@@ -2457,28 +2457,25 @@
         },
         {
           "id": "4.0e",
-          "title": "Focus 生产动作与来源闭环",
+          "title": "记忆编辑、重新向量化与持久冲突闭环",
           "story": [
-            "US-AWK-007",
-            "US-PRV-004",
-            "US-SYN-002",
-            "US-SYN-003",
-            "US-SYN-004"
+            "US-AWK-007"
           ],
-          "owner": "iOS Content and Core Integration Lead",
+          "owner": "iOS Memory Integrity Lead",
           "documents_required": [
             "AGENTS.md",
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-010-canonical-generation-lifecycle.md",
+            "docs/decisions/ADR-017-focus-production-boundaries.md",
             "docs/ui/architecture.md",
             "UIAutomation/Contracts/instances/memory-detail-surface.json",
-            "UIAutomation/Contracts/instances/creation-surface.json",
             "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
             "4.0b"
           ],
@@ -2490,21 +2487,22 @@
             "Translation"
           ],
           "implementation_constraints": [
-            "新增生产写入必须通过明确 Actor/repository 边界并保持 PrivacyCheckpoint、D-005、strict concurrency 与 hash-only audit",
-            "编辑事务同时持久化 originalTimestamp/userEdited/userLocked 并完成 representation/vector/cache 的替换与重新向量化",
-            "原始来源删除失败或被拒绝时不得先删除 Echo canonical 状态；成功级联不写 ExcludedAssets",
-            "真实媒体与 source anchor 仅解析当前授权下的本地来源；资产缺失或撤权 fail closed，禁止 bundled sample fallback",
-            "Notes 交接仅用本地 export + system share sheet；审计只记 sharePresented，不推断目标 App、用户选择或保存结果"
+            "用户标题、多行纯文本描述和规范化标签写入以 memoryId 为外键的 MemoryUserEdit 关系；原始来源文本保持不变，v1 不承诺富文本格式持久化",
+            "有效检索文本按用户标题、用户描述、标签、原 canonical 文本的固定顺序组成；新表示与向量准备成功后才发布并清理旧向量/FTS/缓存，失败保持旧版本可服务",
+            "首次覆盖时间戳将原值写入 originalTimestamp，后续覆盖不得改写备份；userEdited 与有效 createdAt 同事务持久化",
+            "MemoryEditConflict 持久化外部版本摘要、检测时间和状态；local/external/merge 决议与 userLocked 同事务更新，重启后不丢失",
+            "SyncPipeline 自动更新必须跳过 userLocked 记忆，直到用户显式重新同步或恢复外部版本；所有异步入口执行 PrivacyCheckpoint"
           ],
           "acceptance_evidence": [
-            "no-fixture 编辑→事务持久化→重新向量化，以及同步中 L4 阻止保存的故障注入证据",
-            "local/external conflict resolution、userLocked 自动同步跳过、显式恢复与重启持久化证据",
-            "photo/video/voice/note 真实来源解析、权限撤回、资产消失与正确播放/Detail 路由证据",
-            "原始来源删除成功/拒绝/失败、D-005 补偿与 ExcludedAssets 不写边界证据",
-            "grounded citation → stable MemoryID Detail、NoSource 禁用、share handoff cancel/failure 与 sharePresented hash-only audit 证据"
+            "no-fixture 标题/多行描述/标签/时间戳编辑跨重启持久化，原始来源文本未覆盖且有效检索文本顺序可定位",
+            "新表示/向量/FTS/缓存成功后发布以及每个故障点保持旧版本可服务的事务/补偿证据",
+            "同步进行中保存被 L4 阻止，编辑期间外部变化持久化 conflict，重启后仍可恢复差异",
+            "local/external/manual merge 三种决议、userLocked 自动同步跳过与显式重新同步解除的生产证据",
+            "memoryEdited 审计包含结构化 editedFields/reindexed/conflictResolvedWith，ID 与自由文本仅摘要"
           ],
-          "last_updated": "2026-09-02T00:06:54Z",
-          "notes": "Created by the 4.0b reasonableness review because a visual task and a later E2E test cannot substitute for the production edit/conflict/source-deletion/media/citation/share-audit behavior still marked Partial after Phase 3F. Automatically promoted from backlog to ready after dependency 4.0b completed."
+          "last_updated": "2026-09-03T23:24:33Z",
+          "notes": "2026-09-03 reasonableness review adopted ADR-017 and narrowed 4.0e to editable metadata, safe re-index publication and persistent conflict semantics. Implemented MemoryUserEdit and MemoryEditConflict relations, prepare-before-publish text vector/FTS/cache replacement, first-write timestamp backup, shared Detail/Sync MemoryEditActor wiring, local/external/merge resolution, persistent userLocked sync exclusion, and structured hash-only memoryEdited audit fields. Validation: 7 task tests passed, including the AC-3 production L4 sync-lock guard; 27 MemoryDetailViewModel and 12 SyncPipeline regression tests passed; SwiftLint completed with 0 violations.",
+          "pr": null
         },
         {
           "id": "4.0f",
@@ -2615,6 +2613,148 @@
           "notes": "Created by the 4.0c reasonableness review. Production currently reads ProgressActor rows but Continue/Restart intentionally returns an unavailable error because no task reconstruction/launcher boundary is connected; prompt fixtures cannot satisfy US-SYS-001 AC-3/AC-4. Automatically promoted from backlog to ready after dependency 4.0c completed."
         },
         {
+          "id": "4.0h",
+          "title": "真实来源解析与 PhotoKit 删除补偿闭环",
+          "story": [
+            "US-AWK-005",
+            "US-PRV-004",
+            "US-PRV-007"
+          ],
+          "owner": "iOS Source Lifecycle Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-017-focus-production-boundaries.md",
+            "docs/ui/architecture.md",
+            "UIAutomation/Contracts/instances/memory-detail-surface.json",
+            "UIAutomation/Contracts/instances/memory-detail-action-delete-original.json",
+            "docs/05-planning/deferred-items.json",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0e"
+          ],
+          "test_file": "EchoTests/Phase4/4.0h_FocusSourceLifecycleTests.swift",
+          "surface_family": "focus",
+          "ui_scope": [
+            "Detail"
+          ],
+          "implementation_constraints": [
+            "FocusSourceResolver 仅通过当前 UserPolicy 和公开系统 API 解析 photo/video/voice/note，返回 Sendable 值类型或受控播放句柄；失效与撤权 fail closed",
+            "同时删除原始文件只对当前可写且可解析的 PhotoKit photo/video 可用；Share Extension note/voice/thirdParty 不具有来源 App 删除能力",
+            "PhotoKit 删除与 Echo D-005 清理采用有序 saga：请求前持久化既有 MemoryDeletionJournal(.planned)，系统成功后从 .planned 进入现有 D-005 本地清理；系统失败不修改 canonical，未决 intent 恢复时先复验资产存在性，本地清理可重放",
+            "系统资产已删除后本地清理失败进入 L2 手动重试/前台补偿，不声称外部回滚；级联清理不写 ExcludedAssets",
+            "生产媒体解析禁止 bundled sample fallback；所有异步入口执行 PrivacyCheckpoint，审计只含必要结构化字段和摘要"
+          ],
+          "acceptance_evidence": [
+            "photo/video/voice/note 真实来源解析、播放/阅读、权限撤回、资产消失与重启证据",
+            "PhotoKit 可删/limited/denied/read-only/missing 与 Share Extension note/voice/thirdParty 能力矩阵",
+            "用户取消、系统拒绝、删除失败时 canonical/向量/缓存/ExcludedAssets 全部未变，intent 被安全结束",
+            "MemoryDeletionJournal(.planned) 写入后各终止点、未决 intent 资产存在性复验、从 .planned 进入 D-005 后各清理阶段故障、journal 重放、最终完整清除且 ExcludedAssets 不写",
+            "memoryDeleted/cascadeDeleteFromOriginal 审计记录请求、完成和失败阶段，ID 仅摘要"
+          ],
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "Created by ADR-017 because PhotoKit and Echo stores cannot form one atomic transaction, and Share Extension imports do not grant deletion authority over Notes, Voice Memos or third-party source content."
+        },
+        {
+          "id": "4.0i",
+          "title": "可验证引用、稳定导航与系统分享审计闭环",
+          "story": [
+            "US-SYN-002",
+            "US-SYN-003",
+            "US-SYN-004"
+          ],
+          "owner": "iOS Grounded Creation Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-013-creation-export-boundary.md",
+            "docs/decisions/ADR-017-focus-production-boundaries.md",
+            "docs/ui/architecture.md",
+            "UIAutomation/Contracts/instances/memory-detail-surface.json",
+            "UIAutomation/Contracts/instances/creation-surface.json",
+            "UIAutomation/Contracts/instances/creation-action-save-to-notes.json",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0h"
+          ],
+          "test_file": "EchoTests/Phase4/4.0i_GroundedCitationShareTests.swift",
+          "surface_family": "focus",
+          "ui_scope": [
+            "Detail",
+            "Creation"
+          ],
+          "implementation_constraints": [
+            "CreativePipeline 输出每段显式 source MemoryID；解析器只接受本次输入 allow-list，禁止按位置或轮询猜测来源",
+            "未知、缺失、撤权或不可解析来源标记 NoSource 并禁用跳转；有效锚点经当前 UserPolicy 与 FocusSourceResolver 复验后进入稳定 Detail",
+            "Markdown/PDF/系统分享保留可理解的引用语义；Notes 仅为系统 share/export 交接，不调用私有 API 或伪造保存结果",
+            "creativeGeneration 与 creationSharePresented 分离；sharePresented 为结构化 Bool，不哈希且不记录 activityType、目标 App、用户完成状态或原文",
+            "导出准备或面板呈现失败为 L2；已成功呈现后的用户取消不是失败"
+          ],
+          "acceptance_evidence": [
+            "多来源、缺失 ID、未知 ID、输入集合外 ID 与模型伪造 ID 的 allow-list 解析证据，无 round-robin fallback",
+            "有效 citation 到真实 Detail、撤权/资产消失转 NoSource/诚实不可用、NoSource 禁用",
+            "Markdown/PDF/share payload 引用语义与系统 share sheet 呈现证据",
+            "呈现成功/准备失败/呈现失败/已呈现后取消的状态与 L2 行为",
+            "creativeGeneration 与 creationSharePresented 审计字段、结构化 sharePresented 及零目标 App/原文证明"
+          ],
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "Created by ADR-017 because the existing paragraph-index round-robin source assignment cannot prove grounding, and sharePresented cannot be truthfully recorded during generation or hidden in a hash."
+        },
+        {
+          "id": "4.0j",
+          "title": "月度与年度叙事报告持久调度闭环",
+          "story": [
+            "US-SYN-004"
+          ],
+          "owner": "iOS Narrative Automation Lead",
+          "documents_required": [
+            "AGENTS.md",
+            "docs/01-spec/用户故事与验收标准规格书.md",
+            "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/数据流全链路技术说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-011-task-progress-boundary.md",
+            "docs/decisions/ADR-017-focus-production-boundaries.md",
+            "docs/05-planning/deferred-items.json",
+            "docs/05-planning/task-status.json"
+          ],
+          "status": "backlog",
+          "dependencies": [
+            "4.0i"
+          ],
+          "test_file": "EchoTests/Phase4/4.0j_NarrativeReportSchedulerTests.swift",
+          "surface_family": "focus",
+          "ui_scope": [
+            "Creation"
+          ],
+          "implementation_constraints": [
+            "月报/年报使用本地持久 period key 幂等；App 启动、前台或系统提供后台机会时执行最早符合条件且未完成的周期，不承诺精确时刻",
+            "任务通过 TaskQueueActor 串行执行并由 ProgressActor 持久化；所有异步入口执行 PrivacyCheckpoint，取消与重启可恢复",
+            "只消费当前授权且生产可用的数据分区；人物身份或 HealthKit 等不可用时省略并明确标注，禁止 fixture/占位数据",
+            "每周期最多成功生成一次；失败不写完成键，L2 仅手动重试或下一合法调度机会重建",
+            "narrativeReportGenerated 记录 periodType、实际 dataSourcesUsed 和 periodKeyDigest，不记录报告原文"
+          ],
+          "acceptance_evidence": [
+            "月/年边界、跨时区、重复启动、错过多个周期与开关关闭的确定性 period-key 测试",
+            "最早符合周期入队、取消、进程终止、重启恢复与成功后不重复生成证据",
+            "授权来源组合、人物/HealthKit 不可用时省略、无 fixture/占位输入证明",
+            "TaskQueueActor/ProgressActor 串行与故障矩阵",
+            "narrativeReportGenerated 审计字段及报告原文零落库证明"
+          ],
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "Created by ADR-017 because no production narrative report scheduler exists; fixture report titles and share UI cannot satisfy US-SYN-004 automatic generation."
+        },
+        {
           "id": "4.1",
           "title": "Golden Dataset 与反馈排序质量验收",
           "story": [
@@ -2723,12 +2863,15 @@
             "4.0d",
             "4.0e",
             "4.0f",
-            "4.0g"
+            "4.0g",
+            "4.0h",
+            "4.0i",
+            "4.0j"
           ],
           "test_file": "EchoTests/Phase4/AllPipelinesTests.swift",
           "acceptance_evidence": [
             "默认 App 无 -ui-fixture 参数的来源、摄入、检索、反馈、编辑、删除、唤醒、翻译和创作全链路通过记录",
-            "US-AWK-005 真实媒体、Bundle 离线音乐/显式 opt-in 后设备非云端曲目匹配、下一张、MemoryFeeling 新增编辑删除、card→typed-Focus 与真实 source anchor 的 no-fixture 联合闭环（消费 4.0d + 4.0e，MusicKit web-service 路径扫描为 0，不以本测试任务补写功能）",
+            "US-AWK-005 真实媒体、Bundle 离线音乐/显式 opt-in 后设备非云端曲目匹配、下一张、MemoryFeeling 新增编辑删除、card→typed-Focus 与真实 source anchor 的 no-fixture 联合闭环（消费 4.0d + 4.0h + 4.0i，MusicKit web-service 路径扫描为 0，不以本测试任务补写功能）",
             "Home 0/1~19/20+ live-data 状态与 Search <6/>=6 结果布局路径的 no-fixture 端到端记录",
             "12 个 UI 功能域在默认 App 路径使用同一 design profile 且跨 Surface 导航不出现视觉系统切换的端到端记录",
             "真实 PhotoKit 与 Share Extension 输入的 traceID 贯穿 PrivacyCheckpoint、SQLite、generation route 和审计日志",
@@ -2739,7 +2882,8 @@
           "migrated_from": [
             "4.2"
           ],
-          "last_updated": "2026-08-31T16:18:55Z"
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "ADR-017 adds 4.0h/4.0i/4.0j as required production prerequisites; verification tasks consume rather than implement them."
         },
         {
           "id": "4.3",
@@ -2834,7 +2978,7 @@
           ],
           "status": "backlog",
           "dependencies": [
-            "4.0e"
+            "4.0h"
           ],
           "test_file": "EchoTests/Phase4/ExcludedAssetsBoundaryTests.swift",
           "acceptance_evidence": [
@@ -2847,7 +2991,7 @@
           "migrated_from": [
             "4.6"
           ],
-          "last_updated": "2026-08-31T15:42:40Z"
+          "last_updated": "2026-09-03T16:00:00Z"
         },
         {
           "id": "4.6",
@@ -2872,7 +3016,10 @@
             "4.0d",
             "4.0e",
             "4.0f",
-            "4.0g"
+            "4.0g",
+            "4.0h",
+            "4.0i",
+            "4.0j"
           ],
           "test_file": "EchoTests/Phase4/QualityGateTests.swift",
           "acceptance_evidence": [
@@ -2882,7 +3029,8 @@
             "Combine、Task.detached、@unchecked Sendable、nonisolated(unsafe)、网络下载和明文审计内容扫描均为 0 命中"
           ],
           "migrated_from": [],
-          "last_updated": "2026-08-31T16:18:55Z"
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "ADR-017 adds 4.0h/4.0i/4.0j as required production prerequisites; verification tasks consume rather than implement them."
         },
         {
           "id": "4.7",
@@ -2916,7 +3064,10 @@
             "4.0d",
             "4.0e",
             "4.0f",
-            "4.0g"
+            "4.0g",
+            "4.0h",
+            "4.0i",
+            "4.0j"
           ],
           "test_file": "EchoTests/Phase4/LocalizationAccessibilityTests.swift",
           "acceptance_evidence": [
@@ -2928,7 +3079,8 @@
             "全 App 12 个功能域共享 typography、accent、spacing、radii、container hierarchy、status/action components 与 motion，同时各自保持正确 Discovery/Focus/Task 布局的验收记录"
           ],
           "migrated_from": [],
-          "last_updated": "2026-08-31T16:18:55Z"
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "ADR-017 adds 4.0h/4.0i/4.0j as required production prerequisites; verification tasks consume rather than implement them."
         },
         {
           "id": "4.8",
@@ -2964,7 +3116,10 @@
             "4.0d",
             "4.0e",
             "4.0f",
-            "4.0g"
+            "4.0g",
+            "4.0h",
+            "4.0i",
+            "4.0j"
           ],
           "test_file": null,
           "acceptance_evidence": [
@@ -2978,7 +3133,8 @@
           "migrated_from": [
             "4.8"
           ],
-          "last_updated": "2026-08-31T16:18:55Z"
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "ADR-017 adds 4.0h/4.0i/4.0j as required production prerequisites; verification tasks consume rather than implement them."
         },
         {
           "id": "4.9",
@@ -3041,6 +3197,9 @@
             "4.0e",
             "4.0f",
             "4.0g",
+            "4.0h",
+            "4.0i",
+            "4.0j",
             "4.1",
             "4.2",
             "4.3",
@@ -3065,7 +3224,8 @@
             "DEF-002"
           ],
           "migrated_from": [],
-          "last_updated": "2026-08-31T16:18:55Z"
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "ADR-017 adds 4.0h/4.0i/4.0j as required production prerequisites; verification tasks consume rather than implement them."
         },
         {
           "id": "4.11",
@@ -3175,6 +3335,9 @@
             "4.0e",
             "4.0f",
             "4.0g",
+            "4.0h",
+            "4.0i",
+            "4.0j",
             "4.1",
             "4.2",
             "4.3",
@@ -3191,7 +3354,7 @@
           ],
           "test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
           "acceptance_evidence": [
-            "4.0、4.0a、4.0b、4.0c、4.0d、4.0e、4.0f、4.0g 与 4.1 至 4.13 全部为 done，且每项 acceptance_evidence 均有可定位制品",
+            "4.0、4.0a、4.0b、4.0c、4.0d、4.0e、4.0f、4.0g、4.0h、4.0i、4.0j 与 4.1 至 4.13 全部为 done，且每项 acceptance_evidence 均有可定位制品",
             "EchoTests/Phase4/Phase4IntegrationTests.swift 在最终 RC 上 exit code 0",
             "Phase 1、2、3、3F、4 的累计单元与集成测试均为 0 failure",
             "最终 RC 身份、签名、SBOM、隐私、文档、P0=0 和 P1=0 的发布证据索引",
@@ -3200,7 +3363,8 @@
           "migrated_from": [
             "4.11"
           ],
-          "last_updated": "2026-08-31T16:18:55Z"
+          "last_updated": "2026-09-03T16:00:00Z",
+          "notes": "ADR-017 adds 4.0h/4.0i/4.0j as required production prerequisites; verification tasks consume rather than implement them."
         }
       ]
     },
@@ -3625,6 +3789,43 @@
         "docs/05-planning/开发计划安排文档.md",
         "docs/05-planning/phase3f-evidence-index.md",
         "docs/05-planning/phase3f-story-matrix.md",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260903-4-0E-REASONABLENESS",
+      "status": "resolved",
+      "detected_at": "2026-09-03T16:00:00Z",
+      "resolved_at": "2026-09-03T16:00:00Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "split-focus-production-boundaries",
+      "decision": "Narrow 4.0e to persisted user edits, safe re-index publication and durable conflict resolution; add 4.0h for source resolution and PhotoKit deletion saga, 4.0i for allow-list validated citations and share presentation audit, and 4.0j for persistent earliest-eligible narrative scheduling. Limit source deletion to writable PhotoKit photo/video, model v1 descriptions as multiline plain text, and store sharePresented as a structured boolean.",
+      "reason": "The prior task treated PhotoKit and Echo stores as one atomic transaction, exposed source deletion for imports Echo cannot control, used position-based source assignment that cannot prove grounding, mixed generation and share audit timing, promised rich text without a persistence model, and had no production owner for narrative scheduling.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/INDEX.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/架构设计文档.md",
+        "docs/02-architecture/数据流全链路技术说明文档.md",
+        "docs/03-implementation/开发避坑与关键注意点手册.md",
+        "docs/decisions/ADR-013-creation-export-boundary.md",
+        "docs/decisions/ADR-017-focus-production-boundaries.md",
+        "docs/ui/README.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/instances/memory-detail-surface.json",
+        "UIAutomation/Contracts/instances/creation-surface.json",
+        "UIAutomation/Contracts/instances/memory-detail-action-delete.json",
+        "UIAutomation/Contracts/instances/memory-detail-action-delete-original.json",
+        "UIAutomation/Contracts/instances/memory-detail-action-save.json",
+        "UIAutomation/Contracts/instances/memory-detail-action-keep-local.json",
+        "UIAutomation/Contracts/instances/memory-detail-action-keep-external.json",
+        "UIAutomation/Contracts/instances/creation-action-save-to-notes.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/phase3f-story-matrix.md",
+        "docs/05-planning/phase3f-evidence-index.md",
+        "docs/05-planning/deferred-items.json",
         "docs/05-planning/task-status.json"
       ]
     }

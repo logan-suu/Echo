@@ -67,9 +67,9 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | RET-007 | Absent/unmapped | 3F.6, 4.1, 4.2 | No retrieval cache or policy-aware invalidation. |
 | RET-008 | Stub | 3F.6, 4.1, 4.2 | No operational timeout/partial-result path; only UI error/fixture behavior. |
 | SYN-001 | Stub | 3F.9, 4.2 | Language picker is a fixture UI transition; no persisted policy or model prompt/retry integration. |
-| SYN-002 | Partial | 3F.9, 4.0e, 4.2 | Grounded generation produces anchors; 4.0e owns stable anchor → real Detail navigation and no-source production behavior. |
-| SYN-003 | Partial | 3F.0, 3F.9, 4.0e, 4.2 | Private Notes creation/deep-link was replaced by the approved system share/export boundary; 4.0e owns honest handoff state and sharePresented audit. |
-| SYN-004 | Partial | 3F.0, 3F.9, 4.0e, 4.2 | Best-effort scheduling and system share/export replace invalid exact-time/Notes assumptions; 4.0e owns the report handoff boundary and audit wiring. |
+| SYN-002 | Partial | 3F.9, 4.0i, 4.2 | 3F.9 renders anchors but assigns them by paragraph position. ADR-017 requires 4.0i to accept only model-emitted source IDs from the current input allow-list, route valid anchors to real Detail and mark every unknown/missing source as NoSource. |
+| SYN-003 | Partial | 3F.0, 3F.9, 4.0i, 4.2 | Private Notes creation/deep-link was replaced by system share/export; 4.0i owns verified citations, honest handoff and the separate structured creationSharePresented audit. |
+| SYN-004 | Partial | 3F.0, 3F.9, 4.0i, 4.0j, 4.2 | 4.0i owns verified report citations/share handoff; 4.0j owns persistent earliest-eligible monthly/yearly scheduling, idempotency and narrativeReportGenerated audit. Fixture reports are not production evidence. |
 | SYN-005 | Stub | 3F.9, 4.2 | Prompt editor UI exists; no bounded analysis pipeline or source enforcement. |
 | SYN-006 | Absent/unmapped | 3F.9, 4.2 | No emotion-intervention synthesis/prompt implementation. |
 | SYN-007 | Absent/unmapped | 3F.9, 4.2 | No term glossary runtime or Golden validation. |
@@ -78,13 +78,13 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | AWK-002 | Partial | 3F.0, 3F.8, 4.0f, 4.2 | The exact 09:00 promise was corrected to an earliest-eligible best-effort window; 4.0f owns contextual notification opt-in and the UI must not promise an exact delivery time. |
 | AWK-003 | Partial | 3F.8, 4.0f, 4.2 | Production HealthKit and awakening adapters exist; 4.0f owns explicit health-context opt-in, minimum-scope authorization and non-inference of undisclosed read authorization. |
 | AWK-004 | Deferred | DEF-001 (approved deferral) | Explicit P1 Phase-4 Widget/Live Activity deferral (DEF-001). |
-| AWK-005 | Partial | 3F.7, 3F.8, 4.0d, 4.0e, 4.2 | 3F delivered persistent card identity, minimized notification and response→detail routing. Under ADR-016, 4.0d owns real card media, bundled-offline/default and explicit-opt-in on-device music matching (no MusicKit web service), next/record interactions, the MemoryFeeling relation, card→typed-Focus routing and cardInteraction audit. 4.0e owns the Focus-internal real source anchor/deletion boundary; 4.2 verifies the joined no-fixture production loop. |
+| AWK-005 | Partial | 3F.7, 3F.8, 4.0d, 4.0h, 4.0i, 4.2 | 4.0d owns real card media/music/feelings and card→typed-Focus routing. ADR-017 assigns Focus source resolution/deletion capability to 4.0h and verified source-anchor navigation to 4.0i; 4.2 verifies the joined loop. |
 | AWK-006 | Deferred | DEF-002 (approved deferral) | Explicit P1 Phase-4 Siri/App Intents deferral (DEF-002). |
-| AWK-007 | Partial | 3F.4, 3F.7, 4.0e, 4.2 | Detail editing/conflict UI mutates fixture model; 4.0e owns reindexing, source preservation, userLocked sync behavior and persistent conflict resolution. |
+| AWK-007 | Partial | 3F.4, 3F.7, 4.0e, 4.2 | Detail editing/conflict UI mutates fixture model; ADR-017 narrows 4.0e to MemoryUserEdit, safe reindex publication, source preservation, userLocked sync behavior and persistent MemoryEditConflict resolution. |
 | PRV-001 | Partial | 3F.1, 3F.2, 3F.6, 4.2, 4.5, 4.9 | PrivacyActor has isolated policy/checkpoint behavior; startup neither loads nor wires a deny-by-default production policy. |
 | PRV-002 | Stub | 3F.7 | Audit rows can exist in core tests, but Settings audit viewer is not wired to live data. |
 | PRV-003 | Impossible/spec-invalid | 3F.0, 3F.7 | The AC requires complete 30-day export and a <=5MB file without a limit, pagination, or split rule. |
-| PRV-004 | Partial | 3F.1, 3F.4, 3F.7, 4.0e, 4.2, 4.5, 4.9 | Remove-from-Echo is connected to canonical deletion; 4.0e owns the missing original-source deletion boundary and 4.5 verifies ExcludedAssets/D-005 behavior. |
+| PRV-004 | Partial | 3F.1, 3F.4, 3F.7, 4.0h, 4.2, 4.5, 4.9 | Remove-from-Echo is connected. ADR-017 limits source deletion to writable PhotoKit photo/video and assigns its durable deletion saga to 4.0h; Share Extension sources cannot be deleted by Echo. |
 | PRV-005 | Impossible/spec-invalid | 3F.0, 3F.1, 4.2, 4.9 | iOS cannot guarantee cooling-period completion while the app is not running. |
 | PRV-006 | Partial | 3F.1, 3F.4, 4.2, 4.9 | Persistence/retention intent exists in core schema and settings UI, but no production canonical-store lifecycle verifies the full deletion boundary. |
 | PRV-007 | Impossible/spec-invalid | 3F.0, 3F.4, 4.2, 4.5, 4.9 | The required 5-second cascade after original deletion cannot be guaranteed while iOS is suspended/backgrounded. |

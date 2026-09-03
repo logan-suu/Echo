@@ -228,6 +228,7 @@ public actor SyncPipeline {
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
     /// 分代索引注册表（CR-3 方案A）— 生产替换路径经活跃路由写入 canonical + 每代向量
     private let generationRegistry: GenerationRegistryActor?
+    private let memoryEditActor: MemoryEditActor?
 
     /// 当前同步中锁定的内存 ID 引用计数（AC-6: 防止并发编辑，N-2 修复）
     ///
@@ -253,7 +254,8 @@ public actor SyncPipeline {
         excludedAssets: ExcludedAssetsActor = .shared,
         progressActor: ProgressActor = .shared,
         canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
-        generationRegistry: GenerationRegistryActor? = nil
+        generationRegistry: GenerationRegistryActor? = nil,
+        memoryEditActor: MemoryEditActor? = nil
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
@@ -262,6 +264,7 @@ public actor SyncPipeline {
         self.progressActor = progressActor
         self.canonicalRepository = canonicalRepository
         self.generationRegistry = generationRegistry
+        self.memoryEditActor = memoryEditActor
     }
 
     // MARK: - Sync Execution (AC-4, AC-5, AC-7, AC-9)
@@ -374,6 +377,40 @@ public actor SyncPipeline {
                     // 注意：旧记忆 ID 必须在摄入新记忆【之前】查询——新记忆的 assetId
                     // 与旧记忆相同，摄入后查找会把新记忆也当作旧记录误删。
                     let oldMemoryIds = try await findMemories(byAssetId: change.assetId)
+
+                    if let memoryEditActor {
+                        var shouldSkip = false
+                        for memoryIDString in oldMemoryIds {
+                            guard let memoryID = UUID(uuidString: memoryIDString) else { continue }
+                            let disposition = try await memoryEditActor.handleExternalChange(
+                                memoryID: memoryID,
+                                externalVersionSummary: "\(change.source.rawValue) source changed",
+                                traceID: traceID
+                            )
+                            if disposition != .proceed { shouldSkip = true }
+                        }
+                        if shouldSkip {
+                            skippedCount += 1
+                            try? await progressActor.updateProgress(
+                                taskId: taskId,
+                                lastProcessedIndex: index + 1,
+                                lastProcessedId: change.assetId
+                            )
+                            continue
+                        }
+                    } else if let canonicalRepository {
+                        var isLocked = false
+                        for memoryIDString in oldMemoryIds {
+                            guard let memoryID = UUID(uuidString: memoryIDString) else { continue }
+                            if try await canonicalRepository.loadMemory(memoryId: memoryID)?.userLocked == true {
+                                isLocked = true
+                            }
+                        }
+                        if isLocked {
+                            skippedCount += 1
+                            continue
+                        }
+                    }
 
                     // AC-6 (W1): 删除旧记忆窗口期加锁，阻止并发用户编辑（L4 冲突保护）
                     for memId in oldMemoryIds {
