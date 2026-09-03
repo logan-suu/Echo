@@ -3265,6 +3265,23 @@
         }
       }
     },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确定"
+          }
+        }
+      }
+    },
     "Offline generation runtime is not available. Please try again.": {
       "extractionState": "manual",
       "localizations": {
@@ -5992,6 +6009,138 @@
       "localizations": {
         "en-US": { "stringUnit": { "state": "translated", "value": "Open Search and run this query" } },
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开搜索并执行此查询" } }
+      }
+    },
+    "Memory unavailable": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Memory unavailable" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "记忆不可用" } }
+      }
+    },
+    "The original source is no longer available or authorized.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "The original source is no longer available or authorized." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "原始来源已不可用或不再获得授权。" } }
+      }
+    },
+    "Next memory": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Next memory" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "下一条记忆" } }
+      }
+    },
+    "Record feeling": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Record feeling" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "记录感受" } }
+      }
+    },
+    "Open memory": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Open memory" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开记忆" } }
+      }
+    },
+    "Use the actions to open, advance, or record a feeling": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Use the actions to open, advance, or record a feeling" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "使用操作来打开、切换或记录感受" } }
+      }
+    },
+    "Suggestion": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Suggestion" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "音乐建议" } }
+      }
+    },
+    "Open": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Open" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开" } }
+      }
+    },
+    "Next": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Next" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "下一张" } }
+      }
+    },
+    "Match device music": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Match device music" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "匹配此设备音乐" } }
+      }
+    },
+    "This moment": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "This moment" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "此刻" } }
+      }
+    },
+    "How do you feel?": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "How do you feel?" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "你此刻有什么感受？" } }
+      }
+    },
+    "Earlier feelings": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Earlier feelings" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "之前的感受" } }
+      }
+    },
+    "Delete feeling": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Delete feeling" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "删除感受" } }
+      }
+    },
+    "Unknown artist": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unknown artist" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未知艺人" } }
+      }
+    },
+    "Interaction unavailable": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Interaction unavailable" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "操作暂不可用" } }
+      }
+    },
+    "Unable to show the next memory. Please try again.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to show the next memory. Please try again." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法显示下一条记忆，请重试。" } }
+      }
+    },
+    "This memory is no longer available.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "This memory is no longer available." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "这条记忆已不可用。" } }
+      }
+    },
+    "Unable to save this feeling. Please try again.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to save this feeling. Please try again." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法保存这条感受，请重试。" } }
+      }
+    },
+    "Unable to update this feeling. Please try again.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to update this feeling. Please try again." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法更新这条感受，请重试。" } }
+      }
+    },
+    "Unable to delete this feeling. Please try again.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to delete this feeling. Please try again." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法删除这条感受，请重试。" } }
+      }
+    },
+    "Unable to open this memory. Please try again.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to open this memory. Please try again." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法打开这条记忆，请重试。" } }
       }
     },
     "Failed": {

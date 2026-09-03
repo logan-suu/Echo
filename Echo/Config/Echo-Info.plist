@@ -10,6 +10,8 @@
 	<string>Echo reads your photos and videos on this device to build searchable memories. Everything stays on your device.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Echo never writes to your photo library.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Echo can optionally match a memory with music already downloaded to this device. Echo never sends memory data to Apple Music.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Echo uses your location to surface memories when you arrive at meaningful places. Location data never leaves your device.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

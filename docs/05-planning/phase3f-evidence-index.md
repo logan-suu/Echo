@@ -735,7 +735,7 @@ Production awakening system adapters per ADR-012: real `CoreLocationProvider` (C
 ## Related Specs
 - Task ID: 3F.8 — Awakening 与 system adapters
 - Stories: US-AWK-001, US-AWK-002, US-AWK-003, US-AWK-005, US-SRC-010
-- Phase 4 closure note (2026-09-01 spec review): this evidence proves only the US-AWK-005 AC-1/3 subset listed below (minimal notification/card identity + response→detail). Task 4.0d owns the remaining media/music, next/record, userFeelings persistence/edit/delete, full source navigation and `.cardInteraction` production evidence before 4.2/RC.
+- Phase 4 closure note (2026-09-02 ADR-016 review): this evidence proves only the US-AWK-005 AC-1/3 subset listed below (minimal notification/card identity + response→detail). Task 4.0d owns real card media, bundled-offline/default plus explicit-opt-in on-device non-cloud music matching, next/record, the MemoryFeeling relation, card→typed-Focus routing and `.cardInteraction`; task 4.0e owns Focus-internal real source anchors/deletion. 4.2/RC must verify the joined production loop and zero MusicKit web-service paths.
 - Documents: docs/decisions/ADR-012-awakening-system-boundary.md (governing), docs/01-spec/用户故事与验收标准规格书.md, docs/02-architecture/架构设计文档.md, docs/02-architecture/数据流全链路技术说明文档.md, docs/ui/testing-and-artifacts.md, docs/ui/echo-readiness.md, docs/05-planning/phase3f-execution-plan.md §4.6.8, docs/05-planning/phase3f-evidence-index.md, docs/05-planning/task-status.json, docs/05-planning/deferred-items.json
 
 ## AC Coverage

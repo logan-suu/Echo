@@ -7,16 +7,17 @@
 //            docs/ui/architecture.md §3 (Surface View), §8 (Discovery surface family)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 AC-4, US-AWK-005, US-RES-001 AC-3
 // 任务: 3.1 - HomeView + HomeViewModel + Awakening Cards + Offline Indicator; 4.0a - Discovery 平衡画布
+//       4.0d - Interactive awakening card production closure
 //          (3.6 降级横幅 host; 3.7 断点续传恢复提示 host)
 // AC 覆盖: US-AWK-001 AC-4 ✅ (唤醒卡片 UI), US-AWK-005 AC-1 ✅ (卡片展示),
 //          US-RES-001 AC-3 ✅ (离线模式标识), AWK-002 AC-3 ✅ (纪念日卡片),
-//          AWK-003 AC-4 ✅ (情绪卡片), AWK-005 AC-2 🔮 (左滑/右滑, Phase 3.3+)
+//          AWK-003 AC-4 ✅ (情绪卡片), AWK-005 AC-1~5 ✅ (4.0d production closure)
 //          3.7 host: ResumeProgressPromptView + resume-progress-* fixture 注入
 //          (2026-08-02 PR review W-1: ResumeProgressPromptView 改真实布局槽位, 移除零高 frame)
 //          4.0a: live recent memories, deterministic masonry gate, truthful zero-memory progress
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.2 (Discovery adaptive masonry),
 //           §10.1 (Views 目录), echo-memory-canvas apple-native 基础
-// 生成时间: 2026-07-26; 2026-09-01 (4.0a)
+// 生成时间: 2026-07-26; 2026-09-02 (4.0d)
 // ==========================================
 
 import SwiftUI
@@ -50,6 +51,8 @@ struct HomeView: View {
     @State private var viewModel: HomeViewModel
     private let appViewModel: AppViewModel?
     @State private var selectedMemoryID: UUID?
+    @State private var selectedAwakeningRoute: AwakeningFocusRoute?
+    @State private var feelingEditor: FeelingEditorContext?
     @State private var discoveryContentWidth: CGFloat = 0
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -88,6 +91,10 @@ struct HomeView: View {
         appViewModel: AppViewModel? = nil
     ) {
         self.appViewModel = appViewModel
+        let feelingStore = MemoryFeelingActor()
+        let musicService = try? AwakeningMusicService(
+            library: BundledMusicLibrary.loadFromBundleOrRepository()
+        )
         let resolvedViewModel = viewModel ?? HomeViewModel(
             cardRepository: AwakeningCardRepositoryActor(),
             discoveryAdapter: HomeDiscoveryAdapter(
@@ -96,7 +103,10 @@ struct HomeView: View {
                 policyReader: PrivacyActor.shared,
                 sourceResolver: LiveDiscoverySourceResolver()
             ),
-            searchCapability: LiveHomeSearchCapability()
+            searchCapability: LiveHomeSearchCapability(),
+            interactionActor: AwakeningCardInteractionActor(feelingStore: feelingStore),
+            feelingStore: feelingStore,
+            musicService: musicService
         )
         _viewModel = State(initialValue: resolvedViewModel)
     }
@@ -160,6 +170,41 @@ struct HomeView: View {
         }
         .navigationDestination(item: $selectedMemoryID) { memoryID in
             MemoryDetailView(memoryId: memoryID)
+        }
+        .navigationDestination(item: $selectedAwakeningRoute) { route in
+            switch route {
+            case .media(let memoryID, _), .text(let memoryID, _), .voice(let memoryID, _):
+                MemoryDetailView(memoryId: memoryID)
+
+            case .unavailable:
+                EchoStatusPresentation(
+                    role: .warning,
+                    systemImage: "exclamationmark.triangle",
+                    title: EchoStrings.tr("Memory unavailable"),
+                    message: EchoStrings.tr("The original source is no longer available or authorized.")
+                )
+                .padding()
+            }
+        }
+        .sheet(item: $feelingEditor) { context in
+            AwakeningFeelingSheet(
+                card: context.card,
+                editingFeeling: context.feeling,
+                viewModel: viewModel
+            )
+        }
+        .alert(
+            EchoStrings.tr("Interaction unavailable"),
+            isPresented: Binding(
+                get: { viewModel.interactionErrorMessage != nil },
+                set: { presented in
+                    if !presented { viewModel.dismissInteractionError() }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) { viewModel.dismissInteractionError() }
+        } message: {
+            Text(EchoStrings.tr(viewModel.interactionErrorMessage ?? ""))
         }
         .onAppear {
             viewModel.onAppear()
@@ -396,9 +441,23 @@ struct HomeView: View {
                 if !viewModel.awakeningCards.isEmpty {
                     EchoSectionHeader(title: "Awakenings")
                     ForEach(viewModel.awakeningCards) { card in
-                        AwakeningCardView(card: card) {
-                            selectedMemoryID = card.memoryIds.first
-                        }
+                        AwakeningCardView(
+                            card: card,
+                            media: viewModel.presentations(for: card),
+                            music: viewModel.musicSuggestion(for: card),
+                            feelings: viewModel.feelings(for: card),
+                            canAdvance: viewModel.canAdvance(card),
+                            onNext: { viewModel.advance(card) },
+                            onRecordFeeling: {
+                                feelingEditor = FeelingEditorContext(card: card, feeling: nil)
+                            },
+                            onJump: {
+                                guard let route = viewModel.focusRoute(for: card) else { return }
+                                selectedAwakeningRoute = route
+                                viewModel.recordJump(for: card)
+                            },
+                            onMatchDeviceMusic: { viewModel.matchDeviceMusic(for: card) }
+                        )
                     }
                 }
 
@@ -581,17 +640,19 @@ struct HomeView: View {
 /// - SF Symbol: 由 triggerType 决定
 struct AwakeningCardView: View {
     let card: AwakeningCardModel
-    let action: () -> Void
-
-    init(card: AwakeningCardModel, action: @escaping () -> Void = {}) {
-        self.card = card
-        self.action = action
-    }
+    let media: [DiscoveryCardPresentation]
+    let music: MusicSuggestion?
+    let feelings: [UserFeeling]
+    let canAdvance: Bool
+    let onNext: () -> Void
+    let onRecordFeeling: () -> Void
+    let onJump: () -> Void
+    let onMatchDeviceMusic: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            EchoContainer(level: .emphasized) {
-                HStack(spacing: 14) {
+        EchoContainer(level: .emphasized) {
+            VStack(alignment: .leading, spacing: EchoSpacingToken.normal.points) {
+                HStack(alignment: .top, spacing: 14) {
                     iconView
                     textContent
                     Spacer(minLength: 8)
@@ -600,12 +661,109 @@ struct AwakeningCardView: View {
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
+
+                mediaPreview
+                musicSuggestion
+
+                if let latestFeeling = feelings.last {
+                    Label(latestFeeling.text, systemImage: "heart.text.square")
+                        .font(EchoTypographyToken.metadata.font)
+                        .foregroundStyle(EchoColorToken.secondaryText.color)
+                        .lineLimit(2)
+                }
+
+                ViewThatFits {
+                    HStack(spacing: EchoSpacingToken.compact.points) { actionButtons }
+                    VStack(spacing: EchoSpacingToken.compact.points) { actionButtons }
+                }
             }
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
+        .contentShape(.rect)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 32).onEnded { value in
+                if value.translation.width <= -60, canAdvance {
+                    onNext()
+                } else if value.translation.width >= 60 {
+                    onRecordFeeling()
+                }
+            }
+        )
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(cardAccessibilityLabel)
-        .accessibilityHint("Tap to view memories")
+        .accessibilityHint("Use the actions to open, advance, or record a feeling")
+        .accessibilityAction(named: Text("Next memory")) {
+            guard canAdvance else { return }
+            onNext()
+        }
+        .accessibilityAction(named: Text("Record feeling")) { onRecordFeeling() }
+        .accessibilityAction(named: Text("Open memory")) { onJump() }
+    }
+
+    @ViewBuilder
+    private var mediaPreview: some View {
+        let thumbnails = Array(media.filter { $0.aspectRatio != nil }.prefix(3))
+        if !thumbnails.isEmpty {
+            HStack(spacing: EchoSpacingToken.compact.points) {
+                ForEach(thumbnails) { item in
+                    if let aspectRatio = item.aspectRatio {
+                        DiscoveryMediaThumbnail(
+                            assetID: item.sourceLocator,
+                            aspectRatio: aspectRatio,
+                            sourceType: item.sourceType
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var musicSuggestion: some View {
+        if let music {
+            HStack(spacing: EchoSpacingToken.compact.points) {
+                Image(systemName: "music.note")
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(music.title).font(.subheadline.weight(.semibold))
+                    Text(music.artist).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if music.source == .bundled {
+                    Text("Suggestion")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        Button(action: onJump) {
+            Label("Open", systemImage: "arrow.up.right.square")
+        }
+        .buttonStyle(EchoActionButtonStyle(role: .primary))
+        .accessibilityIdentifier("awakening-open")
+
+        Button(action: onNext) {
+            Label("Next", systemImage: "arrow.right")
+        }
+        .buttonStyle(EchoActionButtonStyle(role: .secondary))
+        .disabled(!canAdvance)
+        .accessibilityIdentifier("awakening-next")
+
+        Button(action: onRecordFeeling) {
+            Label("Record feeling", systemImage: "heart.text.square")
+        }
+        .buttonStyle(EchoActionButtonStyle(role: .secondary))
+        .accessibilityIdentifier("awakening-record-feeling")
+
+        Button(action: onMatchDeviceMusic) {
+            Label("Match device music", systemImage: "music.note.list")
+        }
+        .buttonStyle(EchoActionButtonStyle(role: .secondary))
+        .accessibilityIdentifier("awakening-device-music")
     }
 
     // MARK: - Icon
@@ -643,6 +801,83 @@ struct AwakeningCardView: View {
 
     private var cardAccessibilityLabel: String {
         "\(card.localizedTitle), \(card.localizedSubtitle), \(card.localizedRelativeTime)"
+    }
+}
+
+private struct FeelingEditorContext: Identifiable {
+    let id = UUID()
+    let card: AwakeningCardModel
+    let feeling: UserFeeling?
+}
+
+private struct AwakeningFeelingSheet: View {
+    let card: AwakeningCardModel
+    let editingFeeling: UserFeeling?
+    let viewModel: HomeViewModel
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft = ""
+    @State private var selectedFeeling: UserFeeling?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("This moment") {
+                    TextField("How do you feel?", text: $draft, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+
+                if !viewModel.feelings(for: card).isEmpty {
+                    Section("Earlier feelings") {
+                        ForEach(viewModel.feelings(for: card)) { feeling in
+                            HStack(alignment: .top) {
+                                Button(feeling.text) {
+                                    selectedFeeling = feeling
+                                    draft = feeling.text
+                                }
+                                .buttonStyle(.plain)
+                                Spacer()
+                                Button(role: .destructive) {
+                                    if selectedFeeling?.feelingID == feeling.feelingID {
+                                        selectedFeeling = nil
+                                        draft = ""
+                                    }
+                                    viewModel.deleteFeeling(feeling)
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .accessibilityLabel("Delete feeling")
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Record feeling")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        viewModel.cancelFeelingEditing()
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        if let selectedFeeling {
+                            viewModel.updateFeeling(selectedFeeling, text: draft)
+                        } else {
+                            viewModel.recordFeeling(draft, for: card)
+                        }
+                        dismiss()
+                    }
+                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                selectedFeeling = editingFeeling
+                draft = editingFeeling?.text ?? ""
+            }
+        }
     }
 }
 

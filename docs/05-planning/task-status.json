@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-02T20:41:18Z",
+  "last_updated": "2026-09-03T01:39:16Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2382,17 +2382,21 @@
             "AGENTS.md",
             "docs/01-spec/用户故事与验收标准规格书.md",
             "docs/02-architecture/架构设计文档.md",
+            "docs/02-architecture/技术选型文档.md",
             "docs/02-architecture/数据流全链路技术说明文档.md",
             "docs/03-implementation/双语言实现说明文档.md",
+            "docs/03-implementation/开发避坑与关键注意点手册.md",
+            "docs/decisions/ADR-016-awakening-card-feelings-offline-music.md",
             "docs/ui/echo-memory-canvas-style.md",
             "docs/ui/architecture.md",
             "docs/ui/testing-and-artifacts.md",
             "docs/05-planning/phase3f-story-matrix.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
-            "4.0a"
+            "4.0a",
+            "4.0b"
           ],
           "test_file": "EchoTests/Phase4/4.0d_InteractiveAwakeningCardTests.swift",
           "surface_family": "discovery",
@@ -2403,21 +2407,29 @@
           ],
           "implementation_constraints": [
             "交付 US-AWK-005 AC-1~5 的真实生产闭环，不得以 fixture、通知占位文案或仅导航到详情冒充卡片完成",
-            "userFeelings 是原记忆的扩展属性而非独立记忆；新增 schema/迁移与 Actor 写路径必须事务化、端侧保存、可编辑/删除且不可被用户搜索",
-            "左滑下一张、右滑记录感受仅属于专用 AwakeningCard variant；同时提供等价可见按钮和 accessibility actions，避免手势成为唯一入口",
-            "媒体缩略图、来源跳转和 Apple Music 授权状态来自真实系统 adapter；无授权显示本地化提示，限流/不可用静默降级到随 App 打包的离线年份曲库，不发起模型或内容下载",
+            "userFeelings 是领域扩展集合，物理存储为以 memoryId 为外键的 MemoryFeeling 关系表；不嵌入 canonical JSON，不创建 Memory/Representation，不进入检索/翻译索引；新增/编辑/删除/原 memory 级联删除必须事务化",
+            "左滑下一张、右滑记录感受仅属于专用 AwakeningCard variant；同时提供等价可见按钮和 accessibility actions；next 按稳定唤醒顺序前进，无后继项时禁用，record 仅在事务提交成功后成立",
+            "媒体缩略图和 card→Focus 路由来自真实系统 adapter；无媒体/来源撤权时诚实降级。4.0d 不复制 4.0e 的 Focus source-anchor/原来源操作边界",
+            "音乐建议默认从随包离线年份曲库产生；仅用户显式选择后请求媒体库权限并通过 MPMediaQuery 读取 isCloudItem=false 的设备曲目。禁止 MusicKit catalog/personal/recently-played 网络请求和任何记忆派生数据上传",
             "所有新增异步入口遵循 PrivacyCheckpoint、Actor isolation、L1~L4 与 hash-only audit；禁止 Combine、Task.detached、@unchecked Sendable 和 nonisolated(unsafe)"
           ],
           "acceptance_evidence": [
-            "AC-1：真实文案、1~3 个媒体缩略图与授权感知音乐建议/离线降级证据",
-            "AC-2：左滑下一张、右滑记录感受及等价按钮/accessibility actions 触发相同 intent",
-            "AC-3：照片、文案/备忘录和语音分别跳转正确原始数据或播放/详情 surface",
-            "AC-4：userFeelings 新增、查看、编辑、删除、重启持久化、不可搜索及下一次个性化刷新边界测试",
-            "AC-5：cardInteraction action=next/record/jump、feelingAssociatedToSource 的 hash-only 审计证据",
-            "双语、Dynamic Type、VoiceOver、Reduce Motion、权限拒绝/限流与双设备无媒体 Live Simulator Review"
+            "AC-1：真实文案、仅媒体记忆的 1~3 个真实缩略图、带 supportedYears/fallback/provenance-license 的随包元数据库与 memoryId digest 稳定选择，以及显式 opt-in 后仅设备非云端曲目的本地匹配证据；Bundle 无音频/封面/歌词/URL，MusicKit catalog/personal/recently-played 扫描为 0",
+            "AC-2：左滑下一张、右滑记录感受及等价按钮/accessibility actions 触发相同 intent；稳定顺序、无后继项禁用、取消不写库/不审计",
+            "AC-3：照片/视频、备忘录文案和语音通过稳定 memoryId/sourceLocator 进入正确 Echo Focus surface；不可解析时诚实不可用，真实 source anchor 证据归 4.0e",
+            "AC-4：MemoryFeeling 关系表新增、查看、编辑、删除、原 memory 级联删除、重启持久化、不可搜索/不可翻译索引及下一次个性化刷新边界测试",
+            "AC-5：AuditEvent.cardInteraction 枚举与 action=next/record/jump、hash-only card/memory digest、布尔 feelingAssociatedToSource 的持久化证据；无感受原文/媒体库内容",
+            "双语、Dynamic Type、VoiceOver、Reduce Motion、权限 denied/restricted/empty/failure 回退与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-01T14:27:08Z",
-          "notes": "Created by the 4.0a reasonableness review because Phase 3/3F evidence explicitly left US-AWK-005 media/music/reaction persistence incomplete. A release test task cannot substitute for missing production behavior."
+          "last_updated": "2026-09-03T02:02:58Z",
+          "notes": "Created by the 4.0a reasonableness review because Phase 3/3F evidence explicitly left US-AWK-005 media/music/reaction persistence incomplete. The 2026-09-02 4.0d review adopted ADR-016: bundled offline music is the default; optional device-library matching is explicit opt-in and excludes cloud items; all MusicKit web-service paths are prohibited; userFeelings maps to a MemoryFeeling relation; audit timing/fields and 4.0d versus 4.0e source ownership are now testable. Dependency 4.0b was added because card jumps consume its Focus routing. Implementation includes real Home card media presentation, stable next/record/jump intents, typed Focus routing, MemoryFeeling CRUD/restart/cascade persistence, bundled and opt-in device music matching, structured hash-only cardInteraction audit, bilingual error presentation, and explicit unavailable states. PR #71 review fixes make feeling and record-audit persistence atomic, scope interaction cancellation by card and generation, preserve device-track release years, clear deleted selections, connect cancellation to a testable no-op intent, add the missing OK localization, and align the technology review date. Verification after review: 4.0d 13/13; Phase 4 plus Home regression 73/73; localization, static-ban and accessibility gates pass; Release simulator build passes; JSON/diff checks pass; SwiftLint 0. Human Live Simulator Review accepted on 2026-09-02; the temporary debug viewing entry was removed before delivery. Status remains review and PR #71 records Git delivery.",
+          "pr": {
+            "number": 71,
+            "url": "https://github.com/logan-suu/Echo/pull/71",
+            "head": "feature/interactive-awakening-card-US-AWK-005",
+            "base": "dev-1.0",
+            "created_at": "2026-09-03T01:38:38Z"
+          }
         },
         {
           "id": "4.0e",
@@ -2692,7 +2704,7 @@
           "test_file": "EchoTests/Phase4/AllPipelinesTests.swift",
           "acceptance_evidence": [
             "默认 App 无 -ui-fixture 参数的来源、摄入、检索、反馈、编辑、删除、唤醒、翻译和创作全链路通过记录",
-            "US-AWK-005 媒体/音乐、下一张、感受新增编辑删除与来源跳转的 no-fixture 生产闭环记录（消费 4.0d，不以本测试任务补写功能）",
+            "US-AWK-005 真实媒体、Bundle 离线音乐/显式 opt-in 后设备非云端曲目匹配、下一张、MemoryFeeling 新增编辑删除、card→typed-Focus 与真实 source anchor 的 no-fixture 联合闭环（消费 4.0d + 4.0e，MusicKit web-service 路径扫描为 0，不以本测试任务补写功能）",
             "Home 0/1~19/20+ live-data 状态与 Search <6/>=6 结果布局路径的 no-fixture 端到端记录",
             "12 个 UI 功能域在默认 App 路径使用同一 design profile 且跨 Surface 导航不出现视觉系统切换的端到端记录",
             "真实 PhotoKit 与 Share Extension 输入的 traceID 贯穿 PrivacyCheckpoint、SQLite、generation route 和审计日志",
@@ -3558,6 +3570,37 @@
         "docs/05-planning/开发计划安排文档.md",
         "docs/05-planning/phase3f-story-matrix.md",
         "docs/05-planning/deferred-items.json",
+        "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260902-4-0D-REASONABLENESS",
+      "status": "resolved",
+      "detected_at": "2026-09-02T22:15:51Z",
+      "resolved_at": "2026-09-02T22:15:51Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "offline-first-music-relational-feelings-explicit-boundaries",
+      "decision": "Retain the interactive awakening-card product direction while replacing MusicKit web-service recommendations with a bundled offline default and explicit opt-in local-device-library matching, modeling userFeelings as a MemoryFeeling relation, defining deterministic next/record/jump audit semantics, and separating card-to-Focus routing in 4.0d from Focus source-anchor behavior in 4.0e.",
+      "reason": "The prior contract treated Music authorization as content and playback capability, conflicted with R-001/R-005 by depending on Apple Music web services, specified contradictory rate-limit fallback, blurred a domain collection with physical storage, left record audit timing and feelingAssociatedToSource untyped, and duplicated source-navigation ownership across 4.0d and 4.0e.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/INDEX.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/架构设计文档.md",
+        "docs/02-architecture/技术选型文档.md",
+        "docs/02-architecture/数据流全链路技术说明文档.md",
+        "docs/03-implementation/双语言实现说明文档.md",
+        "docs/03-implementation/开发避坑与关键注意点手册.md",
+        "docs/decisions/ADR-016-awakening-card-feelings-offline-music.md",
+        "docs/ui/README.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/instances/home-discovery-surface.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/phase3f-evidence-index.md",
+        "docs/05-planning/phase3f-story-matrix.md",
         "docs/05-planning/task-status.json"
       ]
     }

@@ -22,7 +22,7 @@
 | **Phase 3F 执行计划**  | `05-planning/phase3f-execution-plan.md`           | Phase 3F 开发 Agent 执行指令与任务账本迁移契约    |
 | **Phase 3F 故事矩阵**  | `05-planning/phase3f-story-matrix.md`             | 66 个用户故事的 Phase 3F 归属矩阵                 |
 | **Phase 3F 证据索引**  | `05-planning/phase3f-evidence-index.md`           | Phase 3F 预合并证据索引                           |
-| **决策记录 (ADR)**     | `decisions/ADR-006~014`                            | Phase 3F 范围、离线运行时、发布合规等 9 项决策    |
+| **决策记录 (ADR)**     | `decisions/ADR-001~016`                            | SQLite/并发、Phase 3F、检索、唤醒卡感受与全离线音乐等决策 |
 | **疑难杂症问题**       | `06-troubleshooting/`                              | 架构性限制/难解问题的定位与根因分析（如照片文本搜索跨模态限制） |
 | **UI 文档路由**        | `ui/README.md`                                     | Phase 3 UI 设计配置、自动化工作流、架构边界、测试 |
 | **UI 设计风格**        | `ui/echo-memory-canvas-style.md`                   | 全 App 方案 B「平衡画布」、共享 profile/token/component、Discovery masonry 与 Focus/Task 同源表达 |
@@ -59,6 +59,7 @@
 | Phase 3F 执行计划与任务重排                | `05-planning/phase3f-execution-plan.md` + `05-planning/开发计划安排文档.md` |
 | Phase 3F 故事归属与证据                    | `05-planning/phase3f-story-matrix.md` + `05-planning/phase3f-evidence-index.md` |
 | Phase 3F 决策记录                          | `decisions/ADR-006~014`                                 |
+| 唤醒卡感受存储与全离线音乐边界 | `decisions/ADR-016-awakening-card-feelings-offline-music.md` |
 | Phase 3/4 UI 设计配置与规范                | `ui/echo-memory-canvas-style.md`（方案 B「平衡画布」） |
 | UI 自动化工作流与试点选择                  | `ui/automation-workflow.md`                            |
 | UI 架构边界与保护路径                      | `ui/architecture.md`                                   |

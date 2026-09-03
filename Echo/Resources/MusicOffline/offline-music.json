@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "supportedYears": [1999],
+  "provenance": "Original Echo editorial metadata created for deterministic offline suggestions.",
+  "license": "CC0-1.0 metadata; no audio, artwork, lyrics, or remote resources are included.",
+  "tracks": [
+    {"id":"1999-01","title":"Amber Window","artist":"Echo Editorial","releaseYear":1999,"tags":["reflective"]},
+    {"id":"1999-02","title":"Blue Hour Walk","artist":"Echo Editorial","releaseYear":1999,"tags":["calm"]},
+    {"id":"1999-03","title":"Paper Constellations","artist":"Echo Editorial","releaseYear":1999,"tags":["nostalgic"]},
+    {"id":"1999-04","title":"Morning Platform","artist":"Echo Editorial","releaseYear":1999,"tags":["travel"]},
+    {"id":"1999-05","title":"Quiet Polaroid","artist":"Echo Editorial","releaseYear":1999,"tags":["memory"]},
+    {"id":"1999-06","title":"Rain on Glass","artist":"Echo Editorial","releaseYear":1999,"tags":["reflective"]},
+    {"id":"1999-07","title":"Summer Postcard","artist":"Echo Editorial","releaseYear":1999,"tags":["joy"]},
+    {"id":"1999-08","title":"Soft Horizon","artist":"Echo Editorial","releaseYear":1999,"tags":["calm"]},
+    {"id":"1999-09","title":"Lantern Street","artist":"Echo Editorial","releaseYear":1999,"tags":["place"]},
+    {"id":"1999-10","title":"Old Cinema Light","artist":"Echo Editorial","releaseYear":1999,"tags":["nostalgic"]},
+    {"id":"1999-11","title":"Familiar Station","artist":"Echo Editorial","releaseYear":1999,"tags":["travel"]},
+    {"id":"1999-12","title":"Garden After Rain","artist":"Echo Editorial","releaseYear":1999,"tags":["calm"]},
+    {"id":"1999-13","title":"Sunday Notebook","artist":"Echo Editorial","releaseYear":1999,"tags":["reflective"]},
+    {"id":"1999-14","title":"Warm Kitchen","artist":"Echo Editorial","releaseYear":1999,"tags":["home"]},
+    {"id":"1999-15","title":"First Train Home","artist":"Echo Editorial","releaseYear":1999,"tags":["home"]},
+    {"id":"1999-16","title":"Distant Fireflies","artist":"Echo Editorial","releaseYear":1999,"tags":["joy"]},
+    {"id":"1999-17","title":"Library Sunlight","artist":"Echo Editorial","releaseYear":1999,"tags":["quiet"]},
+    {"id":"1999-18","title":"Coastal Letters","artist":"Echo Editorial","releaseYear":1999,"tags":["travel"]},
+    {"id":"1999-19","title":"Autumn Bicycle","artist":"Echo Editorial","releaseYear":1999,"tags":["place"]},
+    {"id":"1999-20","title":"Midnight Keepsake","artist":"Echo Editorial","releaseYear":1999,"tags":["memory"]}
+  ],
+  "fallback": [
+    {"id":"fallback-01","title":"A Quiet Place","artist":"Echo Editorial","releaseYear":null,"tags":["calm"]},
+    {"id":"fallback-02","title":"Light Between Days","artist":"Echo Editorial","releaseYear":null,"tags":["reflective"]},
+    {"id":"fallback-03","title":"The Way Back","artist":"Echo Editorial","releaseYear":null,"tags":["home"]},
+    {"id":"fallback-04","title":"Small Joys","artist":"Echo Editorial","releaseYear":null,"tags":["joy"]},
+    {"id":"fallback-05","title":"Remembered Weather","artist":"Echo Editorial","releaseYear":null,"tags":["memory"]}
+  ]
+}

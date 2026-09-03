@@ -1,6 +1,6 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.38
+**版本**：v5.39
 **生效日期**：2026-09-01
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -553,6 +553,7 @@ let checkpoint = await PrivacyActor.shared.validate(
 | `.memoryDeleted`                  | 记忆删除                 | preservedOriginal, excludedAssetWritten                   |
 | `.cascadeDeleteFromOriginal`      | 原始文件级联清除         | assetId, memoryId, excludedAutoCleaned                    |
 | `.memoryEdited`                   | 手动编辑记忆             | editedFields, reindexed, conflictResolvedWith             |
+| `.cardInteraction`               | 交互式唤醒卡动作       | action=next/record/jump, cardIdDigest, memoryIdDigest, feelingAssociatedToSource（hash-only，禁止感受原文） |
 | `.feedbackReceived`               | 反馈收集                 | sentiment, decayFactor                                    |
 | `.feedbackReset`                  | 清除所有反馈             | -                                                         |
 | `.feedbackRevoked`                | 撤销单条反馈             | feedbackId                                                |
@@ -1398,6 +1399,8 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 
 **4.0b Focus 边界（2026-09-01 规格审查）**：`4.0b` 只负责 Detail、Creation、Translation 的平衡画布表现、Focus 导航/阅读连续性及现有生产能力的诚实状态映射。它不得用 fixture 成功态证明生产能力，不得在视觉任务中新增 Core 写边界，也不得宣称已完成当前仍缺少生产接线的编辑重索引、冲突持久化或原始来源删除。Notes 交接仅通过用户可见的系统 share/export 流；禁止私有 NoteStore 直写、`notes://` 深链、伪造“已保存”Toast 或笔记链接。翻译不确定阈值统一为 NLTagger 源语言置信度 `< 0.9`。
 
+**4.0d 交互式唤醒卡边界（2026-09-02 规格审查）**：音乐建议默认且始终可从随 App 打包的离线年份曲库产生；仅当用户在卡片中显式选择“匹配此设备音乐”后，才可请求媒体库权限并通过 `MPMediaQuery` 读取 `isCloudItem == false` 的本地曲目元数据。禁止 `MusicCatalog*`、personal recommendations、recently played 和任意 MusicKit Web Service，禁止上传记忆派生数据。领域 API 可暴露 `userFeelings` 集合，但物理存储必须为以 `memoryId` 为外键的 `MemoryFeeling` 关系表；感受不创建 Memory/Representation，不进入搜索或翻译索引。`next` 按稳定唤醒顺序前进，`record` 仅在事务成功后成立；`.cardInteraction` 仅记录 action、hash-only card/memory digest 与布尔 `feelingAssociatedToSource`。`4.0d` 只负责 card→typed Focus 路由，Focus 内 source anchor/原来源操作仍由 `4.0e` 唯一交付。详见 ADR-016。
+
 ### 17.3 双状态模型
 
 Phase 3 UI 维护两个严格分离的状态文件：
@@ -1523,3 +1526,4 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.36 | 2026-09-01 | 双设备 Live Review 修正规格缺陷：明确 `.search` 是 PrivacyOperation 而非 UserPolicy 数据源；检索入口执行操作级 checkpoint 后按真实来源过滤，禁止因旧策略缺少伪来源 `search` 而整项拒绝或恢复用户已撤销授权。 | Codex |
 | v5.37 | 2026-09-01 | 4.0b 规格合理性复审：把 Focus 任务收敛为 Detail/Creation/Translation 的表现与连续性切片；修复 SYN-003 Notes 私有 API 自相矛盾、fixture/生产合同混用、翻译 `<0.7` 旧阈值与 Phase 3.8/3.9 过期标记；新增 4.0e 承担编辑重索引、冲突持久化、原始来源删除、真实媒体/引用导航与 share 审计，禁止由 4.0b 视觉任务或 4.2 测试任务冒充生产实现。 | Codex |
 | v5.38 | 2026-09-02 | 4.0c 规格合理性复审：保留 Task 平衡画布方向并收敛为六域表现切片；补齐故事/Surface 追踪，修正 US-SET-004 加密迁移包矛盾与 US-AWK-002 09:00 过期 AC；新增 4.0f 渐进式权限和 4.0g 真实断点恢复；修复 UI Contract v1 对既有 1.1 实例和终态空 action 的 schema 自相矛盾。 | Codex |
+| v5.39 | 2026-09-02 | 4.0d 规格合理性复审：禁止与 R-001/R-005 冲突的 MusicKit Web Service 推荐，改为 Bundle 离线默认 + 显式 opt-in 后的设备非云端曲目匹配；将 userFeelings 物理存储明确为 MemoryFeeling 关系表；固定 next/record/jump 与 hash-only 审计语义；拆清 4.0d card→Focus 与 4.0e source-anchor 任务边界。 | Codex |

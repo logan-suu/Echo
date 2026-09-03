@@ -6,7 +6,10 @@
   "responsibility": "Render the live-data Ask Echo, Today Echo, recent imports, real collections and active background-task status using the approved balanced-canvas direction",
   "inputs": {
     "visibleMemoryCount": "Count of policy-allowed, non-excluded memories whose original source, stable memoryId, Focus route and display content can still be resolved",
-    "todayEcho": "Optional real date/anniversary match from AwakeningCardRepositoryActor",
+    "todayEcho": "Optional real awakening result from AwakeningCardRepositoryActor with stable ordered memory IDs",
+    "awakeningMedia": "Zero to three real source-resolved thumbnails; absent for memories without resolvable media",
+    "awakeningMusic": "Bundled offline suggestion by default; optional on-device match only after explicit media-library opt-in and only for non-cloud items",
+    "userFeelings": "MemoryFeeling relation values keyed by memoryId; never a Memory/Representation or searchable/translation-indexed payload",
     "recentImports": "Stable ordered live memory card values",
     "collections": "Real metadata-derived topic or time collections; absent when unsupported",
     "runtimeStatus": "Live progress, offline and degradation state",
@@ -15,7 +18,7 @@
   },
   "outputs": {
     "visibleContent": "Ask Echo followed by available Today Echo, recent imports, collections and active task status",
-    "interactionTargets": "askEcho, memoryCard, collection, backgroundTaskStatus, permissionOrImportAction",
+    "interactionTargets": "askEcho, memoryCard, awakeningNext, awakeningRecordFeeling, awakeningJump, awakeningDeviceMusicOptIn, collection, backgroundTaskStatus, permissionOrImportAction",
     "accessibilityTree": "Stable semantic section/card order independent of masonry packing"
   },
   "systemContainer": "TabView + NavigationStack + ScrollView with system navigation and search behavior",
@@ -30,7 +33,8 @@
   ],
   "displayableDefinition": "Policy allowed, non-excluded, source resolvable, stable memoryId and Focus route present, with real aspect ratio or real summary",
   "emptyStateRule": "Show determinate scan progress only for a real active ProgressActor task; otherwise show authorization/import guidance without ProgressView or scanning copy",
-  "gestureRule": "Generic Discovery cards have no horizontal swipe; US-AWK-005 awakening cards are a dedicated variant with left-next/right-record-feeling plus equivalent visible and accessibility actions",
+  "gestureRule": "Generic Discovery cards have no horizontal swipe; US-AWK-005 awakening cards are a dedicated variant with left-next/right-record-feeling plus equivalent visible and accessibility actions; next follows stable awakening order and is disabled at the end; cancelled feeling entry performs no write or successful record audit",
+  "awakeningCardRule": "Bundled offline music is always available as a suggestion source; device-library matching requires explicit opt-in, reads only non-cloud local items, and falls back on denied/restricted/empty/failure; MusicKit web-service requests are prohibited. Successful feelings persist in MemoryFeeling and card interactions audit only action, hash-only card/memory digests, and boolean feelingAssociatedToSource.",
   "states": [
     "empty",
     "lowData",
@@ -38,5 +42,5 @@
     "degraded",
     "activeBackgroundTask"
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

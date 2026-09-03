@@ -3,7 +3,7 @@
 > **上游权威**：用户批准的 `echo-memory-canvas` 设计配置，扩展 `apple-native` 基础
 > **物化来源**：`Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范.md` §7
 > **不得覆盖**：Core 领域逻辑、数据库 schema、模型集成、隐私声明、CI 门禁
-> **最后同步**：2026-09-02，4.0c Task 合理性评审补充 consent-first 权限、诚实恢复状态与迁移边界
+> **最后同步**：2026-09-02，4.0d 合理性评审补充全离线音乐、MemoryFeeling、确定性交互审计与 card→Focus 边界
 
 ---
 
@@ -521,7 +521,8 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 - 长按：contextMenu（查看详情/标记问题/分享/移出 Echo）
 - 点击：进入 Focus surface
 - 通用 masonry/ScrollView 卡片不定义水平滑动手势；移出 Echo、收藏与反馈通过显式按钮、Menu/contextMenu 和等价 `accessibilityAction` 提供，避免与纵向滚动及辅助技术手势冲突
-- **US-AWK-005 专用唤醒卡例外**：左滑“下一张”、右滑“记录感受”，并同时提供等价可见按钮与辅助功能动作；不得把该语义复用于普通 Home/Search 记忆卡
+- **US-AWK-005 专用唤醒卡例外**：左滑“下一张”、右滑“记录感受”，并同时提供等价可见按钮与辅助功能动作；不得把该语义复用于普通 Home/Search 记忆卡。`next` 只按稳定唤醒顺序前进，无后继项时手势和按钮均不可用；只有感受保存成功才呈现已记录状态
+- 音乐建议始终有随包离线来源，不以 Apple Music 授权作为卡片展示前置条件。“匹配此设备音乐”是独立的显式权限动作；拒绝/受限/空库/失败后仍显示随包建议，不显示假播放按钮
 
 ### 17.3 卡片 Accessibility
 - VoiceOver label：`"[类型]，[内容描述]，[时间]，[位置]"`

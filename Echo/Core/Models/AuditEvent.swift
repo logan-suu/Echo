@@ -5,12 +5,13 @@
 //            docs/decisions/ADR-007-production-composition-consent.md §决策-4 (AuditLog schema/存储迁移)
 // 任务: 3F.1 - Production composition、首次启动、同意与隐私
 //       3F.6 - 跟进查询审计事件（US-RET-005 AC-4）
+//       4.0d - 交互式唤醒卡 hash-only action audit
 // AC 覆盖: AGENTS.md §5.4 (必填字段 eventType/timestamp/traceID/policyVersion/success, hash-only, 30天, 加密),
 //          US-PRV-006 AC-6 (retentionPolicyEvaluated), ADR-007 §决策-3 (purgeFailed 审计),
 //          US-RET-005 AC-4 ✅ (followUpQuery, 2026-08-11 3F.6), US-SRC-010 AC-5 ✅ (crossAppSearch)
 // 架构约束: AGENTS.md R-007 (禁止 unchecked Sendable), 仅记录哈希摘要禁止原文
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，所有 struct stored/computed 需 nonisolated
-// 生成时间: 2026-08-04 | 更新: 2026-08-11 (3F.6 followUpQuery/crossAppSearch)
+// 生成时间: 2026-08-04 | 更新: 2026-09-02 (4.0d cardInteraction)
 // ==========================================
 
 import Foundation
@@ -97,6 +98,8 @@ public enum AuditEvent: String, Sendable, Codable {
     case creativeGeneration
     /// 合成失败模板降级 (US-SYN-008 AC-5: 含 failureReason)
     case synthesisFallback
+    /// 交互式唤醒卡动作（US-AWK-005 AC-5: next/record/jump + hash-only identity）
+    case cardInteraction
 }
 
 // MARK: - Audit Log Entry
@@ -126,6 +129,10 @@ public struct AuditLogEntry: Sendable, Codable {
     public nonisolated let hasAudio: Bool?
     /// 内容字段的 SHA-256 哈希摘要（hash-only，禁止原文）— AGENTS.md §5.4
     public nonisolated let contentHash: String?
+    public nonisolated let action: String?
+    public nonisolated let cardIdDigest: String?
+    public nonisolated let memoryIdDigest: String?
+    public nonisolated let feelingAssociatedToSource: Bool?
 
     public nonisolated init(
         id: Int64 = 0,
@@ -142,7 +149,11 @@ public struct AuditLogEntry: Sendable, Codable {
         frameCount: Int? = nil,
         audioTranscriptLength: Int? = nil,
         hasAudio: Bool? = nil,
-        contentHash: String? = nil
+        contentHash: String? = nil,
+        action: String? = nil,
+        cardIdDigest: String? = nil,
+        memoryIdDigest: String? = nil,
+        feelingAssociatedToSource: Bool? = nil
     ) {
         self.id = id
         self.eventType = eventType
@@ -159,6 +170,10 @@ public struct AuditLogEntry: Sendable, Codable {
         self.audioTranscriptLength = audioTranscriptLength
         self.hasAudio = hasAudio
         self.contentHash = contentHash
+        self.action = action
+        self.cardIdDigest = cardIdDigest
+        self.memoryIdDigest = memoryIdDigest
+        self.feelingAssociatedToSource = feelingAssociatedToSource
     }
 
     /// 从数据库查询结果行构造 AuditLogEntry（用于 fetchAuditLogs）
@@ -184,7 +199,11 @@ public struct AuditLogEntry: Sendable, Codable {
             frameCount: row["frameCount"]?.intValue.map(Int.init),
             audioTranscriptLength: row["audioTranscriptLength"]?.intValue.map(Int.init),
             hasAudio: row["hasAudio"]?.intValue.map { $0 != 0 },
-            contentHash: row["contentHash"]?.stringValue
+            contentHash: row["contentHash"]?.stringValue,
+            action: row["action"]?.stringValue,
+            cardIdDigest: row["cardIdDigest"]?.stringValue,
+            memoryIdDigest: row["memoryIdDigest"]?.stringValue,
+            feelingAssociatedToSource: row["feelingAssociatedToSource"]?.intValue.map { $0 != 0 }
         )
     }
 }
