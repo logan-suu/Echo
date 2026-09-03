@@ -382,16 +382,62 @@ public actor PrivacyActor {
         memoryIdDigest: String? = nil,
         feelingAssociatedToSource: Bool? = nil
     ) async throws {
-        // hash-only: 内容字段在持久化前哈希 (AGENTS.md §5.4)
+        let write = Self.makeAuditWrite(
+            eventType: eventType,
+            traceID: traceID,
+            policyVersion: policyVersion,
+            success: success,
+            sourceType: sourceType,
+            affectedCount: affectedCount,
+            excludedWritten: excludedWritten,
+            sourceLanguage: sourceLanguage,
+            elapsedMs: elapsedMs,
+            frameCount: frameCount,
+            audioTranscriptLength: audioTranscriptLength,
+            hasAudio: hasAudio,
+            content: content,
+            subjectKind: subjectKind,
+            subjectHash: subjectHash,
+            action: action,
+            cardIdDigest: cardIdDigest,
+            memoryIdDigest: memoryIdDigest,
+            feelingAssociatedToSource: feelingAssociatedToSource
+        )
+        try await db.executeWrite(sql: write.sql, bindings: write.bindings)
+    }
+
+    nonisolated static func makeAuditWrite(
+        eventType: AuditEvent,
+        traceID: String,
+        policyVersion: Int,
+        success: Bool = true,
+        sourceType: String? = nil,
+        affectedCount: Int? = nil,
+        excludedWritten: Bool? = nil,
+        sourceLanguage: String? = nil,
+        elapsedMs: Int? = nil,
+        frameCount: Int? = nil,
+        audioTranscriptLength: Int? = nil,
+        hasAudio: Bool? = nil,
+        content: String? = nil,
+        subjectKind: String? = nil,
+        subjectHash: String? = nil,
+        action: String? = nil,
+        cardIdDigest: String? = nil,
+        memoryIdDigest: String? = nil,
+        feelingAssociatedToSource: Bool? = nil,
+        timestamp: Date = Date()
+    ) -> DatabaseManager.DBWrite {
+        // Hash content fields before persistence (AGENTS.md §5.4).
         let contentHash = content.map { AuditContentHasher.sha256Hex($0) }
-        try await db.executeWrite(
+        return DatabaseManager.DBWrite(
             sql: """
                 INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash, subjectKind, subjectHash, action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             bindings: [
                 .text(eventType.rawValue),
-                .double(Date().timeIntervalSince1970),
+                .double(timestamp.timeIntervalSince1970),
                 .text(traceID),
                 .int(Int64(policyVersion)),
                 .int(success ? 1 : 0),

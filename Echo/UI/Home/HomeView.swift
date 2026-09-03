@@ -838,6 +838,10 @@ private struct AwakeningFeelingSheet: View {
                                 .buttonStyle(.plain)
                                 Spacer()
                                 Button(role: .destructive) {
+                                    if selectedFeeling?.feelingID == feeling.feelingID {
+                                        selectedFeeling = nil
+                                        draft = ""
+                                    }
                                     viewModel.deleteFeeling(feeling)
                                 } label: {
                                     Image(systemName: "trash")
@@ -852,7 +856,10 @@ private struct AwakeningFeelingSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") {
+                        viewModel.cancelFeelingEditing()
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {

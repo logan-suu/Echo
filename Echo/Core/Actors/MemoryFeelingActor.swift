@@ -2,7 +2,7 @@
 // File: MemoryFeelingActor.swift
 // Specification: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-005 AC-4
 // Task: 4.0d - Interactive Awakening Card production closure
-// AC coverage: AC-4 (transactional CRUD, restart persistence, memory cascade)
+// AC coverage: AC-4/5 (transactional CRUD, cascade, and atomic record audit)
 // Architecture: ADR-016 D-3; AGENTS.md §4.2, R-006/R-008 and D-005
 // Generated: 2026-09-02
 // ==========================================
@@ -44,6 +44,42 @@ public actor MemoryFeelingActor {
                 .double(feeling.updatedAt.timeIntervalSince1970),
             ]
         )
+        return feeling
+    }
+
+    public func createWithInteractionAudit(
+        memoryID: UUID,
+        text: String,
+        cardID: UUID,
+        traceID: String
+    ) async throws -> UserFeeling {
+        let checkpoint = await privacyActor.validate(operation: .awakening, traceID: traceID)
+        guard checkpoint.isAllowed else { throw MemoryFeelingError.privacyDenied }
+        let normalized = try Self.normalized(text)
+        let feeling = UserFeeling(memoryID: memoryID, text: normalized)
+        let feelingWrite = DatabaseManager.DBWrite(
+            sql: """
+                INSERT INTO MemoryFeeling (feelingId, memoryId, text, createdAt, updatedAt)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+            bindings: [
+                .text(feeling.feelingID.uuidString),
+                .text(feeling.memoryID.uuidString),
+                .text(feeling.text),
+                .double(feeling.createdAt.timeIntervalSince1970),
+                .double(feeling.updatedAt.timeIntervalSince1970),
+            ]
+        )
+        let auditWrite = PrivacyActor.makeAuditWrite(
+            eventType: .cardInteraction,
+            traceID: traceID,
+            policyVersion: checkpoint.policyVersion,
+            action: AwakeningCardAction.record.rawValue,
+            cardIdDigest: AuditContentHasher.sha256Hex(cardID.uuidString.lowercased()),
+            memoryIdDigest: AuditContentHasher.sha256Hex(memoryID.uuidString.lowercased()),
+            feelingAssociatedToSource: true
+        )
+        try await db.executeTransaction([feelingWrite, auditWrite])
         return feeling
     }
 

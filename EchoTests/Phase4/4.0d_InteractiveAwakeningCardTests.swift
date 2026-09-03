@@ -121,6 +121,13 @@ struct InteractiveAwakeningCardTests {
         )?.source == .bundled)
     }
 
+    @Test("AC-1: device release dates preserve the year used for matching")
+    func test_AC1_deviceReleaseYearMapping() {
+        let components = DateComponents(calendar: Calendar(identifier: .gregorian), year: 1999)
+        #expect(SystemDeviceMusicLibraryProvider.releaseYear(from: components.date) == 1999)
+        #expect(SystemDeviceMusicLibraryProvider.releaseYear(from: nil) == nil)
+    }
+
     @Test("AC-2: next follows stable order and disables at the end")
     func test_AC2_stableNextOrder() {
         let ids = [UUID(), UUID(), UUID()]
@@ -290,6 +297,41 @@ struct InteractiveAwakeningCardTests {
         #expect(!rows.description.contains(rawFeeling))
     }
 
+    @Test("AC-4/5: feeling and record audit roll back atomically")
+    func test_AC4_AC5_recordFeelingAndAuditAreAtomic() async throws {
+        let memoryID = UUID()
+        try await insertMemory(memoryID)
+        try await db.execute(sql: """
+            CREATE TRIGGER RejectCardInteractionAudit
+            BEFORE INSERT ON AuditLog
+            WHEN NEW.eventType = 'cardInteraction'
+            BEGIN
+                SELECT RAISE(ABORT, 'injected audit failure');
+            END
+            """)
+        let store = MemoryFeelingActor(db: db, privacyActor: privacy)
+        let interactions = AwakeningCardInteractionActor(
+            feelingStore: store,
+            privacyActor: privacy
+        )
+
+        await #expect(throws: (any Error).self) {
+            try await interactions.recordFeeling(
+                "Must roll back",
+                cardID: UUID(),
+                memoryID: memoryID,
+                traceID: "atomic-record"
+            )
+        }
+
+        #expect(try await store.fetch(memoryID: memoryID).isEmpty)
+        let audits = try await db.executeQuery(
+            sql: "SELECT * FROM AuditLog WHERE traceID = ? AND action = 'record'",
+            bindings: [.text("atomic-record")]
+        )
+        #expect(audits.isEmpty)
+    }
+
     @Test("AC-5: next and jump audit false association; failed save writes no record audit")
     func test_AC5_allAuditActionsAndFailedSave() async throws {
         let memoryID = UUID()
@@ -339,6 +381,16 @@ struct InteractiveAwakeningCardTests {
         let memoryID = UUID()
         try await insertMemory(memoryID)
         let store = MemoryFeelingActor(db: db, privacyActor: privacy)
+        let interactions = AwakeningCardInteractionActor(
+            feelingStore: store,
+            privacyActor: privacy
+        )
+        let viewModel = HomeViewModel(
+            interactionActor: interactions,
+            feelingStore: store
+        )
+
+        #expect(viewModel.cancelFeelingEditing() == .idle)
 
         #expect(try await store.fetch(memoryID: memoryID).isEmpty)
         let rows = try await db.executeQuery(
@@ -346,6 +398,12 @@ struct InteractiveAwakeningCardTests {
             bindings: []
         )
         #expect(rows.isEmpty)
+        let source = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("Echo/UI/Home/HomeView.swift"),
+            encoding: .utf8
+        )
+        #expect(source.contains("Button(\"Cancel\")"))
+        #expect(source.contains("viewModel.cancelFeelingEditing()"))
     }
 
     @Test("AC-2/3: Home exposes equivalent visible, gesture and accessibility intents")
@@ -362,6 +420,16 @@ struct InteractiveAwakeningCardTests {
         #expect(source.contains("MemoryDetailView(memoryId:"))
         #expect(source.contains("viewModel.interactionErrorMessage"))
         #expect(source.contains("Interaction unavailable"))
+        #expect(source.contains("selectedFeeling?.feelingID == feeling.feelingID"))
+
+        let viewModelSource = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("Echo/UI/Home/HomeViewModel.swift"),
+            encoding: .utf8
+        )
+        #expect(viewModelSource.contains("interactionTasks: [UUID: Task<Void, Never>]"))
+        #expect(viewModelSource.contains("interactionGenerations: [UUID: UUID]"))
+        #expect(viewModelSource.contains("latestInteractionGeneration"))
+        #expect(viewModelSource.contains("guard self.isCurrentInteraction"))
     }
 
     private func insertMemory(_ memoryID: UUID) async throws {

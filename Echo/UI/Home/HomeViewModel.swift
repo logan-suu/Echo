@@ -242,7 +242,9 @@ final class HomeViewModel {
 
     /// 当前活跃的加载 Task
     private var loadingTask: Task<Void, Never>?
-    private var interactionTask: Task<Void, Never>?
+    private var interactionTasks: [UUID: Task<Void, Never>] = [:]
+    private var interactionGenerations: [UUID: UUID] = [:]
+    private var latestInteractionGeneration: UUID?
 
     // MARK: - Initialization
 
@@ -434,26 +436,31 @@ final class HomeViewModel {
 
     func advance(_ card: AwakeningCardModel) {
         interactionState = .loading
-        interactionTask?.cancel()
-        interactionTask = Task { [weak self] in
+        let generation = beginInteraction(for: card.id)
+        interactionTasks[card.id] = Task { [weak self] in
             guard let self, var navigator = self.cardNavigators[card.id],
                   let nextMemoryID = navigator.advance() else {
-                self?.interactionState = .idle
+                self?.finishInteraction(for: card.id, generation: generation, state: .idle)
                 return
             }
             do {
+                guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
                 try await self.interactionActor?.record(
                     action: .next,
                     cardID: card.id,
                     memoryID: nextMemoryID,
                     traceID: UUID().uuidString
                 )
-                guard !Task.isCancelled else { return }
+                guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
                 self.cardNavigators[card.id] = navigator
                 await self.loadInteractionContext(for: [card])
-                self.interactionState = .completed
+                self.finishInteraction(for: card.id, generation: generation, state: .completed)
             } catch {
-                self.interactionState = .error("Unable to show the next memory. Please try again.")
+                self.finishInteraction(
+                    for: card.id,
+                    generation: generation,
+                    state: .error("Unable to show the next memory. Please try again.")
+                )
             }
         }
     }
@@ -464,63 +471,87 @@ final class HomeViewModel {
             interactionState = .error("This memory is no longer available.")
             return
         }
-        interactionTask?.cancel()
-        interactionTask = Task { [weak self] in
+        let generation = beginInteraction(for: card.id)
+        interactionTasks[card.id] = Task { [weak self] in
             guard let self else { return }
             do {
+                guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
                 _ = try await interactionActor.recordFeeling(
                     text,
                     cardID: card.id,
                     memoryID: memoryID,
                     traceID: UUID().uuidString
                 )
-                self.userFeelings[memoryID] = try await self.feelingStore?.fetch(
+                guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
+                let feelings = try await self.feelingStore?.fetch(
                     memoryID: memoryID
                 ) ?? []
-                self.interactionState = .completed
+                guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
+                self.userFeelings[memoryID] = feelings
+                self.finishInteraction(for: card.id, generation: generation, state: .completed)
             } catch {
-                self.interactionState = .error("Unable to save this feeling. Please try again.")
+                self.finishInteraction(
+                    for: card.id,
+                    generation: generation,
+                    state: .error("Unable to save this feeling. Please try again.")
+                )
             }
         }
     }
 
     func updateFeeling(_ feeling: UserFeeling, text: String) {
         interactionState = .loading
-        interactionTask?.cancel()
-        interactionTask = Task { [weak self] in
+        let ownerID = interactionOwnerID(for: feeling.memoryID)
+        let generation = beginInteraction(for: ownerID)
+        interactionTasks[ownerID] = Task { [weak self] in
             guard let self, let feelingStore else { return }
             do {
+                guard self.isCurrentInteraction(for: ownerID, generation: generation) else { return }
                 _ = try await feelingStore.update(
                     feelingID: feeling.feelingID,
                     text: text,
                     traceID: UUID().uuidString
                 )
-                self.userFeelings[feeling.memoryID] = try await feelingStore.fetch(
+                let feelings = try await feelingStore.fetch(
                     memoryID: feeling.memoryID
                 )
-                self.interactionState = .completed
+                guard self.isCurrentInteraction(for: ownerID, generation: generation) else { return }
+                self.userFeelings[feeling.memoryID] = feelings
+                self.finishInteraction(for: ownerID, generation: generation, state: .completed)
             } catch {
-                self.interactionState = .error("Unable to update this feeling. Please try again.")
+                self.finishInteraction(
+                    for: ownerID,
+                    generation: generation,
+                    state: .error("Unable to update this feeling. Please try again.")
+                )
             }
         }
     }
 
     func deleteFeeling(_ feeling: UserFeeling) {
         interactionState = .loading
-        interactionTask?.cancel()
-        interactionTask = Task { [weak self] in
+        let ownerID = interactionOwnerID(for: feeling.memoryID)
+        let generation = beginInteraction(for: ownerID)
+        interactionTasks[ownerID] = Task { [weak self] in
             guard let self, let feelingStore else { return }
             do {
+                guard self.isCurrentInteraction(for: ownerID, generation: generation) else { return }
                 try await feelingStore.delete(
                     feelingID: feeling.feelingID,
                     traceID: UUID().uuidString
                 )
-                self.userFeelings[feeling.memoryID] = try await feelingStore.fetch(
+                let feelings = try await feelingStore.fetch(
                     memoryID: feeling.memoryID
                 )
-                self.interactionState = .completed
+                guard self.isCurrentInteraction(for: ownerID, generation: generation) else { return }
+                self.userFeelings[feeling.memoryID] = feelings
+                self.finishInteraction(for: ownerID, generation: generation, state: .completed)
             } catch {
-                self.interactionState = .error("Unable to delete this feeling. Please try again.")
+                self.finishInteraction(
+                    for: ownerID,
+                    generation: generation,
+                    state: .error("Unable to delete this feeling. Please try again.")
+                )
             }
         }
     }
@@ -531,19 +562,24 @@ final class HomeViewModel {
             interactionState = .error("This memory is no longer available.")
             return
         }
-        interactionTask?.cancel()
-        interactionTask = Task { [weak self] in
+        let generation = beginInteraction(for: card.id)
+        interactionTasks[card.id] = Task { [weak self] in
             guard let self else { return }
             do {
+                guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
                 try await self.interactionActor?.record(
                     action: .jump,
                     cardID: card.id,
                     memoryID: memoryID,
                     traceID: UUID().uuidString
                 )
-                self.interactionState = .completed
+                self.finishInteraction(for: card.id, generation: generation, state: .completed)
             } catch {
-                self.interactionState = .error("Unable to open this memory. Please try again.")
+                self.finishInteraction(
+                    for: card.id,
+                    generation: generation,
+                    state: .error("Unable to open this memory. Please try again.")
+                )
             }
         }
     }
@@ -554,18 +590,56 @@ final class HomeViewModel {
             interactionState = .idle
             return
         }
-        interactionTask?.cancel()
-        interactionTask = Task { [weak self] in
+        let generation = beginInteraction(for: card.id)
+        interactionTasks[card.id] = Task { [weak self] in
             guard let self else { return }
+            guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
             let year = self.currentPresentation(for: card).map {
                 Calendar.current.component(.year, from: Date(timeIntervalSince1970: $0.timestamp))
             }
-            self.awakeningMusic[card.id] = await musicService.suggestion(
+            let suggestion = await musicService.suggestion(
                 memoryID: memoryID,
                 year: year,
                 matchDeviceMusic: true
             )
-            self.interactionState = .completed
+            guard self.isCurrentInteraction(for: card.id, generation: generation) else { return }
+            self.awakeningMusic[card.id] = suggestion
+            self.finishInteraction(for: card.id, generation: generation, state: .completed)
+        }
+    }
+
+    @discardableResult
+    func cancelFeelingEditing() -> InteractionState {
+        interactionState
+    }
+
+    private func beginInteraction(for ownerID: UUID) -> UUID {
+        interactionTasks[ownerID]?.cancel()
+        let generation = UUID()
+        interactionGenerations[ownerID] = generation
+        latestInteractionGeneration = generation
+        return generation
+    }
+
+    private func interactionOwnerID(for memoryID: UUID) -> UUID {
+        awakeningCards.first { $0.memoryIds.contains(memoryID) }?.id ?? memoryID
+    }
+
+    private func isCurrentInteraction(for ownerID: UUID, generation: UUID) -> Bool {
+        !Task.isCancelled && interactionGenerations[ownerID] == generation
+    }
+
+    private func finishInteraction(
+        for ownerID: UUID,
+        generation: UUID,
+        state: InteractionState
+    ) {
+        guard interactionGenerations[ownerID] == generation else { return }
+        interactionTasks[ownerID] = nil
+        interactionGenerations[ownerID] = nil
+        if latestInteractionGeneration == generation {
+            latestInteractionGeneration = nil
+            interactionState = state
         }
     }
 
@@ -593,8 +667,10 @@ final class HomeViewModel {
     func cancelLoading() {
         loadingTask?.cancel()
         loadingTask = nil
-        interactionTask?.cancel()
-        interactionTask = nil
+        interactionTasks.values.forEach { $0.cancel() }
+        interactionTasks.removeAll()
+        interactionGenerations.removeAll()
+        latestInteractionGeneration = nil
         viewState = .cancelled
     }
 

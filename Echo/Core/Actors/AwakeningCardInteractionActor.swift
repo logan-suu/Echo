@@ -2,7 +2,7 @@
 // File: AwakeningCardInteractionActor.swift
 // Specification: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-005 AC-5
 // Task: 4.0d - Interactive Awakening Card production closure
-// AC coverage: AC-5 (next/record/jump structured hash-only audit)
+// AC coverage: AC-4/5 (atomic feeling record and structured hash-only audit)
 // Architecture: ADR-016 D-4; AGENTS.md §4.2, §5.4 and R-006/R-008
 // Generated: 2026-09-02
 // ==========================================
@@ -29,18 +29,12 @@ public actor AwakeningCardInteractionActor {
     ) async throws -> UserFeeling {
         let checkpoint = await privacyActor.validate(operation: .awakening, traceID: traceID)
         guard checkpoint.isAllowed else { throw MemoryFeelingError.privacyDenied }
-        let feeling = try await feelingStore.create(
-            memoryID: memoryID, text: text, traceID: traceID
-        )
-        try await writeAudit(
-            action: .record,
-            cardID: cardID,
+        return try await feelingStore.createWithInteractionAudit(
             memoryID: memoryID,
-            feelingAssociatedToSource: true,
-            traceID: traceID,
-            policyVersion: checkpoint.policyVersion
+            text: text,
+            cardID: cardID,
+            traceID: traceID
         )
-        return feeling
     }
 
     public func record(
@@ -80,4 +74,3 @@ public actor AwakeningCardInteractionActor {
         )
     }
 }
-

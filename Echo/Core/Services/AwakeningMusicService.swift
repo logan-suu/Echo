@@ -143,12 +143,16 @@ public actor SystemDeviceMusicLibraryProvider: DeviceMusicLibraryProviding {
                     id: String(item.persistentID),
                     title: title,
                     artist: item.artist ?? String(localized: "Unknown artist"),
-                    releaseYear: nil,
+                    releaseYear: Self.releaseYear(from: item.releaseDate),
                     isCloudItem: cloud,
                     isPlayable: assetURL != nil
                 )
             }
         }
+    }
+
+    nonisolated static func releaseYear(from date: Date?) -> Int? {
+        date.map { Calendar(identifier: .gregorian).component(.year, from: $0) }
     }
 
     private nonisolated static func map(
