@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-03T01:39:16Z",
+  "last_updated": "2026-09-03T03:09:17Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2421,8 +2421,8 @@
             "AC-5：AuditEvent.cardInteraction 枚举与 action=next/record/jump、hash-only card/memory digest、布尔 feelingAssociatedToSource 的持久化证据；无感受原文/媒体库内容",
             "双语、Dynamic Type、VoiceOver、Reduce Motion、权限 denied/restricted/empty/failure 回退与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-03T02:58:57Z",
-          "notes": "Created by the 4.0a reasonableness review because Phase 3/3F evidence explicitly left US-AWK-005 media/music/reaction persistence incomplete. The 2026-09-02 4.0d review adopted ADR-016: bundled offline music is the default; optional device-library matching is explicit opt-in and excludes cloud items; all MusicKit web-service paths are prohibited; userFeelings maps to a MemoryFeeling relation; audit timing/fields and 4.0d versus 4.0e source ownership are now testable. Dependency 4.0b was added because card jumps consume its Focus routing. Implementation includes real Home card media presentation, stable next/record/jump intents, typed Focus routing, MemoryFeeling CRUD/restart/cascade persistence, bundled and opt-in device music matching, structured hash-only cardInteraction audit, bilingual error presentation, and explicit unavailable states. PR #71 review fixes make feeling and record-audit persistence atomic, scope interaction cancellation by card and generation, preserve device-track release years, clear deleted selections, connect cancellation to a testable no-op intent, add the missing OK localization, and align the technology review date. Verification after review: 4.0d 13/13; Phase 4 plus Home regression 73/73; localization, static-ban and accessibility gates pass; Release simulator build passes; JSON/diff checks pass; SwiftLint 0. Human Live Simulator Review accepted on 2026-09-02; the temporary debug viewing entry was removed before delivery. PR #71 was human-merged by logan-suu at 2026-09-03T02:24:46Z with merge commit 1fc685af8323401965eb39704a81211e450f9098. Post-merge review-summary reconciliation found three comments that were absent from the inline review feed. A user-requested immediate re-review confirmed all three as actionable and fixed them on fix/awakening-review-followups-US-AWK-005: public audit fetch now returns every structured cardInteraction field, injected HomeViewModel initialization skips production actor/music construction, and AC-2 interaction evidence is executable rather than source-text based. DEF-71-001 through DEF-71-003 were removed because no unresolved work remains. Verification passes: focused 4.0d suite 15/15, PrivacyActor/Home regression 61/61, SwiftLint 0, static-ban scan clean, JSON validation and diff checks pass. Backlog cascade was re-evaluated after merge and produced no new ready transitions because every dependent backlog task still has other unfinished prerequisites.",
+          "last_updated": "2026-09-03T03:09:17Z",
+          "notes": "Created by the 4.0a reasonableness review because Phase 3/3F evidence explicitly left US-AWK-005 media/music/reaction persistence incomplete. The 2026-09-02 4.0d review adopted ADR-016: bundled offline music is the default; optional device-library matching is explicit opt-in and excludes cloud items; all MusicKit web-service paths are prohibited; userFeelings maps to a MemoryFeeling relation; audit timing/fields and 4.0d versus 4.0e source ownership are now testable. Dependency 4.0b was added because card jumps consume its Focus routing. Implementation includes real Home card media presentation, stable next/record/jump intents, typed Focus routing, MemoryFeeling CRUD/restart/cascade persistence, bundled and opt-in device music matching, structured hash-only cardInteraction audit, bilingual error presentation, and explicit unavailable states. PR #71 review fixes make feeling and record-audit persistence atomic, scope interaction cancellation by card and generation, preserve device-track release years, clear deleted selections, connect cancellation to a testable no-op intent, add the missing OK localization, and align the technology review date. Verification after review: 4.0d 13/13; Phase 4 plus Home regression 73/73; localization, static-ban and accessibility gates pass; Release simulator build passes; JSON/diff checks pass; SwiftLint 0. Human Live Simulator Review accepted on 2026-09-02; the temporary debug viewing entry was removed before delivery. PR #71 was human-merged by logan-suu at 2026-09-03T02:24:46Z with merge commit 1fc685af8323401965eb39704a81211e450f9098. Post-merge review-summary reconciliation found three comments that were absent from the inline review feed. A user-requested immediate re-review confirmed all three as actionable and fixed them on fix/awakening-review-followups-US-AWK-005: public audit fetch now returns every structured cardInteraction field, injected HomeViewModel initialization skips production actor/music construction, and AC-2 interaction evidence is executable rather than source-text based. DEF-71-001 through DEF-71-003 were removed because no unresolved work remains. Verification passes: focused 4.0d suite 15/15, PrivacyActor/Home regression 61/61, SwiftLint 0, static-ban scan clean, JSON validation and diff checks pass. Follow-up PR #72 records these post-merge corrections without overwriting the original PR #71 merge evidence. Backlog cascade was re-evaluated after merge and produced no new ready transitions because every dependent backlog task still has other unfinished prerequisites.",
           "status_transitions": {
             "review_at": "2026-09-03T01:38:38Z",
             "done_at": "2026-09-03T02:24:46Z"
@@ -2437,6 +2437,17 @@
             "merge_commit": "1fc685af8323401965eb39704a81211e450f9098",
             "merged_by": "logan-suu"
           },
+          "followup_prs": [
+            {
+              "number": 72,
+              "url": "https://github.com/logan-suu/Echo/pull/72",
+              "head": "fix/awakening-review-followups-US-AWK-005",
+              "base": "dev-1.0",
+              "created_at": "2026-09-03T03:09:02Z",
+              "status": "review",
+              "purpose": "Resolve validated post-merge PR #71 review follow-ups"
+            }
+          ],
           "merged_at": "2026-09-03T02:24:46Z",
           "merge_commit": "1fc685af8323401965eb39704a81211e450f9098",
           "merged_by": "logan-suu"
