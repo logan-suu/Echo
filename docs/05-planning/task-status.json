@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-04T16:08:31Z",
+  "last_updated": "2026-09-04T16:13:45Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2559,7 +2559,7 @@
             "UIAutomation/Fixtures/awakening-settings/awakening-settings-unavailable.json",
             "UIAutomation/Fixtures/awakening-settings/awakening-settings-all-disabled.json"
           ],
-          "status": "review",
+          "status": "done",
           "dependencies": [
             "4.0c"
           ],
@@ -2589,19 +2589,26 @@
             "通知 denied 仅停止系统投递，三个偏好与 App 内卡片仍可用；拒绝、撤权、重复进入与重启无自动 prompt",
             "双语、VoiceOver、Dynamic Type、Reduce Motion、schema validation 与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-04T16:08:31Z",
-          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior. Automatically promoted from backlog to ready after dependency 4.0c completed. 2026-09-04 reasonableness review (ADR-018) retained the progressive-permission direction but corrected four non-executable boundaries: persisted consent now gates protected requests; notification delivery is orthogonal to awakening preferences; geofence authorization is staged When In Use then separately confirmed Always; and HealthKit read authorization is represented by request lifecycle plus data availability rather than fabricated granted/denied. The review also requires adapters to await callbacks/final snapshots and adds contract states/actions for consent persistence and background-location elevation. Implementation completed on 2026-09-04: durable consent now hard-gates Photos; onboarding requests Photos only; awakening preferences and HealthKit request lifecycle persist in SQLite; notifications are independent; location authorization is staged; HealthKit read state is represented by request completion plus sample availability. Validation: 90 tests across ProgressivePermissionFlow, Onboarding, Awakening settings/system adapters, and cross-app Health passed; SwiftLint strict passed; 169 UI contracts validated; JSON and diff checks passed. Phase 4 cumulative regression through 4.0f also passed: 82 tests across 7 suites. Pull request #74 opened against dev-1.0. PR #74 review fixes: preference updates now use atomic single-column SQLite upserts; overlapping CoreLocation requests share one callback result; the legacy HealthKit API that inferred read authorization was removed; HealthKit request and settings-query failures surface as L2; notification persistence failures are visible; cancelled loads cannot publish late completion; UI contract fixtures and active evidence now use request lifecycle plus readable-sample semantics. CodeRabbit findings were individually reviewed: valid defects were fixed, while the proposed unavailable state for supported HealthKit devices was rejected in favor of noReadableSamples. No review finding was deferred. Review-fix validation: 87 related tests across 5 suites and 88 Phase 4 cumulative tests across 7 suites passed; SwiftLint strict, 169 UI contracts, JSON parsing, and diff checks passed. Follow-up review fix: aligned the Swift no-permissions fixture with the JSON/contract request lifecycle (`notRequested` + `noReadableSamples`) after CodeRabbit identified the remaining request-state mismatch.",
+          "last_updated": "2026-09-04T16:13:45Z",
+          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior. Automatically promoted from backlog to ready after dependency 4.0c completed. 2026-09-04 reasonableness review (ADR-018) retained the progressive-permission direction but corrected four non-executable boundaries: persisted consent now gates protected requests; notification delivery is orthogonal to awakening preferences; geofence authorization is staged When In Use then separately confirmed Always; and HealthKit read authorization is represented by request lifecycle plus data availability rather than fabricated granted/denied. The review also requires adapters to await callbacks/final snapshots and adds contract states/actions for consent persistence and background-location elevation. Implementation completed on 2026-09-04: durable consent now hard-gates Photos; onboarding requests Photos only; awakening preferences and HealthKit request lifecycle persist in SQLite; notifications are independent; location authorization is staged; HealthKit read state is represented by request completion plus sample availability. Validation: 90 tests across ProgressivePermissionFlow, Onboarding, Awakening settings/system adapters, and cross-app Health passed; SwiftLint strict passed; 169 UI contracts validated; JSON and diff checks passed. Phase 4 cumulative regression through 4.0f also passed: 82 tests across 7 suites. Pull request #74 opened against dev-1.0. PR #74 review fixes: preference updates now use atomic single-column SQLite upserts; overlapping CoreLocation requests share one callback result; the legacy HealthKit API that inferred read authorization was removed; HealthKit request and settings-query failures surface as L2; notification persistence failures are visible; cancelled loads cannot publish late completion; UI contract fixtures and active evidence now use request lifecycle plus readable-sample semantics. CodeRabbit findings were individually reviewed: valid defects were fixed, while the proposed unavailable state for supported HealthKit devices was rejected in favor of noReadableSamples. No review finding was deferred. Review-fix validation: 87 related tests across 5 suites and 88 Phase 4 cumulative tests across 7 suites passed; SwiftLint strict, 169 UI contracts, JSON parsing, and diff checks passed. Follow-up review fix: aligned the Swift no-permissions fixture with the JSON/contract request lifecycle (`notRequested` + `noReadableSamples`) after CodeRabbit identified the remaining request-state mismatch. PR #74 was human-merged by logan-suu at 2026-09-04T16:12:06Z with merge commit 59638bbd9f0d2e7ffff196290c85ed817ee6f386. Post-merge deferred-item scan found no PR #74 entries and no existing deferred item whose target condition was completed by this merge.",
           "started_at": "2026-09-04T14:48:31.538956Z",
           "status_transitions": {
-            "review_at": "2026-09-04T15:09:43Z"
+            "review_at": "2026-09-04T15:09:43Z",
+            "done_at": "2026-09-04T16:12:06Z"
           },
           "pr": {
             "number": 74,
             "url": "https://github.com/logan-suu/Echo/pull/74",
             "head": "feature/progressive-permissions-US-PRV-008",
             "base": "dev-1.0",
-            "created_at": "2026-09-04T15:25:03Z"
-          }
+            "created_at": "2026-09-04T15:25:03Z",
+            "merged_at": "2026-09-04T16:12:06Z",
+            "merge_commit": "59638bbd9f0d2e7ffff196290c85ed817ee6f386",
+            "merged_by": "logan-suu"
+          },
+          "merged_at": "2026-09-04T16:12:06Z",
+          "merge_commit": "59638bbd9f0d2e7ffff196290c85ed817ee6f386",
+          "merged_by": "logan-suu"
         },
         {
           "id": "4.0g",
@@ -3200,7 +3207,7 @@
             "docs/05-planning/phase3f-evidence-index.md",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "3F.11",
             "4.0f"
@@ -3213,7 +3220,7 @@
             "Release 包零运行时下载、零分析 SDK、零用户数据外传的网络与依赖扫描报告"
           ],
           "migrated_from": [],
-          "last_updated": "2026-09-02T19:10:59Z",
+          "last_updated": "2026-09-04T16:13:45Z",
           "notes": "2026-09-02 permission reasonableness review added 4.0f as a release-compliance prerequisite; task returned from ready to backlog until the consent-first contextual permission flow is complete."
         },
         {
