@@ -264,6 +264,7 @@ struct ProductionIngestionTests {
         let loaded = try await progress.load(taskId: "cancel-job")
         #expect(loaded != nil)
         #expect(loaded?.lastProcessedIndex == 3)
+        #expect(loaded?.resumeData == resumeData)
     }
 
     @Test("TaskQueue completion deletes progress record")
@@ -328,8 +329,19 @@ struct ProductionIngestionTests {
     func test_queue_pausedDoesNotStarveLaterJobs() async throws {
         let progress = ProgressActor.shared
         let queue = TaskQueueActor(progressActor: progress)
+        let blockerStarted = expectationSignal()
+        let releaseBlocker = expectationSignal()
 
-        await queue.pause(taskId: "paused-job")
+        try await queue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: "pause-blocker",
+            taskType: .fullIndex,
+            totalCount: 1
+        ) { _ in
+            await blockerStarted.signal()
+            await releaseBlocker.awaitSignal()
+        })
+        await blockerStarted.awaitSignal()
+
         try await queue.enqueue(TaskQueueActor.QueuedJob(
             taskId: "paused-job",
             taskType: .fullIndex,
@@ -337,18 +349,24 @@ struct ProductionIngestionTests {
         ) { context in
             try await context.report(processedIndex: 1, lastProcessedId: "p")
         })
+        await queue.pause(taskId: "paused-job")
 
-        try await queue.enqueueAndWait(TaskQueueActor.QueuedJob(
+        let runnable = Task {
+            try await queue.enqueueAndWait(TaskQueueActor.QueuedJob(
             taskId: "runnable-job",
             taskType: .dataSourceSync,
             totalCount: 1
-        ) { context in
-            try await context.report(processedIndex: 1, lastProcessedId: "r")
-        })
+            ) { context in
+                try await context.report(processedIndex: 1, lastProcessedId: "r")
+            })
+        }
+        await releaseBlocker.signal()
+        _ = try await runnable.value
 
         #expect(try await progress.load(taskId: "runnable-job") == nil)
         #expect(await queue.isPaused(taskId: "paused-job"))
         #expect(await queue.pendingCount() == 1)
+        await queue.cancel(taskId: "paused-job")
     }
 
     // ══════════════════════════════════════════════════════════════

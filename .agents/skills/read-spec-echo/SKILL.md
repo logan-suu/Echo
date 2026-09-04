@@ -7,8 +7,9 @@ description: "快速阅读并总结当前任务对应的规格文档（AC、架�
 > repository `AGENTS.md` as the authority. Treat any remaining GitHub API
 > wording as the equivalent `gh` CLI operation supported by the current
 > environment. Never weaken human-only approval, PR merge, branch retention,
-> privacy, or release gates. If `gh auth status` is invalid, stop external
-> GitHub mutations and ask the user to re-authenticate.
+> privacy, or release gates. A sandboxed `gh auth status` failure is
+> inconclusive. Apply the two-stage, read-only verification in `AGENTS.md`
+> §15; request re-authentication only after an explicit credential rejection.
 
 
 ## 📖 规格速读

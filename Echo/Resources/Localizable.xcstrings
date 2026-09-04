@@ -6249,10 +6249,34 @@
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "任务恢复当前不可用。" } }
       }
     },
+    "This saved task type is not supported by this app version.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "This saved task type is not supported by this app version." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "此 App 版本不支持该已保存任务类型。" } }
+      }
+    },
+    "Unable to cancel this task because it is no longer active.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to cancel this task because it is no longer active." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法取消此任务，因为它已不再活跃。" } }
+      }
+    },
     "Unable to continue this task. Review access and try again.": {
       "localizations": {
         "en-US": { "stringUnit": { "state": "translated", "value": "Unable to continue this task. Review access and try again." } },
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法继续此任务。请检查访问权限后重试。" } }
+      }
+    },
+    "Unable to resume this task because it is no longer active.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to resume this task because it is no longer active." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法恢复此任务，因为它已不再处于活动状态。" } }
+      }
+    },
+    "Unable to pause this task because it is no longer active.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Unable to pause this task because it is no longer active." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法暂停此任务，因为它已不再活跃。" } }
       }
     },
     "Unable to restart this task. Review access and try again.": {

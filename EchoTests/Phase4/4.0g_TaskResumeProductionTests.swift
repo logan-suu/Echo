@@ -133,8 +133,8 @@ struct TaskResumeProductionTests {
         await hold.open()
     }
 
-    @Test("AC-4: Restart replaces checkpoint before enqueue and retains zero checkpoint on enqueue failure")
-    func test_AC4_restartRetainsResetCheckpointWhenEnqueueFails() async throws {
+    @Test("AC-4: Restart reserves task identity before checkpoint replacement")
+    func test_AC4_restartReservationPreventsCompetingOwner() async throws {
         let taskId = "restart-checkpoint"
         let stored = TaskProgress(
             taskId: taskId,
@@ -150,23 +150,26 @@ struct TaskResumeProductionTests {
         let occupied = AsyncGate()
         let registry = TaskRecoveryRegistry()
         await registry.register(taskType: .dataSourceSync) { request in
-            // Simulate a current-session owner appearing after the coordinator's
-            // initial ownership check but before its enqueue phase.
-            try await queue.enqueue(
-                TaskQueueActor.QueuedJob(
-                    taskId: request.progress.taskId,
-                    taskType: .dataSourceSync,
-                    totalCount: request.progress.totalCount,
-                    resumeData: request.progress.resumeData
-                ) { _ in await occupied.wait() },
-                progressPolicy: .preserveExisting
-            )
+            do {
+                try await queue.enqueue(
+                    TaskQueueActor.QueuedJob(
+                        taskId: request.progress.taskId,
+                        taskType: .dataSourceSync,
+                        totalCount: request.progress.totalCount,
+                        resumeData: request.progress.resumeData
+                    ) { _ in await occupied.wait() },
+                    progressPolicy: .preserveExisting
+                )
+                Issue.record("a competing enqueue must not acquire a reserved recovery task ID")
+            } catch TaskQueueError.taskAlreadyQueued {
+                // Expected: the recovery reservation owns the exact task identity.
+            }
             return TaskQueueActor.QueuedJob(
                 taskId: request.progress.taskId,
                 taskType: .dataSourceSync,
                 totalCount: request.progress.totalCount,
                 resumeData: request.progress.resumeData
-            ) { _ in }
+            ) { _ in await occupied.wait() }
         }
         let privacy = PrivacyActor(db: db)
         try await privacy.updatePolicy(UserPolicy(authorizedSourceTypes: ["photo"]))
@@ -179,8 +182,11 @@ struct TaskResumeProductionTests {
             auditWriter: nil
         )
 
-        await #expect(throws: TaskRecoveryError.self) {
-            _ = try await coordinator.restartTask(stored)
+        do {
+            #expect(try await coordinator.restartTask(stored) == .restarted)
+        } catch {
+            await occupied.open()
+            throw error
         }
         let reset = try await progressActor.load(taskId: taskId)
         #expect(reset?.lastProcessedIndex == 0)
@@ -262,9 +268,11 @@ struct TaskResumeProductionTests {
             lastProcessedIndex: 3, totalCount: 8, resumeData: try descriptor(sourceTypes: ["photo"])
         )
         try await progressActor.save(progress: stored)
+        let launcherProbe = InvocationProbe()
         let registry = TaskRecoveryRegistry()
         await registry.register(taskType: .dataSourceSync) { request in
-            TaskQueueActor.QueuedJob(
+            await launcherProbe.markInvoked()
+            return TaskQueueActor.QueuedJob(
                 taskId: request.progress.taskId,
                 taskType: .dataSourceSync,
                 totalCount: request.progress.totalCount
@@ -285,6 +293,74 @@ struct TaskResumeProductionTests {
             _ = try await coordinator.continueTask(stored)
         }
         #expect(try await progressActor.load(taskId: "revoked")?.lastProcessedIndex == 3)
+        #expect(await launcherProbe.wasInvoked == false)
+    }
+
+    @Test("AC-3: cancelling a paused queued task clears queue ownership")
+    func test_AC3_cancelPausedQueuedTaskClearsPauseOwnership() async throws {
+        let queue = TaskQueueActor(progressActor: progressActor)
+        let blocker = AsyncGate()
+        try await queue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: "blocking-owner", taskType: .fullIndex, totalCount: 1
+        ) { _ in await blocker.wait() })
+        try await queue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: "paused-queued", taskType: .dataSourceSync, totalCount: 1
+        ) { _ in })
+
+        await queue.pause(taskId: "paused-queued")
+        #expect(await queue.isPaused(taskId: "paused-queued"))
+        await queue.cancel(taskId: "paused-queued")
+
+        #expect(await queue.isPaused(taskId: "paused-queued") == false)
+        #expect(await queue.ownedTaskIDs().contains("paused-queued") == false)
+        await blocker.open()
+    }
+
+    @Test("AC-3: cancelling an orphan does not claim success or erase its checkpoint")
+    func test_AC3_cancelOrphanReturnsFalseAndRetainsCheckpoint() async throws {
+        let stored = TaskProgress(
+            taskId: "orphan-cancel", taskType: .dataSourceSync,
+            lastProcessedIndex: 4, totalCount: 9, resumeData: try descriptor()
+        )
+        try await progressActor.save(progress: stored)
+        let queue = TaskQueueActor(progressActor: progressActor)
+
+        #expect(await queue.cancel(taskId: stored.taskId) == false)
+        #expect(try await progressActor.load(taskId: stored.taskId)?.lastProcessedIndex == 4)
+    }
+
+    @Test("AC-4: unsupported persisted tasks remain visible without recovery actions")
+    @MainActor
+    func test_AC4_unsupportedTaskIsNonActionableL2() async throws {
+        let stored = TaskProgress(
+            taskId: "unsupported-ui", rawTaskType: "retiredTaskType",
+            lastProcessedIndex: 2, totalCount: 7, resumeData: try descriptor()
+        )
+        try await progressActor.save(progress: stored)
+        let coordinator = TaskRecoveryCoordinator(
+            progressActor: progressActor,
+            taskQueue: TaskQueueActor(progressActor: progressActor),
+            registry: TaskRecoveryRegistry(),
+            privacyActor: PrivacyActor(db: db),
+            pendingOpsActor: nil,
+            auditWriter: nil
+        )
+        let viewModel = ResumeProgressViewModel(
+            progressActor: progressActor,
+            recoveryCoordinator: coordinator,
+            checkDelayNanoseconds: 0
+        )
+
+        viewModel.checkForPendingProgress()
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(viewModel.pendingProgressRecords.contains { $0.taskId == stored.taskId })
+        #expect(viewModel.isPromptPresented == false)
+        guard case .error(.l2Recoverable(let message)) = viewModel.viewState else {
+            Issue.record("unsupported task must map to a non-actionable L2 state")
+            return
+        }
+        #expect(message.contains("not supported"))
     }
 
     @Test("AC-4: duplicate recovery attempts cannot enqueue the same task twice")
@@ -407,5 +483,13 @@ private actor AsyncGate {
 
     func open() {
         isOpen = true
+    }
+}
+
+private actor InvocationProbe {
+    private(set) var wasInvoked = false
+
+    func markInvoked() {
+        wasInvoked = true
     }
 }

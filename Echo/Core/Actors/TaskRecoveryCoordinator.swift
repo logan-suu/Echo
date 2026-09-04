@@ -2,8 +2,9 @@
 // File: TaskRecoveryCoordinator.swift
 // Spec: docs/01-spec/用户故事与验收标准规格书.md → US-SYS-001 AC-3/AC-4/AC-7
 // Task: 4.0g - Production task resume loop
-// AC Coverage: typed reconstruction, exact taskId, authorization recheck,
-//              idempotent Continue/Restart, L2 persistence, structured audit
+// AC Coverage: typed reconstruction, reserved exact taskId, authorization recheck,
+//              idempotent Continue/Restart, fail-closed unsupported types,
+//              L2 persistence, structured audit with outcome
 // Architecture: AGENTS.md §4.2, §4.3, §4.5, §7.3
 // Generated: 2026-09-04
 // ==========================================
@@ -28,6 +29,10 @@ public actor TaskRecoveryRegistry {
             throw TaskRecoveryError.unsupportedTaskType(request.progress.rawTaskType)
         }
         return try await launcher(request)
+    }
+
+    func supports(taskType: TaskType) -> Bool {
+        taskType != .unknown && launchers[taskType] != nil
     }
 }
 
@@ -74,15 +79,20 @@ public actor TaskRecoveryCoordinator {
         defer { recoveringTaskIDs.remove(snapshot.taskId) }
         do {
             let current = try await currentProgress(matching: snapshot)
-            try await ensureNotOwned(taskId: current.taskId)
-            let request = try makeRequest(progress: current, choice: .continue)
-            try await validatePrivacy(request.descriptor)
-            let job = try await registry.makeJob(for: request)
-            try validate(job: job, progress: current)
+            let reservation = try await reserve(taskId: current.taskId)
             do {
-                try await taskQueue.enqueue(job, progressPolicy: .preserveExisting)
+                let request = try makeRequest(progress: current, choice: .continue)
+                try await validatePrivacy(request.descriptor)
+                let job = try await registry.makeJob(for: request)
+                try validate(job: job, progress: current)
+                try await taskQueue.enqueue(
+                    job,
+                    progressPolicy: .preserveExisting,
+                    reservation: reservation
+                )
             } catch {
-                throw TaskRecoveryError.enqueueFailed
+                await taskQueue.release(reservation)
+                throw error
             }
             await recordAudit(progress: current, choice: "continue", outcome: "resumed", success: true)
             return .resumed
@@ -98,16 +108,22 @@ public actor TaskRecoveryCoordinator {
         defer { recoveringTaskIDs.remove(snapshot.taskId) }
         do {
             let current = try await currentProgress(matching: snapshot)
-            try await ensureNotOwned(taskId: current.taskId)
-            let request = try makeRequest(progress: current, choice: .restart)
-            try await validatePrivacy(request.descriptor)
-            let job = try await registry.makeJob(for: request)
-            try validate(job: job, progress: current)
-            let reset = try await progressActor.resetForRestart(current)
+            let reservation = try await reserve(taskId: current.taskId)
+            let reset: TaskProgress
             do {
-                try await taskQueue.enqueue(job, progressPolicy: .preserveExisting)
+                let request = try makeRequest(progress: current, choice: .restart)
+                try await validatePrivacy(request.descriptor)
+                let job = try await registry.makeJob(for: request)
+                try validate(job: job, progress: current)
+                reset = try await progressActor.resetForRestart(current)
+                try await taskQueue.enqueue(
+                    job,
+                    progressPolicy: .preserveExisting,
+                    reservation: reservation
+                )
             } catch {
-                throw TaskRecoveryError.enqueueFailed
+                await taskQueue.release(reservation)
+                throw error
             }
             await recordAudit(progress: reset, choice: "restart", outcome: "restarted", success: true)
             return .restarted
@@ -137,9 +153,18 @@ public actor TaskRecoveryCoordinator {
         return current
     }
 
-    private func ensureNotOwned(taskId: String) async throws {
-        guard !(await taskQueue.ownedTaskIDs()).contains(taskId) else {
+    /// Reports whether a persisted row has a registered production reconstruction path.
+    public func supportsRecovery(for progress: TaskProgress) async -> Bool {
+        await registry.supports(taskType: progress.taskType)
+    }
+
+    private func reserve(taskId: String) async throws -> TaskQueueActor.TaskReservation {
+        do {
+            return try await taskQueue.reserve(taskId: taskId)
+        } catch TaskQueueError.taskAlreadyQueued {
             throw TaskRecoveryError.taskOwnedByCurrentSession
+        } catch {
+            throw TaskRecoveryError.enqueueFailed
         }
     }
 

@@ -192,7 +192,15 @@ final class ResumeProgressViewModel {
                     }
                     self.pendingProgressRecords = pending
                     if let first = pending.first {
-                        self.presentPrompt(first, fixtureBacked: false)
+                        if await recoveryCoordinator.supportsRecovery(for: first) {
+                            self.presentPrompt(first, fixtureBacked: false)
+                        } else {
+                            self.isFixtureBacked = false
+                            self.isPromptPresented = false
+                            self.viewState = .error(.l2Recoverable(
+                                message: "This saved task type is not supported by this app version."
+                            ))
+                        }
                     } else {
                         self.viewState = .none
                     }

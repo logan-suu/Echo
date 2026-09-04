@@ -201,9 +201,14 @@ final class BackgroundTaskViewModel {
                     while !Task.isCancelled {
                         let rows = try await progressActor.loadAll()
                         guard !Task.isCancelled else { return }
+                        let activeTaskIDs = if let taskQueue = self.taskQueue {
+                            await taskQueue.activeTaskIDs()
+                        } else {
+                            Set(rows.map(\.taskId))
+                        }
                         var mappedTasks: [BackgroundTaskModel] = []
                         mappedTasks.reserveCapacity(rows.count)
-                        for row in rows {
+                        for row in rows where activeTaskIDs.contains(row.taskId) {
                             var task = BackgroundTaskModel(from: row)
                             if let taskQueue = self.taskQueue,
                                await taskQueue.isPaused(taskId: row.taskId) {
@@ -247,20 +252,56 @@ final class BackgroundTaskViewModel {
 
     func pauseTask(_ taskId: String) {
         guard let idx = tasks.firstIndex(where: { $0.taskId == taskId }) else { return }
-        tasks[idx].status = .paused
         if let taskQueue {
-            Task { await taskQueue.pause(taskId: taskId) }
+            Task { [weak self] in
+                let paused = await taskQueue.pause(taskId: taskId)
+                guard let self else { return }
+                guard paused,
+                      let currentIndex = self.tasks.firstIndex(where: { $0.taskId == taskId }),
+                      await taskQueue.isPaused(taskId: taskId) else {
+                    self.viewState = .error(.l2Recoverable(
+                        message: "Unable to pause this task because it is no longer active."
+                    ))
+                    return
+                }
+                self.tasks[currentIndex].status = .paused
+                self.writeAudit(
+                    event: .backgroundTaskInterrupted,
+                    action: "pause",
+                    resumePoint: self.tasks[currentIndex].processedCount,
+                    outcome: "paused"
+                )
+            }
+            return
         }
-        writeAudit(event: .backgroundTaskInterrupted, action: "pause", resumePoint: tasks[idx].processedCount)
+        tasks[idx].status = .paused
+        writeAudit(
+            event: .backgroundTaskInterrupted,
+            action: "pause",
+            resumePoint: tasks[idx].processedCount,
+            outcome: "paused"
+        )
     }
 
     func resumeTask(_ taskId: String) {
         guard let idx = tasks.firstIndex(where: { $0.taskId == taskId }) else { return }
         guard tasks[idx].status == .paused else { return }
-        tasks[idx].status = .running
         if let taskQueue {
-            Task { await taskQueue.resume(taskId: taskId) }
+            Task { [weak self] in
+                let resumed = await taskQueue.resume(taskId: taskId)
+                guard let self else { return }
+                guard resumed,
+                      let currentIndex = self.tasks.firstIndex(where: { $0.taskId == taskId }) else {
+                    self.viewState = .error(.l2Recoverable(
+                        message: "Unable to resume this task because it is no longer active."
+                    ))
+                    return
+                }
+                self.tasks[currentIndex].status = .running
+            }
+            return
         }
+        tasks[idx].status = .running
     }
 
     func requestCancelTask(_ taskId: String) {
@@ -276,13 +317,18 @@ final class BackgroundTaskViewModel {
         if let taskQueue {
             pendingCancelTaskId = nil
             Task { [weak self] in
-                await taskQueue.cancel(taskId: taskId)
-                guard let self,
-                      let currentIndex = self.tasks.firstIndex(where: { $0.taskId == taskId }) else {
+                let cancelled = await taskQueue.cancel(taskId: taskId)
+                guard let self else { return }
+                guard cancelled else {
+                    self.viewState = .error(.l2Recoverable(
+                        message: "Unable to cancel this task because it is no longer active."
+                    ))
                     return
                 }
-                self.tasks[currentIndex].status = .cancelled
-                self.tasks.remove(at: currentIndex)
+                if let currentIndex = self.tasks.firstIndex(where: { $0.taskId == taskId }) {
+                    self.tasks[currentIndex].status = .cancelled
+                    self.tasks.remove(at: currentIndex)
+                }
                 self.writeAudit(
                     event: .backgroundTaskInterrupted,
                     action: "cancel",
