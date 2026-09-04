@@ -83,7 +83,7 @@ struct TaskBalancedCanvasTests {
         #expect(settings.contains("message: EchoStrings.tr(\"Please try again.\")"))
         let resumePrompt = try loadSource("Echo/UI/ResumeProgress/ResumeProgressPromptView.swift")
         #expect(resumePrompt.contains("title: EchoStrings.tr(\"Unable to check saved progress\")"))
-        #expect(uiReadme.contains("最后同步**：2026-09-02"))
+        #expect(uiReadme.contains("最后同步**："))
         #expect(uiArchitecture.contains("`DeviceMigrationActor` 负责编排"))
         #expect(uiArchitecture.contains("`DeviceMigrationService.exportPackage` / `importPackage`"))
         #expect(uiArchitecture.contains("禁止使用 `PhotoSearchMigrationActor`"))

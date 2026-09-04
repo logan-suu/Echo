@@ -283,9 +283,30 @@ public actor DatabaseManager {
             CREATE TABLE IF NOT EXISTS MemoryEditConflict (
                 memoryId TEXT PRIMARY KEY NOT NULL REFERENCES Memory(memoryId) ON DELETE CASCADE,
                 externalVersionSummary TEXT NOT NULL,
-                detectedAt REAL NOT NULL
+                detectedAt REAL NOT NULL,
+                pendingAssetId TEXT,
+                pendingSource TEXT,
+                pendingChangeType TEXT,
+                pendingContentHash TEXT,
+                pendingHashSkipped INTEGER NOT NULL DEFAULT 0
             )
             """)
+        let conflictColumns = try columnNames(in: "MemoryEditConflict")
+        if !conflictColumns.contains("pendingAssetId") {
+            try execute(sql: "ALTER TABLE MemoryEditConflict ADD COLUMN pendingAssetId TEXT")
+        }
+        if !conflictColumns.contains("pendingSource") {
+            try execute(sql: "ALTER TABLE MemoryEditConflict ADD COLUMN pendingSource TEXT")
+        }
+        if !conflictColumns.contains("pendingChangeType") {
+            try execute(sql: "ALTER TABLE MemoryEditConflict ADD COLUMN pendingChangeType TEXT")
+        }
+        if !conflictColumns.contains("pendingContentHash") {
+            try execute(sql: "ALTER TABLE MemoryEditConflict ADD COLUMN pendingContentHash TEXT")
+        }
+        if !conflictColumns.contains("pendingHashSkipped") {
+            try execute(sql: "ALTER TABLE MemoryEditConflict ADD COLUMN pendingHashSkipped INTEGER NOT NULL DEFAULT 0")
+        }
         // 4.0d: editable feelings are relational children, never canonical/search payloads.
         try execute(sql: """
             CREATE TABLE IF NOT EXISTS MemoryFeeling (
@@ -460,6 +481,36 @@ public actor DatabaseManager {
             }
             try execute(sql: "COMMIT")
             return Int32(writes.count)
+        } catch {
+            try? execute(sql: "ROLLBACK")
+            throw error
+        }
+    }
+
+    /// Executes writes only when the row-existence precondition still matches inside the same
+    /// SQLite write transaction. This closes actor-reentrancy gaps between a prior read and commit.
+    public func executeConditionalTransaction(
+        _ writes: [DBWrite],
+        conditionSQL: String,
+        conditionBindings: [DBBinding],
+        expectedRowExists: Bool
+    ) throws -> Bool {
+        guard !writes.isEmpty else { return true }
+        try execute(sql: "BEGIN IMMEDIATE TRANSACTION")
+        do {
+            let rowExists = try !executeQuery(
+                sql: conditionSQL,
+                bindings: conditionBindings
+            ).isEmpty
+            guard rowExists == expectedRowExists else {
+                try execute(sql: "ROLLBACK")
+                return false
+            }
+            for write in writes {
+                _ = try executeWrite(sql: write.sql, bindings: write.bindings)
+            }
+            try execute(sql: "COMMIT")
+            return true
         } catch {
             try? execute(sql: "ROLLBACK")
             throw error

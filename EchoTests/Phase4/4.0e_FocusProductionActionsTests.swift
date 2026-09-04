@@ -8,6 +8,7 @@
 // ==========================================
 
 import Foundation
+import ProximaKit
 import Testing
 @testable import Echo
 
@@ -54,6 +55,76 @@ private actor EditTestSyncLockChecker: MemorySyncLockChecking {
     let locked: Bool
     init(locked: Bool) { self.locked = locked }
     func isMemoryLockedForSync(memoryId: String) async -> Bool { locked }
+}
+
+private actor EditTestExternalChangeApplier: MemoryExternalChangeApplying {
+    private let db: DatabaseManager
+    private var appliedChanges: [PendingMemorySourceChange] = []
+
+    init(db: DatabaseManager) { self.db = db }
+
+    func applyResolvedExternalChange(
+        _ change: PendingMemorySourceChange,
+        memoryID: UUID,
+        traceID: String
+    ) async throws {
+        appliedChanges.append(change)
+        try await db.executeTransaction([
+            .init(
+                sql: "DELETE FROM MemoryUserEdit WHERE memoryId = ?",
+                bindings: [.text(memoryID.uuidString)]
+            ),
+            .init(
+                sql: "DELETE FROM MemoryEditConflict WHERE memoryId = ?",
+                bindings: [.text(memoryID.uuidString)]
+            ),
+            .init(
+                sql: "UPDATE Memory SET userEdited = 0, userLocked = 0 WHERE memoryId = ?",
+                bindings: [.text(memoryID.uuidString)]
+            ),
+        ])
+    }
+
+    func changes() -> [PendingMemorySourceChange] { appliedChanges }
+}
+
+private actor CancellableEditTestService: MemoryEditServicing {
+    func loadSnapshot(memoryID: UUID, traceID: String) async throws -> MemoryEditSnapshot? {
+        try await Task.sleep(for: .seconds(10))
+        return nil
+    }
+
+    func beginEditing(memoryID: UUID, traceID: String) async throws {}
+    func save(_ request: MemoryEditRequest, traceID: String) async throws -> MemoryEditResult {
+        throw CancellationError()
+    }
+    func resolveConflict(
+        memoryID: UUID,
+        resolution: MemoryConflictResolution,
+        traceID: String
+    ) async throws {}
+}
+
+private actor ConflictInjectingEditTestEmbedder: EmbedderProtocol {
+    private let db: DatabaseManager
+    private let memoryID: UUID
+
+    init(db: DatabaseManager, memoryID: UUID) {
+        self.db = db
+        self.memoryID = memoryID
+    }
+
+    func embedImage(assetId: String) async throws -> [Float] {
+        [Float](repeating: 0, count: 384)
+    }
+
+    func embedText(_ text: String) async throws -> [Float] {
+        try await db.executeWrite(
+            sql: "INSERT INTO MemoryEditConflict (memoryId, externalVersionSummary, detectedAt) VALUES (?, ?, ?)",
+            bindings: [.text(memoryID.uuidString), .text("racing external change"), .double(1_000)]
+        )
+        return [Float](repeating: Float(text.utf8.count % 17) / 17, count: 384)
+    }
 }
 
 @Suite("FocusProductionActionsTests", .serialized)
@@ -242,16 +313,117 @@ struct FocusProductionActionsTests {
         #expect(try await actor.handleExternalChange(memoryID: id, externalVersionSummary: "later", traceID: "locked") == .skippedUserLocked)
     }
 
-    @Test("AC-4: external and merge resolutions persist their selected truth")
-    func externalAndMergeResolutions() async throws {
+    @Test("AC-4: persisted edits are protected and ordinary saves cannot bypass conflict resolution")
+    func persistedEditConflictBlocksOrdinarySave() async throws {
         let (db, _, _, actor) = try await makeSystem()
         let id = UUID()
         let timestamp = Date(timeIntervalSince1970: 100)
         try await seedMemory(db, id: id, timestamp: timestamp)
+        _ = try await actor.save(
+            MemoryEditRequest(
+                memoryID: id,
+                title: "Saved edit",
+                description: "local",
+                tags: [],
+                timestamp: timestamp
+            ),
+            traceID: "saved-edit"
+        )
+        let pending = PendingMemorySourceChange(
+            assetID: "note://source",
+            source: "photo",
+            changeType: "modified",
+            newContentHash: "new-hash",
+            hashSkipped: false
+        )
+
+        #expect(try await actor.handleExternalChange(
+            memoryID: id,
+            externalVersionSummary: "external",
+            pendingChange: pending,
+            traceID: "saved-edit-conflict"
+        ) == .conflictRecorded)
+        await #expect(throws: MemoryEditError.conflictPending) {
+            try await actor.save(
+                MemoryEditRequest(
+                    memoryID: id,
+                    title: "stale overwrite",
+                    description: "stale",
+                    tags: [],
+                    timestamp: timestamp
+                ),
+                traceID: "blocked-stale-save"
+            )
+        }
+        let snapshot = try await actor.loadSnapshot(memoryID: id, traceID: "protected-load")
+        #expect(snapshot?.edit?.title == "Saved edit")
+        #expect(snapshot?.conflict?.pendingChange == pending)
+    }
+
+    @Test("AC-2/4: a racing conflict cannot remove an already-serviceable identical vector")
+    func racingConflictPreservesReusedVector() async throws {
+        let (db, privacy, registry, actor) = try await makeSystem()
+        let id = UUID()
+        let timestamp = Date(timeIntervalSince1970: 100)
+        let request = MemoryEditRequest(
+            memoryID: id,
+            title: "Stable edit",
+            description: "local",
+            tags: [],
+            timestamp: timestamp
+        )
+        try await seedMemory(db, id: id, timestamp: timestamp)
+        _ = try await actor.save(request, traceID: "seed-identical-vector")
+        let route = try #require(try await registry.loadActiveRoute())
+        let store = try #require(await registry.vectorStore(for: route.textGeneration))
+        let effectiveText = MemoryEditActor.effectiveText(
+            title: request.title,
+            description: request.description,
+            tags: request.tags,
+            canonicalText: "immutable source text"
+        )
+        let vector = [Float](repeating: Float(effectiveText.utf8.count % 17) / 17, count: 384)
+        let before = await store.search(query: vector, k: 1)
+        let racingActor = MemoryEditActor(
+            db: db,
+            privacyActor: privacy,
+            generationRegistry: registry,
+            embedder: ConflictInjectingEditTestEmbedder(db: db, memoryID: id)
+        )
+
+        await #expect(throws: MemoryEditError.conflictPending) {
+            try await racingActor.save(request, traceID: "racing-conflict")
+        }
+        let after = await store.search(query: vector, k: 1)
+        #expect(!before.isEmpty)
+        #expect(after.first?.id == before.first?.id)
+    }
+
+    @Test("AC-4: external and merge resolutions persist their selected truth")
+    func externalAndMergeResolutions() async throws {
+        let (db, _, _, actor) = try await makeSystem()
+        let applier = EditTestExternalChangeApplier(db: db)
+        try await actor.attachExternalChangeApplier(applier, traceID: "attach-applier")
+        let id = UUID()
+        let timestamp = Date(timeIntervalSince1970: 100)
+        try await seedMemory(db, id: id, timestamp: timestamp)
         try await actor.beginEditing(memoryID: id, traceID: "begin-external")
-        _ = try await actor.handleExternalChange(memoryID: id, externalVersionSummary: "external", traceID: "detect-external")
+        let pending = PendingMemorySourceChange(
+            assetID: "note://source",
+            source: "photo",
+            changeType: "modified",
+            newContentHash: "external-hash",
+            hashSkipped: false
+        )
+        _ = try await actor.handleExternalChange(
+            memoryID: id,
+            externalVersionSummary: "external",
+            pendingChange: pending,
+            traceID: "detect-external"
+        )
         try await actor.resolveConflict(memoryID: id, resolution: .external, traceID: "resolve-external")
         #expect(try await actor.loadSnapshot(memoryID: id, traceID: "load-external")?.edit == nil)
+        #expect(await applier.changes() == [pending])
 
         try await actor.beginEditing(memoryID: id, traceID: "begin-merge")
         _ = try await actor.handleExternalChange(memoryID: id, externalVersionSummary: "external 2", traceID: "detect-merge")
@@ -263,6 +435,18 @@ struct FocusProductionActionsTests {
         let merged = try await actor.loadSnapshot(memoryID: id, traceID: "load-merge")
         #expect(merged?.edit?.title == "Merged")
         #expect(merged?.memory.userLocked == true)
+    }
+
+    @Test("Regression: cancelling a production edit-service load stays cancelled")
+    func cancelledEditServiceLoadStaysCancelled() async {
+        let viewModel = MemoryDetailViewModel(memoryEditService: CancellableEditTestService())
+        viewModel.load(memoryId: UUID())
+        await Task.yield()
+        viewModel.onDisappear()
+        for _ in 0..<100 where viewModel.viewState == .loading {
+            await Task.yield()
+        }
+        #expect(viewModel.viewState == .cancelled)
     }
 
     @Test("AC-7: audit fields are structured and identifiers are digests")

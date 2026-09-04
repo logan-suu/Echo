@@ -36,7 +36,7 @@ Apple 公共 API 支持在 `PHPhotoLibrary.performChanges` 内通过 `PHAssetCha
 
 ### 3. 冲突必须持久化
 
-新增 `MemoryEditConflict` 关系保存 memoryId、外部版本摘要、检测时间和状态；本地草稿来自 `MemoryUserEdit`。同步遇到 `userLocked=true` 时跳过自动覆盖。编辑期间检测到外部变化时持久化 conflict，不覆盖本地编辑。选择本地版本会清除 conflict 并写 `userLocked=true`；选择外部版本会替换 canonical/representation、清除用户编辑关系和 conflict，并写 `userLocked=false`。手动合并保存后按本地版本规则锁定。显式“重新同步”清除锁并重新读取来源。
+新增 `MemoryEditConflict` 关系保存 memoryId、外部版本摘要、检测时间和可重放的来源变更参数；本地草稿来自 `MemoryUserEdit`。同步遇到 `userLocked=true` 时跳过自动覆盖；未保存编辑会话或已持久化用户编辑遇到外部变化时都持久化 conflict，不覆盖本地编辑。普通保存以数据库条件事务拒绝现存 conflict。选择本地版本会在同一事务清除 conflict 并写 `userLocked=true`；手动合并在同一条件事务发布编辑、清除 conflict 并锁定。选择外部版本由 SyncPipeline 重放持久化变更，只有 canonical/representation 替换成功后才通过级联清除用户编辑关系和 conflict，并保持 `userLocked=false`；失败保留 conflict。显式“重新同步”清除锁并重新读取来源。
 
 ### 4. 原始来源删除采用有序 saga
 

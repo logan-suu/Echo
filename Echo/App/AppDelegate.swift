@@ -134,6 +134,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             generationRegistry: registry,
             memoryEditActor: composition.memoryEditActor
         )
+        do {
+            try await composition.memoryEditActor.attachExternalChangeApplier(
+                sync,
+                traceID: UUID().uuidString
+            )
+        } catch {
+            return
+        }
         await sync.registerPhotoLibraryObserver()
         syncPipeline = sync        // Share 队列排空（US-SRC-001/003, ADR-008 §决策-3）— 恰好一次消费
         // 3F.11 fix: 注入生产同步管线 — Settings 照片授权/首次全量导入入口（US-SRC-001 AC-3/AC-5）

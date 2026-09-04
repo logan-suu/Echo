@@ -154,12 +154,10 @@ public enum LiveAppAdapters {
         composition.memoryEditActor
     }
 
-    /// Current production sync lock boundary used to block conflicting Detail saves.
-    @MainActor
-    public static func makeSyncPipeline(
-        composition: AppComposition = .shared
-    ) -> SyncPipeline? {
-        composition.productionSyncPipeline
+    /// Live sync-lock proxy. It resolves the pipeline at call time because AppDelegate attaches
+    /// the production pipeline after the SwiftUI hierarchy may already exist.
+    static func makeSyncLockChecker() -> any MemorySyncLockChecking {
+        ProductionSyncLockChecker()
     }
 
     // MARK: - Private Helpers
@@ -170,5 +168,12 @@ public enum LiveAppAdapters {
     ) async -> VectorStoreActor? {
         guard let route = try? await registry.loadActiveRoute() else { return nil }
         return await registry.vectorStore(for: route.textGeneration)
+    }
+}
+
+private actor ProductionSyncLockChecker: MemorySyncLockChecking {
+    func isMemoryLockedForSync(memoryId: String) async -> Bool {
+        let pipeline = await MainActor.run { AppComposition.shared.productionSyncPipeline }
+        return await pipeline?.isMemoryLockedForSync(memoryId: memoryId) ?? false
     }
 }

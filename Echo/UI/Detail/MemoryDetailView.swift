@@ -60,7 +60,7 @@ struct MemoryDetailView: View {
         _viewModel = State(initialValue: MemoryDetailViewModel(
             canonicalRepository: LiveAppAdapters.makeCanonicalRepository(),
             memoryEditService: LiveAppAdapters.makeMemoryEditActor(),
-            syncLockChecker: LiveAppAdapters.makeSyncPipeline()
+            syncLockChecker: LiveAppAdapters.makeSyncLockChecker()
         ))
         _pendingMemoryID = State(initialValue: memoryId)
     }

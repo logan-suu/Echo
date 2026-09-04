@@ -2490,7 +2490,7 @@
             "用户标题、多行纯文本描述和规范化标签写入以 memoryId 为外键的 MemoryUserEdit 关系；原始来源文本保持不变，v1 不承诺富文本格式持久化",
             "有效检索文本按用户标题、用户描述、标签、原 canonical 文本的固定顺序组成；新表示与向量准备成功后才发布并清理旧向量/FTS/缓存，失败保持旧版本可服务",
             "首次覆盖时间戳将原值写入 originalTimestamp，后续覆盖不得改写备份；userEdited 与有效 createdAt 同事务持久化",
-            "MemoryEditConflict 持久化外部版本摘要、检测时间和状态；local/external/merge 决议与 userLocked 同事务更新，重启后不丢失",
+            "MemoryEditConflict 持久化外部版本摘要、检测时间和可重放来源变更；普通保存以条件事务拒绝现存冲突，local/merge 原子更新锁与冲突，external 仅在来源变更重放成功后级联清理",
             "SyncPipeline 自动更新必须跳过 userLocked 记忆，直到用户显式重新同步或恢复外部版本；所有异步入口执行 PrivacyCheckpoint"
           ],
           "acceptance_evidence": [
@@ -2501,7 +2501,7 @@
             "memoryEdited 审计包含结构化 editedFields/reindexed/conflictResolvedWith，ID 与自由文本仅摘要"
           ],
           "last_updated": "2026-09-03T23:31:13Z",
-          "notes": "2026-09-03 reasonableness review adopted ADR-017 and narrowed 4.0e to editable metadata, safe re-index publication and persistent conflict semantics. Implemented MemoryUserEdit and MemoryEditConflict relations, prepare-before-publish text vector/FTS/cache replacement, first-write timestamp backup, shared Detail/Sync MemoryEditActor wiring, local/external/merge resolution, persistent userLocked sync exclusion, and structured hash-only memoryEdited audit fields. Validation: 7 task tests passed, including the AC-3 production L4 sync-lock guard; 27 MemoryDetailViewModel and 12 SyncPipeline regression tests passed; SwiftLint completed with 0 violations.",
+          "notes": "2026-09-03 reasonableness review adopted ADR-017 and narrowed 4.0e to editable metadata, safe re-index publication and persistent conflict semantics. Implemented MemoryUserEdit and MemoryEditConflict relations, prepare-before-publish text vector/FTS/cache replacement, first-write timestamp backup, shared Detail/Sync MemoryEditActor wiring, local/external/merge resolution, persistent userLocked sync exclusion, and structured hash-only memoryEdited audit fields. Validation: 7 task tests passed, including the AC-3 production L4 sync-lock guard; 27 MemoryDetailViewModel and 12 SyncPipeline regression tests passed; SwiftLint completed with 0 violations. PR #73 review accepted six actionable findings and fixed all of them: atomic merge publication, persisted-edit conflict protection, ordinary-save conflict guards, replayable external resolution, live sync-lock lookup, and cancellation mapping. Local review also fixed identical-vector compensation under a racing conflict. The stale 4.0c documentation-date CI assertion was corrected. Post-fix focused regression: 55 tests across FocusProductionActions, TaskBalancedCanvas, MemoryDetailViewModel, and SyncPipeline passed with 0 failures; the final task suite passed 10/10 and no review finding was deferred.",
           "pr": {
             "number": 73,
             "url": "https://github.com/logan-suu/Echo/pull/73",

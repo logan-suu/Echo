@@ -41,15 +41,52 @@ public nonisolated struct MemoryEditRequest: Sendable, Equatable {
     }
 }
 
+public nonisolated struct PendingMemorySourceChange: Sendable, Codable, Equatable {
+    public let assetID: String
+    public let source: String
+    public let changeType: String
+    public let newContentHash: String?
+    public let hashSkipped: Bool
+
+    public init(
+        assetID: String,
+        source: String,
+        changeType: String,
+        newContentHash: String?,
+        hashSkipped: Bool
+    ) {
+        self.assetID = assetID
+        self.source = source
+        self.changeType = changeType
+        self.newContentHash = newContentHash
+        self.hashSkipped = hashSkipped
+    }
+}
+
+public nonisolated protocol MemoryExternalChangeApplying: Actor {
+    func applyResolvedExternalChange(
+        _ change: PendingMemorySourceChange,
+        memoryID: UUID,
+        traceID: String
+    ) async throws
+}
+
 public nonisolated struct MemoryEditConflict: Sendable, Codable, Equatable {
     public let memoryID: UUID
     public let externalVersionSummary: String
     public let detectedAt: Date
+    public let pendingChange: PendingMemorySourceChange?
 
-    public init(memoryID: UUID, externalVersionSummary: String, detectedAt: Date) {
+    public init(
+        memoryID: UUID,
+        externalVersionSummary: String,
+        detectedAt: Date,
+        pendingChange: PendingMemorySourceChange? = nil
+    ) {
         self.memoryID = memoryID
         self.externalVersionSummary = externalVersionSummary
         self.detectedAt = detectedAt
+        self.pendingChange = pendingChange
     }
 }
 
@@ -92,7 +129,9 @@ public nonisolated enum MemoryEditError: Error, LocalizedError, Sendable, Equata
     case memoryNotFound
     case routeUnavailable
     case conflictMissing
+    case conflictPending
     case syncInProgress
+    case externalReplayUnavailable
 
     public var errorDescription: String? {
         switch self {
@@ -100,7 +139,9 @@ public nonisolated enum MemoryEditError: Error, LocalizedError, Sendable, Equata
         case .memoryNotFound: "The memory no longer exists."
         case .routeUnavailable: "The active text index is unavailable."
         case .conflictMissing: "The edit conflict no longer exists."
+        case .conflictPending: "Resolve the external change conflict before saving this memory."
         case .syncInProgress: "This memory is being updated. Please edit it again after synchronization finishes."
+        case .externalReplayUnavailable: "The external version cannot be restored until synchronization is available."
         }
     }
 }

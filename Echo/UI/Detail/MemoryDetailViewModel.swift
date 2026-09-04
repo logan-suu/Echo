@@ -466,7 +466,13 @@ final class MemoryDetailViewModel {
                     guard !Task.isCancelled else { self.viewState = .cancelled; return }
                     self.memory = Self.makeDetailModel(from: snapshot)
                     self.viewState = .completed
+                } catch is CancellationError {
+                    self.viewState = .cancelled
                 } catch {
+                    guard !Task.isCancelled else {
+                        self.viewState = .cancelled
+                        return
+                    }
                     self.viewState = .error(.l2Recoverable(message: "Unable to load this memory. Please try again."))
                 }
                 return

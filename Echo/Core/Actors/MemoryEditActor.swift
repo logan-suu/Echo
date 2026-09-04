@@ -2,7 +2,7 @@
 // File: MemoryEditActor.swift
 // Spec: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-007
 // Task: 4.0e - Memory editing, re-indexing, and persistent conflict closure
-// AC coverage: AC-1 through AC-7
+// AC coverage: AC-1 through AC-7 (review: conditional conflict publication + replayable external resolution)
 // Architecture: AGENTS.md §4.2 (Actor isolation), §7.1 (PrivacyCheckpoint)
 // Generated: 2026-09-03
 // ==========================================
@@ -17,6 +17,7 @@ public actor MemoryEditActor {
     private let generationRegistry: GenerationRegistryActor
     private let embedder: any EmbedderProtocol
     private var activeEditingMemoryIDs: Set<UUID> = []
+    private weak var externalChangeApplier: (any MemoryExternalChangeApplying)?
 
     public init(
         db: DatabaseManager = .shared,
@@ -54,6 +55,9 @@ public actor MemoryEditActor {
     public func save(_ request: MemoryEditRequest, traceID: String) async throws -> MemoryEditResult {
         let checkpoint = await privacyActor.validate(operation: .sync, traceID: traceID)
         guard checkpoint.isAllowed else { throw MemoryEditError.privacyDenied }
+        guard try await loadSnapshotUnchecked(memoryID: request.memoryID)?.conflict == nil else {
+            throw MemoryEditError.conflictPending
+        }
         let result = try await publish(request, traceID: traceID, conflictResolution: nil)
         activeEditingMemoryIDs.remove(request.memoryID)
         return result
@@ -62,6 +66,7 @@ public actor MemoryEditActor {
     public func handleExternalChange(
         memoryID: UUID,
         externalVersionSummary: String,
+        pendingChange: PendingMemorySourceChange? = nil,
         traceID: String
     ) async throws -> ExternalChangeDisposition {
         let checkpoint = await privacyActor.validate(operation: .sync, traceID: traceID)
@@ -70,22 +75,45 @@ public actor MemoryEditActor {
             throw MemoryEditError.memoryNotFound
         }
         if snapshot.memory.userLocked { return .skippedUserLocked }
-        guard activeEditingMemoryIDs.contains(memoryID) else { return .proceed }
+        guard activeEditingMemoryIDs.contains(memoryID) || snapshot.memory.userEdited else {
+            return .proceed
+        }
         try await db.executeWrite(
             sql: """
-            INSERT INTO MemoryEditConflict (memoryId, externalVersionSummary, detectedAt)
-            VALUES (?, ?, ?)
+            INSERT INTO MemoryEditConflict
+                (memoryId, externalVersionSummary, detectedAt, pendingAssetId,
+                 pendingSource, pendingChangeType, pendingContentHash, pendingHashSkipped)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(memoryId) DO UPDATE SET
                 externalVersionSummary = excluded.externalVersionSummary,
-                detectedAt = excluded.detectedAt
+                detectedAt = excluded.detectedAt,
+                pendingAssetId = excluded.pendingAssetId,
+                pendingSource = excluded.pendingSource,
+                pendingChangeType = excluded.pendingChangeType,
+                pendingContentHash = excluded.pendingContentHash,
+                pendingHashSkipped = excluded.pendingHashSkipped
             """,
             bindings: [
                 .text(memoryID.uuidString),
                 .text(externalVersionSummary),
                 .double(Date().timeIntervalSince1970),
+                pendingChange.map { .text($0.assetID) } ?? .null,
+                pendingChange.map { .text($0.source) } ?? .null,
+                pendingChange.map { .text($0.changeType) } ?? .null,
+                pendingChange?.newContentHash.map(DBBinding.text) ?? .null,
+                .int(pendingChange?.hashSkipped == true ? 1 : 0),
             ]
         )
         return .conflictRecorded
+    }
+
+    public func attachExternalChangeApplier(
+        _ applier: any MemoryExternalChangeApplying,
+        traceID: String
+    ) async throws {
+        let checkpoint = await privacyActor.validate(operation: .sync, traceID: traceID)
+        guard checkpoint.isAllowed else { throw MemoryEditError.privacyDenied }
+        externalChangeApplier = applier
     }
 
     public func resolveConflict(
@@ -109,21 +137,18 @@ public actor MemoryEditActor {
             ])
             resolvedWith = "local"
         case .external:
-            try await db.executeTransaction([
-                .init(sql: "DELETE FROM MemoryUserEdit WHERE memoryId = ?", bindings: [.text(memoryID.uuidString)]),
-                .init(sql: "DELETE FROM MemoryEditConflict WHERE memoryId = ?", bindings: [.text(memoryID.uuidString)]),
-                .init(sql: "UPDATE Memory SET userEdited = 0, userLocked = 0, updatedAt = ? WHERE memoryId = ?", bindings: [.double(Date().timeIntervalSince1970), .text(memoryID.uuidString)]),
-                .init(sql: "DELETE FROM MemoryFTS WHERE memoryId = ?", bindings: [.text(memoryID.uuidString)]),
-                .init(sql: "INSERT INTO MemoryFTS (memoryId, canonicalText, sourceType) VALUES (?, ?, ?)", bindings: [.text(memoryID.uuidString), snapshot.memory.canonicalText.map(DBBinding.text) ?? .null, .text(snapshot.memory.sourceType)]),
-                .init(sql: "DELETE FROM translationCache WHERE memoryId = ?", bindings: [.text(memoryID.uuidString)]),
-            ])
+            guard let pendingChange = snapshot.conflict?.pendingChange,
+                  let externalChangeApplier else {
+                throw MemoryEditError.externalReplayUnavailable
+            }
+            try await externalChangeApplier.applyResolvedExternalChange(
+                pendingChange,
+                memoryID: memoryID,
+                traceID: traceID
+            )
             resolvedWith = "external"
         case .merge(let request):
             _ = try await publish(request, traceID: traceID, conflictResolution: "merge")
-            try await db.executeTransaction([
-                .init(sql: "UPDATE Memory SET userLocked = 1 WHERE memoryId = ?", bindings: [.text(memoryID.uuidString)]),
-                .init(sql: "DELETE FROM MemoryEditConflict WHERE memoryId = ?", bindings: [.text(memoryID.uuidString)]),
-            ])
             resolvedWith = "merge"
         }
         activeEditingMemoryIDs.remove(memoryID)
@@ -180,15 +205,20 @@ public actor MemoryEditActor {
             sql: "SELECT representationId FROM Representation WHERE memoryId = ? AND modality = ?",
             bindings: [.text(request.memoryID.uuidString), .text(Modality.textDense.rawValue)]
         ).compactMap { $0["representationId"]?.stringValue.flatMap(UUID.init(uuidString:)) }
+        let reusesExistingVector = oldTextIDs.contains(representationID)
 
-        try await store.ingest(vector: vector, id: representationID)
+        if !reusesExistingVector {
+            try await store.ingest(vector: vector, id: representationID)
+        }
         do {
-            try await generationRegistry.persistStore(generationId: route.textGeneration)
+            if !reusesExistingVector {
+                try await generationRegistry.persistStore(generationId: route.textGeneration)
+            }
             let tagsData = try JSONEncoder().encode(tags)
             let tagsJSON = String(decoding: tagsData, as: UTF8.self)
             let now = Date()
             let timestampChanged = request.timestamp != previous.memory.createdAt
-            try await db.executeTransaction([
+            var writes: [DatabaseManager.DBWrite] = [
                 .init(
                     sql: """
                     INSERT INTO MemoryUserEdit (memoryId, title, description, tagsJSON, updatedAt)
@@ -215,10 +245,33 @@ public actor MemoryEditActor {
                 .init(sql: "DELETE FROM MemoryFTS WHERE memoryId = ?", bindings: [.text(request.memoryID.uuidString)]),
                 .init(sql: "INSERT INTO MemoryFTS (memoryId, canonicalText, sourceType) VALUES (?, ?, ?)", bindings: [.text(request.memoryID.uuidString), .text(effectiveText), .text(previous.memory.sourceType)]),
                 .init(sql: "DELETE FROM translationCache WHERE memoryId = ?", bindings: [.text(request.memoryID.uuidString)]),
-            ])
+            ]
+            if conflictResolution == "merge" {
+                writes.append(.init(
+                    sql: "UPDATE Memory SET userLocked = 1 WHERE memoryId = ?",
+                    bindings: [.text(request.memoryID.uuidString)]
+                ))
+                writes.append(.init(
+                    sql: "DELETE FROM MemoryEditConflict WHERE memoryId = ?",
+                    bindings: [.text(request.memoryID.uuidString)]
+                ))
+            }
+            let committed = try await db.executeConditionalTransaction(
+                writes,
+                conditionSQL: "SELECT 1 FROM MemoryEditConflict WHERE memoryId = ? LIMIT 1",
+                conditionBindings: [.text(request.memoryID.uuidString)],
+                expectedRowExists: conflictResolution == "merge"
+            )
+            guard committed else {
+                throw conflictResolution == "merge"
+                    ? MemoryEditError.conflictMissing
+                    : MemoryEditError.conflictPending
+            }
         } catch {
-            _ = await store.delete(id: representationID)
-            try? await generationRegistry.persistStore(generationId: route.textGeneration)
+            if !reusesExistingVector {
+                _ = await store.delete(id: representationID)
+                try? await generationRegistry.persistStore(generationId: route.textGeneration)
+            }
             throw error
         }
 
@@ -265,7 +318,9 @@ public actor MemoryEditActor {
         let rows = try await db.executeQuery(
             sql: """
             SELECT m.*, e.title, e.description, e.tagsJSON, e.updatedAt AS editUpdatedAt,
-                   c.externalVersionSummary, c.detectedAt
+                   c.externalVersionSummary, c.detectedAt, c.pendingAssetId,
+                   c.pendingSource, c.pendingChangeType, c.pendingContentHash,
+                   c.pendingHashSkipped
             FROM Memory m
             LEFT JOIN MemoryUserEdit e ON e.memoryId = m.memoryId
             LEFT JOIN MemoryEditConflict c ON c.memoryId = m.memoryId
@@ -306,9 +361,29 @@ public actor MemoryEditActor {
         } else { nil }
         let conflict: MemoryEditConflict? = if let summary = row["externalVersionSummary"]?.stringValue,
                                                 let detectedAt = row["detectedAt"]?.doubleValue {
-            MemoryEditConflict(memoryID: memoryID, externalVersionSummary: summary, detectedAt: Date(timeIntervalSince1970: detectedAt))
+            MemoryEditConflict(
+                memoryID: memoryID,
+                externalVersionSummary: summary,
+                detectedAt: Date(timeIntervalSince1970: detectedAt),
+                pendingChange: Self.pendingChange(from: row)
+            )
         } else { nil }
         return MemoryEditSnapshot(memory: memory, edit: edit, conflict: conflict)
+    }
+
+    private nonisolated static func pendingChange(
+        from row: [String: DBValue]
+    ) -> PendingMemorySourceChange? {
+        guard let assetID = row["pendingAssetId"]?.stringValue,
+              let source = row["pendingSource"]?.stringValue,
+              let changeType = row["pendingChangeType"]?.stringValue else { return nil }
+        return PendingMemorySourceChange(
+            assetID: assetID,
+            source: source,
+            changeType: changeType,
+            newContentHash: row["pendingContentHash"]?.stringValue,
+            hashSkipped: (row["pendingHashSkipped"]?.intValue ?? 0) != 0
+        )
     }
 
     public nonisolated static func effectiveText(
