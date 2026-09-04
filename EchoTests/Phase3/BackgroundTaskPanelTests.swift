@@ -163,6 +163,7 @@ struct BackgroundTaskPanelTests {
 
         vm.closePanel()
         await taskQueue.cancel(taskId: taskId)
+        _ = try? await progressActor.delete(taskId: taskId)
     }
 
     @Test("AC-1 live polling excludes orphaned recovery checkpoints")
@@ -193,6 +194,7 @@ struct BackgroundTaskPanelTests {
 
         vm.closePanel()
         await taskQueue.cancel(taskId: "review-active-task")
+        _ = try? await progressActor.delete(taskId: "review-active-task")
         _ = try? await progressActor.delete(taskId: "review-orphan-task")
     }
 
@@ -231,6 +233,7 @@ struct BackgroundTaskPanelTests {
         vm.pauseTask(taskId)
         try await Task.sleep(for: .milliseconds(20))
         await taskQueue.cancel(taskId: taskId)
+        _ = try? await progressActor.delete(taskId: taskId)
 
         vm.resumeTask(taskId)
         try await Task.sleep(for: .milliseconds(20))

@@ -3,7 +3,7 @@
 // Spec: docs/01-spec/用户故事与验收标准规格书.md → US-SYS-001 AC-3/AC-4/AC-7
 // Task: 4.0g - Production task resume loop
 // AC Coverage: exact task recovery, checkpoint preservation, fail-closed descriptors,
-//              queue ownership filtering, idempotence, pause/cancel semantics
+//              queue ownership filtering, idempotence, final cancel audit, mixed-candidate recovery
 // Architecture: AGENTS.md §4.3, §4.5, §7.3, §8.1
 // Generated: 2026-09-04
 // ==========================================
@@ -363,6 +363,57 @@ struct TaskResumeProductionTests {
         #expect(message.contains("not supported"))
     }
 
+    @Test("AC-4: unsupported oldest checkpoint does not block a later recoverable task")
+    @MainActor
+    func test_AC4_unsupportedOldestAdvancesToSupportedTask() async throws {
+        let now = Date()
+        let unsupported = TaskProgress(
+            taskId: "unsupported-oldest", rawTaskType: "retiredTaskType",
+            lastProcessedIndex: 2, totalCount: 7, resumeData: try descriptor(),
+            updatedAt: now.addingTimeInterval(-10), createdAt: now.addingTimeInterval(-20)
+        )
+        let supported = TaskProgress(
+            taskId: "supported-later", taskType: .dataSourceSync,
+            lastProcessedIndex: 4, totalCount: 9, resumeData: try descriptor(),
+            updatedAt: now, createdAt: now.addingTimeInterval(-5)
+        )
+        try await progressActor.save(progress: unsupported)
+        try await progressActor.save(progress: supported)
+        let registry = TaskRecoveryRegistry()
+        await registry.register(taskType: .dataSourceSync) { request in
+            TaskQueueActor.QueuedJob(
+                taskId: request.progress.taskId,
+                taskType: .dataSourceSync,
+                totalCount: request.progress.totalCount,
+                resumeData: request.progress.resumeData
+            ) { _ in }
+        }
+        let coordinator = TaskRecoveryCoordinator(
+            progressActor: progressActor,
+            taskQueue: TaskQueueActor(progressActor: progressActor),
+            registry: registry,
+            privacyActor: PrivacyActor(db: db),
+            pendingOpsActor: nil,
+            auditWriter: nil
+        )
+        let viewModel = ResumeProgressViewModel(
+            progressActor: progressActor,
+            recoveryCoordinator: coordinator,
+            checkDelayNanoseconds: 0
+        )
+
+        viewModel.checkForPendingProgress()
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(viewModel.pendingProgressRecords.map(\.taskId) == [unsupported.taskId, supported.taskId])
+        #expect(viewModel.isPromptPresented)
+        guard case .prompt(let presented) = viewModel.viewState else {
+            Issue.record("the later supported checkpoint must reach the recovery prompt")
+            return
+        }
+        #expect(presented.taskId == supported.taskId)
+    }
+
     @Test("AC-4: duplicate recovery attempts cannot enqueue the same task twice")
     func test_AC4_duplicateRecoveryAttemptIsSerialized() async throws {
         let stored = TaskProgress(
@@ -411,8 +462,7 @@ struct TaskResumeProductionTests {
         let running = AsyncGate()
         let job = Task {
             try await queue.enqueueAndWait(TaskQueueActor.QueuedJob(
-                taskId: "cancel-final", taskType: .fullIndex, totalCount: 3,
-                resumeData: try descriptor()
+                taskId: "cancel-final", taskType: .fullIndex, totalCount: 3
             ) { context in
                 try await context.report(processedIndex: 1, lastProcessedId: "item-1")
                 await running.open()
@@ -429,6 +479,55 @@ struct TaskResumeProductionTests {
 
         #expect(try await progressActor.load(taskId: "cancel-final")?.lastProcessedIndex == 2)
         await #expect(throws: TaskQueueError.self) { try await job.value }
+    }
+
+    @Test("AC-7: cancellation audit records the final persisted checkpoint")
+    @MainActor
+    func test_AC7_cancelAuditUsesFinalCheckpoint() async throws {
+        let taskId = "cancel-audit-final"
+        let queue = TaskQueueActor(progressActor: progressActor)
+        let running = AsyncGate()
+        try await queue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: taskId,
+            taskType: .dataSourceSync,
+            totalCount: 3,
+            resumeData: try descriptor()
+        ) { context in
+            try await context.report(processedIndex: 1, lastProcessedId: "item-1")
+            await running.open()
+            do {
+                try await Task.sleep(for: .seconds(30))
+            } catch {
+                try await context.report(processedIndex: 2, lastProcessedId: "item-2")
+                throw CancellationError()
+            }
+        })
+        await running.wait()
+        let auditWriter = PrivacyActor(db: db)
+        let viewModel = BackgroundTaskViewModel(
+            progressActor: progressActor,
+            auditWriter: auditWriter,
+            taskQueue: queue
+        )
+        viewModel.loadPreloadedTasks([
+            TaskProgress(
+                taskId: taskId,
+                taskType: .dataSourceSync,
+                lastProcessedIndex: 1,
+                totalCount: 3,
+                resumeData: try descriptor()
+            ),
+        ])
+
+        viewModel.confirmCancelTask(taskId)
+        try await Task.sleep(for: .milliseconds(100))
+
+        let entry = try await auditWriter.fetchAuditLogs(
+            limit: 10,
+            eventType: .backgroundTaskInterrupted
+        ).first { $0.action == "cancel" }
+        #expect(entry?.resumePoint == 2)
+        #expect(entry?.outcome == "cancelled")
     }
 
     @Test("AC-7: recovery audit stores structured action, point, choice, and outcome")

@@ -378,9 +378,6 @@ public actor TaskQueueActor {
             _ = try? await progressActor.delete(taskId: job.taskId)
             return .completed
         } catch is CancellationError {
-            if job.resumeData == nil {
-                _ = try? await progressActor.delete(taskId: job.taskId)
-            }
             return .cancelled
         } catch TaskQueueError.paused {
             return .paused

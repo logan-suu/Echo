@@ -325,6 +325,11 @@ final class BackgroundTaskViewModel {
                     ))
                     return
                 }
+                var finalResumePoint = resumePoint
+                if let progressActor = self.progressActor,
+                   let finalProgress = try? await progressActor.load(taskId: taskId) {
+                    finalResumePoint = finalProgress.lastProcessedIndex
+                }
                 if let currentIndex = self.tasks.firstIndex(where: { $0.taskId == taskId }) {
                     self.tasks[currentIndex].status = .cancelled
                     self.tasks.remove(at: currentIndex)
@@ -332,7 +337,7 @@ final class BackgroundTaskViewModel {
                 self.writeAudit(
                     event: .backgroundTaskInterrupted,
                     action: "cancel",
-                    resumePoint: resumePoint,
+                    resumePoint: finalResumePoint,
                     outcome: "cancelled"
                 )
             }

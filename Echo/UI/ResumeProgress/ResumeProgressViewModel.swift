@@ -6,8 +6,8 @@
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surface — Alert/confirmationDialog),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
 // 任务: 3.7 - 断点续传集成到长任务; 4.0g - 生产任务恢复闭环
-// AC coverage: all orphaned checkpoints remain visible; production Continue/Restart delegates
-// to TaskRecoveryCoordinator and publishes success only after queue ownership is established.
+// AC coverage: all orphaned checkpoints remain visible; unsupported rows do not block later
+// recoverable work; production Continue/Restart publishes success only after queue ownership.
 //          (2026-08-02 PR review W-2: checkDelayNanoseconds 注入; W-3: 文案统一英文; W-4: progressActor 未接线占位 DEF-42-001)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约), §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
@@ -191,18 +191,10 @@ final class ResumeProgressViewModel {
                         return
                     }
                     self.pendingProgressRecords = pending
-                    if let first = pending.first {
-                        if await recoveryCoordinator.supportsRecovery(for: first) {
-                            self.presentPrompt(first, fixtureBacked: false)
-                        } else {
-                            self.isFixtureBacked = false
-                            self.isPromptPresented = false
-                            self.viewState = .error(.l2Recoverable(
-                                message: "This saved task type is not supported by this app version."
-                            ))
-                        }
-                    } else {
+                    if pending.isEmpty {
                         self.viewState = .none
+                    } else {
+                        await self.presentFirstRecoverableCandidate()
                     }
                     return
                 }
@@ -368,14 +360,35 @@ final class ResumeProgressViewModel {
     /// Keeps each orphaned task individually actionable while allowing the prior terminal
     /// outcome to be observed before the next confirmation dialog is presented.
     private func presentNextPending(after terminalState: ViewState) async {
-        guard let next = pendingProgressRecords.first else { return }
+        guard !pendingProgressRecords.isEmpty else { return }
         do {
             try await Task.sleep(for: .milliseconds(250))
         } catch {
             return
         }
         guard viewState == terminalState else { return }
-        presentPrompt(next, fixtureBacked: false)
+        await presentFirstRecoverableCandidate()
+    }
+
+    /// Selects the first supported orphan without allowing an older unsupported record
+    /// to block later recoverable work. Unsupported rows remain in the diagnostic list.
+    private func presentFirstRecoverableCandidate() async {
+        guard let recoveryCoordinator else {
+            isPromptPresented = false
+            viewState = .error(.l2Recoverable(message: "Task recovery is not available."))
+            return
+        }
+        for candidate in pendingProgressRecords {
+            if await recoveryCoordinator.supportsRecovery(for: candidate) {
+                presentPrompt(candidate, fixtureBacked: false)
+                return
+            }
+        }
+        isFixtureBacked = false
+        isPromptPresented = false
+        viewState = .error(.l2Recoverable(
+            message: "This saved task type is not supported by this app version."
+        ))
     }
 
     // MARK: - Fixture Injection
