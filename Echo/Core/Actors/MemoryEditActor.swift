@@ -2,12 +2,35 @@
 // File: MemoryEditActor.swift
 // Spec: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-007
 // Task: 4.0e - Memory editing, re-indexing, and persistent conflict closure
-// AC coverage: AC-1 through AC-7 (review: conditional conflict publication + replayable external resolution)
+// AC coverage: AC-1 through AC-7 (conditional publication, replayable conflict, retryable post-commit cleanup)
 // Architecture: AGENTS.md §4.2 (Actor isolation), §7.1 (PrivacyCheckpoint)
 // Generated: 2026-09-03
 // ==========================================
 
 import Foundation
+
+public actor MemoryEditPostCommitCleaner: MemoryEditPostCommitCleaning {
+    private let generationRegistry: GenerationRegistryActor
+
+    public init(generationRegistry: GenerationRegistryActor) {
+        self.generationRegistry = generationRegistry
+    }
+
+    public func cleanup(_ task: MemoryEditPostCommitTask) async throws {
+        guard let store = await generationRegistry.vectorStore(for: task.generationID) else {
+            throw MemoryEditError.routeUnavailable
+        }
+        do {
+            for vectorID in task.obsoleteVectorIDs {
+                _ = await store.delete(id: vectorID)
+            }
+            try await generationRegistry.persistStore(generationId: task.generationID)
+        } catch {
+            try? await generationRegistry.reloadStoreFromDisk(generationId: task.generationID)
+            throw error
+        }
+    }
+}
 
 /// Owns the production edit transaction. Source canonical text is immutable; user fields live
 /// in `MemoryUserEdit`, while the published representation and FTS row use effective text.
@@ -16,6 +39,7 @@ public actor MemoryEditActor {
     private let privacyActor: PrivacyActor
     private let generationRegistry: GenerationRegistryActor
     private let embedder: any EmbedderProtocol
+    private let postCommitCleaner: any MemoryEditPostCommitCleaning
     private var activeEditingMemoryIDs: Set<UUID> = []
     private weak var externalChangeApplier: (any MemoryExternalChangeApplying)?
 
@@ -23,12 +47,15 @@ public actor MemoryEditActor {
         db: DatabaseManager = .shared,
         privacyActor: PrivacyActor = .shared,
         generationRegistry: GenerationRegistryActor,
-        embedder: any EmbedderProtocol
+        embedder: any EmbedderProtocol,
+        postCommitCleaner: (any MemoryEditPostCommitCleaning)? = nil
     ) {
         self.db = db
         self.privacyActor = privacyActor
         self.generationRegistry = generationRegistry
         self.embedder = embedder
+        self.postCommitCleaner = postCommitCleaner
+            ?? MemoryEditPostCommitCleaner(generationRegistry: generationRegistry)
     }
 
     public func loadSnapshot(memoryID: UUID, traceID: String) async throws -> MemoryEditSnapshot? {
@@ -173,6 +200,31 @@ public actor MemoryEditActor {
         )
     }
 
+    public func retryPendingPublication(operationID: String, traceID: String) async throws {
+        let checkpoint = await privacyActor.validate(operation: .sync, traceID: traceID)
+        guard checkpoint.isAllowed else { throw MemoryEditError.privacyDenied }
+        let rows = try await db.executeQuery(
+            sql: "SELECT operationType, parameters FROM PendingOperations WHERE operationId = ?",
+            bindings: [.text(operationID)]
+        )
+        guard let row = rows.first,
+              row["operationType"]?.stringValue == "memoryEditPostCommit",
+              let data = row["parameters"]?.blobValue,
+              let task = try? JSONDecoder().decode(MemoryEditPostCommitTask.self, from: data) else {
+            throw MemoryEditError.pendingOperationInvalid
+        }
+        do {
+            try await postCommitCleaner.cleanup(task)
+            _ = try await db.executeWrite(
+                sql: "DELETE FROM PendingOperations WHERE operationId = ?",
+                bindings: [.text(operationID)]
+            )
+        } catch {
+            try? await markPostCommitFailure(operationID: operationID, error: error)
+            throw error
+        }
+    }
+
     private func publish(
         _ request: MemoryEditRequest,
         traceID: String,
@@ -206,6 +258,7 @@ public actor MemoryEditActor {
             bindings: [.text(request.memoryID.uuidString), .text(Modality.textDense.rawValue)]
         ).compactMap { $0["representationId"]?.stringValue.flatMap(UUID.init(uuidString:)) }
         let reusesExistingVector = oldTextIDs.contains(representationID)
+        let obsoleteVectorIDs = oldTextIDs.filter { $0 != representationID }
 
         if !reusesExistingVector {
             try await store.ingest(vector: vector, id: representationID)
@@ -218,6 +271,20 @@ public actor MemoryEditActor {
             let tagsJSON = String(decoding: tagsData, as: UTF8.self)
             let now = Date()
             let timestampChanged = request.timestamp != previous.memory.createdAt
+            let policy = await privacyActor.getPolicy()
+            let editedFields = Self.editedFields(
+                previous: previous,
+                title: title,
+                description: description,
+                tags: tags,
+                timestamp: request.timestamp
+            )
+            let postCommitTask = MemoryEditPostCommitTask(
+                operationID: "memory-edit-postcommit-\(UUID().uuidString)",
+                generationID: route.textGeneration,
+                obsoleteVectorIDs: obsoleteVectorIDs
+            )
+            let postCommitData = try JSONEncoder().encode(postCommitTask)
             var writes: [DatabaseManager.DBWrite] = [
                 .init(
                     sql: """
@@ -245,7 +312,33 @@ public actor MemoryEditActor {
                 .init(sql: "DELETE FROM MemoryFTS WHERE memoryId = ?", bindings: [.text(request.memoryID.uuidString)]),
                 .init(sql: "INSERT INTO MemoryFTS (memoryId, canonicalText, sourceType) VALUES (?, ?, ?)", bindings: [.text(request.memoryID.uuidString), .text(effectiveText), .text(previous.memory.sourceType)]),
                 .init(sql: "DELETE FROM translationCache WHERE memoryId = ?", bindings: [.text(request.memoryID.uuidString)]),
+                PrivacyActor.makeAuditWrite(
+                    eventType: .memoryEdited,
+                    traceID: traceID,
+                    policyVersion: policy.policyVersion,
+                    sourceType: previous.memory.sourceType,
+                    memoryIdDigest: AuditContentHasher.sha256Hex(request.memoryID.uuidString),
+                    editedFields: editedFields,
+                    reindexed: true,
+                    conflictResolvedWith: conflictResolution,
+                    timestamp: now
+                ),
             ]
+            if !obsoleteVectorIDs.isEmpty {
+                writes.append(.init(
+                    sql: """
+                    INSERT INTO PendingOperations
+                        (operationId, operationType, retryCount, parameters, createdAt, lastError)
+                    VALUES (?, ?, 0, ?, ?, NULL)
+                    """,
+                    bindings: [
+                        .text(postCommitTask.operationID),
+                        .text("memoryEditPostCommit"),
+                        .blob(postCommitData),
+                        .double(now.timeIntervalSince1970),
+                    ]
+                ))
+            }
             if conflictResolution == "merge" {
                 writes.append(.init(
                     sql: "UPDATE Memory SET userLocked = 1 WHERE memoryId = ?",
@@ -267,6 +360,37 @@ public actor MemoryEditActor {
                     ? MemoryEditError.conflictMissing
                     : MemoryEditError.conflictPending
             }
+
+            if !obsoleteVectorIDs.isEmpty {
+                await finishPostCommit(postCommitTask)
+            }
+
+            let originalTimestamp = timestampChanged
+                ? previous.memory.originalTimestamp ?? previous.memory.createdAt
+                : previous.memory.originalTimestamp
+            let publishedMemory = Memory(
+                memoryId: previous.memory.memoryId,
+                sourceLocator: previous.memory.sourceLocator,
+                canonicalText: previous.memory.canonicalText,
+                sourceType: previous.memory.sourceType,
+                createdAt: request.timestamp,
+                updatedAt: now,
+                recoverability: previous.memory.recoverability,
+                originalTimestamp: originalTimestamp,
+                userEdited: true,
+                userLocked: conflictResolution == "merge" ? true : previous.memory.userLocked
+            )
+            let publishedEdit = MemoryUserEdit(
+                memoryID: request.memoryID,
+                title: title,
+                description: description,
+                tags: tags,
+                updatedAt: now
+            )
+            return MemoryEditResult(
+                snapshot: MemoryEditSnapshot(memory: publishedMemory, edit: publishedEdit, conflict: nil),
+                effectiveText: effectiveText
+            )
         } catch {
             if !reusesExistingVector {
                 _ = await store.delete(id: representationID)
@@ -274,23 +398,29 @@ public actor MemoryEditActor {
             }
             throw error
         }
+    }
 
-        for oldID in oldTextIDs where oldID != representationID {
-            _ = await store.delete(id: oldID)
+    private func finishPostCommit(_ task: MemoryEditPostCommitTask) async {
+        do {
+            try await postCommitCleaner.cleanup(task)
+            _ = try await db.executeWrite(
+                sql: "DELETE FROM PendingOperations WHERE operationId = ?",
+                bindings: [.text(task.operationID)]
+            )
+        } catch {
+            try? await markPostCommitFailure(operationID: task.operationID, error: error)
         }
-        try await generationRegistry.persistStore(generationId: route.textGeneration)
-        try await writeAudit(
-            memoryID: request.memoryID,
-            sourceType: previous.memory.sourceType,
-            traceID: traceID,
-            fields: Self.editedFields(previous: previous, title: title, description: description, tags: tags, timestamp: request.timestamp),
-            reindexed: true,
-            conflictResolution: conflictResolution
+    }
+
+    private func markPostCommitFailure(operationID: String, error: Error) async throws {
+        try await db.executeWrite(
+            sql: """
+            UPDATE PendingOperations
+            SET retryCount = retryCount + 1, lastError = ?
+            WHERE operationId = ?
+            """,
+            bindings: [.text(error.localizedDescription), .text(operationID)]
         )
-        guard let snapshot = try await loadSnapshotUnchecked(memoryID: request.memoryID) else {
-            throw MemoryEditError.memoryNotFound
-        }
-        return MemoryEditResult(snapshot: snapshot, effectiveText: effectiveText)
     }
 
     private func writeAudit(

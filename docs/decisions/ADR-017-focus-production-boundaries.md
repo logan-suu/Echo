@@ -32,7 +32,7 @@ Apple 公共 API 支持在 `PHPhotoLibrary.performChanges` 内通过 `PHAssetCha
 
 新增由 repository/actor 管理的 `MemoryUserEdit` 关系，以 `memoryId` 为外键并随 Memory 级联删除。至少保存：可选标题、多行纯文本描述、规范化标签集合、更新时间。v1 不承诺富文本格式编辑；描述使用可本地化、可访问、可确定序列化的多行纯文本。原始来源文本保持不变。
 
-用于检索的有效文本按固定顺序由用户标题、用户描述、规范化标签和原 canonical 文本组成。保存事务先生成新表示与向量，成功后原子发布新的关系/FTS/representation 绑定并清理旧向量和缓存；失败保留旧可服务版本。覆盖时间戳写入 `Memory.createdAt`，`originalTimestamp` 在第一次覆盖时保存原值且之后不改写。
+用于检索的有效文本按固定顺序由用户标题、用户描述、规范化标签和原 canonical 文本组成。保存事务先生成并持久化新表示与向量，再原子发布新的关系/FTS/representation 绑定、结构化审计和 `memoryEditPostCommit` 清理任务；发布提交前失败保留旧可服务版本。发布提交后用户保存已经成功；旧向量清理或索引持久化失败不得反向报告保存失败，而应恢复提交前已持久化的索引检查点，保留旧向量与 PendingOperations 记录，并等待用户手动重试。覆盖时间戳写入 `Memory.createdAt`，`originalTimestamp` 在第一次覆盖时保存原值且之后不改写。
 
 ### 3. 冲突必须持久化
 

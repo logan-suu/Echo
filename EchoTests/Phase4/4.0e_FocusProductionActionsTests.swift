@@ -127,6 +127,24 @@ private actor ConflictInjectingEditTestEmbedder: EmbedderProtocol {
     }
 }
 
+private actor EditTestPostCommitCleaner: MemoryEditPostCommitCleaning {
+    enum Failure: Error { case injected }
+    private var shouldFail: Bool
+    private var cleanedOperationIDs: [String] = []
+
+    init(shouldFail: Bool) {
+        self.shouldFail = shouldFail
+    }
+
+    func cleanup(_ task: MemoryEditPostCommitTask) async throws {
+        if shouldFail { throw Failure.injected }
+        cleanedOperationIDs.append(task.operationID)
+    }
+
+    func allowSuccess() { shouldFail = false }
+    func cleaned() -> [String] { cleanedOperationIDs }
+}
+
 @Suite("FocusProductionActionsTests", .serialized)
 @MainActor
 struct FocusProductionActionsTests {
@@ -397,6 +415,70 @@ struct FocusProductionActionsTests {
         let after = await store.search(query: vector, k: 1)
         #expect(!before.isEmpty)
         #expect(after.first?.id == before.first?.id)
+    }
+
+    @Test("AC-2/7: post-commit cleanup failure stays retryable without failing the committed save")
+    func postCommitFailureIsRetryableAndNonFatal() async throws {
+        let (db, privacy, registry, actor) = try await makeSystem()
+        let id = UUID()
+        let timestamp = Date(timeIntervalSince1970: 100)
+        try await seedMemory(db, id: id, timestamp: timestamp)
+        _ = try await actor.save(
+            MemoryEditRequest(
+                memoryID: id,
+                title: "First version",
+                description: "local",
+                tags: [],
+                timestamp: timestamp
+            ),
+            traceID: "postcommit-seed"
+        )
+        let cleaner = EditTestPostCommitCleaner(shouldFail: true)
+        let retryableActor = MemoryEditActor(
+            db: db,
+            privacyActor: privacy,
+            generationRegistry: registry,
+            embedder: EditTestEmbedder(),
+            postCommitCleaner: cleaner
+        )
+
+        let result = try await retryableActor.save(
+            MemoryEditRequest(
+                memoryID: id,
+                title: "Committed version",
+                description: "local",
+                tags: [],
+                timestamp: timestamp
+            ),
+            traceID: "postcommit-save"
+        )
+
+        #expect(result.snapshot.edit?.title == "Committed version")
+        let pending = try await db.executeQuery(
+            sql: """
+            SELECT operationId, retryCount FROM PendingOperations
+            WHERE operationType = 'memoryEditPostCommit'
+            """,
+            bindings: []
+        )
+        let operationID = try #require(pending.first?["operationId"]?.stringValue)
+        #expect(pending.first?["retryCount"]?.intValue == 1)
+        let audits = try await db.executeQuery(
+            sql: "SELECT COUNT(*) AS count FROM AuditLog WHERE eventType = ? AND traceID = ?",
+            bindings: [.text(AuditEvent.memoryEdited.rawValue), .text("postcommit-save")]
+        )
+        #expect(audits.first?["count"]?.intValue == 1)
+
+        await cleaner.allowSuccess()
+        try await retryableActor.retryPendingPublication(
+            operationID: operationID,
+            traceID: "postcommit-retry"
+        )
+        #expect(try await db.executeQuery(
+            sql: "SELECT operationId FROM PendingOperations WHERE operationId = ?",
+            bindings: [.text(operationID)]
+        ).isEmpty)
+        #expect(await cleaner.cleaned() == [operationID])
     }
 
     @Test("AC-4: external and merge resolutions persist their selected truth")

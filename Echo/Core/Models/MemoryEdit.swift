@@ -71,6 +71,22 @@ public nonisolated protocol MemoryExternalChangeApplying: Actor {
     ) async throws
 }
 
+public nonisolated struct MemoryEditPostCommitTask: Sendable, Codable, Equatable {
+    public let operationID: String
+    public let generationID: String
+    public let obsoleteVectorIDs: [UUID]
+
+    public init(operationID: String, generationID: String, obsoleteVectorIDs: [UUID]) {
+        self.operationID = operationID
+        self.generationID = generationID
+        self.obsoleteVectorIDs = obsoleteVectorIDs
+    }
+}
+
+public nonisolated protocol MemoryEditPostCommitCleaning: Actor {
+    func cleanup(_ task: MemoryEditPostCommitTask) async throws
+}
+
 public nonisolated struct MemoryEditConflict: Sendable, Codable, Equatable {
     public let memoryID: UUID
     public let externalVersionSummary: String
@@ -132,6 +148,7 @@ public nonisolated enum MemoryEditError: Error, LocalizedError, Sendable, Equata
     case conflictPending
     case syncInProgress
     case externalReplayUnavailable
+    case pendingOperationInvalid
 
     public var errorDescription: String? {
         switch self {
@@ -142,6 +159,7 @@ public nonisolated enum MemoryEditError: Error, LocalizedError, Sendable, Equata
         case .conflictPending: "Resolve the external change conflict before saving this memory."
         case .syncInProgress: "This memory is being updated. Please edit it again after synchronization finishes."
         case .externalReplayUnavailable: "The external version cannot be restored until synchronization is available."
+        case .pendingOperationInvalid: "The pending memory-edit cleanup operation is invalid."
         }
     }
 }
