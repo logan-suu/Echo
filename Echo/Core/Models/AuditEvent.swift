@@ -130,6 +130,9 @@ public struct AuditLogEntry: Sendable, Codable {
     /// 内容字段的 SHA-256 哈希摘要（hash-only，禁止原文）— AGENTS.md §5.4
     public nonisolated let contentHash: String?
     public nonisolated let action: String?
+    public nonisolated let resumePoint: Int?
+    public nonisolated let userChoiceOnRestart: String?
+    public nonisolated let outcome: String?
     public nonisolated let cardIdDigest: String?
     public nonisolated let memoryIdDigest: String?
     public nonisolated let feelingAssociatedToSource: Bool?
@@ -154,6 +157,9 @@ public struct AuditLogEntry: Sendable, Codable {
         hasAudio: Bool? = nil,
         contentHash: String? = nil,
         action: String? = nil,
+        resumePoint: Int? = nil,
+        userChoiceOnRestart: String? = nil,
+        outcome: String? = nil,
         cardIdDigest: String? = nil,
         memoryIdDigest: String? = nil,
         feelingAssociatedToSource: Bool? = nil,
@@ -177,6 +183,9 @@ public struct AuditLogEntry: Sendable, Codable {
         self.hasAudio = hasAudio
         self.contentHash = contentHash
         self.action = action
+        self.resumePoint = resumePoint
+        self.userChoiceOnRestart = userChoiceOnRestart
+        self.outcome = outcome
         self.cardIdDigest = cardIdDigest
         self.memoryIdDigest = memoryIdDigest
         self.feelingAssociatedToSource = feelingAssociatedToSource
@@ -210,6 +219,9 @@ public struct AuditLogEntry: Sendable, Codable {
             hasAudio: row["hasAudio"]?.intValue.map { $0 != 0 },
             contentHash: row["contentHash"]?.stringValue,
             action: row["action"]?.stringValue,
+            resumePoint: row["resumePoint"]?.intValue.map(Int.init),
+            userChoiceOnRestart: row["userChoiceOnRestart"]?.stringValue,
+            outcome: row["outcome"]?.stringValue,
             cardIdDigest: row["cardIdDigest"]?.stringValue,
             memoryIdDigest: row["memoryIdDigest"]?.stringValue,
             feelingAssociatedToSource: row["feelingAssociatedToSource"]?.intValue.map { $0 != 0 },

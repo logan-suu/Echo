@@ -154,6 +154,9 @@ public enum TaskType: String, Sendable, Codable {
     case fullIndex
     case dataSourceSync
     case modelLoad
+    /// Persisted raw value is unknown to this app version. `TaskProgress.rawTaskType`
+    /// retains the original identity for diagnostics and fail-closed recovery.
+    case unknown
 }
 
 // MARK: - Feedback Models
@@ -209,6 +212,7 @@ public struct FeedbackAdjustment: Sendable {
 public struct TaskProgress: Sendable, Codable {
     public nonisolated let taskId: String
     public nonisolated let taskType: TaskType
+    public nonisolated let rawTaskType: String
     public nonisolated var lastProcessedIndex: Int
     public nonisolated var totalCount: Int
     public nonisolated var lastProcessedId: String?
@@ -228,6 +232,28 @@ public struct TaskProgress: Sendable, Codable {
     ) {
         self.taskId = taskId
         self.taskType = taskType
+        self.rawTaskType = taskType.rawValue
+        self.lastProcessedIndex = lastProcessedIndex
+        self.totalCount = totalCount
+        self.lastProcessedId = lastProcessedId
+        self.resumeData = resumeData
+        self.updatedAt = updatedAt
+        self.createdAt = createdAt
+    }
+
+    public nonisolated init(
+        taskId: String,
+        rawTaskType: String,
+        lastProcessedIndex: Int = 0,
+        totalCount: Int = 0,
+        lastProcessedId: String? = nil,
+        resumeData: Data? = nil,
+        updatedAt: Date = Date(),
+        createdAt: Date = Date()
+    ) {
+        self.taskId = taskId
+        self.taskType = TaskType(rawValue: rawTaskType) ?? .unknown
+        self.rawTaskType = rawTaskType
         self.lastProcessedIndex = lastProcessedIndex
         self.totalCount = totalCount
         self.lastProcessedId = lastProcessedId

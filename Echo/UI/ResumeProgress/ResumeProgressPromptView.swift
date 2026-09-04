@@ -7,9 +7,8 @@
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surface — Alert/confirmationDialog),
 //            §11.2 (L1 Toast) / §12.1 (L3 全屏) / §10.1.3 (Task 空态)
 //            docs/ui/architecture.md §3 (Surface View), §8 (Task surface family)
-// 任务: 4.0c - Task 平衡画布：设置、引导与运行状态页面
-// AC coverage: real ProgressActor detection and X/Y presentation. Continue/restart report an
-// explicit recoverable error until Core exposes task reconstruction; fixtures stay deterministic.
+// 任务: 4.0c - Task 平衡画布; 4.0g - 生产任务恢复闭环
+// AC coverage: real checkpoint detection, X/Y presentation, and production recovery delegation.
 //          (2026-08-02 PR review W-1: error 态改真实布局槽位, 不再依赖零高 frame 溢出; W-3: 弹窗文案统一英文)
 // 架构约束: AGENTS.md §8.1 (ViewModel 驱动), §17.7 (Task surface 禁止 masonry),
 //           echo-memory-canvas apple-native 基础; 系统 confirmationDialog 容器
@@ -86,6 +85,10 @@ struct ResumeProgressPromptView: View {
     private var content: some View {
         if case .error(let level) = viewModel.viewState {
             errorState(level)
+        } else if case .recovering = viewModel.viewState {
+            ProgressView()
+                .controlSize(.small)
+                .accessibilityLabel(EchoStrings.tr("Recovering interrupted task"))
         } else {
             Color.clear
                 .frame(height: 0)

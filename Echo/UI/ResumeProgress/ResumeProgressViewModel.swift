@@ -5,9 +5,9 @@
 //            docs/02-architecture/架构设计文档.md §6.2 (恢复流程 — 检测未完成进度 → 弹窗询问继续/重新开始),
 //            docs/ui/echo-memory-canvas-style.md §3.3 (Task surface — Alert/confirmationDialog),
 //            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
-// 任务: 3.7 - 断点续传集成到长任务
-// AC coverage: pending progress is read from ProgressActor in production. Continue/restart
-// fail visibly until Core exposes a task reconstruction/launcher boundary; fixtures remain test-only.
+// 任务: 3.7 - 断点续传集成到长任务; 4.0g - 生产任务恢复闭环
+// AC coverage: all orphaned checkpoints remain visible; unsupported rows do not block later
+// recoverable work; production Continue/Restart publishes success only after queue ownership.
 //          (2026-08-02 PR review W-2: checkDelayNanoseconds 注入; W-3: 文案统一英文; W-4: progressActor 未接线占位 DEF-42-001)
 // 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum), §8.2 (状态流转),
 //           docs/ui/architecture.md §6~7 (适配器契约), §2.5 (Adapter 不保存第二份领域真相 — 仅转换展示字段)
@@ -34,7 +34,7 @@ import Foundation
 ///
 /// ## 状态流转 (AGENTS.md §8.2)
 /// ```
-/// idle → checking → prompt(TaskProgress) → resumed
+/// idle → checking → prompt(TaskProgress) → recovering → resumed
 ///                → none
 ///                → error(L2) → checking (retry)
 /// ```
@@ -51,6 +51,8 @@ final class ResumeProgressViewModel {
         case checking
         /// 存在未完成进度 → 展示恢复提示弹窗
         case prompt(TaskProgress)
+        /// 恢复协调器正在重建并交付队列
+        case recovering(TaskProgress)
         /// 无未完成进度 → 直接从头开始
         case none
         /// 用户选择"继续" → 从保存的进度恢复
@@ -71,6 +73,9 @@ final class ResumeProgressViewModel {
                     && l.taskType == r.taskType
                     && l.lastProcessedIndex == r.lastProcessedIndex
                     && l.totalCount == r.totalCount
+
+            case (.recovering(let l), .recovering(let r)):
+                return l.taskId == r.taskId
 
             case (.error(let l), .error(let r)):
                 return l == r
@@ -97,6 +102,8 @@ final class ResumeProgressViewModel {
     private(set) var isPromptPresented: Bool = false
     /// 最后一次展示的恢复目标（用于断言继续/重新开始意图）
     private(set) var lastResumeTarget: TaskProgress?
+    /// 当前检查找到的全部恢复候选，不会按 taskType 丢弃旧记录。
+    private(set) var pendingProgressRecords: [TaskProgress] = []
 
     // MARK: - Dependencies (Immutable Actor References)
 
@@ -104,12 +111,14 @@ final class ResumeProgressViewModel {
     /// 可选注入: Phase 3.9 完整集成后通过 DI 容器注入
     /// (2026-08-02 W-4: 当前未接线占位, 追踪 DEF-42-001)
     private let progressActor: ProgressActor?
+    private let recoveryCoordinator: TaskRecoveryCoordinator?
 
     /// 模拟检查延迟 — 测试可注入 0 以 await 真实异步转换 (2026-08-02 W-2)
     private let checkDelayNanoseconds: UInt64
 
     /// 当前活跃的检查 Task
     private var checkTask: Task<Void, Never>?
+    private var recoveryTask: Task<Void, Never>?
 
     /// 当前检查的任务类型（用于重试）
     private var currentTaskType: TaskType?
@@ -130,8 +139,13 @@ final class ResumeProgressViewModel {
     ///   - progressActor: ProgressActor 实例（可选注入）。
     ///     Phase 3.9 完整集成后通过 DI 容器注入。
     ///   - checkDelayNanoseconds: 模拟检查延迟。测试可注入 0 以同步等待异步转换。
-    init(progressActor: ProgressActor? = nil, checkDelayNanoseconds: UInt64 = 200_000_000) {
+    init(
+        progressActor: ProgressActor? = nil,
+        recoveryCoordinator: TaskRecoveryCoordinator? = nil,
+        checkDelayNanoseconds: UInt64 = 200_000_000
+    ) {
         self.progressActor = progressActor
+        self.recoveryCoordinator = recoveryCoordinator
         self.checkDelayNanoseconds = checkDelayNanoseconds
     }
 
@@ -140,7 +154,7 @@ final class ResumeProgressViewModel {
     /// 检查指定任务类型是否存在未完成进度（US-SYS-001 AC-3: 取消后再次启动相同任务时询问）。
     ///
     /// - Parameter taskType: 即将启动的任务类型
-    func checkForPendingProgress(taskType: TaskType) {
+    func checkForPendingProgress(taskType: TaskType? = nil) {
         // 防止重复检查
         guard viewState != .checking else { return }
 
@@ -170,16 +184,32 @@ final class ResumeProgressViewModel {
                     return
                 }
 
-                if let progressActor = self.progressActor {
-                    let pending = try await progressActor.loadAll()
-                        .filter { $0.taskType == taskType }
-                        .max { $0.updatedAt < $1.updatedAt }
+                if let recoveryCoordinator = self.recoveryCoordinator {
+                    let pending = try await recoveryCoordinator.pendingRecords(taskType: taskType)
                     guard !Task.isCancelled else {
                         self.viewState = .idle
                         return
                     }
-                    if let pending {
-                        self.presentPrompt(pending, fixtureBacked: false)
+                    self.pendingProgressRecords = pending
+                    if pending.isEmpty {
+                        self.viewState = .none
+                    } else {
+                        await self.presentFirstRecoverableCandidate()
+                    }
+                    return
+                }
+
+                if let progressActor = self.progressActor {
+                    let pending = try await progressActor.loadAll()
+                        .filter { taskType == nil || $0.taskType == taskType }
+                        .sorted { $0.updatedAt < $1.updatedAt }
+                    guard !Task.isCancelled else {
+                        self.viewState = .idle
+                        return
+                    }
+                    self.pendingProgressRecords = pending
+                    if let first = pending.first {
+                        self.presentPrompt(first, fixtureBacked: false)
                     } else {
                         self.viewState = .none
                     }
@@ -213,38 +243,70 @@ final class ResumeProgressViewModel {
 
     /// 用户选择"继续" — 从保存的进度恢复（US-SYS-001 AC-3）。
     ///
-    /// Fixture journeys record the deterministic choice. Production fails visibly because a
-    /// persisted TaskProgress row cannot reconstruct the original queued job by itself.
     func continueTask() {
         guard case .prompt(let progress) = viewState else { return }
-        guard isFixtureBacked else {
-            isPromptPresented = false
-            viewState = .error(.l2Recoverable(
-                message: "Task continuation is unavailable because no production task reconstruction boundary is connected."
-            ))
+        isPromptPresented = false
+        viewState = .recovering(progress)
+        if isFixtureBacked {
+            lastResumeTarget = progress
+            viewState = .resumed
             return
         }
-        lastResumeTarget = progress
-        isPromptPresented = false
-        viewState = .resumed
+        guard let recoveryCoordinator else {
+            viewState = .error(.l2Recoverable(message: "Task recovery is not available."))
+            return
+        }
+        recoveryTask?.cancel()
+        recoveryTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                _ = try await recoveryCoordinator.continueTask(progress)
+                guard !Task.isCancelled else { return }
+                self.lastResumeTarget = progress
+                self.pendingProgressRecords.removeAll { $0.taskId == progress.taskId }
+                self.viewState = .resumed
+                await self.presentNextPending(after: .resumed)
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.viewState = .error(.l2Recoverable(
+                    message: "Unable to continue this task. Review access and try again."
+                ))
+            }
+        }
     }
 
     /// 用户选择"重新开始" — 清除进度后从头开始（US-SYS-001 AC-4）。
     ///
-    /// Fixture journeys record the deterministic choice. Production fails visibly until the
-    /// originating feature supplies a real task launcher; it does not report a fake restart.
     func restartTask() {
         guard case .prompt(let progress) = viewState else { return }
-        guard isFixtureBacked else {
-            isPromptPresented = false
-            viewState = .error(.l2Recoverable(
-                message: "Task restart is unavailable because no production task launcher is connected."
-            ))
+        isPromptPresented = false
+        viewState = .recovering(progress)
+        if isFixtureBacked {
+            lastResumeTarget = progress
+            viewState = .restarted
             return
         }
-        lastResumeTarget = progress
-        isPromptPresented = false
-        viewState = .restarted
+        guard let recoveryCoordinator else {
+            viewState = .error(.l2Recoverable(message: "Task recovery is not available."))
+            return
+        }
+        recoveryTask?.cancel()
+        recoveryTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                _ = try await recoveryCoordinator.restartTask(progress)
+                guard !Task.isCancelled else { return }
+                self.lastResumeTarget = progress
+                self.pendingProgressRecords.removeAll { $0.taskId == progress.taskId }
+                self.viewState = .restarted
+                await self.presentNextPending(after: .restarted)
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.viewState = .error(.l2Recoverable(
+                    message: "Unable to restart this task. Review access and try again."
+                ))
+            }
+        }
     }
 
     /// 关闭恢复提示弹窗（不改变任务状态）。
@@ -260,7 +322,6 @@ final class ResumeProgressViewModel {
     /// fixture 模式下错误为一次性瞬态（simulateCheckError 仅注入 error 展示态），
     /// 重试清除该标记使检查流程恢复正常。
     func retry() {
-        guard let currentTaskType else { return }
         simulateError = false
         checkForPendingProgress(taskType: currentTaskType)
     }
@@ -268,10 +329,13 @@ final class ResumeProgressViewModel {
     /// 重置到初始状态。
     func reset() {
         checkTask?.cancel()
+        recoveryTask?.cancel()
         checkTask = nil
+        recoveryTask = nil
         viewState = .idle
         isPromptPresented = false
         currentTaskType = nil
+        pendingProgressRecords = []
         stubFixture = nil
         isFixtureBacked = false
         simulateError = false
@@ -291,6 +355,40 @@ final class ResumeProgressViewModel {
         isFixtureBacked = fixtureBacked
         viewState = .prompt(progress)
         isPromptPresented = true
+    }
+
+    /// Keeps each orphaned task individually actionable while allowing the prior terminal
+    /// outcome to be observed before the next confirmation dialog is presented.
+    private func presentNextPending(after terminalState: ViewState) async {
+        guard !pendingProgressRecords.isEmpty else { return }
+        do {
+            try await Task.sleep(for: .milliseconds(250))
+        } catch {
+            return
+        }
+        guard viewState == terminalState else { return }
+        await presentFirstRecoverableCandidate()
+    }
+
+    /// Selects the first supported orphan without allowing an older unsupported record
+    /// to block later recoverable work. Unsupported rows remain in the diagnostic list.
+    private func presentFirstRecoverableCandidate() async {
+        guard let recoveryCoordinator else {
+            isPromptPresented = false
+            viewState = .error(.l2Recoverable(message: "Task recovery is not available."))
+            return
+        }
+        for candidate in pendingProgressRecords {
+            if await recoveryCoordinator.supportsRecovery(for: candidate) {
+                presentPrompt(candidate, fixtureBacked: false)
+                return
+            }
+        }
+        isFixtureBacked = false
+        isPromptPresented = false
+        viewState = .error(.l2Recoverable(
+            message: "This saved task type is not supported by this app version."
+        ))
     }
 
     // MARK: - Fixture Injection

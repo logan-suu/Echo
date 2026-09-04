@@ -3,7 +3,7 @@
   "stateId": "error",
   "surfaceId": "resume-progress-prompt",
   "dataConditions": {
-    "pendingProgress": "unavailable because ProgressActor load failed or no valid production task launcher exists — L2",
+    "pendingProgress": "retained because ProgressActor load, raw-type/descriptor validation, authorization, checkpoint replacement or queue acceptance failed — L2",
     "isError": true
   },
   "allowedActions": ["error.retry"],
@@ -12,5 +12,5 @@
     "retryButton": "Retry re-runs the progress check and launcher resolution",
     "readingOrder": ["errorMessage", "retryButton"]
   },
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

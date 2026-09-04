@@ -3,7 +3,7 @@
   "stateId": "prompt",
   "surfaceId": "resume-progress-prompt",
   "dataConditions": {
-    "pendingProgress": "exists (fixture resume-progress-pending.json: fullIndex 50/128)",
+    "pendingProgress": "one exact orphaned taskId is selected from the complete recoverable-record list (fixture example: fullIndex 50/128)",
     "dialogVisible": true
   },
   "allowedActions": ["prompt.continue", "prompt.restart"],
@@ -11,8 +11,8 @@
     "title": "Resume interrupted task / 检测到未完成的进度",
     "message": "已完成 50 / 128，是否继续？",
     "continueButton": "Continue / 继续 (resume from saved progress)",
-    "restartButton": "Restart / 重新开始 (delete progress + start fresh)",
+    "restartButton": "Restart / 重新开始 (replace checkpoint with retryable index 0, then queue)",
     "readingOrder": ["title", "message", "continueButton", "restartButton"]
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

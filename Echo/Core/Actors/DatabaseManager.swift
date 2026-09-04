@@ -151,6 +151,9 @@ public actor DatabaseManager {
                 sourceLanguage TEXT,
                 elapsedMs INTEGER,
                 action TEXT,
+                resumePoint INTEGER,
+                userChoiceOnRestart TEXT,
+                outcome TEXT,
                 cardIdDigest TEXT,
                 memoryIdDigest TEXT,
                 feelingAssociatedToSource INTEGER
@@ -188,6 +191,15 @@ public actor DatabaseManager {
         }
         if !auditColumns.contains("action") {
             try execute(sql: "ALTER TABLE AuditLog ADD COLUMN action TEXT")
+        }
+        if !auditColumns.contains("resumePoint") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN resumePoint INTEGER")
+        }
+        if !auditColumns.contains("userChoiceOnRestart") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN userChoiceOnRestart TEXT")
+        }
+        if !auditColumns.contains("outcome") {
+            try execute(sql: "ALTER TABLE AuditLog ADD COLUMN outcome TEXT")
         }
         if !auditColumns.contains("cardIdDigest") {
             try execute(sql: "ALTER TABLE AuditLog ADD COLUMN cardIdDigest TEXT")

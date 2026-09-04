@@ -8,6 +8,7 @@
 // 任务: 2.3 - IngestPipeline：图片摄入（US-ING-004）
 //        2.4 - IngestPipeline：视频摄入（US-ING-005）
 //        2.5 - IngestPipeline：备忘录 + 语音转写（US-ING-001~003）
+//        4.0g - 可恢复的 PhotoKit 生产摄入重建
 // AC 覆盖: US-ING-004 AC-1~AC-5 (图片摄入),
 //          US-ING-005 AC-1 (帧采样 ≤2fps/≤20, CLIP 向量化), AC-2 (SenseVoice 转写+文本向量化),
 //          AC-3 (memoryGroupId 关联), AC-4 (PHAsset 引用), AC-5 (审计 .videoIngested)
@@ -178,6 +179,15 @@ public enum IngestError: Error, LocalizedError, Sendable, Equatable {
 ///     → Embedder.embedText() → zero-pad(384→512)
 ///     → VectorStore.ingest() → PrivacyActor.writeAuditLog(.voiceIngested)
 /// ```
+private nonisolated struct ProductionIngestResumePayload: Sendable, Codable {
+    enum Kind: String, Sendable, Codable {
+        case photo
+    }
+
+    let kind: Kind
+    let assetId: String
+}
+
 public actor IngestPipeline {
 
     // MARK: - Dependencies
@@ -1000,10 +1010,12 @@ public actor IngestPipeline {
         }
         let metadata = try await extractor.extractMetadata(assetId: assetId)
 
+        let resumeData = try makeResumeData(kind: .photo, assetId: assetId)
         let work = TaskQueueActor.QueuedJob(
             taskId: taskID,
             taskType: .fullIndex,
-            totalCount: 1
+            totalCount: 1,
+            resumeData: resumeData
         ) { context in
             try await self.performProductionPhoto(
                 assetId: assetId,
@@ -1109,6 +1121,81 @@ public actor IngestPipeline {
         try await runQueued(work, traceID: traceID)
         let generationIds = try await productionGenerations(for: content.hasAudio ? [.visionDense, .textDense] : [.visionDense])
         return ProductionIngestResult(sourceLocator: assetId, sourceType: "video", generationIds: generationIds)
+    }
+
+    /// Reconstructs only allow-listed, source-resolvable production ingestion jobs.
+    /// Shared text/audio are intentionally excluded because their plaintext must not enter resumeData.
+    func makeRecoveryJob(for request: TaskRecoveryRequest) async throws -> TaskQueueActor.QueuedJob {
+        let checkpoint = await privacyActor.validate(
+            operation: request.descriptor.operation,
+            traceID: UUID().uuidString,
+            sourceTypes: request.descriptor.sourceTypes
+        )
+        guard checkpoint.isAllowed else {
+            throw IngestError.privacyDenied(sourceTypes: checkpoint.sourceTypes)
+        }
+        guard request.progress.taskType == .fullIndex,
+              request.descriptor.operation == .ingest else {
+            throw TaskRecoveryError.launcherMismatch
+        }
+        if request.choice == .continue,
+           request.progress.lastProcessedIndex >= request.progress.totalCount {
+            return TaskQueueActor.QueuedJob(
+                taskId: request.progress.taskId,
+                taskType: .fullIndex,
+                totalCount: request.progress.totalCount,
+                resumeData: request.progress.resumeData
+            ) { _ in }
+        }
+        let payload: ProductionIngestResumePayload
+        do {
+            payload = try JSONDecoder().decode(
+                ProductionIngestResumePayload.self,
+                from: request.descriptor.payload
+            )
+        } catch {
+            throw TaskRecoveryError.descriptorInvalid
+        }
+        let traceID = UUID().uuidString
+        switch payload.kind {
+        case .photo:
+            guard request.descriptor.sourceTypes == ["photo"] else {
+                throw TaskRecoveryError.descriptorInvalid
+            }
+            let extractor = photoExtractor ?? RealPhotoAssetExtractor()
+            guard await extractor.isLocallyAvailable(assetId: payload.assetId) else {
+                throw IngestError.assetUnavailableLocally(assetId: payload.assetId)
+            }
+            let metadata = try await extractor.extractMetadata(assetId: payload.assetId)
+            return TaskQueueActor.QueuedJob(
+                taskId: request.progress.taskId,
+                taskType: .fullIndex,
+                totalCount: request.progress.totalCount,
+                resumeData: request.progress.resumeData
+            ) { context in
+                try await self.performProductionPhoto(
+                    assetId: payload.assetId,
+                    exifMetadata: metadata.exifMetadata,
+                    creationDate: metadata.creationDate,
+                    context: context,
+                    traceID: traceID
+                )
+            }
+        }
+    }
+
+    private func makeResumeData(
+        kind: ProductionIngestResumePayload.Kind,
+        assetId: String
+    ) throws -> Data {
+        let payload = try JSONEncoder().encode(
+            ProductionIngestResumePayload(kind: kind, assetId: assetId)
+        )
+        return try TaskResumeDescriptor(
+            operation: .ingest,
+            sourceTypes: [kind.rawValue],
+            payload: payload
+        ).encoded()
     }
 
     // MARK: - Production Execution (actor-isolated)
@@ -1543,7 +1630,8 @@ public actor IngestPipeline {
             try await progressStore.save(progress: TaskProgress(
                 taskId: job.taskId,
                 taskType: job.taskType,
-                totalCount: job.totalCount
+                totalCount: job.totalCount,
+                resumeData: job.resumeData
             ))
             let token = PauseToken()
             do {

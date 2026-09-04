@@ -142,7 +142,13 @@ struct BackgroundTaskPanelTests {
         let taskQueue = TaskQueueActor(progressActor: progressActor)
         try await DatabaseManager.shared.open()
         _ = try? await progressActor.delete(taskId: taskId)
-        try await progressActor.save(progress: makeTaskProgress(taskId: taskId))
+        try await taskQueue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: taskId,
+            taskType: .dataSourceSync,
+            totalCount: 128
+        ) { _ in
+            try await Task.sleep(for: .seconds(30))
+        })
         await taskQueue.pause(taskId: taskId)
 
         let vm = BackgroundTaskViewModel(
@@ -156,8 +162,40 @@ struct BackgroundTaskPanelTests {
         #expect(vm.tasks.first { $0.taskId == taskId }?.status == .paused)
 
         vm.closePanel()
-        await taskQueue.resume(taskId: taskId)
-        _ = try await progressActor.delete(taskId: taskId)
+        await taskQueue.cancel(taskId: taskId)
+        _ = try? await progressActor.delete(taskId: taskId)
+    }
+
+    @Test("AC-1 live polling excludes orphaned recovery checkpoints")
+    func test_AC1_livePollingShowsOnlyQueueOwnedTasks() async throws {
+        let progressActor = ProgressActor.shared
+        let taskQueue = TaskQueueActor(progressActor: progressActor)
+        try await DatabaseManager.shared.open()
+        _ = try? await progressActor.delete(taskId: "review-active-task")
+        _ = try? await progressActor.delete(taskId: "review-orphan-task")
+        try await progressActor.save(progress: makeTaskProgress(taskId: "review-orphan-task"))
+        try await taskQueue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: "review-active-task",
+            taskType: .dataSourceSync,
+            totalCount: 128
+        ) { _ in
+            try await Task.sleep(for: .seconds(30))
+        })
+
+        let vm = BackgroundTaskViewModel(
+            progressActor: progressActor,
+            taskQueue: taskQueue,
+            pollIntervalNanoseconds: 5_000_000
+        )
+        vm.openPanel()
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(vm.tasks.map(\.taskId) == ["review-active-task"])
+
+        vm.closePanel()
+        await taskQueue.cancel(taskId: "review-active-task")
+        _ = try? await progressActor.delete(taskId: "review-active-task")
+        _ = try? await progressActor.delete(taskId: "review-orphan-task")
     }
 
     @Test("resumeTask resumes a paused task")
@@ -172,6 +210,39 @@ struct BackgroundTaskPanelTests {
         #expect(vm.tasks[0].status == .running)
         #expect(vm.tasks[0].statusLabel == "Running")
         #expect(vm.hasActiveTasks == true)
+    }
+
+    @Test("AC-3 resume does not publish running after queue ownership is lost")
+    func test_AC3_liveResumeFailureRemainsPaused() async throws {
+        let taskId = "review-stale-resume-task"
+        let progressActor = ProgressActor.shared
+        let taskQueue = TaskQueueActor(progressActor: progressActor)
+        try await DatabaseManager.shared.open()
+        _ = try? await progressActor.delete(taskId: taskId)
+        try await taskQueue.enqueue(TaskQueueActor.QueuedJob(
+            taskId: taskId,
+            taskType: .dataSourceSync,
+            totalCount: 128
+        ) { _ in
+            try await Task.sleep(for: .seconds(30))
+        })
+        await taskQueue.pause(taskId: taskId)
+
+        let vm = BackgroundTaskViewModel(taskQueue: taskQueue)
+        vm.loadPreloadedTasks([makeTaskProgress(taskId: taskId)])
+        vm.pauseTask(taskId)
+        try await Task.sleep(for: .milliseconds(20))
+        await taskQueue.cancel(taskId: taskId)
+        _ = try? await progressActor.delete(taskId: taskId)
+
+        vm.resumeTask(taskId)
+        try await Task.sleep(for: .milliseconds(20))
+
+        #expect(vm.tasks.first?.status == .paused)
+        guard case .error(.l2Recoverable) = vm.viewState else {
+            Issue.record("A lost queue owner must surface an L2 recovery error")
+            return
+        }
     }
 
     @Test("requestCancelTask sets pending cancel state")

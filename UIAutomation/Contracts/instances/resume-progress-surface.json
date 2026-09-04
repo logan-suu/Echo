@@ -6,13 +6,13 @@
   "responsibility": "When ProgressActor holds pending progress, present Continue/Restart only through a production task-reconstruction boundary. Reading TaskProgress alone is not completion evidence; without a registered launcher the surface must fail visibly instead of reporting resumed or restarted.",
   "inputs": {
     "taskType": "TaskType of the task about to start",
-    "pendingProgress": "TaskProgress? loaded from ProgressActor (taskId, lastProcessedIndex, totalCount)",
+    "pendingProgress": "All orphaned/interrupted persisted records, each preserving exact taskId and raw taskType; current-session queue-owned rows are excluded",
     "resumePoint": "lastProcessedIndex / totalCount shown to the user",
-    "taskLauncher": "Composition-owned registry that can reconstruct the persisted taskType and validates stale or unknown task identities"
+    "taskLauncher": "Composition-owned typed allow-list that validates versioned bounded resumeData and current privacy/source authorization before reconstructing an exact taskId"
   },
   "outputs": {
     "visibleContent": "Confirmation dialog: '检测到未完成的进度（已完成 X / Y），是否继续？' with Continue / Restart buttons",
-    "interactionTargets": "promptContinue through the registered launcher, promptRestart after transactional progress reset, errorRetry",
+    "interactionTargets": "promptContinue without checkpoint overwrite, promptRestart after transactional checkpoint replacement, errorRetry",
     "accessibilityTree": "Dialog title, progress text (X of Y), Continue button, Restart button"
   },
   "systemContainer": "Alert / confirmationDialog presented from the task-start host (e.g. BackgroundTaskPanel or Home)",
@@ -21,11 +21,14 @@
   "fallbackConditions": [
     "No pending progress for task type -> auto-start new task, no prompt (state: none)",
     "ProgressActor load failure -> L2 error state with retry (state: error)",
-    "Missing, stale or unknown production task launcher -> honest unavailable/error state; never a fixture-backed success"
+    "Missing, stale or unknown production task launcher -> honest unavailable/error state with the raw record retained; never a fixture-backed success",
+    "A taskId still owned by the current session queue -> no recovery prompt",
+    "Multiple records with the same taskType -> each exact taskId remains independently visible and recoverable"
   ],
   "states": [
     "checking",
     "prompt",
+    "recovering",
     "none",
     "resumed",
     "restarted",
@@ -34,5 +37,5 @@
   "relatedStories": [
     "US-SYS-001"
   ],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

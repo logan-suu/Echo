@@ -7,8 +7,9 @@ description: "提交当前代码变更，推送到远程仓库，并创建 Pull 
 > repository `AGENTS.md` as the authority. Treat any remaining GitHub API
 > wording as the equivalent `gh` CLI operation supported by the current
 > environment. Never weaken human-only approval, PR merge, branch retention,
-> privacy, or release gates. If `gh auth status` is invalid, stop external
-> GitHub mutations and ask the user to re-authenticate.
+> privacy, or release gates. A sandboxed `gh auth status` failure is
+> inconclusive, not proof that credentials expired. Apply the two-stage
+> verification gate below before requesting re-authentication.
 
 
 ## 🚀 提交代码与创建 PR
@@ -26,6 +27,13 @@ description: "提交当前代码变更，推送到远程仓库，并创建 Pull 
      请先执行 $ui-bootstrap-build-echo [任务ID] 完成验证与双设备 Simulator Review
      （iPhone 17 Pro iOS 26 + iPhone 16 Pro iOS 18），获得用户明确批准后再提交。
      ```
+1. **GitHub 认证双阶段核验（AGENTS.md §15）**：
+   - 首先运行只读命令 `gh auth status -h github.com`。
+   - 若初检失败，尤其是在沙箱内出现 token invalid、DNS、timeout、connection refused 或 API unavailable，结果只能标记为 `indeterminate`；不得据此宣称凭据失效，也不得要求用户重新认证。
+   - 自动在允许联网的只读执行环境中复核 `gh auth status -h github.com`，并运行 `gh api user --jq .login` 验证当前身份。复核不得执行任何 GitHub 写操作。
+   - 只有允许联网的复核明确返回 HTTP 401、`Bad credentials` 或等价认证拒绝时，才标记为 `invalid`，停止 GitHub 写操作并提示运行 `gh auth login -h github.com`。
+   - DNS、timeout、connection refused、GitHub API 不可达或其他连接失败均归类为 `connectivity`；报告网络问题，不得要求重新认证。
+   - 禁止运行或输出 `gh auth token`，不得把 token、keyring 内容或凭据写入日志、PR 或 Artifact。
 1. **Git 状态检查**：
    - 执行 `git status`，确认有变更可提交。
    - 如果无变更，输出：“当前没有可提交的变更。请确认代码已修改或使用 `git add` 添加文件。”并退出。
@@ -65,7 +73,7 @@ description: "提交当前代码变更，推送到远程仓库，并创建 Pull 
    - 执行 `git push -u origin [分支名]`
    - **如果推送失败**：
      - 远程有新提交 → 提示 `git pull --rebase` 后重试。
-     - 权限问题 → 停止外部写操作并提示运行 `gh auth login -h github.com`。
+     - 疑似权限问题 → 先执行第一步的认证双阶段核验；仅明确认证拒绝时提示重新登录，连接失败只报告网络问题。
 2. **生成 AC 覆盖对照表**：
    - 从当前任务的 `story` 字段获取用户故事编号（如 US-PRV-001）。
    - 读取 `docs/01-spec/用户故事与验收标准规格书.md`，定位到该故事。
@@ -76,7 +84,7 @@ description: "提交当前代码变更，推送到远程仓库，并创建 Pull 
      | --- | --- | --- | --- | --- |
      | AC-1 | ... | ... | ... | ✅ |
      | AC-2 | ... | ... | ... | ✅ |
-3. 使用 `gh pr create` 创建 PR；执行前确认 `gh auth status` 有效。
+3. 使用 `gh pr create` 创建 PR；执行前必须通过第一步的认证双阶段核验。
 4. **PR 标题**：`{type}({scope}): {description} [US-XXX]`
 5. **PR 描述**：必须包含上述 AC 覆盖对照表（§3.3）。
 

@@ -160,6 +160,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             ocrService: VisionPhotoOCRService()
         )
         ingestPipeline = ingest
+        await composition.attachProductionIngestPipeline(ingest)
         _ = try? await ingest.drainSharedImports(from: .shared)
 
         // 3F.8: 唤醒系统适配器装配（ADR-012 决策-3: 真实系统适配器接入生产）。

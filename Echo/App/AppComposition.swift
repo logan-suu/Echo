@@ -3,7 +3,7 @@
 // 对应规格: docs/decisions/ADR-007-production-composition-consent.md §决策-1 (composition root),
 //            §决策-2 (deny-by-default 同意), §决策-3 (事务性撤回/清除), §决策-5 (不可用启动状态)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-PRV-001, US-PRV-008, US-RES-004
-// 任务: 3F.1 + 4.0e + 4.0f - Production composition, editing, and permission preferences
+// 任务: 3F.1 + 4.0e + 4.0f + 4.0g - Production composition and recovery
 // AC 覆盖: ADR-007 §决策-1 (唯一依赖图 + 启动状态机), §决策-2 (同意闸门装配),
 //          §决策-3 (撤回 → 事务清除 → blocked), §决策-5 (model/route/index-unavailable/bootstrap-failed)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §8.1 (@MainActor @Observable), R-007 (禁止 unchecked Sendable)
@@ -59,6 +59,8 @@ public final class AppComposition {
     public let modelLoader: ModelLoaderActor
     public let generationRegistry: GenerationRegistryActor
     public let memoryEditActor: MemoryEditActor
+    public let taskRecoveryRegistry: TaskRecoveryRegistry
+    public let taskRecoveryCoordinator: TaskRecoveryCoordinator
     /// 文本嵌入器（E5）— 生产摄入/检索文本路径（CR-10）
     public let textEmbedder: any EmbedderProtocol
     /// 视觉嵌入器（SigLIP2）— 图片/视频帧生产路径（CR-10）
@@ -109,6 +111,13 @@ public final class AppComposition {
         self.awakeningPreferenceStore = awakeningPreferenceStore ?? AwakeningPreferenceActor(db: databaseManager)
         self.modelLoader = modelLoader
         self.generationRegistry = generationRegistry
+        let taskRecoveryRegistry = TaskRecoveryRegistry()
+        self.taskRecoveryRegistry = taskRecoveryRegistry
+        self.taskRecoveryCoordinator = TaskRecoveryCoordinator(
+            registry: taskRecoveryRegistry,
+            privacyActor: privacyActor,
+            auditWriter: privacyActor
+        )
         self.textEmbedder = textEmbedder
         self.memoryEditActor = MemoryEditActor(
             db: databaseManager,
@@ -211,6 +220,13 @@ public final class AppComposition {
     /// 注入生产同步管线（AppDelegate.configureSources 装配完成后调用）。
     public func attachProductionSyncPipeline(_ pipeline: SyncPipeline) {
         productionSyncPipeline = pipeline
+    }
+
+    /// Registers the production full-index reconstruction boundary after source wiring.
+    public func attachProductionIngestPipeline(_ pipeline: IngestPipeline) async {
+        await taskRecoveryRegistry.register(taskType: .fullIndex) { request in
+            try await pipeline.makeRecoveryJob(for: request)
+        }
     }
 
     /// 注入生产唤醒系统适配器（AppDelegate.configureSources 装配完成后调用，ADR-012 决策-2/3）。

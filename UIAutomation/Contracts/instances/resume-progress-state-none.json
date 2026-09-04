@@ -3,12 +3,13 @@
   "stateId": "none",
   "surfaceId": "resume-progress-prompt",
   "dataConditions": {
-    "pendingProgress": "nil (fixture resume-progress-none.json: no TaskProgress record for task type)",
+    "pendingProgress": "no orphaned/interrupted record for the requested logical task; current-session queue-owned rows do not count",
+    "queueOwnedProgress": "may exist for a running, queued, or paused current-session job; it suppresses recovery UI without implying a fresh start",
     "dialogVisible": false
   },
   "allowedActions": [],
   "expectedSemantics": {
-    "dialogHidden": "No prompt; task starts fresh from index 0 (US-SYS-001 AC-4: no stale record)"
+    "dialogHidden": "No recovery prompt. Start fresh from index 0 only when neither an orphaned/interrupted record nor a current-session queue-owned row exists; otherwise the existing queue-owned job continues."
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

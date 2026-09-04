@@ -3,9 +3,10 @@
 // 对应规格: docs/decisions/ADR-011-task-progress-boundary.md 决策-1 (串行契约)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-SYS-001 AC-3/4/6 (暂停/取消/断点续传)
 //            AGENTS.md §4.3 (TaskQueue 契约), §4.5 (断点续传契约)
-// 任务: 3F.5 - Production ingestion
-// AC 覆盖: 串行执行 (索引构建与数据同步互斥), 入队写入任务, 暂停 (挂起不释放资源),
-//          取消 (保存进度), 完成/最终失败后删除 TaskProgress, 取消保留进度供下次询问
+// 任务: 3F.5 - Production ingestion; 4.0g - Production task resume loop
+// AC Coverage: serial execution, reserved unique taskId ownership,
+//              pause without releasing the job, cancellation checkpoint retention,
+//              pause-ownership cleanup, terminal progress cleanup, truthful active projection
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §4.3 (TaskQueue 契约), R-007 (禁止 unchecked Sendable)
 // PR#57 CodeRabbit fix: CR-1 取消/暂停排队任务 resume 等待方、暂停不阻塞后续任务;
 //                       CR-21 cancel 即时移除队列条目（pendingCount 精确）
@@ -28,7 +29,7 @@ import Foundation
 ///
 /// ## 协作式取消/暂停
 /// - 任务体通过 `Task.isCancelled` 感知取消；队列对激活任务调用 `Task.cancel()`
-/// - 任务体通过 `TaskContext.checkPaused()` 在检查点感知暂停并抛出 `.paused`
+/// - 任务体通过 `TaskContext.checkPaused()` 在检查点协作式挂起；恢复后由同一 job 继续
 public actor TaskQueueActor {
 
     // MARK: - Singleton
@@ -44,6 +45,7 @@ public actor TaskQueueActor {
     private var activePauseToken: PauseToken?
     private var pausedJobIds: Set<String> = []
     private var cancelledJobIds: Set<String> = []
+    private var reservations: [String: UUID] = [:]
     private var completions: [String: CheckedContinuation<Void, Error>] = [:]
 
     // MARK: - Initialization
@@ -77,6 +79,18 @@ public actor TaskQueueActor {
         }
     }
 
+    /// Controls whether enqueue creates a new checkpoint or adopts one loaded after relaunch.
+    public enum ProgressPolicy: Sendable {
+        case createNew
+        case preserveExisting
+    }
+
+    /// Short-lived ownership token used to close the check/reset/enqueue reentrancy window.
+    public nonisolated struct TaskReservation: Sendable, Equatable {
+        fileprivate nonisolated let taskId: String
+        fileprivate nonisolated let token: UUID
+    }
+
     /// 任务上下文 — 提供进度上报与暂停/取消检查（跨 Actor 值类型）。
     public struct TaskContext: Sendable {
         nonisolated let taskId: String
@@ -92,11 +106,13 @@ public actor TaskQueueActor {
             )
         }
 
-        /// 检查暂停信号；暂停时抛出 `.paused`（任务在检查点协作式挂起）。
+        /// Wait at a cooperative safe point while paused, retaining this exact in-memory job.
         public func checkPaused() async throws {
-            if await pauseToken.isPaused {
-                throw TaskQueueError.paused(taskId: taskId)
+            while await pauseToken.isPaused {
+                try Task.checkCancellation()
+                try await Task.sleep(for: .milliseconds(20))
             }
+            try Task.checkCancellation()
         }
 
         /// 检查取消信号。
@@ -112,17 +128,72 @@ public actor TaskQueueActor {
     /// 入队一个任务并立即持久化初始进度；若队列空闲则开始串行执行。
     ///
     /// - Throws: `TaskQueueError.taskAlreadyQueued` 若同 taskId 已在队列/运行中
-    public func enqueue(_ job: QueuedJob) async throws {
+    public func enqueue(
+        _ job: QueuedJob,
+        progressPolicy: ProgressPolicy = .createNew
+    ) async throws {
+        let reservation = try makeReservation(taskId: job.taskId, allowingPrepaused: true)
+        try await enqueue(job, progressPolicy: progressPolicy, reservation: reservation)
+    }
+
+    /// Atomically reserves an exact task identity before any cross-actor preparation work.
+    public func reserve(taskId: String) throws -> TaskReservation {
+        try makeReservation(taskId: taskId, allowingPrepaused: false)
+    }
+
+    private func makeReservation(
+        taskId: String,
+        allowingPrepaused: Bool
+    ) throws -> TaskReservation {
+        guard !queue.contains(where: { $0.taskId == taskId }),
+              activeJobId != taskId,
+              (allowingPrepaused || !pausedJobIds.contains(taskId)),
+              reservations[taskId] == nil else {
+            throw TaskQueueError.taskAlreadyQueued(taskId: taskId)
+        }
+        let reservation = TaskReservation(taskId: taskId, token: UUID())
+        reservations[taskId] = reservation.token
+        return reservation
+    }
+
+    /// Releases a reservation that did not reach queue acceptance.
+    public func release(_ reservation: TaskReservation) {
+        guard reservations[reservation.taskId] == reservation.token else { return }
+        reservations.removeValue(forKey: reservation.taskId)
+    }
+
+    /// Adopts a caller-held reservation and releases it after acceptance or failure.
+    public func enqueue(
+        _ job: QueuedJob,
+        progressPolicy: ProgressPolicy,
+        reservation: TaskReservation
+    ) async throws {
+        guard reservation.taskId == job.taskId,
+              reservations[job.taskId] == reservation.token else {
+            throw TaskQueueError.invalidReservation(taskId: job.taskId)
+        }
+        defer { reservations.removeValue(forKey: job.taskId) }
         guard !queue.contains(where: { $0.taskId == job.taskId }), activeJobId != job.taskId else {
             throw TaskQueueError.taskAlreadyQueued(taskId: job.taskId)
         }
-        let progress = TaskProgress(
-            taskId: job.taskId,
-            taskType: job.taskType,
-            totalCount: job.totalCount,
-            resumeData: job.resumeData
-        )
-        try await progressActor.save(progress: progress)
+        switch progressPolicy {
+        case .createNew:
+            let progress = TaskProgress(
+                taskId: job.taskId,
+                taskType: job.taskType,
+                totalCount: job.totalCount,
+                resumeData: job.resumeData
+            )
+            try await progressActor.save(progress: progress)
+        case .preserveExisting:
+            guard let existing = try await progressActor.load(taskId: job.taskId) else {
+                throw TaskQueueError.missingCheckpoint(taskId: job.taskId)
+            }
+            guard existing.rawTaskType == job.taskType.rawValue,
+                  existing.totalCount == job.totalCount else {
+                throw TaskQueueError.checkpointMismatch(taskId: job.taskId)
+            }
+        }
         queue.append(job)
         if activeTask == nil {
             await startNext()
@@ -131,38 +202,59 @@ public actor TaskQueueActor {
 
     /// 取消指定任务：运行中 → 终止底层 Task（进度保留）；排队中 → 立即移除并恢复等待方。
     ///
-    /// 排队中的任务被取消时同步清理进度并 resume `enqueueAndWait` 等待方（CR-1），
-    /// 且不再留在 `pendingCount` 计数内（CR-21）。
-    public func cancel(taskId: String) async {
+    /// 未启动的 0/N 任务取消时清理初始记录；已有恢复进度则保留 checkpoint。
+    /// 两者都会 resume `enqueueAndWait` 等待方并立即移出 `pendingCount`。
+    @discardableResult
+    public func cancel(taskId: String) async -> Bool {
         if activeJobId == taskId {
             cancelledJobIds.insert(taskId)
             activeTask?.cancel()
+            // Do not publish cancellation to callers until the cooperative body has unwound
+            // and its final checkpoint write (if any) is complete.
+            while activeJobId == taskId {
+                await Task.yield()
+            }
+            return true
         } else if let index = queue.firstIndex(where: { $0.taskId == taskId }) {
             let job = queue.remove(at: index)
             cancelledJobIds.remove(job.taskId)
-            _ = try? await progressActor.delete(taskId: job.taskId)
+            pausedJobIds.remove(job.taskId)
+            if let progress = try? await progressActor.load(taskId: job.taskId),
+               progress.lastProcessedIndex == 0 {
+                _ = try? await progressActor.delete(taskId: job.taskId)
+            }
             if let completion = completions.removeValue(forKey: job.taskId) {
                 completion.resume(throwing: TaskQueueError.cancelled(taskId: job.taskId))
             }
+            return true
         }
+        pausedJobIds.remove(taskId)
+        return false
     }
 
     /// 暂停指定任务：运行中 → 经 PauseToken 协作式挂起；排队中 → 标记暂停（不启动）。
-    public func pause(taskId: String) async {
+    @discardableResult
+    public func pause(taskId: String) async -> Bool {
+        guard activeJobId == taskId || queue.contains(where: { $0.taskId == taskId }) else {
+            return false
+        }
         pausedJobIds.insert(taskId)
         if activeJobId == taskId {
             await activePauseToken?.setPaused(true)
         }
+        return true
     }
 
     /// 恢复指定任务（解除暂停）。
-    public func resume(taskId: String) async {
-        pausedJobIds.remove(taskId)
+    @discardableResult
+    public func resume(taskId: String) async -> Bool {
+        guard pausedJobIds.remove(taskId) != nil else { return false }
         if activeJobId == taskId {
             await activePauseToken?.setPaused(false)
         } else if activeTask == nil {
             await startNext()
         }
+        return true
     }
 
     /// 当前是否有任务在运行。
@@ -180,6 +272,25 @@ public actor TaskQueueActor {
         queue.count
     }
 
+    /// IDs owned by this process, including running, queued, and paused jobs.
+    public func ownedTaskIDs() async -> Set<String> {
+        var ids = activeTaskIDsValue()
+        ids.formUnion(reservations.keys)
+        return ids
+    }
+
+    /// IDs with an actual running, queued, or paused in-memory job; excludes preparation reservations.
+    public func activeTaskIDs() async -> Set<String> {
+        activeTaskIDsValue()
+    }
+
+    private func activeTaskIDsValue() -> Set<String> {
+        var ids = Set(queue.map(\.taskId))
+        if let activeJobId { ids.insert(activeJobId) }
+        ids.formUnion(pausedJobIds)
+        return ids
+    }
+
     /// 是否暂停了指定任务。
     public func isPaused(taskId: String) async -> Bool {
         pausedJobIds.contains(taskId)
@@ -190,7 +301,11 @@ public actor TaskQueueActor {
     /// 与 `enqueue` 相同的串行/进度语义，但阻塞直到任务完成或抛出其终止错误。
     /// - Throws: 任务体抛出的错误，或 `TaskQueueError`（取消/暂停）
     public func enqueueAndWait(_ job: QueuedJob) async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            guard completions[job.taskId] == nil else {
+                continuation.resume(throwing: TaskQueueError.taskAlreadyQueued(taskId: job.taskId))
+                return
+            }
             completions[job.taskId] = continuation
             Task {
                 do {
@@ -322,6 +437,9 @@ public enum TaskQueueError: Error, LocalizedError, Sendable {
     case paused(taskId: String)
     /// 任务被取消
     case cancelled(taskId: String)
+    case missingCheckpoint(taskId: String)
+    case checkpointMismatch(taskId: String)
+    case invalidReservation(taskId: String)
 
     public var errorDescription: String? {
         switch self {
@@ -331,6 +449,12 @@ public enum TaskQueueError: Error, LocalizedError, Sendable {
             return "Task paused: \(id)"
         case .cancelled(let id):
             return "Task cancelled: \(id)"
+        case .missingCheckpoint(let id):
+            return "Saved checkpoint missing: \(id)"
+        case .checkpointMismatch(let id):
+            return "Saved checkpoint does not match task: \(id)"
+        case .invalidReservation(let id):
+            return "Task reservation is no longer valid: \(id)"
         }
     }
 }

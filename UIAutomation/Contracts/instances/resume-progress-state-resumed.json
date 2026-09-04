@@ -4,12 +4,12 @@
   "surfaceId": "resume-progress-prompt",
   "dataConditions": {
     "userDecision": "continue (prompt.continue)",
-    "resumeTarget": "resume from lastProcessedIndex 50 (saved progress retained)"
+    "resumeTarget": "exact taskId resumes from lastProcessedIndex 50 and queue acceptance did not overwrite the saved checkpoint"
   },
   "allowedActions": [],
   "expectedSemantics": {
     "dialogDismissed": "Prompt closes",
-    "outcome": "Resume intent forwarded to TaskQueueActor.resume(taskId:) (Phase 3.9 Core); progress continues from 50/128"
+    "outcome": "A reconstructed job was accepted by TaskQueueActor and continues from 50/128; this is distinct from in-memory pause resume(taskId:)"
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

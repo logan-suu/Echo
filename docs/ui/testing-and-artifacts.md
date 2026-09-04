@@ -84,7 +84,7 @@
 - 4.0f 不断言 HealthKit read granted/denied。测试只断言 request lifecycle、请求类型集合、样本可读/空样本回退与 unsupported；不得用 `authorizationStatus(for:)` 或 request completion success 作为读取授权证据
 - 4.0f 的 Core Location fake 必须证明 async 请求在 delegate 回调前不完成；Always 只在 When In Use 后的第二个明确动作发生。通知测试在 completion 后复读 `UNNotificationSettings`，并覆盖 provisional/ephemeral 映射
 - 4.0f 必须证明唤醒偏好和 HealthKit request lifecycle 写入 SQLite 后可跨 ViewModel/重启恢复，同时所有系统授权快照均来自 live adapter；恢复偏好不得产生 request API 调用
-- 4.0g 必须以 no-fixture 路径证明已持久化任务可在重启后重建：Continue 从准确 resume point 执行，Restart 原子删除旧进度后从头执行，取消/失败不伪造成功，未知 task type fail closed，完成后清理 `TaskProgress`，审计记录实际 userChoiceOnRestart
+- 4.0g 必须以 no-fixture 路径证明已持久化任务可在重启后重建：Continue 从准确 resume point 执行且入队不覆盖 checkpoint；Restart 先事务性替换为 index 0 可重试记录再单独入队，入队失败保留记录。覆盖未知 raw task type、malformed/oversized/version-mismatch resumeData、撤权后恢复、多个同 taskType taskId、当前会话活跃行排除、double-tap/取消-完成竞态、pause 保留同 job、完成/最终失败清理和结构化实际 userChoiceOnRestart 审计。恢复中间态禁止重复操作，只在队列接管后显示 resumed/restarted
 - Settings migration journey 必须区分“加密 Echo 迁移包”和“全部原始媒体导出”：前者覆盖 system share/AirDrop handoff、分离密钥、覆盖/合并/冲突/rollback；后者必须不存在。测试不得检查或持久化传输密钥、原文、截图或分享目标 App
 
 ### 2.6 权限流程测试（Permission Flow Testing）

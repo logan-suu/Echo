@@ -519,6 +519,7 @@ struct UnifiedLanguageTests: ~Copyable {
             let logs = try await PrivacyActor.shared.fetchAuditLogs(limit: 20, eventType: .backgroundTaskInterrupted)
             #expect(!logs.isEmpty, "pause must write .backgroundTaskInterrupted")
             #expect(logs.first?.sourceType?.contains("pause") == true, "action=pause must be recorded")
+            #expect(logs.first?.outcome == "paused", "successful pause must record outcome=paused")
         }
 
         @Test("SYS-001 AC-7: cancel writes .backgroundTaskInterrupted with action=cancel")
@@ -533,6 +534,7 @@ struct UnifiedLanguageTests: ~Copyable {
             let logs = try await PrivacyActor.shared.fetchAuditLogs(limit: 20, eventType: .backgroundTaskInterrupted)
             #expect(!logs.isEmpty, "cancel must write .backgroundTaskInterrupted")
             #expect(logs.first?.sourceType?.contains("cancel") == true, "action=cancel must be recorded")
+            #expect(logs.first?.outcome == "cancelled", "successful cancellation must record outcome=cancelled")
         }
 
         @Test("SYS-001 AC-1/AX: task accessibility label is localized and complete")

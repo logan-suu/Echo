@@ -379,6 +379,9 @@ public actor PrivacyActor {
         subjectKind: String? = nil,
         subjectHash: String? = nil,
         action: String? = nil,
+        resumePoint: Int? = nil,
+        userChoiceOnRestart: String? = nil,
+        outcome: String? = nil,
         cardIdDigest: String? = nil,
         memoryIdDigest: String? = nil,
         feelingAssociatedToSource: Bool? = nil,
@@ -403,6 +406,9 @@ public actor PrivacyActor {
             subjectKind: subjectKind,
             subjectHash: subjectHash,
             action: action,
+            resumePoint: resumePoint,
+            userChoiceOnRestart: userChoiceOnRestart,
+            outcome: outcome,
             cardIdDigest: cardIdDigest,
             memoryIdDigest: memoryIdDigest,
             feelingAssociatedToSource: feelingAssociatedToSource,
@@ -430,6 +436,9 @@ public actor PrivacyActor {
         subjectKind: String? = nil,
         subjectHash: String? = nil,
         action: String? = nil,
+        resumePoint: Int? = nil,
+        userChoiceOnRestart: String? = nil,
+        outcome: String? = nil,
         cardIdDigest: String? = nil,
         memoryIdDigest: String? = nil,
         feelingAssociatedToSource: Bool? = nil,
@@ -442,8 +451,8 @@ public actor PrivacyActor {
         let contentHash = content.map { AuditContentHasher.sha256Hex($0) }
         return DatabaseManager.DBWrite(
             sql: """
-                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash, subjectKind, subjectHash, action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource, editedFields, reindexed, conflictResolvedWith)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO AuditLog (eventType, timestamp, traceID, policyVersion, success, sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs, frameCount, audioTranscriptLength, hasAudio, contentHash, subjectKind, subjectHash, action, resumePoint, userChoiceOnRestart, outcome, cardIdDigest, memoryIdDigest, feelingAssociatedToSource, editedFields, reindexed, conflictResolvedWith)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             bindings: [
                 .text(eventType.rawValue),
@@ -463,6 +472,9 @@ public actor PrivacyActor {
                 subjectKind.map { .text($0) } ?? .null,
                 subjectHash.map { .text($0) } ?? .null,
                 action.map { .text($0) } ?? .null,
+                resumePoint.map { .int(Int64($0)) } ?? .null,
+                userChoiceOnRestart.map { .text($0) } ?? .null,
+                outcome.map { .text($0) } ?? .null,
                 cardIdDigest.map { .text($0) } ?? .null,
                 memoryIdDigest.map { .text($0) } ?? .null,
                 feelingAssociatedToSource.map { .int($0 ? 1 : 0) } ?? .null,
@@ -514,7 +526,8 @@ public actor PrivacyActor {
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
                        frameCount, audioTranscriptLength, hasAudio, contentHash,
-                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource,
+                       action, resumePoint, userChoiceOnRestart, outcome,
+                       cardIdDigest, memoryIdDigest, feelingAssociatedToSource,
                        editedFields, reindexed, conflictResolvedWith
                 FROM AuditLog WHERE eventType = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """
@@ -524,7 +537,8 @@ public actor PrivacyActor {
                 SELECT id, eventType, timestamp, traceID, policyVersion, success,
                        sourceType, affectedCount, excludedWritten, sourceLanguage, elapsedMs,
                        frameCount, audioTranscriptLength, hasAudio, contentHash,
-                       action, cardIdDigest, memoryIdDigest, feelingAssociatedToSource,
+                       action, resumePoint, userChoiceOnRestart, outcome,
+                       cardIdDigest, memoryIdDigest, feelingAssociatedToSource,
                        editedFields, reindexed, conflictResolvedWith
                 FROM AuditLog ORDER BY timestamp DESC LIMIT ? OFFSET ?
                 """

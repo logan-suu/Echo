@@ -369,13 +369,18 @@ struct Phase1IntegrationTests {
 
         @Test("Save and load progress round-trip")
         func test_saveAndLoadRoundTrip() async throws {
+            let resumeData = try TaskResumeDescriptor(
+                operation: .ingest,
+                sourceTypes: ["photo"],
+                payload: Data("phase1-round-trip".utf8)
+            ).encoded()
             let task = TaskProgress(
                 taskId: "ingest-batch-1",
                 taskType: .fullIndex,
                 lastProcessedIndex: 42,
                 totalCount: 100,
                 lastProcessedId: "item-42",
-                resumeData: Data([0x01, 0x02, 0x03]),
+                resumeData: resumeData,
                 updatedAt: Date(),
                 createdAt: Date()
             )
@@ -385,6 +390,7 @@ struct Phase1IntegrationTests {
             #expect(loaded?.lastProcessedIndex == 42)
             #expect(loaded?.totalCount == 100)
             #expect(loaded?.lastProcessedId == "item-42")
+            #expect(loaded?.resumeData == resumeData)
         }
 
         @Test("Update progress modifies DB correctly")
@@ -656,9 +662,17 @@ struct Phase1IntegrationTests {
 
     // MARK: - Suite 7: PrivacyActor Integration
 
-    @Suite("PrivacyIntegration")
+    @Suite("PrivacyIntegration", .serialized)
     struct PrivacyIntegrationTests {
-        let sut = PrivacyActor.shared
+        let sut: PrivacyActor
+
+        init() async throws {
+            let databaseURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("echo-phase1-privacy-\(UUID().uuidString).sqlite")
+            let database = DatabaseManager(databaseURL: databaseURL)
+            try await database.open()
+            self.sut = PrivacyActor(db: database)
+        }
 
         @Test("Validate allows operation with no source types")
         func test_validateNoSourceTypes() async throws {
