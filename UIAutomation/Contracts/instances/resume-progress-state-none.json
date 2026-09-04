@@ -3,12 +3,12 @@
   "stateId": "none",
   "surfaceId": "resume-progress-prompt",
   "dataConditions": {
-    "pendingProgress": "nil (fixture resume-progress-none.json: no TaskProgress record for task type)",
+    "pendingProgress": "no orphaned/interrupted record for the requested logical task; current-session queue-owned rows do not count",
     "dialogVisible": false
   },
   "allowedActions": [],
   "expectedSemantics": {
     "dialogHidden": "No prompt; task starts fresh from index 0 (US-SYS-001 AC-4: no stale record)"
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

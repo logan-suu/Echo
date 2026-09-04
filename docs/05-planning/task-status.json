@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-04T16:13:45Z",
+  "last_updated": "2026-09-04T19:44:34Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2628,14 +2628,21 @@
             "docs/ui/testing-and-artifacts.md",
             "UIAutomation/Contracts/instances/background-tasks-surface.json",
             "UIAutomation/Contracts/instances/resume-progress-surface.json",
+            "UIAutomation/Contracts/instances/resume-progress-action-continue.json",
+            "UIAutomation/Contracts/instances/resume-progress-action-restart.json",
+            "UIAutomation/Contracts/instances/resume-progress-state-recovering.json",
+            "UIAutomation/Contracts/instances/resume-progress-state-resumed.json",
+            "UIAutomation/Contracts/instances/resume-progress-state-restarted.json",
+            "UIAutomation/Contracts/instances/resume-progress-journey-basic.json",
             "UIAutomation/Contracts/schemas/surface-v1.json",
             "UIAutomation/Contracts/schemas/state-v1.json",
             "UIAutomation/Contracts/schemas/action-v1.json",
             "UIAutomation/Contracts/schemas/journey-v1.json",
+            "UIAutomation/Policies/acceptance-policy.json",
             "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
             "4.0c"
           ],
@@ -2646,21 +2653,27 @@
             "ResumeProgress"
           ],
           "implementation_constraints": [
-            "TaskProgress 只保存恢复数据，不得被当成可执行任务；由 composition-owned registry 按 taskType 重建 launcher",
-            "Continue 从准确 resume point 继续；Restart 事务删除旧进度后从头入队；未知、过期或不可重建类型 fail closed",
-            "任务重建、入队、暂停、取消、完成清理必须使用 TaskQueueActor/ProgressActor，跨 Actor 调用 await，禁止 Task.detached",
-            "所有异步入口执行 PrivacyCheckpoint，用户选择和结果写 hash-only audit；L2 仅手动重试",
+            "TaskProgress 只保存有版本、有大小上限和完整性校验的恢复描述，不存 closure、Actor、授权快照或记忆原文；由 composition-owned typed allow-list registry 按精确 taskId + raw taskType 重建 launcher",
+            "Continue 从准确 resume point 继续且入队不覆盖 checkpoint；Restart 先校验 launcher/当前授权，再事务性替换为 index 0 可重试记录，然后单独入队；入队失败保留记录",
+            "未知/过期 raw taskType 必须可诊断且 fail closed，不得被 enum 解码静默丢弃；多条同 taskType 记录逐条可见，不只选最新一条",
+            "恢复协调器排除当前会话 running/queued/paused taskId，对同 taskId 串行化单次尝试；重复点击、过期快照与取消-完成竞态不得双重入队或发布多个终态",
+            "Pause 保留同一 in-memory job/checkpoint；运行任务 Cancel 在协作式终止与最后 checkpoint 持久化后才发布；未开始且 index 0 的排队任务可直接移除",
+            "恢复时由 registry 声明的 PrivacyOperation/真实来源重新执行当前 PrivacyCheckpoint；用户选择、resumePoint 和实际结果写结构化非原文 audit；L2 仅手动重试",
+            "已入队任务成功或不可继续最终失败清理 TaskProgress；重建/入队前 L2、取消、暂停保留；任务重建、入队和清理必须走 TaskQueueActor/ProgressActor，跨 Actor await，禁止 Task.detached",
             "不得用 fixture prompt、仅状态翻转或伪造 resumed/restarted UI 作为生产完成证据"
           ],
           "acceptance_evidence": [
-            "no-fixture 任务取消→进程终止→重启→检测相同 taskType→Continue 从准确索引继续的证据",
-            "Restart 原子清理旧 TaskProgress、从 0 重新入队且完成后立即删除进度的证据",
-            "未知/过期 taskType、launcher 构造失败、磁盘错误、取消竞态与 L2 手动重试故障矩阵",
-            "backgroundTaskInterrupted 审计包含真实 action、resumePoint、userChoiceOnRestart 且无原文",
+            "no-fixture 任务取消→进程终止→重启→精确 taskId Continue 从准确索引继续，且入队前后 checkpoint 不被重置为 0",
+            "Restart 在 SQLite 事务内替换为同 taskId/index 0 可重试记录，与后续入队分阶段可观测；入队失败不丢记录，成功或最终失败后立即清理",
+            "未知 raw taskType 不被 load/loadAll 丢弃；malformed/oversized/version-mismatch resumeData、launcher 构造、存储/入队失败进入保留 checkpoint 的 L2 手动重试",
+            "多个同 taskType taskId 逐条可见，当前会话 running/queued/paused 行排除，double-tap/取消-完成竞态不重复入队且只发布一个终态",
+            "恢复前撤回来源授权的测试证明当前 PrivacyCheckpoint fail closed，resumeData 无授权快照/记忆原文",
+            "Pause 保留同一 job 并可恢复；Cancel 在最后 checkpoint 持久化后才发布 cancelled；未开始 0/N 排队项可不生成恢复提示",
+            "backgroundTaskInterrupted 审计以结构化非原文字段包含真实 action、resumePoint、userChoiceOnRestart 和队列接管结果",
             "双设备 no-fixture journey 与无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-02T21:45:10Z",
-          "notes": "Created by the 4.0c reasonableness review. Production currently reads ProgressActor rows but Continue/Restart intentionally returns an unavailable error because no task reconstruction/launcher boundary is connected; prompt fixtures cannot satisfy US-SYS-001 AC-3/AC-4. Automatically promoted from backlog to ready after dependency 4.0c completed."
+          "last_updated": "2026-09-04T19:44:34Z",
+          "notes": "Created by the 4.0c reasonableness review. The 2026-09-04 reasonableness review corrected unsafe pseudo-atomic enqueue semantics and defined exact task identity, bounded/versioned descriptors, current authorization, ownership, idempotence, pause/cancel, multi-record, L2 and audit boundaries. Human confirmed implementation at 2026-09-04T18:42:36Z. Task 4.0g now provides TaskRecoveryRegistry + TaskRecoveryCoordinator from AppComposition; preserves unknown raw task types; validates bounded SHA-256 resume descriptors; preserves Continue checkpoints; performs transactional Restart reset before separately observable enqueue; excludes queue-owned records; serializes duplicate attempts; revalidates current PrivacyCheckpoint; stores structured recovery audit fields; retains active jobs during pause; waits for cooperative cancellation checkpoint persistence; wires production ResumeProgress startup detection and recovering state; and registers PhotoKit photo ingestion as a no-plaintext production reconstruction path. Verification: TaskResumeProductionTests 10/10, ProductionIngestionTests 24/24, ResumeProgressPrompt + BackgroundTaskPanel + BackgroundTaskAudit related regressions 42/42, SwiftLint --strict --no-cache 0 violations. The same no-fixture build launched and remained running on iPhone 17 Pro iOS 26.5 and iPhone 16 Pro iOS 18.2. XcodeBuildMCP subsequently prepared the same deterministic resume-progress-pending visual state on both devices; installed executable SHA-256 matched on both devices. Human approved the 4.0g dual-device Live Simulator Review at 2026-09-04T19:32:08Z. Structured evidence: UIAutomation/Artifacts/manifests/4.0g-task-recovery-live-sim-review.json; visualMediaCaptured=false. XcodeBuildMCP runtime accessibility snapshots exposed only the application root and were not treated as semantic proof. commit-pr-echo preflight passed at 2026-09-04T19:41:22Z: branch feature/task-recovery-US-SYS-001 was unique on origin, SwiftLint reported zero violations across 89 files, the focused TaskResumeProductionTests passed 10/10 serially on iPhone 17 Pro, all affected Actor/Pipeline watermarks were present, and the UI delivery state was accepted. The initial sandboxed GitHub check produced a network-isolation false negative; an escalated read-only check confirmed the existing logan-suu keyring authentication and repo scope are valid."
         },
         {
           "id": "4.0h",
@@ -3930,6 +3943,42 @@
         "UIAutomation/Fixtures/awakening-settings/awakening-settings-all-disabled.json",
         "UIAutomation/Fixtures/awakening-settings/awakening-settings-no-permissions.json",
         "UIAutomation/Fixtures/awakening-settings/awakening-settings-unavailable.json"
+      ]
+    },
+    {
+      "id": "DOC-20260904-4-0G-REASONABLENESS",
+      "status": "resolved",
+      "detected_at": "2026-09-04T18:29:45Z",
+      "resolved_at": "2026-09-04T18:29:45Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "exact-id-two-phase-recovery-current-policy-idempotent-queue-ownership",
+      "decision": "Retain the 4.0g production recovery direction while replacing the impossible cross-actor atomic restart claim with a SQLite checkpoint-replacement phase followed by separately observable queue acceptance. Require exact taskId recovery, no-overwrite Continue, raw unknown type preservation, complete same-type record visibility, current-session queue ownership exclusion, bounded versioned resumeData, current-policy PrivacyCheckpoint revalidation, one recovery attempt per taskId, and truthful pause/cancel terminal semantics.",
+      "reason": "The prior documents allowed Restart to delete the only checkpoint before an enqueue that cannot share its SQLite transaction, while the current TaskQueueActor enqueue resets every job to index 0. ProgressActor silently drops unknown raw task types, ResumeProgress selects only the newest row per taskType and can mistake current-session active rows for orphaned work. The documents also omitted authorization changes across relaunch, duplicate recovery attempts, and the fact that the current pause path throws away the in-memory job.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/架构设计文档.md",
+        "docs/02-architecture/数据流全链路技术说明文档.md",
+        "docs/03-implementation/开发避坑与关键注意点手册.md",
+        "docs/decisions/ADR-011-task-progress-boundary.md",
+        "docs/ui/architecture.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/instances/resume-progress-surface.json",
+        "UIAutomation/Contracts/instances/resume-progress-action-continue.json",
+        "UIAutomation/Contracts/instances/resume-progress-action-restart.json",
+        "UIAutomation/Contracts/instances/resume-progress-action-retry.json",
+        "UIAutomation/Contracts/instances/resume-progress-action-start.json",
+        "UIAutomation/Contracts/instances/resume-progress-state-prompt.json",
+        "UIAutomation/Contracts/instances/resume-progress-state-recovering.json",
+        "UIAutomation/Contracts/instances/resume-progress-state-error.json",
+        "UIAutomation/Contracts/instances/resume-progress-state-none.json",
+        "UIAutomation/Contracts/instances/resume-progress-state-resumed.json",
+        "UIAutomation/Contracts/instances/resume-progress-state-restarted.json",
+        "UIAutomation/Contracts/instances/resume-progress-journey-basic.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/deferred-items.json",
+        "docs/05-planning/task-status.json"
       ]
     }
   ],

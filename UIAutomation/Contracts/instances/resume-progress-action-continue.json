@@ -3,7 +3,7 @@
   "actionId": "prompt.continue",
   "source": "user",
   "targetIntent": "ResumeProgressViewModel.continueTask()",
-  "expectedOutcome": "A registered production launcher validates taskType/resumeData and re-enqueues the interrupted task from lastProcessedIndex; missing or stale launchers produce an L2 error and never dismiss as success (US-SYS-001 AC-3)",
+  "expectedOutcome": "A registered allow-list launcher validates exact taskId, raw taskType, bounded versioned resumeData and current authorization, then re-enqueues without overwriting lastProcessedIndex; only queue acceptance publishes resumed, while any pre-enqueue failure retains the record and shows L2 (US-SYS-001 AC-3)",
   "requiresConfirmation": false,
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

@@ -3,7 +3,7 @@
   "actionId": "task.start",
   "source": "system",
   "targetIntent": "ResumeProgressViewModel.checkForPendingProgress(taskType:)",
-  "expectedOutcome": "Host task start triggers a ProgressActor pending-progress check; transitions to prompt (pending found) / none (no pending) / error (L2)",
+  "expectedOutcome": "Host task start asks the recovery coordinator for orphaned records, excluding current-session queue-owned taskIds; every exact matching taskId remains visible, and raw unknown types transition to retained L2 instead of disappearing",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -3,7 +3,7 @@
   "actionId": "error.retry",
   "source": "user",
   "targetIntent": "ResumeProgressViewModel.retry()",
-  "expectedOutcome": "Re-run the pending-progress check for the task type after an L2 load failure; transition to prompt/none on success",
+  "expectedOutcome": "Re-read the exact taskId/raw taskType record and retry launcher validation or enqueue only after explicit user action; retained progress must not be silently replaced",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

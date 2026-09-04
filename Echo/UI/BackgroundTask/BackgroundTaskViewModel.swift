@@ -52,6 +52,7 @@ struct BackgroundTaskModel: Identifiable, Sendable, Equatable {
         case .dataSourceSync: return "Syncing photos"
         case .fullIndex:      return "Building vector index"
         case .modelLoad:      return "Loading AI model"
+        case .unknown:        return "Unsupported saved task"
         }
     }
 
@@ -65,6 +66,7 @@ struct BackgroundTaskModel: Identifiable, Sendable, Equatable {
         case .dataSourceSync: return "arrow.triangle.2.circlepath"
         case .fullIndex:      return "cube.box.fill"
         case .modelLoad:      return "cpu"
+        case .unknown:        return "exclamationmark.triangle"
         }
     }
 
@@ -272,12 +274,33 @@ final class BackgroundTaskViewModel {
         }
         let resumePoint = tasks[idx].processedCount
         if let taskQueue {
-            Task { await taskQueue.cancel(taskId: taskId) }
+            pendingCancelTaskId = nil
+            Task { [weak self] in
+                await taskQueue.cancel(taskId: taskId)
+                guard let self,
+                      let currentIndex = self.tasks.firstIndex(where: { $0.taskId == taskId }) else {
+                    return
+                }
+                self.tasks[currentIndex].status = .cancelled
+                self.tasks.remove(at: currentIndex)
+                self.writeAudit(
+                    event: .backgroundTaskInterrupted,
+                    action: "cancel",
+                    resumePoint: resumePoint,
+                    outcome: "cancelled"
+                )
+            }
+            return
         }
         tasks[idx].status = .cancelled
         tasks.remove(at: idx)
         pendingCancelTaskId = nil
-        writeAudit(event: .backgroundTaskInterrupted, action: "cancel", resumePoint: resumePoint)
+        writeAudit(
+            event: .backgroundTaskInterrupted,
+            action: "cancel",
+            resumePoint: resumePoint,
+            outcome: "cancelled"
+        )
     }
 
     func dismissCancelConfirmation() {
@@ -286,7 +309,12 @@ final class BackgroundTaskViewModel {
 
     // MARK: - Audit (US-SYS-001 AC-7)
 
-    private func writeAudit(event: AuditEvent, action: String, resumePoint: Int?) {
+    private func writeAudit(
+        event: AuditEvent,
+        action: String,
+        resumePoint: Int?,
+        outcome: String? = nil
+    ) {
         guard let auditWriter else { return }
         Task {
             let policy = await auditWriter.getPolicy()
@@ -296,7 +324,9 @@ final class BackgroundTaskViewModel {
                 policyVersion: policy.policyVersion,
                 success: true,
                 sourceType: "action=\(action)",
-                content: "action=\(action)|resumePoint=\(resumePoint.map(String.init) ?? "none")|userChoiceOnRestart=pending"
+                action: action,
+                resumePoint: resumePoint,
+                outcome: outcome
             )
         }
     }

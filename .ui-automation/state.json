@@ -1,56 +1,47 @@
 {
-  "schemaVersion": "1.1.0",
-  "task_id": "3.12",
-  "runId": "3.12-bootstrap",
+  "schemaVersion": "1.2.0",
+  "task_id": "4.0g",
+  "runId": "ebb3770a-9563-4447-ae6c-d4baacf46d64",
+  "sourceRevision": "cde2f503cd480f3158e6b334be924aa9b47879be",
+  "sourceDirty": true,
   "repositoryRoot": "/Users/logansu/Documents/Dev/SwiftProjects/Echo",
-  "automation_phase": "awaiting_delivery_approval",
+  "automation_phase": "accepted",
   "automation_phase_status": "completed",
-  "delivery_decision": "accepted",
-  "delivery_approved_at": "2026-08-03T03:11:00+08:00",
-  "start_mode": "direct_fallback",
-  "started_at": "2026-08-03T03:00:00+08:00",
-  "completed_steps": [
-    "repo_discovery",
-    "materialize_structure",
-    "readiness_check",
-    "select_pilot",
-    "contract_drafting",
-    "design_profile_validation",
-    "ui_slice_generation",
-    "verification",
-    "awaiting_delivery_approval"
-  ],
-  "files_created": [
-    "Echo/UI/ViewModels/AwakeningSettingsViewModel.swift",
-    "Echo/UI/Views/AwakeningSettingsView.swift",
-    "Echo/UI/Views/AwakeningSettingsFixtureLoader.swift",
-    "EchoTests/Phase3/AwakeningDeliveryTests.swift",
-    "UIAutomation/Contracts/instances/awakening-settings-surface.json",
-    "UIAutomation/Contracts/instances/awakening-settings-state-loaded.json",
-    "UIAutomation/Contracts/instances/awakening-settings-state-loading.json",
-    "UIAutomation/Contracts/instances/awakening-settings-state-empty-permissions.json",
-    "UIAutomation/Contracts/instances/awakening-settings-state-unavailable.json"
-  ],
-  "files_modified": [
-    "docs/05-planning/task-status.json"
-  ],
+  "last_successful_command": "dual-device-human-live-simulator-review",
+  "command_exit_code": 0,
+  "command_timestamp": "2026-09-04T19:32:08Z",
   "design_profile": {
     "profile_id": "echo-memory-canvas",
-    "profile_version": "1.0.0",
+    "profile_version": "1.2.0",
     "base_profile": "apple-native",
+    "approval_record": {
+      "approved_by": "human-user",
+      "approved_at": "2026-09-04",
+      "source": "dual-device Live Simulator Review"
+    },
     "surface_family": "task",
-    "layout_mode": "form",
-    "masonry": "forbidden"
+    "layout_mode": "alert"
   },
-  "xcode": {
-    "version": "26.5",
-    "build_version": "17F42"
+  "contracts": {
+    "surface_id": "resume-progress-prompt",
+    "state_id": "prompt",
+    "action_ids": ["task.start", "prompt.continue", "prompt.restart", "error.retry"],
+    "journey_id": "resume-progress-basic",
+    "fixture_ids": ["resume-progress-pending", "resume-progress-none", "resume-progress-error"],
+    "content_hash": "4747ff302925c8f8dfb9ec30f6bc56329f05e8ed6eeb78682629f0daa38d5e9b"
   },
-  "mcpbridge": {
-    "selected_as_owner": false
+  "policies_hash": "f16090944e4af1937eb4805ed2aacfa06a89cf0258e820faab599d21e0d01c30",
+  "artifacts": {
+    "manifest_path": "UIAutomation/Artifacts/manifests/4.0g-task-recovery-live-sim-review.json",
+    "build_log_path": "/Users/logansu/Library/Developer/XcodeBuildMCP/workspaces/Echo-534d69257a8a/logs/build_run_sim_2026-09-04T19-16-48-007Z_pid17148_9e66a2b6.log",
+    "accessibility_tree_path": "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json",
+    "content_hashes": {
+      "installed_executable_both_devices": "0831e00ac994d6b062aa5acaa04b21a764d6afd84e4cc157a7beead98eb45ef0",
+      "acceptance_policy": "f16090944e4af1937eb4805ed2aacfa06a89cf0258e820faab599d21e0d01c30"
+    }
   },
   "simulator_owner": {
-    "owner_type": "cli_xctest",
+    "owner_type": "xcodebuild_mcp",
     "devices": [
       {
         "role": "primary",
@@ -64,12 +55,45 @@
         "device_udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D",
         "runtime": "iOS 18.2"
       }
-    ]
+    ],
+    "surface_id": "resume-progress-prompt",
+    "state_id": "prompt",
+    "fixture_id": "resume-progress-pending"
   },
-  "test_results": {
-    "unit_tests_passed": 22,
-    "build": "SUCCEEDED"
+  "xcode": {
+    "version": "26.5",
+    "build_version": "17F42",
+    "sdk": "iOS Simulator",
+    "runtime": "iOS 26.5 / iOS 18.2"
   },
   "blockers": [],
-  "last_updated": "2026-08-03T03:11:00+08:00"
+  "delivery_approval": {
+    "approved": true,
+    "approved_by": "human-user",
+    "approved_at": "2026-09-04T19:32:08Z"
+  },
+  "completed_steps": ["verification", "awaiting_delivery_approval", "accepted"],
+  "files_created": [
+    "Echo/Core/Actors/TaskRecoveryCoordinator.swift",
+    "Echo/Core/Models/TaskRecovery.swift",
+    "EchoTests/Phase4/4.0g_TaskResumeProductionTests.swift",
+    "UIAutomation/Contracts/instances/resume-progress-state-recovering.json",
+    "UIAutomation/Artifacts/manifests/4.0g-task-recovery-live-sim-review.json"
+  ],
+  "files_modified": [
+    "Echo/App/AppComposition.swift",
+    "Echo/App/AppDelegate.swift",
+    "Echo/Core/Actors/ProgressActor.swift",
+    "Echo/Core/Actors/TaskQueueActor.swift",
+    "Echo/UI/Home/HomeView.swift",
+    "Echo/UI/ResumeProgress/ResumeProgressPromptView.swift",
+    "Echo/UI/ResumeProgress/ResumeProgressViewModel.swift",
+    "docs/05-planning/task-status.json"
+  ],
+  "test_results": {
+    "unit_tests_passed": 25,
+    "build": "SUCCEEDED",
+    "unverified": false
+  },
+  "last_updated": "2026-09-04T19:32:08Z"
 }

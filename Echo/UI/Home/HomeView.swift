@@ -123,7 +123,10 @@ struct HomeView: View {
     )
 
     /// 断点续传恢复提示 ViewModel — Live Sim Review fixture 注入 (Task 3.7)
-    @State private var resumeProgressViewModel = ResumeProgressViewModel(progressActor: .shared)
+    @State private var resumeProgressViewModel = ResumeProgressViewModel(
+        progressActor: .shared,
+        recoveryCoordinator: AppComposition.shared.taskRecoveryCoordinator
+    )
 
     /// 首次出现标记 — 控制 fixture 注入仅执行一次
     @State private var hasHandledLaunchArguments = false
@@ -271,8 +274,12 @@ struct HomeView: View {
         guard !hasHandledLaunchArguments else { return }
         hasHandledLaunchArguments = true
         #if DEBUG
-        handleLaunchArguments()
+        if ProcessInfo.processInfo.arguments.contains("-ui-fixture") {
+            handleLaunchArguments()
+            return
+        }
         #endif
+        resumeProgressViewModel.checkForPendingProgress()
     }
 
     #if DEBUG

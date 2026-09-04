@@ -231,10 +231,16 @@ struct ProductionIngestionTests {
         let queue = TaskQueueActor(progressActor: progress)
 
         let started = expectationSignal()
+        let resumeData = try TaskResumeDescriptor(
+            operation: .sync,
+            sourceTypes: ["photo"],
+            payload: Data("cancel-job".utf8)
+        ).encoded()
         let job = TaskQueueActor.QueuedJob(
             taskId: "cancel-job",
             taskType: .dataSourceSync,
-            totalCount: 10
+            totalCount: 10,
+            resumeData: resumeData
         ) { context in
             await started.signal()
             try await context.report(processedIndex: 3, lastProcessedId: "x")

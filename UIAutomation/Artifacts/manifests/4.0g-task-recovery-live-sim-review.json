@@ -1,0 +1,64 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/state/v1",
+  "runId": "ebb3770a-9563-4447-ae6c-d4baacf46d64",
+  "task_id": "4.0g",
+  "actor": "codex-agent",
+  "timestamp": "2026-09-04T19:32:08Z",
+  "sourceRevision": "cde2f503cd480f3158e6b334be924aa9b47879be",
+  "sourceDirty": true,
+  "surfaceId": "resume-progress-prompt",
+  "surfaceFamily": "task",
+  "stateId": "prompt",
+  "journeyId": "resume-progress-basic",
+  "fixtureId": "resume-progress-pending",
+  "designProfileId": "echo-memory-canvas",
+  "layoutMode": "alert",
+  "masonryEnabled": false,
+  "launchArguments": ["-ui-language", "zh-Hans", "-ui-skip-consent", "-ui-fixture", "resume-progress-pending"],
+  "reviewBoundary": {
+    "visualStatePurpose": "Deterministic dual-device presentation of the resume prompt for human visual approval",
+    "fixtureUsedForProductionEvidence": false,
+    "productionBehaviorEvidence": "4.0g focused no-fixture task-reconstruction tests and production composition wiring",
+    "runtimeAccessibilitySnapshot": "XcodeBuildMCP returned only the application root on both devices; it was not treated as semantic proof",
+    "historicalAccessibilityContract": "UIAutomation/Artifacts/accessibility/resume-progress-prompt-axtree.json"
+  },
+  "dualDeviceReview": [
+    {
+      "role": "primary",
+      "device": "iPhone 17 Pro",
+      "udid": "2789B5D1-D292-4144-A66B-649CE2DF32EC",
+      "runtime": "iOS 26.5",
+      "processId": 65727,
+      "installedExecutableSha256": "0831e00ac994d6b062aa5acaa04b21a764d6afd84e4cc157a7beead98eb45ef0"
+    },
+    {
+      "role": "minimum_version",
+      "device": "iPhone 16 Pro",
+      "udid": "F3BF1718-247D-4CB2-AAAF-F7738514B14D",
+      "runtime": "iOS 18.2",
+      "processId": 66008,
+      "installedExecutableSha256": "0831e00ac994d6b062aa5acaa04b21a764d6afd84e4cc157a7beead98eb45ef0"
+    }
+  ],
+  "sameBuildArtifactVerified": true,
+  "humanApproval": {
+    "approved": true,
+    "approvedBy": "human-user",
+    "approvedAt": "2026-09-04T19:32:08Z",
+    "verbatimDecision": "批准 4.0g 双设备 Live Simulator Review"
+  },
+  "verification": {
+    "build": "SUCCEEDED",
+    "focusedTaskAndPromptTests": "25/25 passed",
+    "productionIngestionRegression": "24/24 passed",
+    "relatedBackgroundTaskRegression": "42/42 passed",
+    "taskBalancedCanvasTests": "6/6 passed",
+    "swiftlint": "0 violations"
+  },
+  "contractHashes": {
+    "resumeProgressSurface": "4747ff302925c8f8dfb9ec30f6bc56329f05e8ed6eeb78682629f0daa38d5e9b",
+    "acceptancePolicy": "f16090944e4af1937eb4805ed2aacfa06a89cf0258e820faab599d21e0d01c30"
+  },
+  "visualMediaCaptured": false,
+  "result": "accepted"
+}

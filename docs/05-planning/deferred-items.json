@@ -498,10 +498,10 @@
       "title": "ResumeProgress can read saved progress but cannot reconstruct and relaunch production tasks",
       "severity": "🟡",
       "location": "Echo/UI/ResumeProgress/ResumeProgressViewModel.swift:106-240; Echo/UI/Home/HomeView.swift:81",
-      "reason": "2026-09-02 recheck: Home now injects ProgressActor.shared, so pending rows are loaded from production SQLite. However continueTask()/restartTask() intentionally return an L2 unavailable state for non-fixture progress because no composition-owned task reconstruction/launcher boundary exists. The original wiring defect is partially resolved, but US-SYS-001 AC-3/AC-4 production recovery remains incomplete.",
+      "reason": "2026-09-04 reasonableness recheck: Home now injects ProgressActor.shared, so pending rows are loaded from production SQLite. However continueTask()/restartTask() intentionally return an L2 unavailable state for non-fixture progress because no composition-owned task reconstruction/launcher boundary exists. Review also confirmed that current enqueue would overwrite a resumed checkpoint with index 0, raw unknown task types are silently filtered, same-type records are collapsed to the newest row, and pause currently terminates the job instead of retaining it. US-SYS-001 AC-3/AC-4 therefore remain incomplete and are explicitly owned by revised task 4.0g.",
       "defer_to": "Task 4.0g production task reconstruction and relaunch boundary",
       "deferred_at": "2026-08-02",
-      "last_checked_at": "2026-09-02T19:10:59Z",
+      "last_checked_at": "2026-09-04T18:29:45Z",
       "owners": [
         "iOS"
       ],
@@ -511,10 +511,13 @@
       ],
       "acceptance_evidence": [
         "no-fixture Continue/Restart through a registered task launcher across process relaunch",
-        "accurate resume point, transactional restart reset, completion cleanup and userChoiceOnRestart audit"
+        "accurate resume point without enqueue overwrite; transactional restart checkpoint replacement followed by separately observable enqueue",
+        "raw unknown/multiple same-type/current-session ownership handling, current-authorization revalidation, idempotent recovery, pause/cancel race coverage and structured userChoiceOnRestart audit"
       ],
-      "tracking_status": "partial",
-      "recheck_trigger": "4.0g review"
+      "tracking_status": "resolved",
+      "recheck_trigger": "4.0g review",
+      "resolved_at": "2026-09-04T19:09:51Z",
+      "resolved_by": "Task 4.0g implemented a composition-owned typed recovery registry/coordinator, real ResumeProgress UI delegation, checkpoint-safe Continue/Restart, current-authorization validation, queue ownership/idempotence controls, structured audit fields, pause/cancel terminal semantics, and a production PhotoKit photo reconstruction path. Focused and related regression suites pass; dual no-fixture simulator launches succeeded."
     },
     {
       "id": "DEF-42-002",

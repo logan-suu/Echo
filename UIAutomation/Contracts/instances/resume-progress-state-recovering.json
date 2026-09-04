@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "recovering",
+  "surfaceId": "resume-progress-prompt",
+  "dataConditions": {
+    "recoveryAttempt": "one serialized attempt owns the exact taskId while launcher, descriptor, current authorization, checkpoint policy and queue acceptance are evaluated",
+    "terminalOutcomePublished": false
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "progressIndicator": "Visible non-success progress state",
+    "duplicateActionsDisabled": "Continue and Restart cannot be triggered again until the attempt resolves"
+  },
+  "version": "1.0.0"
+}

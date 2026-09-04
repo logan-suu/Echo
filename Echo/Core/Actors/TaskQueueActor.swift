@@ -3,7 +3,7 @@
 // 对应规格: docs/decisions/ADR-011-task-progress-boundary.md 决策-1 (串行契约)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-SYS-001 AC-3/4/6 (暂停/取消/断点续传)
 //            AGENTS.md §4.3 (TaskQueue 契约), §4.5 (断点续传契约)
-// 任务: 3F.5 - Production ingestion
+// 任务: 3F.5 - Production ingestion; 4.0g - Production task resume loop
 // AC 覆盖: 串行执行 (索引构建与数据同步互斥), 入队写入任务, 暂停 (挂起不释放资源),
 //          取消 (保存进度), 完成/最终失败后删除 TaskProgress, 取消保留进度供下次询问
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §4.3 (TaskQueue 契约), R-007 (禁止 unchecked Sendable)
@@ -28,7 +28,7 @@ import Foundation
 ///
 /// ## 协作式取消/暂停
 /// - 任务体通过 `Task.isCancelled` 感知取消；队列对激活任务调用 `Task.cancel()`
-/// - 任务体通过 `TaskContext.checkPaused()` 在检查点感知暂停并抛出 `.paused`
+/// - 任务体通过 `TaskContext.checkPaused()` 在检查点协作式挂起；恢复后由同一 job 继续
 public actor TaskQueueActor {
 
     // MARK: - Singleton
@@ -77,6 +77,12 @@ public actor TaskQueueActor {
         }
     }
 
+    /// Controls whether enqueue creates a new checkpoint or adopts one loaded after relaunch.
+    public enum ProgressPolicy: Sendable {
+        case createNew
+        case preserveExisting
+    }
+
     /// 任务上下文 — 提供进度上报与暂停/取消检查（跨 Actor 值类型）。
     public struct TaskContext: Sendable {
         nonisolated let taskId: String
@@ -92,11 +98,13 @@ public actor TaskQueueActor {
             )
         }
 
-        /// 检查暂停信号；暂停时抛出 `.paused`（任务在检查点协作式挂起）。
+        /// Wait at a cooperative safe point while paused, retaining this exact in-memory job.
         public func checkPaused() async throws {
-            if await pauseToken.isPaused {
-                throw TaskQueueError.paused(taskId: taskId)
+            while await pauseToken.isPaused {
+                try Task.checkCancellation()
+                try await Task.sleep(for: .milliseconds(20))
             }
+            try Task.checkCancellation()
         }
 
         /// 检查取消信号。
@@ -112,17 +120,31 @@ public actor TaskQueueActor {
     /// 入队一个任务并立即持久化初始进度；若队列空闲则开始串行执行。
     ///
     /// - Throws: `TaskQueueError.taskAlreadyQueued` 若同 taskId 已在队列/运行中
-    public func enqueue(_ job: QueuedJob) async throws {
+    public func enqueue(
+        _ job: QueuedJob,
+        progressPolicy: ProgressPolicy = .createNew
+    ) async throws {
         guard !queue.contains(where: { $0.taskId == job.taskId }), activeJobId != job.taskId else {
             throw TaskQueueError.taskAlreadyQueued(taskId: job.taskId)
         }
-        let progress = TaskProgress(
-            taskId: job.taskId,
-            taskType: job.taskType,
-            totalCount: job.totalCount,
-            resumeData: job.resumeData
-        )
-        try await progressActor.save(progress: progress)
+        switch progressPolicy {
+        case .createNew:
+            let progress = TaskProgress(
+                taskId: job.taskId,
+                taskType: job.taskType,
+                totalCount: job.totalCount,
+                resumeData: job.resumeData
+            )
+            try await progressActor.save(progress: progress)
+        case .preserveExisting:
+            guard let existing = try await progressActor.load(taskId: job.taskId) else {
+                throw TaskQueueError.missingCheckpoint(taskId: job.taskId)
+            }
+            guard existing.rawTaskType == job.taskType.rawValue,
+                  existing.totalCount == job.totalCount else {
+                throw TaskQueueError.checkpointMismatch(taskId: job.taskId)
+            }
+        }
         queue.append(job)
         if activeTask == nil {
             await startNext()
@@ -131,16 +153,24 @@ public actor TaskQueueActor {
 
     /// 取消指定任务：运行中 → 终止底层 Task（进度保留）；排队中 → 立即移除并恢复等待方。
     ///
-    /// 排队中的任务被取消时同步清理进度并 resume `enqueueAndWait` 等待方（CR-1），
-    /// 且不再留在 `pendingCount` 计数内（CR-21）。
+    /// 未启动的 0/N 任务取消时清理初始记录；已有恢复进度则保留 checkpoint。
+    /// 两者都会 resume `enqueueAndWait` 等待方并立即移出 `pendingCount`。
     public func cancel(taskId: String) async {
         if activeJobId == taskId {
             cancelledJobIds.insert(taskId)
             activeTask?.cancel()
+            // Do not publish cancellation to callers until the cooperative body has unwound
+            // and its final checkpoint write (if any) is complete.
+            while activeJobId == taskId {
+                await Task.yield()
+            }
         } else if let index = queue.firstIndex(where: { $0.taskId == taskId }) {
             let job = queue.remove(at: index)
             cancelledJobIds.remove(job.taskId)
-            _ = try? await progressActor.delete(taskId: job.taskId)
+            if let progress = try? await progressActor.load(taskId: job.taskId),
+               progress.lastProcessedIndex == 0 {
+                _ = try? await progressActor.delete(taskId: job.taskId)
+            }
             if let completion = completions.removeValue(forKey: job.taskId) {
                 completion.resume(throwing: TaskQueueError.cancelled(taskId: job.taskId))
             }
@@ -178,6 +208,14 @@ public actor TaskQueueActor {
     /// 队列中待处理任务数（不含运行中）。
     public func pendingCount() async -> Int {
         queue.count
+    }
+
+    /// IDs owned by this process, including running, queued, and paused jobs.
+    public func ownedTaskIDs() async -> Set<String> {
+        var ids = Set(queue.map(\.taskId))
+        if let activeJobId { ids.insert(activeJobId) }
+        ids.formUnion(pausedJobIds)
+        return ids
     }
 
     /// 是否暂停了指定任务。
@@ -263,6 +301,9 @@ public actor TaskQueueActor {
             _ = try? await progressActor.delete(taskId: job.taskId)
             return .completed
         } catch is CancellationError {
+            if job.resumeData == nil {
+                _ = try? await progressActor.delete(taskId: job.taskId)
+            }
             return .cancelled
         } catch TaskQueueError.paused {
             return .paused
@@ -322,6 +363,8 @@ public enum TaskQueueError: Error, LocalizedError, Sendable {
     case paused(taskId: String)
     /// 任务被取消
     case cancelled(taskId: String)
+    case missingCheckpoint(taskId: String)
+    case checkpointMismatch(taskId: String)
 
     public var errorDescription: String? {
         switch self {
@@ -331,6 +374,10 @@ public enum TaskQueueError: Error, LocalizedError, Sendable {
             return "Task paused: \(id)"
         case .cancelled(let id):
             return "Task cancelled: \(id)"
+        case .missingCheckpoint(let id):
+            return "Saved checkpoint missing: \(id)"
+        case .checkpointMismatch(let id):
+            return "Saved checkpoint does not match task: \(id)"
         }
     }
 }
