@@ -1,6 +1,6 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.43
+**版本**：v5.44
 **生效日期**：2026-09-04
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -1273,7 +1273,7 @@ ADR 存入 `docs/decisions/`，Agent 在遇到相关上下文时自动加载。
 
 ## 15. GitHub 自动化操作规约（Codex + `gh`）
 
-> **核心原则**：Codex 通过已认证的 `gh` CLI 自动化执行常规 GitHub 操作，但**合并操作必须由人类手动执行**，确保代码质量和安全性。若 `gh auth status` 无效，Agent 必须停止外部 GitHub 写操作并要求人类重新认证。
+> **核心原则**：Codex 通过已认证的 `gh` CLI 自动化执行常规 GitHub 操作，但**合并操作必须由人类手动执行**，确保代码质量和安全性。GitHub 认证采用双阶段核验：先运行只读 `gh auth status -h github.com`；若沙箱初检失败，结果只能标记为 `indeterminate`，必须自动在允许联网的只读环境中复核同一命令，并以 `gh api user --jq .login` 验证身份。只有联网复核明确返回 HTTP 401、`Bad credentials` 或等价认证拒绝时，才可判定凭据无效并要求重新认证。DNS、timeout、connection refused、API 不可达及其他连接失败均属于网络问题，禁止据此要求重新认证。认证核验禁止运行或输出 `gh auth token`，不得泄露 token、keyring 内容或其他凭据。
 
 ### 15.1 操作权限矩阵
 
@@ -1315,13 +1315,15 @@ Codex **在任何情况下都不得自动合并 PR**。人类执行合并前，�
 
 ### 15.4 异常处理
 
-| 异常场景            | Codex 行为                      | 人类介入方式                     |
-| ------------------- | ------------------------------ | -------------------------------- |
-| **CI 失败**         | 在 PR 中评论失败原因，等待修复 | 查看失败日志，指导修复           |
-| **合并冲突**        | 在 PR 中标记冲突，不自动解决   | 手动解决冲突或指示 Agent 处理    |
-| **权限不足**        | 记录错误，通知人类             | 运行 `gh auth login -h github.com` |
-| **reviewer 未响应** | 24 小时后自动提醒              | 手动联系 reviewer 或更换         |
-| **PR 长时间未合并** | 每周提醒一次                   | 评估是否合并或关闭               |
+| 异常场景                     | Codex 行为                                                         | 人类介入方式                       |
+| ---------------------------- | ----------------------------------------------------------------- | ---------------------------------- |
+| **CI 失败**                  | 在 PR 中评论失败原因，等待修复                                    | 查看失败日志，指导修复             |
+| **合并冲突**                 | 在 PR 中标记冲突，不自动解决                                      | 手动解决冲突或指示 Agent 处理      |
+| **沙箱认证初检失败**         | 标记 `indeterminate`，自动执行允许联网的只读双阶段复核             | 无                                 |
+| **GitHub/DNS/连接不可达**    | 标记 `connectivity`，停止当前外部写操作并报告网络问题              | 恢复网络后重试                     |
+| **联网复核明确认证拒绝**     | 仅在 HTTP 401、`Bad credentials` 或等价拒绝时标记 `invalid`        | 运行 `gh auth login -h github.com` |
+| **reviewer 未响应**          | 24 小时后自动提醒                                                  | 手动联系 reviewer 或更换           |
+| **PR 长时间未合并**          | 每周提醒一次                                                       | 评估是否合并或关闭                 |
 
 ### 15.5 PR Review 修复与外部 AI 审查工具评论审核（v5.15）
 
@@ -1546,3 +1548,4 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.41 | 2026-09-04 | 4.0f 规格合理性复审（ADR-018）：同意持久化成为权限硬门禁；PhotoKit 保持显式可跳过；通知与三类唤醒偏好解耦；地理围栏采用 When In Use → 用户二次确认 → Always 的分阶段授权；HealthKit 改为 request-completed + data-availability 诚实状态，禁止伪造读取授权。 | Codex |
 | v5.42 | 2026-09-04 | 4.0f PR 预审修订：补充 HealthKit 请求处理失败与查询失败的 L2/本地回退语义；移除会伪造 read grant 的兼容 API；要求偏好单列原子 upsert、定位授权请求合并等待同一 callback，并同步 3F.8 历史证据语义。 | Codex |
 | v5.43 | 2026-09-04 | 4.0g 规格合理性复审：修正 SQLite checkpoint 替换与跨 Actor 入队的伪原子性；明确 Continue 不覆盖、精确 taskId/多记录/raw taskType、当前会话排除、恢复时隐私重校验、幂等及 pause/cancel 终态契约。 | Codex |
+| v5.44 | 2026-09-04 | GitHub 认证误判防护：`gh` 认证改为沙箱初检与联网只读复核的双阶段判断；仅明确 401/Bad credentials 才要求重新认证，DNS、超时和 API 不可达统一归类为网络问题；同步 commit-pr-echo 的 Codex skill 与 OpenCode 回滚源。 | Codex |
