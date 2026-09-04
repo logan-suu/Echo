@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-03T23:31:13Z",
+  "last_updated": "2026-09-04T01:34:55Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2042,7 +2042,7 @@
       "integration_test": "pending",
       "integration_test_file": "EchoTests/Phase4/Phase4IntegrationTests.swift",
       "entry_gate": "3F.11",
-      "last_updated": "2026-09-01T07:04:28Z",
+      "last_updated": "2026-09-04T01:34:55Z",
       "tasks": [
         {
           "id": "4.0",
@@ -2475,7 +2475,7 @@
             "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "review",
+          "status": "done",
           "dependencies": [
             "4.0b"
           ],
@@ -2500,15 +2500,25 @@
             "local/external/manual merge 三种决议、userLocked 自动同步跳过与显式重新同步解除的生产证据",
             "memoryEdited 审计包含结构化 editedFields/reindexed/conflictResolvedWith，ID 与自由文本仅摘要"
           ],
-          "last_updated": "2026-09-04T01:07:20Z",
-          "notes": "2026-09-03 reasonableness review adopted ADR-017 and narrowed 4.0e to editable metadata, safe re-index publication and persistent conflict semantics. Implemented MemoryUserEdit and MemoryEditConflict relations, prepare-before-publish text vector/FTS/cache replacement, first-write timestamp backup, shared Detail/Sync MemoryEditActor wiring, local/external/merge resolution, persistent userLocked sync exclusion, and structured hash-only memoryEdited audit fields. Validation: 7 task tests passed, including the AC-3 production L4 sync-lock guard; 27 MemoryDetailViewModel and 12 SyncPipeline regression tests passed; SwiftLint completed with 0 violations. PR #73 first review accepted six actionable findings and fixed all of them: atomic merge publication, persisted-edit conflict protection, ordinary-save conflict guards, replayable external resolution, live sync-lock lookup, and cancellation mapping. Local review also fixed identical-vector compensation under a racing conflict. The second review identified a valid post-commit failure boundary: audit and a memoryEditPostCommit cleanup record now commit atomically with the edit; cleanup failure restores the durable vector checkpoint, retains PendingOperations for manual retry, and does not report the committed save as failed. The stale 4.0c documentation-date CI assertion was corrected. Post-second-review task suite passed 11/11; no review finding was deferred.",
+          "last_updated": "2026-09-04T01:34:55Z",
+          "notes": "2026-09-03 reasonableness review adopted ADR-017 and narrowed 4.0e to editable metadata, safe re-index publication and persistent conflict semantics. Implemented MemoryUserEdit and MemoryEditConflict relations, prepare-before-publish text vector/FTS/cache replacement, first-write timestamp backup, shared Detail/Sync MemoryEditActor wiring, local/external/merge resolution, persistent userLocked sync exclusion, and structured hash-only memoryEdited audit fields. Validation: 7 task tests passed, including the AC-3 production L4 sync-lock guard; 27 MemoryDetailViewModel and 12 SyncPipeline regression tests passed; SwiftLint completed with 0 violations. PR #73 first review accepted six actionable findings and fixed all of them: atomic merge publication, persisted-edit conflict protection, ordinary-save conflict guards, replayable external resolution, live sync-lock lookup, and cancellation mapping. Local review also fixed identical-vector compensation under a racing conflict. The second review identified a valid post-commit failure boundary: audit and a memoryEditPostCommit cleanup record now commit atomically with the edit; cleanup failure restores the durable vector checkpoint, retains PendingOperations for manual retry, and does not report the committed save as failed. The stale 4.0c documentation-date CI assertion was corrected. Post-second-review task suite passed 11/11; no review finding was deferred. PR #73 was human-merged by logan-suu at 2026-09-04T01:33:09Z with merge commit 43765951d9c4ed41bde5b5b24d2b5dfd8c1a9cad. Post-merge deferred-item scan found no PR #73 entries and no additional deferred work resolved by this merge.",
           "pr": {
             "number": 73,
             "url": "https://github.com/logan-suu/Echo/pull/73",
             "head": "feature/memory-edit-conflict-US-AWK-007",
             "base": "dev-1.0",
-            "created_at": "2026-09-03T23:30:44Z"
-          }
+            "created_at": "2026-09-03T23:30:44Z",
+            "merged_at": "2026-09-04T01:33:09Z",
+            "merge_commit": "43765951d9c4ed41bde5b5b24d2b5dfd8c1a9cad",
+            "merged_by": "logan-suu"
+          },
+          "status_transitions": {
+            "review_at": "2026-09-03T23:30:44Z",
+            "done_at": "2026-09-04T01:33:09Z"
+          },
+          "merged_at": "2026-09-04T01:33:09Z",
+          "merge_commit": "43765951d9c4ed41bde5b5b24d2b5dfd8c1a9cad",
+          "merged_by": "logan-suu"
         },
         {
           "id": "4.0f",
@@ -2640,7 +2650,7 @@
             "docs/05-planning/deferred-items.json",
             "docs/05-planning/task-status.json"
           ],
-          "status": "backlog",
+          "status": "ready",
           "dependencies": [
             "4.0e"
           ],
@@ -2663,8 +2673,8 @@
             "MemoryDeletionJournal(.planned) 写入后各终止点、未决 intent 资产存在性复验、从 .planned 进入 D-005 后各清理阶段故障、journal 重放、最终完整清除且 ExcludedAssets 不写",
             "memoryDeleted/cascadeDeleteFromOriginal 审计记录请求、完成和失败阶段，ID 仅摘要"
           ],
-          "last_updated": "2026-09-03T16:00:00Z",
-          "notes": "Created by ADR-017 because PhotoKit and Echo stores cannot form one atomic transaction, and Share Extension imports do not grant deletion authority over Notes, Voice Memos or third-party source content."
+          "last_updated": "2026-09-04T01:34:55Z",
+          "notes": "Created by ADR-017 because PhotoKit and Echo stores cannot form one atomic transaction, and Share Extension imports do not grant deletion authority over Notes, Voice Memos or third-party source content. Automatically promoted from backlog to ready after dependency 4.0e completed."
         },
         {
           "id": "4.0i",
