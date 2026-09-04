@@ -209,13 +209,11 @@ struct CrossAppHealthIntegrationTests {
 /// 确定性 HealthKit 存储（同 3F.8_AwakeningSystemAdaptersTests 内 StubHealthStore）
 final class CrossAppStubHealthStore: HealthStoreServing, @unchecked Sendable {
     var available = true
-    var authState: HealthAuthState = .authorized
     var samples: [MinimizedHealthSample] = []
     var fetchWindow: ClosedRange<Date>?
 
     func isHealthDataAvailable() -> Bool { available }
-    func currentAuthorizationState() async -> HealthAuthState { authState }
-    func requestAuthorization() async -> HealthAuthState { authState }
+    func requestReadAuthorization() async -> HealthAuthorizationRequestResult { .completed }
     func fetchHRVSamples(in window: ClosedRange<Date>?) async throws -> [MinimizedHealthSample] {
         fetchWindow = window
         if let window {

@@ -1,6 +1,6 @@
 # Echo · 回响：Codex 协作开发规约
 
-**版本**：v5.41
+**版本**：v5.42
 **生效日期**：2026-09-04
 **适用对象**：所有参与 Echo 项目开发的 AI Agent（Codex / OpenCode / Cursor / Claude）及人类开发者
 **优先级**：本规约优先于任何 Agent 的默认行为。当本规约与 Agent 默认行为冲突时，以本规约为准。  
@@ -1397,7 +1397,7 @@ Echo 固定采用用户已批准的 **`echo-memory-canvas`** 设计配置，扩�
 
 **4.0c Task 边界（2026-09-02 规格审查）**：Settings、Onboarding、AwakeningSettings、BackgroundTask、Degradation、ResumeProgress 继续使用 Apple 原生 Form/List/Sheet/Alert/confirmationDialog，并共享 `echo-memory-canvas` token、grouped container、status/action components 与 motion；masonry 始终禁止。4.0c 不得修改 Core、数据库 schema/迁移、权限请求时机、任务重建、迁移/删除/审计副作用，也不得以 fixture/Preview 成功态证明生产行为。生产依赖不存在时必须显示诚实不可用/错误。PIPL 同意/拒绝同层可见且同等醒目；迁移 UI 必须区分加密 Echo migration package 与被禁止的原始媒体导出。
 
-**4.0f 渐进式权限边界（2026-09-04 规格审查）**：PIPL 同意必须先持久化成功，随后才能显示或执行任何受保护数据请求；持久化失败停留在可重试错误态。Onboarding 只提供可跳过的 PhotoKit 连接，且仅 `Connect Photos` 可触发 `.readWrite` 请求；主动 `Not Now` 直接继续，不打开系统设置，系统返回 denied/restricted 后才提供用户发起的设置恢复。通知是独立投递 opt-in，不得由 geofence/emotion/anniversary 开关隐式请求，也不得作为生成 App 内唤醒卡的总开关。geofence 首次启用只请求 When In Use；需要 App 被终止后继续区域唤醒时，先解释能力差异，再由第二个明确动作请求 Always。HealthKit 只请求 HRV 读取；系统不披露读取授权的 granted/denied，UI 仅显示 not requested/request completed/unsupported 与可读样本结果，禁止使用 `authorizationStatus(for:)` 或授权 sheet 的 success 布尔伪造读取授权状态。4.0f 必须通过 `DatabaseManager` 管辖的 SQLite Actor 持久化三个唤醒偏好、通知投递意图与 HealthKit request lifecycle；系统授权快照始终从系统 adapter 读取，不得复制入库。所有 adapter 必须等待系统授权回调或读取最终快照后再更新 UI；打开 App 或设置页只读状态，不触发 prompt。
+**4.0f 渐进式权限边界（2026-09-04 规格审查）**：PIPL 同意必须先持久化成功，随后才能显示或执行任何受保护数据请求；持久化失败停留在可重试错误态。Onboarding 只提供可跳过的 PhotoKit 连接，且仅 `Connect Photos` 可触发 `.readWrite` 请求；主动 `Not Now` 直接继续，不打开系统设置，系统返回 denied/restricted 后才提供用户发起的设置恢复。通知是独立投递 opt-in，不得由 geofence/emotion/anniversary 开关隐式请求，也不得作为生成 App 内唤醒卡的总开关。geofence 首次启用只请求 When In Use；需要 App 被终止后继续区域唤醒时，先解释能力差异，再由第二个明确动作请求 Always。HealthKit 只请求 HRV 读取；系统不披露读取授权的 granted/denied，UI 仅显示 not requested/request completed/unsupported 与可读样本结果，禁止使用 `authorizationStatus(for:)` 或授权 sheet 的 success 布尔伪造读取授权状态。HealthKit 请求处理失败不得写入 `requestCompleted`，必须显示 L2 可重试错误；设置页样本查询失败同样显示 L2，情绪唤醒运行时查询失败则按本轮无可用健康样本进入既有本地回退。4.0f 必须通过 `DatabaseManager` 管辖的 SQLite Actor 持久化三个唤醒偏好、通知投递意图与 HealthKit request lifecycle；系统授权快照始终从系统 adapter 读取，不得复制入库。所有 adapter 必须等待系统授权回调或读取最终快照后再更新 UI；打开 App 或设置页只读状态，不触发 prompt。
 
 **UI Contract v1 兼容规则（2026-09-02）**：`.../v1` schema 表示 major version 兼容边界，允许 `1.x.y` instance 版本；minor/patch 变更不得破坏稳定 `surfaceId`/`stateId`/`actionId`/`journeyId` 引用。Journey 仅在终态观察步骤允许 `actionId: null`，其余步骤必须解析到真实 action contract。
 
@@ -1535,3 +1535,4 @@ $init-session-echo → $next-task-echo → $ui-bootstrap-build-echo <task-id>
 | v5.39 | 2026-09-02 | 4.0d 规格合理性复审：禁止与 R-001/R-005 冲突的 MusicKit Web Service 推荐，改为 Bundle 离线默认 + 显式 opt-in 后的设备非云端曲目匹配；将 userFeelings 物理存储明确为 MemoryFeeling 关系表；固定 next/record/jump 与 hash-only 审计语义；拆清 4.0d card→Focus 与 4.0e source-anchor 任务边界。 | Codex |
 | v5.40 | 2026-09-03 | 4.0e 规格合理性复审（ADR-017）：将巨型 Focus 闭环拆为 4.0e 编辑/冲突、4.0h 来源解析与 PhotoKit 删除 saga、4.0i 可验证引用与分享审计、4.0j 叙事报告调度；明确 Share Extension 来源不可删除、禁止 round-robin 引用、sharePresented 为结构化布尔、v1 描述为多行纯文本。 | Codex |
 | v5.41 | 2026-09-04 | 4.0f 规格合理性复审（ADR-018）：同意持久化成为权限硬门禁；PhotoKit 保持显式可跳过；通知与三类唤醒偏好解耦；地理围栏采用 When In Use → 用户二次确认 → Always 的分阶段授权；HealthKit 改为 request-completed + data-availability 诚实状态，禁止伪造读取授权。 | Codex |
+| v5.42 | 2026-09-04 | 4.0f PR 预审修订：补充 HealthKit 请求处理失败与查询失败的 L2/本地回退语义；移除会伪造 read grant 的兼容 API；要求偏好单列原子 upsert、定位授权请求合并等待同一 callback，并同步 3F.8 历史证据语义。 | Codex |

@@ -6230,6 +6230,18 @@
         "en-US": { "stringUnit": { "state": "translated", "value": "No readable HRV samples are available. Echo uses local query and feeling history instead." } },
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "当前没有可读取的 HRV 样本。Echo 将改用本地查询和感受历史。" } }
       }
+    },
+    "HealthKit could not complete the request. Please try again.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "HealthKit could not complete the request. Please try again." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "HealthKit 无法完成请求，请重试。" } }
+      }
+    },
+    "Notification services are unavailable.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Notification services are unavailable." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "通知服务当前不可用。" } }
+      }
     }
   },
   "version": "1.0"

@@ -2,7 +2,7 @@
 // File: AwakeningPreferenceActor.swift
 // Spec: docs/decisions/ADR-018-progressive-permission-orchestration.md
 // Task: 4.0f - Progressive permissions and first-run production flow
-// AC coverage: AC-3 persisted awakening preferences; AC-4 independent delivery opt-in;
+// AC coverage: AC-3 atomic persisted awakening preferences; AC-4 independent delivery opt-in;
 //              AC-6 HealthKit request lifecycle without inferred read authorization
 // Architecture: AGENTS.md §4.2 (actor isolation), §5.1 (SQLite through DatabaseManager)
 // Generated: 2026-09-04
@@ -89,20 +89,22 @@ public actor AwakeningPreferenceActor {
     }
 
     private func update(column: String, value: DBBinding) async throws {
-        let current = try await load()
         try await db.executeWrite(
             sql: """
-                INSERT OR REPLACE INTO AwakeningPreference (
+                INSERT INTO AwakeningPreference (
                     id, geofenceEnabled, emotionEnabled, anniversaryEnabled,
                     notificationDeliveryEnabled, healthRequestState, updatedAt
                 ) VALUES (1, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    \(column) = excluded.\(column),
+                    updatedAt = excluded.updatedAt
                 """,
             bindings: [
-                column == "geofenceEnabled" ? value : .int(current.geofenceEnabled ? 1 : 0),
-                column == "emotionEnabled" ? value : .int(current.emotionEnabled ? 1 : 0),
-                column == "anniversaryEnabled" ? value : .int(current.anniversaryEnabled ? 1 : 0),
-                column == "notificationDeliveryEnabled" ? value : .int(current.notificationDeliveryEnabled ? 1 : 0),
-                column == "healthRequestState" ? value : .text(current.healthRequestState.rawValue),
+                column == "geofenceEnabled" ? value : .int(0),
+                column == "emotionEnabled" ? value : .int(0),
+                column == "anniversaryEnabled" ? value : .int(0),
+                column == "notificationDeliveryEnabled" ? value : .int(0),
+                column == "healthRequestState" ? value : .text(HealthRequestState.notRequested.rawValue),
                 .double(Date().timeIntervalSince1970),
             ]
         )

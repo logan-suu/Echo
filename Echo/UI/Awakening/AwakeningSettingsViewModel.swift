@@ -4,7 +4,7 @@
 //       docs/decisions/ADR-018-progressive-permission-orchestration.md
 // Task: 4.0f - Progressive permissions and first-run production flow
 // AC coverage: AC-3 persisted preferences; AC-4 independent notifications;
-//              AC-5 staged location; AC-6 honest HealthKit request/data states
+//              AC-5 staged location; AC-6 honest HealthKit request/data states and retryable failures
 // Architecture: AGENTS.md §8.1 (@MainActor @Observable), §4.2 (value boundaries)
 // Generated: 2026-09-04
 // ==========================================
@@ -108,6 +108,7 @@ final class AwakeningSettingsViewModel {
     private let healthStore: (any HealthStoreServing)?
     private let notificationScheduler: (any NotificationScheduling)?
     private let preferenceStore: AwakeningPreferenceActor?
+    private var activeLoadID: UUID?
 
     init(
         fixtureLoader: AwakeningSettingsFixtureLoader = .shared,
@@ -124,21 +125,29 @@ final class AwakeningSettingsViewModel {
     }
 
     func loadSettings() async {
+        let loadID = UUID()
+        activeLoadID = loadID
         state = .loading
         do {
             if let data = try await loadLiveData() {
+                guard activeLoadID == loadID, !Task.isCancelled else { return }
                 isFixtureBacked = false
                 state = .completed(data)
+                activeLoadID = nil
                 return
             }
             try await Task.sleep(for: .milliseconds(300))
+            guard activeLoadID == loadID, !Task.isCancelled else { return }
             state = .completed(try fixtureLoader.loadSettings())
             isFixtureBacked = true
         } catch is CancellationError {
+            guard activeLoadID == loadID else { return }
             state = .cancelled
         } catch {
+            guard activeLoadID == loadID else { return }
             state = .error(.l2Recoverable(error.localizedDescription))
         }
+        if activeLoadID == loadID { activeLoadID = nil }
     }
 
     private func loadLiveData() async throws -> AwakeningSettingsData? {
@@ -234,6 +243,7 @@ final class AwakeningSettingsViewModel {
 
     func toggleGeofenceAwakening(_ enabled: Bool) async {
         guard case .completed(let current) = state else { return }
+        state = .loading
         if isFixtureBacked {
             state = .completed(copy(current, geofence: enabled))
             return
@@ -256,12 +266,14 @@ final class AwakeningSettingsViewModel {
 
     func requestBackgroundLocationPermission() async {
         guard case .completed = state, let locationProvider else { return }
+        state = .loading
         _ = await locationProvider.requestAlwaysAuthorization()
         await loadSettings()
     }
 
     func toggleEmotionAwakening(_ enabled: Bool) async {
         guard case .completed(let current) = state else { return }
+        state = .loading
         if isFixtureBacked {
             state = .completed(copy(current, emotion: enabled))
             return
@@ -280,8 +292,12 @@ final class AwakeningSettingsViewModel {
                     guard result == .completed else {
                         if result == .unsupported {
                             try await preferenceStore?.setHealthRequestState(.unsupported)
+                            await loadSettings()
+                        } else {
+                            state = .error(.l2Recoverable(
+                                "HealthKit could not complete the request. Please try again."
+                            ))
                         }
-                        await loadSettings()
                         return
                     }
                     try await preferenceStore?.setHealthRequestState(.requestCompleted)
@@ -296,6 +312,7 @@ final class AwakeningSettingsViewModel {
 
     func toggleAnniversaryAwakening(_ enabled: Bool) async {
         guard case .completed(let current) = state else { return }
+        state = .loading
         if isFixtureBacked {
             state = .completed(copy(current, anniversary: enabled))
             return
@@ -309,15 +326,22 @@ final class AwakeningSettingsViewModel {
     }
 
     func requestNotificationPermission() async {
+        state = .loading
         notificationAuthStep = .requesting
         guard let notificationScheduler else {
             notificationAuthStep = .denied
+            state = .error(.l3Blocking("Notification services are unavailable."))
             return
         }
         let auth = await notificationScheduler.requestAuthorization()
-        notificationAuthStep = auth.allowsDelivery ? .granted : .denied
-        try? await preferenceStore?.setNotificationDeliveryEnabled(auth.allowsDelivery)
-        await loadSettings()
+        do {
+            try await preferenceStore?.setNotificationDeliveryEnabled(auth.allowsDelivery)
+            notificationAuthStep = auth.allowsDelivery ? .granted : .denied
+            await loadSettings()
+        } catch {
+            notificationAuthStep = .denied
+            state = .error(.l2Recoverable(error.localizedDescription))
+        }
     }
 
     private func copy(
@@ -348,5 +372,8 @@ final class AwakeningSettingsViewModel {
 
     func showGeofenceDetails(_ geofence: GeofenceInfo) { showGeofenceDetail = geofence }
     func dismissGeofenceDetail() { showGeofenceDetail = nil }
-    func cancel() { state = .cancelled }
+    func cancel() {
+        activeLoadID = nil
+        state = .cancelled
+    }
 }

@@ -7,8 +7,7 @@
     "privacyConsent": "not persisted"
   },
   "allowedActions": [
-    "onboarding.retryConsent",
-    "onboarding.privacyDecline"
+    "onboarding.retryConsent"
   ],
   "expectedSemantics": {
     "error": "Consent could not be saved; protected-data access remains denied",

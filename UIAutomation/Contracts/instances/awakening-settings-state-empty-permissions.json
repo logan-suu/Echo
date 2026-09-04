@@ -20,7 +20,7 @@
     "notificationPermission": "not-determined",
     "locationPermission": "not-determined",
     "healthRequestState": "notRequested",
-    "healthDataState": "unavailable",
+    "healthDataState": "noReadableSamples",
     "isGeofenceEnabled": false,
     "isEmotionEnabled": false,
     "isAnniversaryEnabled": false,

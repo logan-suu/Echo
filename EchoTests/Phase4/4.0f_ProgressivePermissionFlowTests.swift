@@ -74,21 +74,27 @@ private actor ProgressiveHealthSpy: HealthStoreServing {
     var available = true
     var requestResult: HealthAuthorizationRequestResult = .completed
     var samples: [MinimizedHealthSample] = []
+    var shouldFailFetch = false
     private(set) var requestCount = 0
     private(set) var fetchCount = 0
 
     nonisolated func isHealthDataAvailable() -> Bool { true }
-    func currentAuthorizationState() async -> HealthAuthState { .notDetermined }
-    func requestAuthorization() async -> HealthAuthState { .notDetermined }
     func requestReadAuthorization() async -> HealthAuthorizationRequestResult {
         requestCount += 1
         return requestResult
     }
     func fetchHRVSamples(in window: ClosedRange<Date>?) async throws -> [MinimizedHealthSample] {
         fetchCount += 1
+        if shouldFailFetch { throw ProgressiveHealthError.queryFailed }
         return samples
     }
+    func setRequestResult(_ value: HealthAuthorizationRequestResult) { requestResult = value }
+    func setShouldFailFetch(_ value: Bool) { shouldFailFetch = value }
     func counts() -> (requests: Int, fetches: Int) { (requestCount, fetchCount) }
+}
+
+private enum ProgressiveHealthError: Error {
+    case queryFailed
 }
 
 @Suite("ProgressivePermissionFlowTests", .serialized)
@@ -187,6 +193,22 @@ struct ProgressivePermissionFlowTests {
         #expect(value.healthRequestState == .requestCompleted)
     }
 
+    @Test("AC-3: overlapping preference setters preserve unrelated columns")
+    func preferenceUpdatesAreAtomic() async throws {
+        let (db, _) = try await makeDatabase()
+        let preferences = AwakeningPreferenceActor(db: db)
+
+        async let geofence: Void = preferences.setGeofenceEnabled(true)
+        async let emotion: Void = preferences.setEmotionEnabled(true)
+        async let anniversary: Void = preferences.setAnniversaryEnabled(true)
+        _ = try await (geofence, emotion, anniversary)
+
+        let value = try await preferences.load()
+        #expect(value.geofenceEnabled)
+        #expect(value.emotionEnabled)
+        #expect(value.anniversaryEnabled)
+    }
+
     @Test("AC-3: full consent revocation purges awakening preferences")
     func consentRevocationPurgesPreferences() async throws {
         let (db, _) = try await makeDatabase()
@@ -249,6 +271,28 @@ struct ProgressivePermissionFlowTests {
         #expect(NotificationAuthState.ephemeral.allowsDelivery)
     }
 
+    @Test("AC-4: notification preference write failure is visible and not reported as granted")
+    func notificationPreferenceWriteFailureIsVisible() async throws {
+        let (db, _) = try await makeDatabase()
+        let preferences = AwakeningPreferenceActor(db: db)
+        let notifications = ProgressiveNotificationSpy()
+        notifications.state = .authorized
+        let viewModel = AwakeningSettingsViewModel(
+            notificationScheduler: notifications,
+            preferenceStore: preferences
+        )
+        await viewModel.loadSettings()
+        await db.close()
+
+        await viewModel.requestNotificationPermission()
+
+        guard case .error(.l2Recoverable) = viewModel.state else {
+            Issue.record("Expected a recoverable persistence error")
+            return
+        }
+        #expect(viewModel.notificationAuthStep == .denied)
+    }
+
     @Test("AC-5: location requests are staged by two explicit actions")
     func locationAuthorizationIsStaged() async throws {
         let (db, _) = try await makeDatabase()
@@ -267,6 +311,25 @@ struct ProgressivePermissionFlowTests {
 
         await viewModel.requestBackgroundLocationPermission()
         #expect(location.alwaysRequests == 1)
+    }
+
+    @Test("AC-5: overlapping location requests share one callback result")
+    func overlappingLocationRequestsAreCoalesced() async {
+        let waiter = LocationAuthorizationWaiter()
+        var requestCount = 0
+        let first = Task { @MainActor in
+            await waiter.wait { requestCount += 1 }
+        }
+        await Task.yield()
+        let second = Task { @MainActor in
+            await waiter.wait { requestCount += 1 }
+        }
+        await Task.yield()
+
+        #expect(requestCount == 1)
+        waiter.resolve(with: .authorizedWhenInUse)
+        #expect(await first.value == .authorizedWhenInUse)
+        #expect(await second.value == .authorizedWhenInUse)
     }
 
     @Test("AC-6: completed HealthKit request with no readable samples remains honest")
@@ -290,5 +353,59 @@ struct ProgressivePermissionFlowTests {
         #expect(data.healthDataState == .noReadableSamples)
         #expect(data.healthPermission.isGranted == false)
         #expect((try await preferences.load()).emotionEnabled)
+    }
+
+    @Test("AC-6: failed HealthKit request remains retryable and does not persist completion")
+    func failedHealthRequestIsVisible() async throws {
+        let (db, _) = try await makeDatabase()
+        let preferences = AwakeningPreferenceActor(db: db)
+        let health = ProgressiveHealthSpy()
+        await health.setRequestResult(.failed)
+        let viewModel = AwakeningSettingsViewModel(
+            healthStore: health,
+            preferenceStore: preferences
+        )
+        await viewModel.loadSettings()
+
+        await viewModel.toggleEmotionAwakening(true)
+
+        guard case .error(.l2Recoverable) = viewModel.state else {
+            Issue.record("Expected a recoverable HealthKit request error")
+            return
+        }
+        #expect((try await preferences.load()).healthRequestState == .notRequested)
+        #expect((try await preferences.load()).emotionEnabled == false)
+    }
+
+    @Test("AC-6: settings surfaces a failed HealthKit sample query as recoverable")
+    func failedHealthQueryIsVisibleInSettings() async throws {
+        let (db, _) = try await makeDatabase()
+        let preferences = AwakeningPreferenceActor(db: db)
+        try await preferences.setHealthRequestState(.requestCompleted)
+        let health = ProgressiveHealthSpy()
+        await health.setShouldFailFetch(true)
+        let viewModel = AwakeningSettingsViewModel(
+            healthStore: health,
+            preferenceStore: preferences
+        )
+
+        await viewModel.loadSettings()
+
+        guard case .error(.l2Recoverable) = viewModel.state else {
+            Issue.record("Expected a recoverable HealthKit query error")
+            return
+        }
+    }
+
+    @Test("Regression: cancelling settings load cannot publish a later completed state")
+    func cancelledLoadStaysCancelled() async {
+        let viewModel = AwakeningSettingsViewModel()
+        let load = Task { @MainActor in await viewModel.loadSettings() }
+        await Task.yield()
+
+        viewModel.cancel()
+        await load.value
+
+        #expect(viewModel.state == .cancelled)
     }
 }

@@ -73,13 +73,11 @@ final class StubNotificationScheduler: NotificationScheduling, @unchecked Sendab
 /// 确定性 HealthKit 存储 — 注入 HRV 样本（US-AWK-003 AC-1）
 final class StubHealthStore: HealthStoreServing, @unchecked Sendable {
     var available = true
-    var authState: HealthAuthState = .authorized
     var samples: [MinimizedHealthSample] = []
     var fetchWindow: ClosedRange<Date>?
 
     func isHealthDataAvailable() -> Bool { available }
-    func currentAuthorizationState() async -> HealthAuthState { authState }
-    func requestAuthorization() async -> HealthAuthState { authState }
+    func requestReadAuthorization() async -> HealthAuthorizationRequestResult { .completed }
     func fetchHRVSamples(in window: ClosedRange<Date>?) async throws -> [MinimizedHealthSample] {
         fetchWindow = window
         if let window {

@@ -21,7 +21,7 @@ Apple 的平台契约要求权限请求发生在用途明确的用户动作之�
 2. **PhotoKit 单一触发**：Onboarding 只展示 `Connect Photos` 与 `Not Now`。前者请求 `.readWrite`，后者零系统调用并直接继续。limited/full 按实际范围工作；denied/restricted 后才显示设置恢复。
 3. **通知独立投递 opt-in**：通知按钮只请求通知。geofence/emotion/anniversary 开关不隐式请求通知，也不因通知 denied 被统一关闭；未授权通知时仍可生成和展示 App 内唤醒卡。
 4. **定位分两阶段**：启用 geofence 时首次只请求 When In Use，并等待 delegate 回调。若用户选择终止态后台区域唤醒，在解释能力差异后由第二个明确动作请求 Always。任何页面加载都只读状态。
-5. **HealthKit 诚实状态**：仅请求 HRV read type。领域状态拆为 `requestState = notRequested | requestCompleted | unsupported` 和 `dataState = samplesAvailable | noReadableSamples | unavailable`。禁止把 `authorizationStatus(for:)` 或 request completion success 映射成 read granted/denied。无可读样本时使用既有 7 天查询字符串与感受回退。
+5. **HealthKit 诚实状态**：仅请求 HRV read type。领域状态拆为 `requestState = notRequested | requestCompleted | unsupported` 和 `dataState = samplesAvailable | noReadableSamples | unavailable`。禁止把 `authorizationStatus(for:)` 或 request completion success 映射成 read granted/denied。请求处理失败不持久化 `requestCompleted` 并显示 L2 可重试错误；设置页样本查询失败显示 L2，唤醒运行时查询失败按本轮无可用样本进入既有 7 天查询字符串与感受回退。
 6. **异步完成语义**：permission adapter 的 async 方法必须等待系统回调，或在 completion 后复读最终系统快照，再返回 Sendable 值类型。重复进入页面、重启和读取状态不触发请求。
 7. **偏好持久化**：新增 `AwakeningPreferenceActor`，通过 `DatabaseManager` 管辖的 SQLite 表保存三个唤醒偏好、通知投递意图与 HealthKit request lifecycle。系统 notification/location/HealthKit 授权快照不入库。重启恢复偏好只读数据库与系统快照，不调用 request API。
 8. **验证边界**：单元/集成测试使用调用 spy 与可控 delegate 验证顺序、次数、scope、持久化和回调完成；XCUITest 只验证可由 Simulator 稳定控制的真实系统 prompt 与返回状态。不得用 fixture 成功态证明生产授权。

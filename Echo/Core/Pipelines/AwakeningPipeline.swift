@@ -6,11 +6,13 @@
 //            docs/02-architecture/架构设计文档.md §2.1 (AwakeningPipeline)
 // 任务: 2.11 - AwakeningPipeline：地理围栏（US-AWK-001）
 //       2.12 - AwakeningPipeline：情绪唤醒（US-AWK-003）
+//       4.0f - HealthKit read-request outcome contract（US-AWK-003）
 // AC 覆盖: US-AWK-001 AC-1 ✅ (仅didEnter触发), AC-2 ✅ (离开重置, 永不重复推送),
 //          AC-3 🔮 Phase 3 (余弦≥0.7过滤已实现, GeoFilter依赖SearchPipeline Phase 3), AC-4 ✅ (回忆卡片生成接口),
 //          AC-5 ✅ (定位权限关闭静默禁用), AC-6 ✅ (审计记录.contextualAwakening)
 //          US-AWK-003 AC-1 ✅ (HealthKit心率变异推断情绪), AC-2 ✅ (文本情感分析+24h缓存+防抖30s),
 //          AC-3 ✅ (mood→tag映射), AC-4 ✅ (温和回忆卡片), AC-5 ✅ (审计.emotionalAwakening)
+//          4.0f AC-6 ✅ (request lifecycle + readable-sample state; no inferred read authorization)
 // PR Review fix: SwiftLint implicit_optional_initialization, Search L1 3 retries + backoff, i18n Phase 3 comment
 // PR Review fix: writeAwakeningAudit 移除冗余 validate(), 接收已有 checkpoint.policyVersion
 // CodeRabbit fix: PrivacyCheckpoint 移至 state read 之前, 新增 claimForProcessing() 原子操作, search 失败增加审计
@@ -353,8 +355,8 @@ public enum EmotionalAwakeningResult: Sendable, Equatable {
 public protocol HealthKitProvider: AnyObject, Sendable {
     /// 设备是否支持 HealthKit
     func isHealthDataAvailable() -> Bool
-    /// 请求 HealthKit 授权
-    func requestAuthorization() async -> Bool
+    /// Requests the HealthKit sheet without claiming an observable read grant.
+    func requestReadAuthorization() async -> HealthAuthorizationRequestResult
     /// 从 HRV 数据推断情绪状态。返回 nil 表示数据不足/不确定。
     func inferMoodFromHRV() async -> MoodState?
 }

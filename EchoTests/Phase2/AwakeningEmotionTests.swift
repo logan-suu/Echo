@@ -88,7 +88,9 @@ struct AwakeningEmotionTests {
         var isAuthorized = false
 
         nonisolated func isHealthDataAvailable() -> Bool { mockAvailable }
-        func requestAuthorization() async -> Bool { isAuthorized }
+        func requestReadAuthorization() async -> HealthAuthorizationRequestResult {
+            isAuthorized ? .completed : .failed
+        }
         func inferMoodFromHRV() async -> MoodState? { mockMood }
     }
 

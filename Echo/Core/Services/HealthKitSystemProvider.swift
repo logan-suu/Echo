@@ -8,7 +8,7 @@
 // AC 覆盖: US-AWK-003 AC-1 ✅ (心率变异性推断情绪, 经 HealthKitProvider 协议),
 //          US-SRC-010 AC-2 ✅ (read denial is represented by an empty query result),
 //          US-SRC-010 AC-3 ✅ (时间窗内最小化样本映射, 保留来源身份 sourceType="health"),
-//          4.0f AC-6 (request lifecycle + actual sample availability; no inferred read grant)
+//          4.0f AC-6 (request result + actual sample availability; no inferred read-grant API)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007 (禁止 unchecked Sendable 于业务代码;
 //           @preconcurrency import HealthKit + MainActor.run 系统框架边界同 PhotoKit 模式),
 //           R-001 (纯本地, 无网络)
@@ -36,15 +36,6 @@ public struct MinimizedHealthSample: Sendable, Equatable {
     }
 }
 
-// MARK: - Health Auth State
-
-/// HealthKit 授权状态（ADR-012 决策-2 全状态处理）
-public enum HealthAuthState: String, Sendable, Equatable {
-    case notDetermined
-    case denied
-    case authorized
-}
-
 /// Result of presenting the HealthKit read authorization sheet. A completed request does not
 /// reveal whether the user granted read access; HealthKit intentionally keeps that private.
 public nonisolated enum HealthAuthorizationRequestResult: Sendable, Equatable {
@@ -58,25 +49,14 @@ public nonisolated enum HealthAuthorizationRequestResult: Sendable, Equatable {
 /// HealthKit 存储服务协议 — 抽象 HKHealthStore 边界，支持测试注入 Fake。
 ///
 /// 生产实现 `RealHealthStore` 经 MainActor.run 访问 @MainActor HKHealthStore；
-/// 仅返回值类型（HealthAuthState / MinimizedHealthSample），HKQuantitySample 不跨边界。
+/// 仅返回值类型（HealthAuthorizationRequestResult / MinimizedHealthSample），HKQuantitySample 不跨边界。
 public protocol HealthStoreServing: Sendable {
     /// 设备是否支持 HealthKit
     nonisolated func isHealthDataAvailable() -> Bool
-    /// 当前授权状态
-    nonisolated func currentAuthorizationState() async -> HealthAuthState
-    /// 请求 HRV 读取授权
-    nonisolated func requestAuthorization() async -> HealthAuthState
     /// Requests HRV read access without claiming that read permission was granted or denied.
     nonisolated func requestReadAuthorization() async -> HealthAuthorizationRequestResult
     /// Reads HRV samples in the requested window; an empty result is the only observable no-data signal.
     nonisolated func fetchHRVSamples(in window: ClosedRange<Date>?) async throws -> [MinimizedHealthSample]
-}
-
-public extension HealthStoreServing {
-    nonisolated func requestReadAuthorization() async -> HealthAuthorizationRequestResult {
-        guard isHealthDataAvailable() else { return .unsupported }
-        return await requestAuthorization() == .authorized ? .completed : .failed
-    }
 }
 
 // MARK: - Real Health Store
@@ -92,16 +72,6 @@ public struct RealHealthStore: HealthStoreServing {
 
     public nonisolated func isHealthDataAvailable() -> Bool {
         HKHealthStore.isHealthDataAvailable()
-    }
-
-    public nonisolated func currentAuthorizationState() async -> HealthAuthState {
-        // HealthKit exposes share/write authorization here, not read authorization.
-        // Keep this compatibility API non-assertive; production UI uses request/data states.
-        .notDetermined
-    }
-
-    public nonisolated func requestAuthorization() async -> HealthAuthState {
-        await requestReadAuthorization() == .completed ? .authorized : .notDetermined
     }
 
     public nonisolated func requestReadAuthorization() async -> HealthAuthorizationRequestResult {
@@ -206,9 +176,9 @@ public final class HealthKitSystemProvider: HealthKitProvider, CrossAppSourcePro
         store.isHealthDataAvailable()
     }
 
-    /// 请求 HealthKit 授权
-    public nonisolated func requestAuthorization() async -> Bool {
-        await store.requestReadAuthorization() == .completed
+    /// Requests the HealthKit sheet and reports request processing without claiming read access.
+    public nonisolated func requestReadAuthorization() async -> HealthAuthorizationRequestResult {
+        await store.requestReadAuthorization()
     }
 
     /// 从 HRV 数据推断情绪状态（US-AWK-003 AC-1）。

@@ -15,6 +15,6 @@
     "isAnniversaryEnabled": false,
     "geofences": [],
     "healthRequestState": "notRequested",
-    "healthDataState": "unavailable"
+    "healthDataState": "noReadableSamples"
   }
 }
