@@ -173,7 +173,7 @@ final class AwakeningSettingsFixtureLoader: Sendable {
             geofences: [],
             lastDailyPushDate: nil,
             lastEmotionAnalysisDate: nil,
-            healthRequestState: .requestCompleted,
+            healthRequestState: .notRequested,
             healthDataState: .noReadableSamples
         )
     }

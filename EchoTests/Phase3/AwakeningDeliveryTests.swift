@@ -46,6 +46,8 @@ struct AwakeningSettingsViewModelTests {
 
         #expect(!data.healthPermission.isGranted)
         #expect(!data.isEmotionEnabled)
+        #expect(data.healthRequestState == .notRequested)
+        #expect(data.healthDataState == .noReadableSamples)
     }
 
     @Test("AC-1: emotion fixture is enabled when readable HealthKit samples exist")
