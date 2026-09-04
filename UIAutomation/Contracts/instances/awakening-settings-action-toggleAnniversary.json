@@ -3,7 +3,7 @@
   "actionId": "awakening.toggleAnniversary",
   "source": "user",
   "targetIntent": "AwakeningSettingsViewModel.toggleAnniversaryAwakening",
-  "expectedOutcome": "Anniversary awakening toggle flips; gated by notification authorization",
+  "expectedOutcome": "Toggle the persisted anniversary preference without requesting any system permission. Notification delivery remains a separate opt-in.",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -4,7 +4,7 @@
 //            docs/01-spec/用户故事与验收标准规格书.md → US-SRC-010 (跨 App 数据关联搜索),
 //            US-AWK-003 AC-1 (HealthKit 情绪推断)
 // 任务: 3F.8 - Awakening 与 system adapters（live HealthKit provider conformance → 3F.6 fusion）
-// AC 覆盖: US-SRC-010 AC-2 ✅ (denied HealthKit 来源不查询/不调用),
+// AC coverage: US-SRC-010 AC-2 (empty HealthKit samples return no source result),
 //          US-SRC-010 AC-3 ✅ (时间窗内最小化样本映射, 来源身份保留),
 //          US-SRC-010 AC-4 ✅ (结果标注 sourceType="health"),
 //          US-SRC-010 AC-5 ✅ (.crossAppSearch 审计实际授权源列表),
@@ -67,16 +67,15 @@ struct CrossAppHealthIntegrationTests {
         #expect(results.allSatisfy { $0.memoryId.uuidString != "00000000-0000-0000-0000-000000000000" })
     }
 
-    @Test("AC-2: denied HealthKit source returns empty — provider not queried")
-    func deniedHealthKitReturnsEmpty() async throws {
+    @Test("AC-2: no readable HealthKit samples returns an empty result")
+    func noReadableHealthKitSamplesReturnsEmpty() async throws {
         try await privacyActor.updatePolicy(UserPolicy(
             preferredLanguage: "zh-Hans",
             authorizedSourceTypes: ["health", "memory"],
             policyVersion: 2
         ))
         let store = CrossAppStubHealthStore()
-        store.authState = .denied
-        store.samples = [MinimizedHealthSample(timestamp: Date().timeIntervalSince1970, hrvValue: 70)]
+        store.samples = []
         let provider = HealthKitSystemProvider(store: store)
 
         let results = try await provider.search(
@@ -210,13 +209,11 @@ struct CrossAppHealthIntegrationTests {
 /// 确定性 HealthKit 存储（同 3F.8_AwakeningSystemAdaptersTests 内 StubHealthStore）
 final class CrossAppStubHealthStore: HealthStoreServing, @unchecked Sendable {
     var available = true
-    var authState: HealthAuthState = .authorized
     var samples: [MinimizedHealthSample] = []
     var fetchWindow: ClosedRange<Date>?
 
     func isHealthDataAvailable() -> Bool { available }
-    func currentAuthorizationState() async -> HealthAuthState { authState }
-    func requestAuthorization() async -> HealthAuthState { authState }
+    func requestReadAuthorization() async -> HealthAuthorizationRequestResult { .completed }
     func fetchHRVSamples(in window: ClosedRange<Date>?) async throws -> [MinimizedHealthSample] {
         fetchWindow = window
         if let window {

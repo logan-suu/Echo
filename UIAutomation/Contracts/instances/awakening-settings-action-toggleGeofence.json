@@ -3,7 +3,7 @@
   "actionId": "awakening.toggleGeofence",
   "source": "user",
   "targetIntent": "AwakeningSettingsViewModel.toggleGeofenceAwakening",
-  "expectedOutcome": "Geofence awakening toggle flips; persisted to system adapter",
+  "expectedOutcome": "Enabling with location notDetermined requests When In Use only and completes after the authorization callback; it never requests notifications. Background/terminated delivery requires a separate requestBackgroundLocation action.",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

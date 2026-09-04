@@ -1,20 +1,23 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
   "fixtureId": "awakening-unavailable",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "locale": "zh-Hans",
   "theme": "light",
   "dynamicTypeSize": "Large",
   "surfaceFamily": "task",
   "payload": {
     "state": "unavailable",
-    "notificationPermission": "denied-permanently",
-    "locationPermission": "not-granted",
-    "healthPermission": "not-granted",
-    "isGeofenceEnabled": false,
-    "isEmotionEnabled": false,
-    "isAnniversaryEnabled": false,
+    "notificationPermission": "denied",
+    "locationPermission": "authorizedWhenInUse",
+    "isGeofenceEnabled": true,
+    "isEmotionEnabled": true,
+    "isAnniversaryEnabled": true,
     "geofences": [],
-    "openSettingsButton": true
+    "openSettingsButton": true,
+    "healthRequestState": "requestCompleted",
+    "healthDataState": "noReadableSamples",
+    "systemDeliveryAvailable": false,
+    "inAppCardGenerationAvailable": true
   }
 }

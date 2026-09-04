@@ -22,7 +22,7 @@
 | **Phase 3F 执行计划**  | `05-planning/phase3f-execution-plan.md`           | Phase 3F 开发 Agent 执行指令与任务账本迁移契约    |
 | **Phase 3F 故事矩阵**  | `05-planning/phase3f-story-matrix.md`             | 66 个用户故事的 Phase 3F 归属矩阵                 |
 | **Phase 3F 证据索引**  | `05-planning/phase3f-evidence-index.md`           | Phase 3F 预合并证据索引                           |
-| **决策记录 (ADR)**     | `decisions/ADR-001~017`                            | SQLite/并发、Phase 3F、检索、唤醒卡、Focus 写入/来源/创作边界等决策 |
+| **决策记录 (ADR)**     | `decisions/ADR-001~018`                            | SQLite/并发、Phase 3F、检索、唤醒卡、Focus 写入/来源/创作、渐进式权限边界等决策 |
 | **疑难杂症问题**       | `06-troubleshooting/`                              | 架构性限制/难解问题的定位与根因分析（如照片文本搜索跨模态限制） |
 | **UI 文档路由**        | `ui/README.md`                                     | Phase 3 UI 设计配置、自动化工作流、架构边界、测试 |
 | **UI 设计风格**        | `ui/echo-memory-canvas-style.md`                   | 全 App 方案 B「平衡画布」、共享 profile/token/component、Discovery masonry 与 Focus/Task 同源表达 |
@@ -44,6 +44,7 @@
 | 技术选型理由与决策                        | `02-architecture/技术选型文档.md` §1~5                 |
 | 数据流程细节（检索/摄入/同步）            | `02-architecture/数据流全链路技术说明文档.md` §2~5     |
 | 首次体验与渐进式系统权限                  | `02-architecture/架构设计文档.md` §2.3.1 + `02-architecture/数据流全链路技术说明文档.md` §1.1 |
+| 渐进式权限状态与系统 API 边界            | `decisions/ADR-018-progressive-permission-orchestration.md` |
 | 跨进程任务重建与真实断点恢复              | `02-architecture/架构设计文档.md` §6.2 + `02-architecture/数据流全链路技术说明文档.md` §8.3 |
 | 跨语言检索实现                            | `03-implementation/双语言实现说明文档.md` §4           |
 | 双语言审计与监控                          | `03-implementation/双语言实现说明文档.md` §7           |

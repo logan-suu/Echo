@@ -3,7 +3,7 @@
   "actionId": "onboarding.permissionAllow",
   "source": "user",
   "targetIntent": "onboarding.allowPermission",
-  "expectedOutcome": "request PhotoKit authorization for the user-selected photo connection, then advance to language; never chain notification, location or HealthKit authorization",
+  "expectedOutcome": "After persisted consent, request PhotoKit .readWrite exactly once. authorized/limited advances; denied/restricted shows recovery and skip; never chains notification, location or HealthKit.",
   "requiresConfirmation": false,
   "version": "1.1.0"
 }

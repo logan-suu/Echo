@@ -150,10 +150,10 @@ struct OnboardingTests {
 
     // MARK: - Permission sequence (echo-memory-canvas §15.4)
 
-    @Test("Production onboarding owns the four real permission steps without loading a fixture")
+    @Test("Production onboarding owns only the contextual Photos permission step")
     func test_productionPermissionStepsAreAvailable() {
         let vm = OnboardingViewModel()
-        #expect(vm.permissionSteps.map(\.id) == ["photos", "notifications", "location", "health"])
+        #expect(vm.permissionSteps.map(\.id) == ["photos"])
         #expect(vm.privacySummary.contains("Local processing"))
     }
 
@@ -168,7 +168,7 @@ struct OnboardingTests {
         let settled = await awaitPermissionSettled(vm, from: 0)
 
         #expect(requester.requestedIDs == ["photos"])
-        #expect(settled == .permissions(1))
+        #expect(settled == .language)
     }
 
     @Test("Denied system permission enters the denied state instead of pretending success")
@@ -186,19 +186,13 @@ struct OnboardingTests {
         #expect(settled == .permissionDenied(0))
     }
 
-    @Test("Permission steps advance photos→notifications→location→health→language")
+    @Test("Permission sequence advances from Photos to language")
     func test_permissionSequenceAdvances() {
         let vm = OnboardingViewModel()
         vm.loadFixture("onboarding-permissions")
         #expect(vm.viewState == .permissions(0))
-        #expect(vm.permissionSteps.count == 4)
+        #expect(vm.permissionSteps.count == 1)
 
-        vm.allowPermission()
-        #expect(vm.viewState == .permissions(1))
-        vm.allowPermission()
-        #expect(vm.viewState == .permissions(2))
-        vm.allowPermission()
-        #expect(vm.viewState == .permissions(3))
         vm.allowPermission()
         #expect(vm.viewState == .language)
     }
@@ -231,12 +225,12 @@ struct OnboardingTests {
         #expect(vm.openSettingsRequested == true)
     }
 
-    @Test("Skip denied permission advances to next step")
+    @Test("Skip denied Photos permission advances to language")
     func test_skipDeniedPermission() {
         let vm = OnboardingViewModel()
         vm.loadFixture("onboarding-permission-denied")
         vm.skipPermission()
-        #expect(vm.viewState == .permissions(1))
+        #expect(vm.viewState == .language)
     }
 
     // MARK: - US-SYN-001 AC-2: Language selection
@@ -407,7 +401,7 @@ struct OnboardingTests {
         vm.loadFixture("onboarding-permissions")
         vm.reset()
         #expect(vm.viewState == .welcome)
-        #expect(vm.permissionSteps.count == 4)
+        #expect(vm.permissionSteps.count == 1)
         #expect(vm.selectedLanguage == nil)
     }
 
@@ -423,11 +417,12 @@ struct OnboardingTests {
         vm.loadFixture("onboarding-privacy-consent")
         vm.acceptPrivacy()
 
+        #expect(vm.viewState == .consentPersisting)
+        await vm.waitForConsentPersistence()
         #expect(vm.viewState == .permissions(0))
-        // 等待异步持久化收敛
+        // Wait for durable SQLite state using a fresh actor instance.
         let deadline = Date().addingTimeInterval(2)
         while Date() < deadline {
-            // 用全新实例验证 SQLite 已落盘（relaunch 语义，避免同实例内存态掩蔽）
             let fresh = ConsentStoreActor(db: db, privacyActor: PrivacyActor.shared)
             try await fresh.loadState()
             if await fresh.hasConsented() { break }
@@ -458,7 +453,7 @@ struct OnboardingTests {
         let vm = OnboardingViewModel()
         vm.start()
         #expect(vm.viewState == .privacyConsent)
-        #expect(vm.permissionSteps.count == 4)
+        #expect(vm.permissionSteps.count == 1)
 
         vm.acceptPrivacy()
 
@@ -470,7 +465,7 @@ struct OnboardingTests {
     func test_3f1_acceptPrivacy_nonEmptyPermissionSteps_advancesToPermissions() {
         let vm = OnboardingViewModel()
         vm.loadFixture("onboarding-privacy-consent")
-        #expect(vm.permissionSteps.count == 4)
+        #expect(vm.permissionSteps.count == 1)
 
         vm.acceptPrivacy()
 

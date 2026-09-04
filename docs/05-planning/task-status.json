@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "project": "Echo v4.6",
-  "last_updated": "2026-09-04T01:34:55Z",
+  "last_updated": "2026-09-04T16:08:31Z",
   "current_phase": "4",
   "phase_order": [
     "1",
@@ -2547,9 +2547,19 @@
             "UIAutomation/Contracts/schemas/state-v1.json",
             "UIAutomation/Contracts/schemas/action-v1.json",
             "UIAutomation/Contracts/schemas/journey-v1.json",
-            "docs/05-planning/task-status.json"
+            "docs/05-planning/task-status.json",
+            "docs/decisions/ADR-018-progressive-permission-orchestration.md",
+            "UIAutomation/Contracts/instances/onboarding-state-consent-persisting.json",
+            "UIAutomation/Contracts/instances/onboarding-state-consent-persist-error.json",
+            "UIAutomation/Contracts/instances/onboarding-action-retryConsent.json",
+            "UIAutomation/Contracts/instances/awakening-settings-action-requestBackgroundLocation.json",
+            "UIAutomation/Policies/acceptance-policy.json",
+            "UIAutomation/Fixtures/awakening-settings/awakening-settings-loaded.json",
+            "UIAutomation/Fixtures/awakening-settings/awakening-settings-no-permissions.json",
+            "UIAutomation/Fixtures/awakening-settings/awakening-settings-unavailable.json",
+            "UIAutomation/Fixtures/awakening-settings/awakening-settings-all-disabled.json"
           ],
-          "status": "ready",
+          "status": "review",
           "dependencies": [
             "4.0c"
           ],
@@ -2560,21 +2570,38 @@
             "Awakening"
           ],
           "implementation_constraints": [
-            "PIPL 同意先于任何受保护数据请求；同意/拒绝同层可见且同等醒目，不预选或诱导同意",
-            "PhotoKit 只在用户明确选择连接照片资料库后请求；拒绝或跳过不阻止使用 Share Extension 路径",
-            "notification/location/HealthKit 只由对应 Awakening 功能的显式 opt-in 按需触发，App 启动或打开设置页不得自动请求",
-            "权限状态来自系统 adapter；HealthKit denied 不得被伪装成可确定读取授权，撤权后 fail closed",
-            "不得新增权限种类、扩大 HealthKit 数据范围、循环催促或用自定义 UI 复制系统权限面板"
+            "ConsentStoreActor 持久化成功是任何受保护请求的硬门禁；失败停留在可重试错误态，禁止先推进 UI 再异步补写",
+            "Onboarding 仅 Connect Photos 请求 PhotoKit .readWrite；Not Now 零系统调用并直接继续；limited/full/denied/restricted 按真实状态处理",
+            "通知是独立投递 opt-in；geofence/emotion/anniversary 开关不得隐式请求通知，通知 denied 不得关闭 App 内卡片生成",
+            "geofence 首次启用只请求 When In Use 并等待 delegate；说明能力差异后，第二个明确动作才可请求 Always",
+            "HealthKit 仅请求 HRV read scope；状态只表达 notRequested/requestCompleted/unsupported 与 samplesAvailable/noReadableSamples，禁止伪造 read granted/denied",
+            "通过 DatabaseManager 管辖的 AwakeningPreferenceActor/SQLite 表持久化三个唤醒偏好、通知投递意图与 HealthKit request lifecycle；系统授权状态禁止入库",
+            "所有 permission adapter 等待回调或复读最终快照；App/页面启动只读状态，拒绝、跳过、重复进入与重启不自动请求",
+            "不得新增权限种类、扩大 HealthKit 数据范围、循环催促、把 fixture 当生产证据或用自定义 UI 复制系统权限面板"
           ],
           "acceptance_evidence": [
-            "无权限首次启动只出现 PIPL consent；未触发任何 PhotoKit/notification/location/HealthKit 系统请求",
-            "用户选择 Connect Photos 后才请求 PhotoKit，limited/full/denied/skip 与系统设置恢复路径可定位",
-            "geofence/emotion/anniversary 对应 opt-in 分别只请求其所需最小权限，关闭开关不触发请求",
-            "拒绝、撤权、重复进入与重启均无自动重复请求，已授权能力继续可用",
-            "双语、VoiceOver、Dynamic Type、Reduce Motion 与双设备无媒体 Live Simulator Review"
+            "PIPL consent 持久化完成前所有 protected request spy 均为 0；写入失败停留并可重试，成功后才出现 Photos 选择",
+            "Connect Photos 恰好请求一次 PhotoKit .readWrite；Not Now 为 0 调用；limited/full/denied/restricted 与用户发起的设置恢复路径均可定位",
+            "打开 AwakeningSettings 为 0 请求；通知、geofence、emotion、anniversary 四个动作分别只产生 notification、When In Use、HRV read、零系统权限调用",
+            "后台区域唤醒仅在 When In Use 成功后的第二个明确动作请求 Always，且两个 async 请求均在系统 callback 后完成",
+            "HealthKit 证据只断言 requestCompleted/unsupported 与 samplesAvailable/noReadableSamples；无样本走 7 天查询/感受回退，不出现 read granted/denied",
+            "唤醒偏好与 HealthKit request lifecycle 跨 ViewModel/重启恢复；恢复过程系统 request spy 为 0，系统授权快照始终来自 live adapter",
+            "通知 denied 仅停止系统投递，三个偏好与 App 内卡片仍可用；拒绝、撤权、重复进入与重启无自动 prompt",
+            "双语、VoiceOver、Dynamic Type、Reduce Motion、schema validation 与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-02T21:45:10Z",
-          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior. Automatically promoted from backlog to ready after dependency 4.0c completed."
+          "last_updated": "2026-09-04T16:08:31Z",
+          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior. Automatically promoted from backlog to ready after dependency 4.0c completed. 2026-09-04 reasonableness review (ADR-018) retained the progressive-permission direction but corrected four non-executable boundaries: persisted consent now gates protected requests; notification delivery is orthogonal to awakening preferences; geofence authorization is staged When In Use then separately confirmed Always; and HealthKit read authorization is represented by request lifecycle plus data availability rather than fabricated granted/denied. The review also requires adapters to await callbacks/final snapshots and adds contract states/actions for consent persistence and background-location elevation. Implementation completed on 2026-09-04: durable consent now hard-gates Photos; onboarding requests Photos only; awakening preferences and HealthKit request lifecycle persist in SQLite; notifications are independent; location authorization is staged; HealthKit read state is represented by request completion plus sample availability. Validation: 90 tests across ProgressivePermissionFlow, Onboarding, Awakening settings/system adapters, and cross-app Health passed; SwiftLint strict passed; 169 UI contracts validated; JSON and diff checks passed. Phase 4 cumulative regression through 4.0f also passed: 82 tests across 7 suites. Pull request #74 opened against dev-1.0. PR #74 review fixes: preference updates now use atomic single-column SQLite upserts; overlapping CoreLocation requests share one callback result; the legacy HealthKit API that inferred read authorization was removed; HealthKit request and settings-query failures surface as L2; notification persistence failures are visible; cancelled loads cannot publish late completion; UI contract fixtures and active evidence now use request lifecycle plus readable-sample semantics. CodeRabbit findings were individually reviewed: valid defects were fixed, while the proposed unavailable state for supported HealthKit devices was rejected in favor of noReadableSamples. No review finding was deferred. Review-fix validation: 87 related tests across 5 suites and 88 Phase 4 cumulative tests across 7 suites passed; SwiftLint strict, 169 UI contracts, JSON parsing, and diff checks passed. Follow-up review fix: aligned the Swift no-permissions fixture with the JSON/contract request lifecycle (`notRequested` + `noReadableSamples`) after CodeRabbit identified the remaining request-state mismatch.",
+          "started_at": "2026-09-04T14:48:31.538956Z",
+          "status_transitions": {
+            "review_at": "2026-09-04T15:09:43Z"
+          },
+          "pr": {
+            "number": 74,
+            "url": "https://github.com/logan-suu/Echo/pull/74",
+            "head": "feature/progressive-permissions-US-PRV-008",
+            "base": "dev-1.0",
+            "created_at": "2026-09-04T15:25:03Z"
+          }
         },
         {
           "id": "4.0g",
@@ -3843,6 +3870,59 @@
         "docs/05-planning/phase3f-evidence-index.md",
         "docs/05-planning/deferred-items.json",
         "docs/05-planning/task-status.json"
+      ]
+    },
+    {
+      "id": "DOC-20260904-4-0F-REASONABLENESS",
+      "status": "resolved",
+      "detected_at": "2026-09-04T14:37:34Z",
+      "resolved_at": "2026-09-04T14:37:34Z",
+      "decision_maker": "Codex spec review under human instruction",
+      "selected_option": "persisted-consent-independent-delivery-staged-location-honest-health-state",
+      "decision": "Retain the 4.0f progressive-permission direction, make persisted consent a hard gate, separate notification delivery from awakening preferences, stage location When In Use then user-confirmed Always, and represent HealthKit by request lifecycle plus actual sample availability. Require permission adapters to await callbacks or reread final snapshots. Persist awakening preferences and the app-owned HealthKit request lifecycle in a DatabaseManager-owned SQLite actor while keeping system authorization snapshots live-only.",
+      "reason": "The prior contract allowed a consent persistence race, did not define the location level needed for terminated-app region awakening, conflated notification delivery with all awakening preferences, and risked treating HealthKit write authorization/request success as read authorization that Apple intentionally does not disclose. Existing CoreLocation code also returns immediately after requesting authorization. The live Awakening toggles also lack any production preference boundary and currently fail visibly, so permission fixes alone would not close the task.",
+      "affected_documents": [
+        "AGENTS.md",
+        "docs/INDEX.md",
+        "docs/01-spec/用户故事与验收标准规格书.md",
+        "docs/02-architecture/架构设计文档.md",
+        "docs/02-architecture/数据流全链路技术说明文档.md",
+        "docs/03-implementation/开发避坑与关键注意点手册.md",
+        "docs/decisions/ADR-018-progressive-permission-orchestration.md",
+        "docs/ui/echo-memory-canvas-style.md",
+        "docs/ui/testing-and-artifacts.md",
+        "UIAutomation/Contracts/instances/onboarding-surface.json",
+        "UIAutomation/Contracts/instances/awakening-settings-surface.json",
+        "UIAutomation/Policies/acceptance-policy.json",
+        "docs/05-planning/开发计划安排文档.md",
+        "docs/05-planning/phase3f-story-matrix.md",
+        "docs/05-planning/task-status.json",
+        "docs/ui/README.md",
+        "docs/ui/architecture.md",
+        "docs/ui/echo-readiness.md",
+        "docs/05-planning/phase3f-evidence-index.md",
+        "UIAutomation/Contracts/instances/onboarding-action-privacyAgree.json",
+        "UIAutomation/Contracts/instances/onboarding-action-permissionAllow.json",
+        "UIAutomation/Contracts/instances/onboarding-action-permissionDeny.json",
+        "UIAutomation/Contracts/instances/onboarding-action-retryConsent.json",
+        "UIAutomation/Contracts/instances/onboarding-state-consent-persisting.json",
+        "UIAutomation/Contracts/instances/onboarding-state-consent-persist-error.json",
+        "UIAutomation/Contracts/instances/awakening-settings-action-toggleGeofence.json",
+        "UIAutomation/Contracts/instances/awakening-settings-action-toggleEmotion.json",
+        "UIAutomation/Contracts/instances/awakening-settings-action-toggleAnniversary.json",
+        "UIAutomation/Contracts/instances/awakening-settings-action-requestNotification.json",
+        "UIAutomation/Contracts/instances/awakening-settings-action-requestBackgroundLocation.json",
+        "UIAutomation/Contracts/instances/awakening-settings-journey-basic.json",
+        "UIAutomation/Contracts/instances/awakening-settings-journey-no-permissions.json",
+        "UIAutomation/Contracts/instances/awakening-settings-journey-unavailable.json",
+        "UIAutomation/Contracts/instances/awakening-settings-state-loaded.json",
+        "UIAutomation/Contracts/instances/awakening-settings-state-all-disabled.json",
+        "UIAutomation/Contracts/instances/awakening-settings-state-empty-permissions.json",
+        "UIAutomation/Contracts/instances/awakening-settings-state-unavailable.json",
+        "UIAutomation/Fixtures/awakening-settings/awakening-settings-loaded.json",
+        "UIAutomation/Fixtures/awakening-settings/awakening-settings-all-disabled.json",
+        "UIAutomation/Fixtures/awakening-settings/awakening-settings-no-permissions.json",
+        "UIAutomation/Fixtures/awakening-settings/awakening-settings-unavailable.json"
       ]
     }
   ],

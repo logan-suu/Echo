@@ -4,12 +4,12 @@
 //            §决策-3 (事务性撤回/清除, PurgeBoundary), §决策-4 (审计 hash-only)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-PRV-008 (PIPL 同意),
 //            US-PRV-005 (撤回=注销, 事务清除), US-PRV-004 (删除时事务性清除)
-// 任务: 3F.1 - Production composition、首次启动、同意与隐私
+// Task: 3F.1 + 4.0f - Production consent and progressive permission cleanup
 // AC 覆盖: ADR-007 §决策-2 (同意版本与时间戳持久化), §决策-3 (事务清除 + blocked + 审计),
 //          US-PRV-005 AC-5/AC-7 (冷却期满异步擦除 + 审计自擦除), US-PRV-008 AC-4/AC-5,
-//          PR review 修复: 撤回成功写 .consentRevoked 审计; 内存状态仅在持久化/commit 成功后更新
+//          4.0f AC-3 (consent revocation also purges persisted awakening preferences)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §5.4 (审计 hash-only), R-007 (禁止 unchecked Sendable)
-// 生成时间: 2026-08-04, 2026-08-05 (PR review 修复)
+// Generated: 2026-08-04; updated: 2026-09-04 (4.0f)
 // ==========================================
 
 import Foundation
@@ -174,6 +174,7 @@ public actor ConsentStoreActor {
                 affected += try await purgeTable("TaskProgress")
                 affected += try await purgeTable("PendingOperations")
                 affected += try await purgeTable("UserPolicyStore")
+                affected += try await purgeTable("AwakeningPreference")
             }
             if boundary.purgeIndexes {
                 affected += try await purgeTable("IndexGeneration")

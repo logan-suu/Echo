@@ -98,7 +98,9 @@ final class AwakeningSettingsFixtureLoader: Sendable {
                 )
             ],
             lastDailyPushDate: Date().addingTimeInterval(-86400),
-            lastEmotionAnalysisDate: Date().addingTimeInterval(-3600 * 6)
+            lastEmotionAnalysisDate: Date().addingTimeInterval(-3600 * 6),
+            healthRequestState: .requestCompleted,
+            healthDataState: .samplesAvailable
         )
     }
 
@@ -133,7 +135,9 @@ final class AwakeningSettingsFixtureLoader: Sendable {
             isAnniversaryEnabled: false,
             geofences: [],
             lastDailyPushDate: nil,
-            lastEmotionAnalysisDate: nil
+            lastEmotionAnalysisDate: nil,
+            healthRequestState: .unsupported,
+            healthDataState: .unavailable
         )
     }
 
@@ -168,7 +172,9 @@ final class AwakeningSettingsFixtureLoader: Sendable {
             isAnniversaryEnabled: false,
             geofences: [],
             lastDailyPushDate: nil,
-            lastEmotionAnalysisDate: nil
+            lastEmotionAnalysisDate: nil,
+            healthRequestState: .notRequested,
+            healthDataState: .noReadableSamples
         )
     }
 
@@ -214,7 +220,9 @@ final class AwakeningSettingsFixtureLoader: Sendable {
                 )
             ],
             lastDailyPushDate: Date().addingTimeInterval(-86400 * 2),
-            lastEmotionAnalysisDate: Date().addingTimeInterval(-3600 * 6)
+            lastEmotionAnalysisDate: Date().addingTimeInterval(-3600 * 6),
+            healthRequestState: .requestCompleted,
+            healthDataState: .samplesAvailable
         )
     }
 }

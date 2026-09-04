@@ -4,14 +4,14 @@
 //            决策-7 (通知内容最小化), 决策-2 (权限感知)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 AC-4 (推送回忆卡片),
 //            US-AWK-003 AC-4 (温和文案), US-AWK-005 AC-1 (卡片展示)
-// 任务: 3F.8 - Awakening 与 system adapters
+// Task: 3F.8 + 4.0f - Local notification delivery authorization
 // AC 覆盖: US-AWK-005 AC-1 ✅ (推送文案+照片, 音乐建议降级), ADR-012 决策-3 ✅ (调度/路由分离),
-//          ADR-012 决策-7 ✅ (通知内容最小化), 决策-2 ✅ (通知权限 denied → 静默不投递)
+//          4.0f AC-4 (independent delivery opt-in; final snapshot includes provisional/ephemeral)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离 — 仅值类型), R-007,
 //           R-001 (纯本地, 无网络)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor；UNUserNotificationCenter 为
 //       @MainActor SDK，类默认 MainActor 隔离（正确持有 center）
-// 生成时间: 2026-08-11
+// Generated: 2026-08-11; updated: 2026-09-04 (4.0f)
 // ==========================================
 
 import Foundation
@@ -24,6 +24,12 @@ public enum NotificationAuthState: String, Sendable, Equatable {
     case notDetermined
     case denied
     case authorized
+    case provisional
+    case ephemeral
+
+    public nonisolated var allowsDelivery: Bool {
+        self == .authorized || self == .provisional || self == .ephemeral
+    }
 }
 
 // MARK: - Notification Content
@@ -97,18 +103,18 @@ public final class LocalNotificationAdapter: NotificationScheduling {
     }
 
     public func requestAuthorization() async -> NotificationAuthState {
-        let granted = await withCheckedContinuation { continuation in
+        _ = await withCheckedContinuation { continuation in
             center.requestAuthorization(options: [.alert, .sound, .badge]) { success, _ in
                 continuation.resume(returning: success)
             }
         }
-        return granted ? .authorized : .denied
+        return await currentAuthorizationState()
     }
 
     public func schedule(_ content: EchoNotificationContent, at date: Date) async -> String? {
         // ADR-012 决策-2: 通知权限 denied → 静默不投递（AC-5 语义，不报错）
         let auth = await currentAuthorizationState()
-        guard auth == .authorized else { return nil }
+        guard auth.allowsDelivery else { return nil }
 
         let identifier = Self.identifierPrefix + (content.memoryId?.uuidString ?? UUID().uuidString)
 
@@ -139,13 +145,15 @@ public final class LocalNotificationAdapter: NotificationScheduling {
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
     }
 
-    // MARK: - Private
+    // MARK: - Authorization Mapping
 
-    private static func map(_ status: UNAuthorizationStatus) -> NotificationAuthState {
+    static nonisolated func map(_ status: UNAuthorizationStatus) -> NotificationAuthState {
         switch status {
         case .notDetermined: return .notDetermined
         case .denied: return .denied
-        case .authorized, .provisional, .ephemeral: return .authorized
+        case .authorized: return .authorized
+        case .provisional: return .provisional
+        case .ephemeral: return .ephemeral
         @unknown default: return .notDetermined
         }
     }

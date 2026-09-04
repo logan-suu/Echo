@@ -30,7 +30,8 @@ struct AwakeningSettingsView: View {
         _viewModel = State(initialValue: viewModel ?? AwakeningSettingsViewModel(
             locationProvider: CoreLocationProvider(),
             healthStore: RealHealthStore(),
-            notificationScheduler: LocalNotificationAdapter()
+            notificationScheduler: LocalNotificationAdapter(),
+            preferenceStore: AppComposition.shared.awakeningPreferenceStore
         ))
     }
 
@@ -207,8 +208,8 @@ struct AwakeningSettingsView: View {
 
     private func permissionsSection(_ data: AwakeningSettingsData) -> some View {
         Section {
-            permissionRow(data.locationPermission)
-            permissionRow(data.healthPermission)
+            locationPermissionRow(data)
+            healthPermissionRow(data)
         } header: {
             Text("Required Permissions")
         } footer: {
@@ -216,7 +217,26 @@ struct AwakeningSettingsView: View {
         }
     }
 
-    private func permissionRow(_ perm: AwakeningPermissionInfo) -> some View {
+    @ViewBuilder
+    private func locationPermissionRow(_ data: AwakeningSettingsData) -> some View {
+        permissionRow(data.locationPermission) {
+            Task { await viewModel.toggleGeofenceAwakening(true) }
+        }
+        if data.locationPermission.isGranted {
+            Button("Allow Background Location") {
+                Task { await viewModel.requestBackgroundLocationPermission() }
+            }
+            .accessibilityIdentifier("awakening-request-background-location")
+        }
+    }
+
+    private func healthPermissionRow(_ data: AwakeningSettingsData) -> some View {
+        permissionRow(data.healthPermission) {
+            Task { await viewModel.toggleEmotionAwakening(true) }
+        }
+    }
+
+    private func permissionRow(_ perm: AwakeningPermissionInfo, request: @escaping () -> Void) -> some View {
         HStack {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
@@ -242,7 +262,7 @@ struct AwakeningSettingsView: View {
                 .controlSize(.small)
             } else {
                 Button("Allow") {
-                    viewModel.openSystemSettings()
+                    request()
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -257,7 +277,7 @@ struct AwakeningSettingsView: View {
         Section {
             Toggle(isOn: Binding(
                 get: { data.isGeofenceEnabled },
-                set: { viewModel.toggleGeofenceAwakening($0) }
+                set: { value in Task { await viewModel.toggleGeofenceAwakening(value) } }
             )) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
@@ -270,11 +290,10 @@ struct AwakeningSettingsView: View {
                     Image(systemName: "mappin.circle")
                 }
             }
-            .disabled(!data.locationPermission.isGranted)
 
             Toggle(isOn: Binding(
                 get: { data.isEmotionEnabled },
-                set: { viewModel.toggleEmotionAwakening($0) }
+                set: { value in Task { await viewModel.toggleEmotionAwakening(value) } }
             )) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
@@ -287,11 +306,10 @@ struct AwakeningSettingsView: View {
                     Image(systemName: "sparkles")
                 }
             }
-            .disabled(!data.healthPermission.isGranted)
 
             Toggle(isOn: Binding(
                 get: { data.isAnniversaryEnabled },
-                set: { viewModel.toggleAnniversaryAwakening($0) }
+                set: { value in Task { await viewModel.toggleAnniversaryAwakening(value) } }
             )) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
@@ -304,12 +322,11 @@ struct AwakeningSettingsView: View {
                     Image(systemName: "clock.arrow.circlepath")
                 }
             }
-            .disabled(!data.notificationPermission.isGranted)
         } header: {
             Text("Awakening Types")
         } footer: {
             if !data.notificationPermission.isGranted {
-                Text("Enable notifications to receive awakening alerts.")
+                Text("In-app awakening cards remain available. Enable notifications only for system delivery.")
                     .foregroundStyle(Color.accentColor)
             }
         }

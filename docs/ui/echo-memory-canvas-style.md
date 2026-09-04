@@ -284,8 +284,9 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 - Settings、Onboarding、Awakening、BackgroundTask、Degradation 与 ResumeProgress 使用同一 grouped background、section header、状态图标、圆角映射和 accent
 - 权限、加载、空态、错误和恢复组件共享相同的图标—标题—说明—主要动作层级，状态颜色只表达语义，不创建页面品牌色
 - Onboarding 可使用更宽松的留白和单一重点插图/符号，但字体、按钮、进度、卡片和后续 App 保持同源
-- Onboarding 的 PIPL 同意先于任何受保护数据请求；相册只在用户明确选择连接资料库后请求。通知、位置与 HealthKit 必须从对应唤醒功能的明确 opt-in 动作按需请求，不得在首次启动时组成连续系统弹窗
-- 可选权限拒绝/跳过不阻止进入 App，不自动循环重试；恢复授权只通过用户主动触发的系统设置入口。同意/拒绝必须同层可见且同等醒目，不使用预选、弱化或视觉诱导
+- Onboarding 的 PIPL 同意必须先持久化成功；失败时停留在可重试状态。相册只由“连接照片”请求，`Not Now` 无系统调用并直接继续。通知使用独立投递 opt-in；geofence/emotion/anniversary 开关不得隐式请求通知
+- geofence 首次启用请求 When In Use；终止态区域唤醒的 Always 权限必须在解释差异后由第二个明确动作请求。HealthKit UI 只显示 not requested/request completed/unsupported 与实际样本可用性，不显示系统无法披露的 read-granted/read-denied
+- 可选权限拒绝/跳过不阻止进入 App，不自动循环重试；系统返回 denied/restricted 后才显示用户主动触发的设置恢复。同意/拒绝必须同层可见且同等醒目，不使用预选、弱化或视觉诱导
 - 错误与恢复明确说明：发生了什么、可执行动作、结果
 - ResumeProgress 只有在生产 task reconstruction/launcher 可用时才能将“继续”或“重新开始”显示为可完成动作；仅能读取 `TaskProgress` 时必须诚实显示不可用，fixture 状态不得作为生产恢复证据
 - Settings 设备迁移必须呈现加密用户中介迁移包与 Finder/iTunes 加密本地备份两条路径，明确原始媒体不进入迁移包；不得把迁移包误写成“导出全部原始记忆”
@@ -476,11 +477,18 @@ Discovery surfaces 使用统一 Memory Card 协议，包含以下 variants。
 
 ### 15.3 Step 2 PIPL 隐私同意
 - 可滚动隐私政策摘要 + "同意并继续" / "不同意"；两者同层可见、同等醒目且均不预选，不以颜色、尺寸或层级诱导同意
+- “同意并继续”进入持久化进行态；只有持久化成功才进入下一步，失败显示原位重试，不允许照片请求抢跑
 
 ### 15.4 Step 3 可选资料库连接
 - 仅呈现可跳过的照片资料库连接；用户明确选择“连接照片”后才请求 PhotoKit
-- 通知、位置与 HealthKit 不进入首次启动序列，只能从对应唤醒功能的明确 opt-in 动作按需请求
-- 拒绝后显示“前往设置”和“继续使用”动作；不自动请求其他权限、不循环重试，也不阻止进入 App
+- 通知、位置与 HealthKit 不进入首次启动序列。通知由独立投递动作请求；位置/HealthKit 由相应唤醒功能明确启用，且不串联通知
+- 用户主动选择“暂不连接”直接继续，不显示设置入口；系统返回 denied/restricted 后显示“前往设置”和“继续使用”。limited/full 按真实范围继续，不自动请求其他权限、不循环重试，也不阻止进入 App
+
+### 15.4.1 Awakening 渐进式授权
+- “启用通知投递”只请求通知；通知不可用不关闭 App 内卡片生成或三个唤醒偏好
+- “启用地理围栏”首次只请求 When In Use；说明后台能力后，由单独的“允许后台区域唤醒”动作请求 Always
+- “启用情绪唤醒”只请求 HRV read scope；请求完成不等于 read granted，UI 以可读样本/无可读样本表达运行结果
+- “启用纪念日”不触发系统权限；系统通知投递仍由独立 opt-in 控制
 
 ### 15.5 Step 4 语言选择
 - 系统 Picker，zh-Hans / en-US

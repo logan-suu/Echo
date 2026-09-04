@@ -382,7 +382,8 @@ struct SettingsView: View {
                 AwakeningSettingsView(viewModel: AwakeningSettingsViewModel(
                     locationProvider: AppComposition.shared.productionLocationProvider ?? CoreLocationProvider(),
                     healthStore: AppComposition.shared.productionHealthStore ?? RealHealthStore(),
-                    notificationScheduler: AppComposition.shared.productionNotificationScheduler ?? LocalNotificationAdapter()
+                    notificationScheduler: AppComposition.shared.productionNotificationScheduler ?? LocalNotificationAdapter(),
+                    preferenceStore: AppComposition.shared.awakeningPreferenceStore
                 ))
             } label: {
                 Label {

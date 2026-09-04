@@ -6158,6 +6158,90 @@
           }
         }
       }
+    },
+    "Saving your consent...": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Saving your consent..." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在保存你的同意…" } }
+      }
+    },
+    "Consent was not saved": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Consent was not saved" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未能保存同意" } }
+      }
+    },
+    "Echo has not requested access to any protected data. Retry to continue.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Echo has not requested access to any protected data. Retry to continue." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Echo 尚未请求访问任何受保护数据。请重试后继续。" } }
+      }
+    },
+    "Allow Background Location": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Allow Background Location" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "允许后台定位" } }
+      }
+    },
+    "In-app awakening cards remain available. Enable notifications only for system delivery.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "In-app awakening cards remain available. Enable notifications only for system delivery." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "应用内唤醒卡片仍然可用。仅在需要系统投递时启用通知。" } }
+      }
+    },
+    "Local notification delivery is optional and independent from in-app awakening cards.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Local notification delivery is optional and independent from in-app awakening cards." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "本地通知投递是可选项，与应用内唤醒卡片相互独立。" } }
+      }
+    },
+    "While Using access is enabled. Allow background location separately for terminated-app awakening.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "While Using access is enabled. Allow background location separately for terminated-app awakening." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已允许使用 App 时访问位置。若要在 App 终止后唤醒，请另行允许后台定位。" } }
+      }
+    },
+    "Location access enables geofence awakening.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Location access enables geofence awakening." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "位置权限可启用地理围栏唤醒。" } }
+      }
+    },
+    "Health data is unavailable on this device.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Health data is unavailable on this device." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "此设备上的健康数据不可用。" } }
+      }
+    },
+    "You can optionally ask HealthKit for HRV read access. Echo cannot inspect the read authorization choice.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "You can optionally ask HealthKit for HRV read access. Echo cannot inspect the read authorization choice." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "你可以选择请求 HealthKit 的 HRV 读取权限。Echo 无法检查你的读取授权选择。" } }
+      }
+    },
+    "Readable HRV samples are available for local emotion context.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Readable HRV samples are available for local emotion context." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已有可读取的 HRV 样本，可用于本地情绪情境。" } }
+      }
+    },
+    "No readable HRV samples are available. Echo uses local query and feeling history instead.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "No readable HRV samples are available. Echo uses local query and feeling history instead." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "当前没有可读取的 HRV 样本。Echo 将改用本地查询和感受历史。" } }
+      }
+    },
+    "HealthKit could not complete the request. Please try again.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "HealthKit could not complete the request. Please try again." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "HealthKit 无法完成请求，请重试。" } }
+      }
+    },
+    "Notification services are unavailable.": {
+      "localizations": {
+        "en-US": { "stringUnit": { "state": "translated", "value": "Notification services are unavailable." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "通知服务当前不可用。" } }
+      }
     }
   },
   "version": "1.0"

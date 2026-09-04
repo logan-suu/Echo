@@ -80,7 +80,10 @@
 - 4.0j 验证月/年周期键、跨时区、重复启动、错过周期、关闭开关、TaskQueue/Progress 重启恢复和不可用数据分区省略；fixture 报告不得计为调度证据
 - 4.0c 必须逐一覆盖 Settings、Onboarding、AwakeningSettings、BackgroundTask、Degradation、ResumeProgress：`designProfileId=echo-memory-canvas`、Task/no-masonry、系统 container、共享 grouped/status/action 组件、default + Accessibility Dynamic Type、VoiceOver reading order、Reduce Motion、light/dark 与 destructive confirmation。生产路径不得注入 fixture，也不得改变现有 consent/permission/model/task/migration/delete 副作用
 - 4.0c 契约门禁必须把六个 Task surface 的 legacy contract 全部迁移或补齐为 v1 schema-compatible surface/state/action/journey；稳定 ID 保持不变，surface 声明的每个 state 均有唯一 state contract，journey 的每个非终态 action 均可解析，禁止以“历史格式”跳过校验
-- 4.0c Onboarding 视觉验收只验证诚实状态层级；渐进式权限生产修正由 4.0f 覆盖：PIPL 先行、照片需用户明确连接、notification/location/HealthKit 按 Awakening opt-in 请求、拒绝/跳过可继续、无启动权限连环弹窗、无重复催促
+- 4.0c Onboarding 视觉验收只验证诚实状态层级；4.0f 以 no-fixture production adapter + 调用 spy 覆盖：consent 持久化完成前零受保护请求；仅 Connect Photos 请求 PhotoKit，Not Now 零调用；通知独立 opt-in；geofence When In Use 与 Always 两段请求；emotion 仅请求 HRV read scope；anniversary 零系统权限；拒绝/跳过可继续；打开页面与重启零自动 prompt
+- 4.0f 不断言 HealthKit read granted/denied。测试只断言 request lifecycle、请求类型集合、样本可读/空样本回退与 unsupported；不得用 `authorizationStatus(for:)` 或 request completion success 作为读取授权证据
+- 4.0f 的 Core Location fake 必须证明 async 请求在 delegate 回调前不完成；Always 只在 When In Use 后的第二个明确动作发生。通知测试在 completion 后复读 `UNNotificationSettings`，并覆盖 provisional/ephemeral 映射
+- 4.0f 必须证明唤醒偏好和 HealthKit request lifecycle 写入 SQLite 后可跨 ViewModel/重启恢复，同时所有系统授权快照均来自 live adapter；恢复偏好不得产生 request API 调用
 - 4.0g 必须以 no-fixture 路径证明已持久化任务可在重启后重建：Continue 从准确 resume point 执行，Restart 原子删除旧进度后从头执行，取消/失败不伪造成功，未知 task type fail closed，完成后清理 `TaskProgress`，审计记录实际 userChoiceOnRestart
 - Settings migration journey 必须区分“加密 Echo 迁移包”和“全部原始媒体导出”：前者覆盖 system share/AirDrop handoff、分离密钥、覆盖/合并/冲突/rollback；后者必须不存在。测试不得检查或持久化传输密钥、原文、截图或分享目标 App
 

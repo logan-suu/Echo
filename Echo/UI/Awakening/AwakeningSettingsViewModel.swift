@@ -1,26 +1,17 @@
 // ==========================================
-// 文件: AwakeningSettingsViewModel.swift
-// i18n: All user-facing strings are hardcoded English. Full String Catalog migration (zh-Hans + en-US) deferred to Phase 3.8.
-// 对应规格: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 (地理围栏), US-AWK-002 (日期唤醒), US-AWK-003 (情绪唤醒)
-//            docs/ui/echo-memory-canvas-style.md §3.3 (Task surfaces), §7.2, §13 (后台任务面板)
-//            docs/ui/architecture.md §6 (ViewModel 契约), §7 (适配器契约)
-// 任务: 3.12 - 唤醒投递：本地通知 + 位置/健康权限 + 地理围栏设置
-// AC 覆盖: US-AWK-001 AC-5 ✅ (位置权限静默禁用/重开), AC-6 ✅ (审计 record 触发 UI),
-//            US-AWK-002 AC-1 ✅ (每日 9:00 推送开关/控制), AC-4 ✅ (无匹配时不推送指示),
-//            US-AWK-003 AC-1 ✅ (HealthKit 权限开关), AC-5 ✅ (审计记录查看入口)
-// Runtime status: system permissions/regions are live. Preference toggles fail visibly until a
-// production awakening-preference boundary exists; deterministic mutation is fixture-only.
-// 架构约束: AGENTS.md §8.1 (@MainActor + @Observable + state enum: idle/loading/completed/error/cancelled),
-//           §4.2 (仅持有不可变引用), docs/ui/architecture.md §6~7 (适配器契约),
-//           §2.5 (Adapter 不保存第二份领域真相), echo-memory-canvas apple-native 基础
-// 生成时间: 2026-08-03
+// File: AwakeningSettingsViewModel.swift
+// Spec: docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001/002/003
+//       docs/decisions/ADR-018-progressive-permission-orchestration.md
+// Task: 4.0f - Progressive permissions and first-run production flow
+// AC coverage: AC-3 persisted preferences; AC-4 independent notifications;
+//              AC-5 staged location; AC-6 honest HealthKit request/data states and retryable failures
+// Architecture: AGENTS.md §8.1 (@MainActor @Observable), §4.2 (value boundaries)
+// Generated: 2026-09-04
 // ==========================================
 
-import SwiftUI
 import Foundation
+import SwiftUI
 import UIKit
-
-// MARK: - Awakening Permission Info
 
 struct AwakeningPermissionInfo: Sendable, Equatable {
     let identifier: String
@@ -52,9 +43,35 @@ struct AwakeningSettingsData: Sendable, Equatable {
     let geofences: [GeofenceInfo]
     let lastDailyPushDate: Date?
     let lastEmotionAnalysisDate: Date?
-}
+    let healthRequestState: HealthRequestState
+    let healthDataState: HealthDataState
 
-// MARK: - AwakeningSettingsViewModel
+    init(
+        notificationPermission: AwakeningPermissionInfo,
+        locationPermission: AwakeningPermissionInfo,
+        healthPermission: AwakeningPermissionInfo,
+        isGeofenceEnabled: Bool,
+        isEmotionEnabled: Bool,
+        isAnniversaryEnabled: Bool,
+        geofences: [GeofenceInfo],
+        lastDailyPushDate: Date?,
+        lastEmotionAnalysisDate: Date?,
+        healthRequestState: HealthRequestState = .notRequested,
+        healthDataState: HealthDataState = .noReadableSamples
+    ) {
+        self.notificationPermission = notificationPermission
+        self.locationPermission = locationPermission
+        self.healthPermission = healthPermission
+        self.isGeofenceEnabled = isGeofenceEnabled
+        self.isEmotionEnabled = isEmotionEnabled
+        self.isAnniversaryEnabled = isAnniversaryEnabled
+        self.geofences = geofences
+        self.lastDailyPushDate = lastDailyPushDate
+        self.lastEmotionAnalysisDate = lastEmotionAnalysisDate
+        self.healthRequestState = healthRequestState
+        self.healthDataState = healthDataState
+    }
+}
 
 @MainActor
 @Observable
@@ -84,230 +101,268 @@ final class AwakeningSettingsViewModel {
     var state: State = .idle
     var notificationAuthStep: NotificationAuthStep = .idle
     private(set) var isFixtureBacked = false
-
     var showGeofenceDetail: GeofenceInfo?
-    private var loadTask: Task<Void, Never>?
 
     private let fixtureLoader: AwakeningSettingsFixtureLoader
-
-    /// 3F.8: 系统适配器 — 真实权限状态与地理围栏来源（ADR-012 决策-2/3）。
-    /// 生产装配注入 live 适配器；fixture 驱动测试保持 nil 走 fixture 路径。
     private let locationProvider: (any LocationProviding)?
     private let healthStore: (any HealthStoreServing)?
     private let notificationScheduler: (any NotificationScheduling)?
+    private let preferenceStore: AwakeningPreferenceActor?
+    private var activeLoadID: UUID?
 
     init(
         fixtureLoader: AwakeningSettingsFixtureLoader = .shared,
         locationProvider: (any LocationProviding)? = nil,
         healthStore: (any HealthStoreServing)? = nil,
-        notificationScheduler: (any NotificationScheduling)? = nil
+        notificationScheduler: (any NotificationScheduling)? = nil,
+        preferenceStore: AwakeningPreferenceActor? = nil
     ) {
         self.fixtureLoader = fixtureLoader
         self.locationProvider = locationProvider
         self.healthStore = healthStore
         self.notificationScheduler = notificationScheduler
+        self.preferenceStore = preferenceStore
     }
-
-    deinit {}
 
     func loadSettings() async {
+        let loadID = UUID()
+        activeLoadID = loadID
         state = .loading
         do {
-            // 3F.8: 有 live 适配器时读取真实系统状态，否则回退 fixture（Preview/测试）
-            if let data = await loadLiveData() {
+            if let data = try await loadLiveData() {
+                guard activeLoadID == loadID, !Task.isCancelled else { return }
                 isFixtureBacked = false
                 state = .completed(data)
+                activeLoadID = nil
                 return
             }
-            try await Task.sleep(nanoseconds: 300_000_000)
-            let data = try fixtureLoader.loadSettings()
+            try await Task.sleep(for: .milliseconds(300))
+            guard activeLoadID == loadID, !Task.isCancelled else { return }
+            state = .completed(try fixtureLoader.loadSettings())
             isFixtureBacked = true
-            state = .completed(data)
+        } catch is CancellationError {
+            guard activeLoadID == loadID else { return }
+            state = .cancelled
         } catch {
+            guard activeLoadID == loadID else { return }
             state = .error(.l2Recoverable(error.localizedDescription))
         }
+        if activeLoadID == loadID { activeLoadID = nil }
     }
 
-    /// 从真实系统适配器读取权限与围栏状态（ADR-012 决策-2）。
-    private func loadLiveData() async -> AwakeningSettingsData? {
-        guard locationProvider != nil || healthStore != nil || notificationScheduler != nil else {
+    private func loadLiveData() async throws -> AwakeningSettingsData? {
+        guard locationProvider != nil || healthStore != nil || notificationScheduler != nil || preferenceStore != nil else {
             return nil
         }
-        let notification: AwakeningPermissionInfo
-        if let notificationScheduler {
-            let auth = await notificationScheduler.currentAuthorizationState()
-            notification = AwakeningPermissionInfo(
-                identifier: "notification",
-                displayName: "Notifications",
-                systemImage: auth == .authorized ? "bell.badge.fill" : "bell.slash.fill",
-                isGranted: auth == .authorized,
-                isDeniedPermanently: auth == .denied,
-                description: "Echo sends awakening notifications for memories at places, on anniversaries, and when your mood changes."
-            )
-        } else {
-            notification = AwakeningPermissionInfo(
-                identifier: "notification",
-                displayName: "Notifications",
-                systemImage: "bell.fill",
-                isGranted: false,
-                isDeniedPermanently: false,
-                description: "Allow Echo to send you awakening notifications when memories surface."
-            )
-        }
+        let preferences = try await preferenceStore?.load() ?? .defaults
 
-        let location: AwakeningPermissionInfo
-        if let locationProvider {
-            let auth = await locationProvider.currentAuthorizationState()
-            let granted = auth == .authorizedWhenInUse || auth == .authorizedAlways
-            location = AwakeningPermissionInfo(
-                identifier: "location",
-                displayName: "Location",
-                systemImage: granted ? "location.fill" : "location.slash.fill",
-                isGranted: granted,
-                isDeniedPermanently: auth == .denied || auth == .restricted,
-                description: "Used for geofence-based memory awakening when you arrive at meaningful places."
-            )
-        } else {
-            location = AwakeningPermissionInfo(
-                identifier: "location",
-                displayName: "Location",
-                systemImage: "location.fill",
-                isGranted: false,
-                isDeniedPermanently: false,
-                description: "Location access enables geofence-based memory delivery."
-            )
-        }
+        let notificationState = await notificationScheduler?.currentAuthorizationState() ?? .notDetermined
+        let notification = AwakeningPermissionInfo(
+            identifier: "notification",
+            displayName: "Notifications",
+            systemImage: notificationState.allowsDelivery ? "bell.badge.fill" : "bell.slash.fill",
+            isGranted: notificationState.allowsDelivery,
+            isDeniedPermanently: notificationState == .denied,
+            description: "Local notification delivery is optional and independent from in-app awakening cards."
+        )
 
-        let health: AwakeningPermissionInfo
-        if let healthStore {
-            let auth = await healthStore.currentAuthorizationState()
-            health = AwakeningPermissionInfo(
-                identifier: "health",
-                displayName: "Health",
-                systemImage: auth == .authorized ? "heart.fill" : "heart.slash.fill",
-                isGranted: auth == .authorized,
-                isDeniedPermanently: auth == .denied,
-                description: "Used for emotion-based awakening to surface joyful memories when mood is low."
-            )
-        } else {
-            health = AwakeningPermissionInfo(
-                identifier: "health",
-                displayName: "Health",
-                systemImage: "heart.fill",
-                isGranted: false,
-                isDeniedPermanently: false,
-                description: "Health data access enables mood-based memory delivery."
-            )
-        }
+        let locationState = await locationProvider?.currentAuthorizationState() ?? .notDetermined
+        let locationGranted = locationState == .authorizedWhenInUse || locationState == .authorizedAlways
+        let location = AwakeningPermissionInfo(
+            identifier: "location",
+            displayName: "Location",
+            systemImage: locationGranted ? "location.fill" : "location.slash.fill",
+            isGranted: locationGranted,
+            isDeniedPermanently: locationState == .denied || locationState == .restricted,
+            description: locationState == .authorizedWhenInUse
+                ? "While Using access is enabled. Allow background location separately for terminated-app awakening."
+                : "Location access enables geofence awakening."
+        )
 
-        let geofences: [GeofenceInfo]
-        if let locationProvider {
-            geofences = await locationProvider.monitoredRegions().map { region in
-                GeofenceInfo(
-                    id: region.identifier,
-                    displayName: region.identifier,
-                    latitude: region.latitude,
-                    longitude: region.longitude,
-                    radiusMeters: region.radiusMeters,
-                    isActive: true,
-                    lastTriggeredAt: nil,
-                    memoryCount: 0
-                )
-            }
-        } else {
-            geofences = []
+        let healthAvailable = healthStore?.isHealthDataAvailable() ?? false
+        var healthDataState: HealthDataState = healthAvailable ? .noReadableSamples : .unavailable
+        if healthAvailable, preferences.healthRequestState == .requestCompleted, let healthStore {
+            let end = Date()
+            let start = Calendar.current.date(byAdding: .day, value: -7, to: end) ?? end
+            let samples = try await healthStore.fetchHRVSamples(in: start...end)
+            healthDataState = samples.isEmpty ? .noReadableSamples : .samplesAvailable
+        }
+        let health = AwakeningPermissionInfo(
+            identifier: "health",
+            displayName: "Health",
+            systemImage: healthDataState == .samplesAvailable ? "heart.fill" : "heart",
+            isGranted: false,
+            isDeniedPermanently: false,
+            description: Self.healthDescription(
+                requestState: preferences.healthRequestState,
+                dataState: healthDataState
+            )
+        )
+
+        let regions = await locationProvider?.monitoredRegions() ?? []
+        let geofences = regions.map {
+            GeofenceInfo(
+                id: $0.identifier,
+                displayName: $0.identifier,
+                latitude: $0.latitude,
+                longitude: $0.longitude,
+                radiusMeters: $0.radiusMeters,
+                isActive: true,
+                lastTriggeredAt: nil,
+                memoryCount: 0
+            )
         }
 
         return AwakeningSettingsData(
             notificationPermission: notification,
             locationPermission: location,
             healthPermission: health,
-            isGeofenceEnabled: geofences.isEmpty ? false : true,
-            isEmotionEnabled: health.isGranted,
-            isAnniversaryEnabled: notification.isGranted,
+            isGeofenceEnabled: preferences.geofenceEnabled,
+            isEmotionEnabled: preferences.emotionEnabled,
+            isAnniversaryEnabled: preferences.anniversaryEnabled,
             geofences: geofences,
             lastDailyPushDate: nil,
-            lastEmotionAnalysisDate: nil
+            lastEmotionAnalysisDate: nil,
+            healthRequestState: healthAvailable ? preferences.healthRequestState : .unsupported,
+            healthDataState: healthDataState
         )
     }
 
-    func toggleGeofenceAwakening(_ enabled: Bool) {
-        guard case .completed(var data) = state else { return }
-        guard isFixtureBacked else {
-            state = .error(.l2Recoverable(
-                "Geofence awakening settings are unavailable because no production preference boundary is connected."
-            ))
-            return
+    private static func healthDescription(requestState: HealthRequestState, dataState: HealthDataState) -> String {
+        switch (requestState, dataState) {
+        case (_, .unavailable), (.unsupported, _):
+            "Health data is unavailable on this device."
+        case (.notRequested, _):
+            "You can optionally ask HealthKit for HRV read access. Echo cannot inspect the read authorization choice."
+        case (.requestCompleted, .samplesAvailable):
+            "Readable HRV samples are available for local emotion context."
+        case (.requestCompleted, .noReadableSamples):
+            "No readable HRV samples are available. Echo uses local query and feeling history instead."
         }
-        data = AwakeningSettingsData(
-            notificationPermission: data.notificationPermission,
-            locationPermission: data.locationPermission,
-            healthPermission: data.healthPermission,
-            isGeofenceEnabled: enabled,
-            isEmotionEnabled: data.isEmotionEnabled,
-            isAnniversaryEnabled: data.isAnniversaryEnabled,
-            geofences: data.geofences,
-            lastDailyPushDate: data.lastDailyPushDate,
-            lastEmotionAnalysisDate: data.lastEmotionAnalysisDate
-        )
-        state = .completed(data)
     }
 
-    func toggleEmotionAwakening(_ enabled: Bool) {
-        guard case .completed(var data) = state else { return }
-        guard isFixtureBacked else {
-            state = .error(.l2Recoverable(
-                "Emotion awakening settings are unavailable because no production preference boundary is connected."
-            ))
+    func toggleGeofenceAwakening(_ enabled: Bool) async {
+        guard case .completed(let current) = state else { return }
+        state = .loading
+        if isFixtureBacked {
+            state = .completed(copy(current, geofence: enabled))
             return
         }
-        data = AwakeningSettingsData(
-            notificationPermission: data.notificationPermission,
-            locationPermission: data.locationPermission,
-            healthPermission: data.healthPermission,
-            isGeofenceEnabled: data.isGeofenceEnabled,
-            isEmotionEnabled: enabled,
-            isAnniversaryEnabled: data.isAnniversaryEnabled,
-            geofences: data.geofences,
-            lastDailyPushDate: data.lastDailyPushDate,
-            lastEmotionAnalysisDate: data.lastEmotionAnalysisDate
-        )
-        state = .completed(data)
+        do {
+            var canEnable = !enabled
+            if enabled, let locationProvider {
+                var auth = await locationProvider.currentAuthorizationState()
+                if auth == .notDetermined {
+                    auth = await locationProvider.requestWhenInUseAuthorization()
+                }
+                canEnable = auth == .authorizedWhenInUse || auth == .authorizedAlways
+            }
+            if canEnable { try await preferenceStore?.setGeofenceEnabled(enabled) }
+            await loadSettings()
+        } catch {
+            state = .error(.l2Recoverable(error.localizedDescription))
+        }
     }
 
-    func toggleAnniversaryAwakening(_ enabled: Bool) {
-        guard case .completed(var data) = state else { return }
-        guard isFixtureBacked else {
-            state = .error(.l2Recoverable(
-                "Anniversary awakening settings are unavailable because no production preference boundary is connected."
-            ))
+    func requestBackgroundLocationPermission() async {
+        guard case .completed = state, let locationProvider else { return }
+        state = .loading
+        _ = await locationProvider.requestAlwaysAuthorization()
+        await loadSettings()
+    }
+
+    func toggleEmotionAwakening(_ enabled: Bool) async {
+        guard case .completed(let current) = state else { return }
+        state = .loading
+        if isFixtureBacked {
+            state = .completed(copy(current, emotion: enabled))
             return
         }
-        data = AwakeningSettingsData(
-            notificationPermission: data.notificationPermission,
-            locationPermission: data.locationPermission,
-            healthPermission: data.healthPermission,
-            isGeofenceEnabled: data.isGeofenceEnabled,
-            isEmotionEnabled: data.isEmotionEnabled,
-            isAnniversaryEnabled: enabled,
-            geofences: data.geofences,
-            lastDailyPushDate: data.lastDailyPushDate,
-            lastEmotionAnalysisDate: data.lastEmotionAnalysisDate
-        )
-        state = .completed(data)
+        do {
+            if enabled, let healthStore {
+                guard healthStore.isHealthDataAvailable() else {
+                    try await preferenceStore?.setHealthRequestState(.unsupported)
+                    try await preferenceStore?.setEmotionEnabled(false)
+                    await loadSettings()
+                    return
+                }
+                let existing = try await preferenceStore?.load() ?? .defaults
+                if existing.healthRequestState == .notRequested {
+                    let result = await healthStore.requestReadAuthorization()
+                    guard result == .completed else {
+                        if result == .unsupported {
+                            try await preferenceStore?.setHealthRequestState(.unsupported)
+                            await loadSettings()
+                        } else {
+                            state = .error(.l2Recoverable(
+                                "HealthKit could not complete the request. Please try again."
+                            ))
+                        }
+                        return
+                    }
+                    try await preferenceStore?.setHealthRequestState(.requestCompleted)
+                }
+            }
+            try await preferenceStore?.setEmotionEnabled(enabled)
+            await loadSettings()
+        } catch {
+            state = .error(.l2Recoverable(error.localizedDescription))
+        }
+    }
+
+    func toggleAnniversaryAwakening(_ enabled: Bool) async {
+        guard case .completed(let current) = state else { return }
+        state = .loading
+        if isFixtureBacked {
+            state = .completed(copy(current, anniversary: enabled))
+            return
+        }
+        do {
+            try await preferenceStore?.setAnniversaryEnabled(enabled)
+            await loadSettings()
+        } catch {
+            state = .error(.l2Recoverable(error.localizedDescription))
+        }
     }
 
     func requestNotificationPermission() async {
+        state = .loading
         notificationAuthStep = .requesting
-        if let notificationScheduler {
-            // 3F.11 fix: 真实通知授权（ADR-012 决策-2/3）
-            let auth = await notificationScheduler.requestAuthorization()
-            notificationAuthStep = (auth == .authorized) ? .granted : .denied
-        } else {
-            // Missing system wiring must not masquerade as granted authorization.
+        guard let notificationScheduler else {
             notificationAuthStep = .denied
+            state = .error(.l3Blocking("Notification services are unavailable."))
+            return
         }
-        await loadSettings()
+        let auth = await notificationScheduler.requestAuthorization()
+        do {
+            try await preferenceStore?.setNotificationDeliveryEnabled(auth.allowsDelivery)
+            notificationAuthStep = auth.allowsDelivery ? .granted : .denied
+            await loadSettings()
+        } catch {
+            notificationAuthStep = .denied
+            state = .error(.l2Recoverable(error.localizedDescription))
+        }
+    }
+
+    private func copy(
+        _ data: AwakeningSettingsData,
+        geofence: Bool? = nil,
+        emotion: Bool? = nil,
+        anniversary: Bool? = nil
+    ) -> AwakeningSettingsData {
+        AwakeningSettingsData(
+            notificationPermission: data.notificationPermission,
+            locationPermission: data.locationPermission,
+            healthPermission: data.healthPermission,
+            isGeofenceEnabled: geofence ?? data.isGeofenceEnabled,
+            isEmotionEnabled: emotion ?? data.isEmotionEnabled,
+            isAnniversaryEnabled: anniversary ?? data.isAnniversaryEnabled,
+            geofences: data.geofences,
+            lastDailyPushDate: data.lastDailyPushDate,
+            lastEmotionAnalysisDate: data.lastEmotionAnalysisDate,
+            healthRequestState: data.healthRequestState,
+            healthDataState: data.healthDataState
+        )
     }
 
     func openSystemSettings() {
@@ -315,16 +370,10 @@ final class AwakeningSettingsViewModel {
         UIApplication.shared.open(url)
     }
 
-    func showGeofenceDetails(_ geofence: GeofenceInfo) {
-        showGeofenceDetail = geofence
-    }
-
-    func dismissGeofenceDetail() {
-        showGeofenceDetail = nil
-    }
-
+    func showGeofenceDetails(_ geofence: GeofenceInfo) { showGeofenceDetail = geofence }
+    func dismissGeofenceDetail() { showGeofenceDetail = nil }
     func cancel() {
-        loadTask?.cancel()
+        activeLoadID = nil
         state = .cancelled
     }
 }

@@ -3,17 +3,17 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "onboarding",
   "surfaceFamily": "task",
-  "responsibility": "First-launch onboarding flow: welcome, PIPL privacy consent summary with equally prominent agree/decline, optional user-initiated photo-library connection with iCloud download guidance, language selection, and first local-model load progress. Notification, location and HealthKit authorization are excluded from the approved launch sequence and are requested only after an explicit opt-in on the related Awakening surface; production orchestration remains assigned to Task 4.0f.",
+  "responsibility": "First-launch flow with persisted PIPL consent as a hard gate, an optional user-initiated PhotoKit connection, language selection and local-model loading. Notification, location and HealthKit are excluded from launch and remain contextual Awakening actions.",
   "inputs": {
     "privacySummary": "PIPL privacy policy summary with purpose/method/kind/retention/local-processing statement (US-PRV-008 AC-2)",
-    "permissionSteps": "After PIPL consent, offer a skippable photo-library connection choice. Request PhotoKit only after the user explicitly chooses Connect Photos. Notification, location and HealthKit remain contextual Awakening opt-ins and never appear as a launch-time permission chain.",
+    "permissionSteps": "After consent persistence succeeds, offer Connect Photos or Not Now. Only Connect Photos may request PhotoKit .readWrite; Not Now performs no system call. Notification, location and HealthKit never appear in onboarding.",
     "icloudDownloadPrompt": "US-SRC-001 AC-6 first photo permission download-and-keep-original hint with Open Settings button",
     "languages": "zh-Hans | en-US picker (US-SYN-001 AC-2); traditional/other mapped to zh-Hans with one-time hint",
     "modelLoadProgress": "Determinate progress for first model load (§15.6); driven by ModelLoaderActor.overallStatus (3F.3), no fixture fallback in production"
   },
   "outputs": {
-    "visibleContent": "Guided full-screen flow: welcome -> privacy consent -> optional Connect Photos choice -> language -> model loading. Decline exits; skipping photos continues without a system permission request.",
-    "interactionTargets": "onboarding-start, onboarding-privacy-agree, onboarding-privacy-decline, onboarding-permission-allow, onboarding-permission-deny, onboarding-permission-skip, onboarding-open-settings, onboarding-language-zh, onboarding-language-en, onboarding-begin-load, onboarding-declined-close",
+    "visibleContent": "welcome -> privacy consent -> consent persisting/error -> optional Connect Photos -> language -> model loading. Protected permission UI is unreachable until consent persistence succeeds.",
+    "interactionTargets": "onboarding-start, onboarding-privacy-agree, onboarding-privacy-decline, onboarding-permission-allow, onboarding-permission-deny, onboarding-permission-skip, onboarding-open-settings, onboarding-language-zh, onboarding-language-en, onboarding-begin-load, onboarding-declined-close, onboarding-retry-consent",
     "accessibilityTree": "Step indicator announced; privacy summary scrollable; agree/decline visible at the same hierarchy with neither preselected; optional photo connection and skip are explicit; language picker has a selected checkmark"
   },
   "systemContainer": "fullScreenCover + TabView (step pages) + Form (language picker) + ProgressView (model loading)",
@@ -21,12 +21,15 @@
   "masonryEnabled": false,
   "fallbackConditions": [
     "Task surface — masonry always disabled (echo-memory-canvas §3.3, §8.1)",
-    "FullScreenCover so system back is disabled; explicit Continue/Decline navigation only",
-    "Optional permissions never block entry and are not automatically requested again after denial or skip"
+    "Consent persistence failure remains on a retryable consent error and issues zero protected-data requests",
+    "Not Now skips Photos with zero PhotoKit calls; denied/restricted recovery is user-initiated",
+    "Opening or re-entering onboarding never automatically requests a system permission"
   ],
   "states": [
     "welcome",
     "privacyConsent",
+    "consentPersisting",
+    "consentPersistError",
     "permissions",
     "permissionDenied",
     "language",
@@ -42,5 +45,19 @@
     "US-SYN-001",
     "US-RES-004"
   ],
-  "version": "1.1.0"
+  "version": "1.2.0",
+  "actions": [
+    "start",
+    "privacyAgree",
+    "privacyDecline",
+    "retryConsent",
+    "permissionAllow",
+    "permissionDeny",
+    "permissionSkip",
+    "openSettings",
+    "selectLanguage",
+    "beginLoad",
+    "retryModelLoad",
+    "declinedClose"
+  ]
 }

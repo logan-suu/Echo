@@ -4,18 +4,18 @@
 //            决策-4 (HealthKit 数据最小化 — 不存原始健康值),
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-003 AC-1 (HealthKit 情绪推断),
 //            US-SRC-010 (live HealthKit provider conformance → 3F.6 fusion)
-// 任务: 3F.8 - Awakening 与 system adapters
+// Task: 3F.8 + 4.0f - HealthKit adapter with honest read-authorization semantics
 // AC 覆盖: US-AWK-003 AC-1 ✅ (心率变异性推断情绪, 经 HealthKitProvider 协议),
-//          US-SRC-010 AC-2 ✅ (denied 来源不查询 — 授权检查失败即返空/不调用底层),
+//          US-SRC-010 AC-2 ✅ (read denial is represented by an empty query result),
 //          US-SRC-010 AC-3 ✅ (时间窗内最小化样本映射, 保留来源身份 sourceType="health"),
-//          ADR-012 决策-2 (denied/accepted 全状态), 决策-4 (仅最小化时序样本, 不存原始健康值)
+//          4.0f AC-6 (request result + actual sample availability; no inferred read-grant API)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), R-007 (禁止 unchecked Sendable 于业务代码;
 //           @preconcurrency import HealthKit + MainActor.run 系统框架边界同 PhotoKit 模式),
 //           R-001 (纯本地, 无网络)
 // 重要: 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，struct stored/computed 需 nonisolated
 //       生产 provider 仅返回「最小化时序样本」(timestamp + 来源身份)，不存储/不透传原始健康值
 // PR Review fix (2026-08-11): semaphore → withCheckedContinuation; UUID 强解包 → compactMap guard
-// 生成时间: 2026-08-11
+// Generated: 2026-08-11; updated: 2026-09-04 (4.0f)
 // ==========================================
 
 import Foundation
@@ -36,13 +36,12 @@ public struct MinimizedHealthSample: Sendable, Equatable {
     }
 }
 
-// MARK: - Health Auth State
-
-/// HealthKit 授权状态（ADR-012 决策-2 全状态处理）
-public enum HealthAuthState: String, Sendable, Equatable {
-    case notDetermined
-    case denied
-    case authorized
+/// Result of presenting the HealthKit read authorization sheet. A completed request does not
+/// reveal whether the user granted read access; HealthKit intentionally keeps that private.
+public nonisolated enum HealthAuthorizationRequestResult: Sendable, Equatable {
+    case completed
+    case failed
+    case unsupported
 }
 
 // MARK: - Health Store Serving
@@ -50,15 +49,13 @@ public enum HealthAuthState: String, Sendable, Equatable {
 /// HealthKit 存储服务协议 — 抽象 HKHealthStore 边界，支持测试注入 Fake。
 ///
 /// 生产实现 `RealHealthStore` 经 MainActor.run 访问 @MainActor HKHealthStore；
-/// 仅返回值类型（HealthAuthState / MinimizedHealthSample），HKQuantitySample 不跨边界。
+/// 仅返回值类型（HealthAuthorizationRequestResult / MinimizedHealthSample），HKQuantitySample 不跨边界。
 public protocol HealthStoreServing: Sendable {
     /// 设备是否支持 HealthKit
     nonisolated func isHealthDataAvailable() -> Bool
-    /// 当前授权状态
-    nonisolated func currentAuthorizationState() async -> HealthAuthState
-    /// 请求 HRV 读取授权
-    nonisolated func requestAuthorization() async -> HealthAuthState
-    /// 读取指定时间窗内的心率变异性样本（授权被拒时返回空数组，不触发底层查询）
+    /// Requests HRV read access without claiming that read permission was granted or denied.
+    nonisolated func requestReadAuthorization() async -> HealthAuthorizationRequestResult
+    /// Reads HRV samples in the requested window; an empty result is the only observable no-data signal.
     nonisolated func fetchHRVSamples(in window: ClosedRange<Date>?) async throws -> [MinimizedHealthSample]
 }
 
@@ -77,34 +74,18 @@ public struct RealHealthStore: HealthStoreServing {
         HKHealthStore.isHealthDataAvailable()
     }
 
-    public nonisolated func currentAuthorizationState() async -> HealthAuthState {
-        await MainActor.run {
-            let hrvType = HKQuantityType(.heartRateVariabilitySDNN)
-            switch self.store.authorizationStatus(for: hrvType) {
-            case .notDetermined: return .notDetermined
-            case .sharingDenied: return .denied
-            case .sharingAuthorized: return .authorized
-            @unknown default: return .denied
-            }
-        }
-    }
-
-    public nonisolated func requestAuthorization() async -> HealthAuthState {
+    public nonisolated func requestReadAuthorization() async -> HealthAuthorizationRequestResult {
+        guard isHealthDataAvailable() else { return .unsupported }
         let hrvType = HKQuantityType(.heartRateVariabilitySDNN)
         let types: Set<HKSampleType> = [hrvType]
-        let granted = await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             self.store.requestAuthorization(toShare: nil, read: types) { success, _ in
-                continuation.resume(returning: success)
+                continuation.resume(returning: success ? .completed : .failed)
             }
         }
-        return granted ? .authorized : .denied
     }
 
     public nonisolated func fetchHRVSamples(in window: ClosedRange<Date>?) async throws -> [MinimizedHealthSample] {
-        // ADR-012 决策-2: 授权被拒时不查询底层
-        let auth = await currentAuthorizationState()
-        guard auth == .authorized else { return [] }
-
         let hrvType = HKQuantityType(.heartRateVariabilitySDNN)
         let predicate: NSPredicate?
         if let window {
@@ -174,9 +155,6 @@ public final class HealthKitSystemProvider: HealthKitProvider, CrossAppSourcePro
         query: String,
         window: ClosedRange<Date>?
     ) async throws -> [CrossAppSourceResult] {
-        let auth = await store.currentAuthorizationState()
-        guard auth == .authorized else { return [] }
-
         let samples = try await store.fetchHRVSamples(in: window)
         return samples.compactMap { sample -> CrossAppSourceResult? in
             let suffix = Self.healthID(from: sample.timestamp)
@@ -198,19 +176,15 @@ public final class HealthKitSystemProvider: HealthKitProvider, CrossAppSourcePro
         store.isHealthDataAvailable()
     }
 
-    /// 请求 HealthKit 授权
-    public nonisolated func requestAuthorization() async -> Bool {
-        let state = await store.requestAuthorization()
-        return state == .authorized
+    /// Requests the HealthKit sheet and reports request processing without claiming read access.
+    public nonisolated func requestReadAuthorization() async -> HealthAuthorizationRequestResult {
+        await store.requestReadAuthorization()
     }
 
     /// 从 HRV 数据推断情绪状态（US-AWK-003 AC-1）。
     ///
     /// 数据最小化：仅使用最小化 HRV 数值；返回 nil 表示数据不足/不确定。
     public nonisolated func inferMoodFromHRV() async -> MoodState? {
-        let auth = await store.currentAuthorizationState()
-        guard auth == .authorized else { return nil }
-
         let samples = (try? await store.fetchHRVSamples(in: nil)) ?? []
         guard !samples.isEmpty else { return nil }
 

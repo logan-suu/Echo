@@ -3,7 +3,7 @@
   "actionId": "awakening.requestNotification",
   "source": "user",
   "targetIntent": "AwakeningSettingsViewModel.requestNotificationPermission",
-  "expectedOutcome": "UNUserNotificationCenter authorization requested; granted/denied state reflected",
+  "expectedOutcome": "Request notification delivery only, then reread UNNotificationSettings and reflect authorized/provisional/ephemeral/denied. It does not change awakening preferences or request location/HealthKit.",
   "requiresConfirmation": true,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

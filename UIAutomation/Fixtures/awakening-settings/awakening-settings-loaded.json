@@ -1,7 +1,7 @@
 {
   "$schema": "https://echo-ui-automation/schemas/contracts/fixture/v1",
   "fixtureId": "awakening-loaded",
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "locale": "zh-Hans",
   "theme": "light",
   "dynamicTypeSize": "Large",
@@ -9,8 +9,7 @@
   "payload": {
     "state": "loaded",
     "notificationPermission": "granted",
-    "locationPermission": "granted",
-    "healthPermission": "granted",
+    "locationPermission": "authorizedAlways",
     "isGeofenceEnabled": true,
     "isEmotionEnabled": true,
     "isAnniversaryEnabled": true,
@@ -45,6 +44,8 @@
         "lastTriggeredAt": 1721788800,
         "memoryCount": 23
       }
-    ]
+    ],
+    "healthRequestState": "requestCompleted",
+    "healthDataState": "samplesAvailable"
   }
 }

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "consentPersisting",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "consentPersisting",
+    "privacyConsent": "save in progress"
+  },
+  "allowedActions": [],
+  "expectedSemantics": {
+    "progress": "A determinate intent-in-progress status is announced",
+    "permissionGate": "No Photos, notification, location or HealthKit request is reachable"
+  },
+  "version": "1.0.0"
+}

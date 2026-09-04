@@ -28,7 +28,7 @@
 | Phase 4 Discovery（4.0a） | style + architecture + testing + Home/Search Surface Contracts |
 | Phase 4 Focus（4.0b） | style + architecture + testing + Detail/Creation/Translation Surface Contracts |
 | Phase 4 Task（4.0c） | style + architecture + testing + Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress Surface Contracts |
-| Phase 4 渐进式权限（4.0f） | style + architecture + testing + Onboarding/Awakening Surface Contracts + PRV-008/SRC-001/AWK-001~003 AC 原文 |
+| Phase 4 渐进式权限（4.0f） | style + architecture + testing + ADR-018 + Onboarding/Awakening Surface Contracts + PRV-008/SRC-001/AWK-001~003 AC 原文 |
 | Phase 4 真实断点恢复（4.0g） | architecture + testing + BackgroundTask/ResumeProgress Surface Contracts + SYS-001 AC 原文 |
 | Phase 4 交互式唤醒卡（4.0d） | style + architecture + testing + US-AWK-005 AC 原文 + ADR-016 + Home/Detail contracts；Bundle 离线音乐、MemoryFeeling 关系、card→Focus intent 属于生产功能闭环，不是第四种 surface family |
 | Phase 4 记忆编辑与冲突（4.0e） | architecture + testing + US-AWK-007 AC 原文 + ADR-010/017 + Memory Detail contracts |

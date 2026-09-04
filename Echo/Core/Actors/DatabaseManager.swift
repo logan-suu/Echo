@@ -4,10 +4,12 @@
 //            AGENTS.md §5 (数据持久化契约)
 // 任务: 1.4 - 集成 SQLite，创建 ExcludedAssets, Feedback, TaskProgress, PendingOperations 表
 //      4.0d - MemoryFeeling relationship and card interaction audit migration
+//      4.0f - Persisted awakening preferences and HealthKit request lifecycle
 // 架构约束: 遵循 AGENTS.md §4.2 (Actor 隔离契约), R-007 (禁止 @unchecked Sendable)
 // AC 覆盖: D-005 deletion journal persists phase, vector plan, and exclusion intent;
-//          US-AWK-005 AC-4/5 (feeling cascade and structured interaction audit)
-// 生成时间: 2026-07-04; 更新: 2026-09-02 (4.0d)
+//          US-AWK-005 AC-4/5 (feeling cascade and structured interaction audit);
+//          4.0f AC-3/6 (awakening preferences and honest HealthKit request state)
+// 生成时间: 2026-07-04; 更新: 2026-09-04 (4.0f)
 // ==========================================
 
 import Foundation
@@ -420,6 +422,18 @@ public actor DatabaseManager {
                 consentVersion INTEGER NOT NULL DEFAULT 1,
                 consentedAt REAL,
                 policyVersion INTEGER NOT NULL DEFAULT 1,
+                updatedAt REAL NOT NULL
+            )
+            """)
+        // 4.0f: App-owned preferences only. System authorization snapshots are always read live.
+        try execute(sql: """
+            CREATE TABLE IF NOT EXISTS AwakeningPreference (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                geofenceEnabled INTEGER NOT NULL DEFAULT 0,
+                emotionEnabled INTEGER NOT NULL DEFAULT 0,
+                anniversaryEnabled INTEGER NOT NULL DEFAULT 0,
+                notificationDeliveryEnabled INTEGER NOT NULL DEFAULT 0,
+                healthRequestState TEXT NOT NULL DEFAULT 'notRequested',
                 updatedAt REAL NOT NULL
             )
             """)
