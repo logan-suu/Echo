@@ -12,7 +12,8 @@
 //          AC-6 (L4冲突: lockMemoryForSync/isMemoryLockedForSync),
 //          AC-7 (进度报告: ProgressActor),
 //          AC-8 (手动触发: — Phase 3 US-SRC-013),
-//          AC-9 (审计: sourceType富化 replaced/skipped/hashSkipped — W2 fixed)
+//          AC-9 (审计: sourceType富化 replaced/skipped/hashSkipped — W2 fixed),
+//          US-AWK-007 AC-4 (4.0e: 持久冲突 + 外部来源变更重放)
 // 架构约束: AGENTS.md §4.1 (Pipeline 契约), R-006 (PrivacyCheckpoint),
 //           AGENTS.md §4.4 (L1~L4 错误分级), §5.2 (ExcludedAssets 写入规则),
 //           AGENTS.md §8.3 (后台任务面板进度订阅)
@@ -215,7 +216,7 @@ public struct SyncResult: Sendable, Equatable {
 ///      → PrivacyActor.writeAuditLog(.dataSourceChangeSynced)
 ///      → ProgressActor.delete(taskId)
 /// ```
-public actor SyncPipeline {
+public actor SyncPipeline: MemoryExternalChangeApplying {
 
     // MARK: - Dependencies
 
@@ -228,6 +229,7 @@ public actor SyncPipeline {
     private let canonicalRepository: CanonicalMemoryRepositoryActor?
     /// 分代索引注册表（CR-3 方案A）— 生产替换路径经活跃路由写入 canonical + 每代向量
     private let generationRegistry: GenerationRegistryActor?
+    private let memoryEditActor: MemoryEditActor?
 
     /// 当前同步中锁定的内存 ID 引用计数（AC-6: 防止并发编辑，N-2 修复）
     ///
@@ -235,6 +237,8 @@ public actor SyncPipeline {
     /// 后完成者失去保护。改用引用计数：每次锁定 +1，仅归零才移除，保证交叠同步
     /// 期间锁持续有效。
     private var lockedMemoryIds: [String: Int] = [:]
+    /// A conflict resolution may replay one persisted change without recording the same conflict again.
+    private var externallyResolvedMemoryIDs: Set<UUID> = []
 
     /// 相册变更观察者（US-SRC-012 AC-1, ADR-008 §决策-1）— 由 PHPhotoLibrary 注册，Actor 持有引用防止释放
     private var photoObserver: PhotoKitChangeObserver?
@@ -253,7 +257,8 @@ public actor SyncPipeline {
         excludedAssets: ExcludedAssetsActor = .shared,
         progressActor: ProgressActor = .shared,
         canonicalRepository: CanonicalMemoryRepositoryActor? = nil,
-        generationRegistry: GenerationRegistryActor? = nil
+        generationRegistry: GenerationRegistryActor? = nil,
+        memoryEditActor: MemoryEditActor? = nil
     ) {
         self.embedder = embedder
         self.privacyActor = privacyActor
@@ -262,6 +267,7 @@ public actor SyncPipeline {
         self.progressActor = progressActor
         self.canonicalRepository = canonicalRepository
         self.generationRegistry = generationRegistry
+        self.memoryEditActor = memoryEditActor
     }
 
     // MARK: - Sync Execution (AC-4, AC-5, AC-7, AC-9)
@@ -374,6 +380,48 @@ public actor SyncPipeline {
                     // 注意：旧记忆 ID 必须在摄入新记忆【之前】查询——新记忆的 assetId
                     // 与旧记忆相同，摄入后查找会把新记忆也当作旧记录误删。
                     let oldMemoryIds = try await findMemories(byAssetId: change.assetId)
+
+                    if let memoryEditActor {
+                        var shouldSkip = false
+                        for memoryIDString in oldMemoryIds {
+                            guard let memoryID = UUID(uuidString: memoryIDString) else { continue }
+                            if externallyResolvedMemoryIDs.contains(memoryID) { continue }
+                            let disposition = try await memoryEditActor.handleExternalChange(
+                                memoryID: memoryID,
+                                externalVersionSummary: "\(change.source.rawValue) source changed",
+                                pendingChange: PendingMemorySourceChange(
+                                    assetID: change.assetId,
+                                    source: change.source.rawValue,
+                                    changeType: change.changeType.rawValue,
+                                    newContentHash: change.newContentHash,
+                                    hashSkipped: change.hashSkipped
+                                ),
+                                traceID: traceID
+                            )
+                            if disposition != .proceed { shouldSkip = true }
+                        }
+                        if shouldSkip {
+                            skippedCount += 1
+                            try? await progressActor.updateProgress(
+                                taskId: taskId,
+                                lastProcessedIndex: index + 1,
+                                lastProcessedId: change.assetId
+                            )
+                            continue
+                        }
+                    } else if let canonicalRepository {
+                        var isLocked = false
+                        for memoryIDString in oldMemoryIds {
+                            guard let memoryID = UUID(uuidString: memoryIDString) else { continue }
+                            if try await canonicalRepository.loadMemory(memoryId: memoryID)?.userLocked == true {
+                                isLocked = true
+                            }
+                        }
+                        if isLocked {
+                            skippedCount += 1
+                            continue
+                        }
+                    }
 
                     // AC-6 (W1): 删除旧记忆窗口期加锁，阻止并发用户编辑（L4 冲突保护）
                     for memId in oldMemoryIds {
@@ -552,6 +600,36 @@ public actor SyncPipeline {
     }
 
     // MARK: - Memory Locking (AC-6)
+
+    public func applyResolvedExternalChange(
+        _ change: PendingMemorySourceChange,
+        memoryID: UUID,
+        traceID: String
+    ) async throws {
+        let checkpoint = await privacyActor.validate(operation: .sync, traceID: traceID)
+        guard checkpoint.isAllowed else {
+            throw SyncError.privacyDenied(sourceTypes: [change.source])
+        }
+        guard let source = ChangeSource(rawValue: change.source),
+              let changeType = ChangeType(rawValue: change.changeType) else {
+            throw MemoryEditError.externalReplayUnavailable
+        }
+        externallyResolvedMemoryIDs.insert(memoryID)
+        defer { externallyResolvedMemoryIDs.remove(memoryID) }
+        let result = try await sync(
+            changes: [ChangeEvent(
+                assetId: change.assetID,
+                source: source,
+                changeType: changeType,
+                newContentHash: change.newContentHash,
+                hashSkipped: change.hashSkipped
+            )],
+            traceID: traceID
+        )
+        guard result.replacedCount == 1, result.failedCount == 0 else {
+            throw MemoryEditError.externalReplayUnavailable
+        }
+    }
 
     /// 锁定指定内存，阻止并发用户编辑（AC-6: L4 冲突处理，引用计数 +1）。
     public func lockMemoryForSync(memoryId: String) async {

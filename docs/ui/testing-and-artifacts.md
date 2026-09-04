@@ -74,6 +74,10 @@
 - 4.0b 必须从真实 Home/Search 路由进入 Detail，验证稳定 MemoryID 与返回栈；分别覆盖 note/photo/voice/video 的真实展示或诚实不可用态，禁止 bundled sample 进入生产证据
 - 4.0b Creation 必须覆盖 grounded output、无来源、runtime unavailable、引用跳转与 NoSource；Notes 入口只断言系统 share sheet 呈现/取消/呈现失败，不断言“已保存”、目标 App 或笔记链接
 - 4.0b Translation 必须覆盖 cache hit、`<0.9` uncertain、unsupported pair、L2 retry 与原文/译文关系；Focus 三个 Surface 均验证无 masonry、共享组件/token、Accessibility Dynamic Type 与 VoiceOver reading order
+- 4.0e 以 no-fixture 路径验证 `MemoryUserEdit` 多行纯文本编辑、安全重索引发布、时间戳备份、持久 `MemoryEditConflict`、local/external/merge 与 `userLocked` 同步跳过；每个故障点必须证明旧版本仍可服务
+- 4.0h 验证来源能力矩阵：真实 photo/video/voice/note 展示，只有可写 PhotoKit photo/video 可以删除原件；Share Extension 来源不可删。删除请求前必须持久化既有 `MemoryDeletionJournal(.planned)`；PhotoKit 取消/拒绝/失败保持 canonical 不变，恢复未决 intent 时先复验资产存在性，从 `.planned` 进入 D-005 清理后的本地失败通过 journal 重放完成
+- 4.0i 验证模型显式 source ID allow-list，未知/缺失/撤权来源为 NoSource 且无 round-robin fallback；有效锚点进入稳定 Detail。分享测试区分准备失败、呈现失败、呈现后取消，并验证结构化 `sharePresented` 不包含 activityType、目标 App 或原文
+- 4.0j 验证月/年周期键、跨时区、重复启动、错过周期、关闭开关、TaskQueue/Progress 重启恢复和不可用数据分区省略；fixture 报告不得计为调度证据
 - 4.0c 必须逐一覆盖 Settings、Onboarding、AwakeningSettings、BackgroundTask、Degradation、ResumeProgress：`designProfileId=echo-memory-canvas`、Task/no-masonry、系统 container、共享 grouped/status/action 组件、default + Accessibility Dynamic Type、VoiceOver reading order、Reduce Motion、light/dark 与 destructive confirmation。生产路径不得注入 fixture，也不得改变现有 consent/permission/model/task/migration/delete 副作用
 - 4.0c 契约门禁必须把六个 Task surface 的 legacy contract 全部迁移或补齐为 v1 schema-compatible surface/state/action/journey；稳定 ID 保持不变，surface 声明的每个 state 均有唯一 state contract，journey 的每个非终态 action 均可解析，禁止以“历史格式”跳过校验
 - 4.0c Onboarding 视觉验收只验证诚实状态层级；渐进式权限生产修正由 4.0f 覆盖：PIPL 先行、照片需用户明确连接、notification/location/HealthKit 按 Awakening opt-in 请求、拒绝/跳过可继续、无启动权限连环弹窗、无重复催促

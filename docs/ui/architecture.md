@@ -213,7 +213,8 @@ enum State {
 - `TaskProgress` 只描述持久化进度，不能单独重建原始 queued job。继续/重新开始必须由任务类型注册表或 composition-owned launcher 重建同一类任务，并将用户选择、resume point、成功/失败写入既有审计边界；该生产闭环由 `4.0g` 交付，`4.0c`/`4.4` 不得以 prompt fixture 或只读进度证明完成。
 - Settings 迁移展示必须消费 ADR-008/ADR-010 的真实加密 migration service：`DeviceMigrationActor` 负责编排，`DeviceMigrationService.exportPackage` / `importPackage` 负责 ECHOMIG1 加密迁移包的导出与导入；禁止使用 `PhotoSearchMigrationActor` 代替设备迁移边界。迁移包与“导出全部原始媒体”是不同概念。ViewModel 不持有密钥、不推断分享目标，也不复制 package/merge/rollback 规则。
 - `4.0b` 仅允许修改 Focus View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移和领域写语义保持只读。真实 adapter 缺少编辑重索引、冲突持久化或原始来源删除边界时，UI 必须映射为明确不可用/错误，不得在视觉切片中复制写规则或以 fixture 成功代替生产行为。
-- Detail 生产媒体经既有 source adapter 在当前 UserPolicy 下解析；解析失败不回退 bundled sample。Creation 只消费 grounded output 和稳定 source anchor；Notes 交接使用系统 share sheet 且不产生 Echo 可验证的“已保存”状态。Translation 继续作为 Detail 内 cache-first 的展示层能力，NLTagger `<0.9` 或语言对不支持时保留原文。
+- ADR-017 将后续生产接线拆分：`4.0e` 负责 `MemoryUserEdit`、安全重索引和持久 conflict；`4.0h` 负责真实来源解析与 PhotoKit 删除 saga；`4.0i` 负责 allow-list 校验的 source anchor、稳定 Detail 路由与 `.creationSharePresented`；`4.0j` 负责持久 earliest-eligible 叙事报告调度。ViewModel 只转发 intent 和映射状态，不直接持有数据库、PHAsset 或删除 journal。
+- Detail 生产媒体经 `FocusSourceResolver` 在当前 UserPolicy 下解析；解析失败不回退 bundled sample。只有可写 PhotoKit photo/video 暴露原始删除动作，Share Extension note/voice/thirdParty 只允许从 Echo 移除。Creation 只消费经输入 allow-list 校验的 grounded source anchors；Notes 交接使用系统 share sheet 且不产生 Echo 可验证的“已保存”状态。Translation 继续作为 Detail 内 cache-first 的展示层能力，NLTagger `<0.9` 或语言对不支持时保留原文。
 - `4.0` 的 `surface_families = [discovery, focus, task]` 表示共享基础必须支持三类 family，不表示 AppShell 同时属于三类 family，也不授权 `4.0` 修改具体功能页。
 
 ---

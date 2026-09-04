@@ -8,7 +8,7 @@
 // AC 覆盖: registerGeneration, setState, loadGenerations, buildItem CRUD,
 //          publishRoute, loadActiveRoute, validateRoute, fallback (回退最近有效 route)
 //          3F.4: finishShadowBuild, activateGeneration, rollbackToPrevious,
-//          restoreActiveRoute, persistStore, removeStoreFile
+//          restoreActiveRoute, persistStore, reloadStoreFromDisk, removeStoreFile
 //          2026-08-09 PR#56 修复: F-2 activateGeneration/rollbackToPrevious
 //          状态迁移+路由发布合并单事务 (原子发布, 无跨挂起点窗口)
 //          2026-08-09 PR#56 二轮: CR-6 lifecycleBusy in-flight 守卫 (并发竞争),
@@ -78,6 +78,19 @@ public actor GenerationRegistryActor {
         guard let store = storeInstances[generationId] else { return }
         try FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
         try await store.save(to: storeFileURL(for: generationId))
+    }
+
+    /// Replaces the active in-memory store with the last durable checkpoint.
+    /// Used when a post-commit cleanup cannot persist, so obsolete vectors remain available
+    /// until the pending cleanup is retried.
+    public func reloadStoreFromDisk(generationId: String) async throws {
+        let url = storeFileURL(for: generationId)
+        let restored = try VectorStoreActor.load(from: url)
+        guard let generation = try await loadGeneration(generationId),
+              restored.dimension == generation.dimension else {
+            throw GenerationError.routeValidationFailed(reason: "Invalid durable store for \(generationId)")
+        }
+        storeInstances[generationId] = restored
     }
 
     /// 删除指定 generation 的持久化索引文件（测试/清理用）。

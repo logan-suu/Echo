@@ -3,16 +3,16 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "creation",
   "surfaceFamily": "focus",
-  "responsibility": "Render grounded creation as a Focus surface with template selection, generated content and source anchors, copy/export/share actions, and a user-mediated Apple Notes handoff through the system share sheet; never claim direct Notes creation or saved-note deep linking",
+  "responsibility": "Render grounded creation whose paragraph source IDs were explicitly emitted and validated against the current input allow-list, with stable Detail anchors, NoSource fallback, local copy/export and a user-mediated system share handoff. Never infer sources by paragraph position or claim a saved Note.",
   "inputs": {
     "templateType": "Preset creation template: letter | report | poem | timeline (US-SYN-003 AC-1)",
     "sourceMemories": "Retrieved memory summaries with citation anchors (US-SYN-002/003 AC-2)",
-    "generatedContent": "Grounded CreativePipeline output with per-paragraph stable source anchors; fixture output is Preview/test-only and prohibited as production evidence",
+    "generatedContent": "Structured CreativePipeline output with per-paragraph explicit source MemoryIDs validated against sourceMemories; unknown/missing IDs become NoSource. Fixture output is Preview/test-only.",
     "preferredLanguage": "UserPolicy.preferredLanguage (zh-Hans | en-US) — output language",
     "promptDraft": "Personalized System Prompt draft (US-SYN-005) — editable, confirm/reset"
   },
   "outputs": {
-    "visibleContent": "Template picker, generation progress, grounded content with citation anchors, copy/export/share/Save to Notes handoff actions, honest empty/runtime/L2 states, and prompt editor. Save to Notes presents the system share sheet; Echo does not show a saved-note Toast or link.",
+    "visibleContent": "Template picker, generation progress, validated source anchors, NoSource, copy/export/share/Save to Notes handoff actions and honest error states. Successful share-sheet presentation writes creationSharePresented with structured sharePresented=true; Echo does not record activityType, target App, completion or content.",
     "interactionTargets": "creation-generate, creation-copy, creation-export, creation-save-to-notes, creation-retry, creation-edit-prompt, creation-confirm-prompt, creation-reset-prompt, creation-citation-anchor-*",
     "accessibilityTree": "Generated content with source citation semantics; system share handoff is announced without claiming a final save result; prompt editor is editable text with confirm/reset actions"
   },
@@ -30,5 +30,5 @@
     "error",
     "share-handoff"
   ],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

@@ -58,7 +58,9 @@ struct MemoryDetailView: View {
 
     init(memoryId: UUID) {
         _viewModel = State(initialValue: MemoryDetailViewModel(
-            canonicalRepository: LiveAppAdapters.makeCanonicalRepository()
+            canonicalRepository: LiveAppAdapters.makeCanonicalRepository(),
+            memoryEditService: LiveAppAdapters.makeMemoryEditActor(),
+            syncLockChecker: LiveAppAdapters.makeSyncLockChecker()
         ))
         _pendingMemoryID = State(initialValue: memoryId)
     }
@@ -659,15 +661,16 @@ struct MemoryDetailView: View {
                     .buttonStyle(EchoActionButtonStyle(role: .secondary))
                     .accessibilityIdentifier("memory-conflict-keep-external")
 
-                    Button { } label: {
+                    Button {
+                        viewModel.resolveConflict(keep: .merge)
+                    } label: {
                         Label("View diff and merge", systemImage: "rectangle.split.3x1")
                             .font(.callout)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(EchoActionButtonStyle(role: .secondary))
-                    .disabled(true)
                     .accessibilityIdentifier("memory-conflict-merge")
-                    .accessibilityHint("Merge is unavailable until the production conflict boundary is connected")
+                    .accessibilityHint("Review and edit a merged draft")
                 }
             }
             .padding(EchoSpacingToken.grouped.points)
@@ -731,13 +734,15 @@ struct MemoryDetailView: View {
         switch level {
         case .l2Recoverable:   return "Unable to load memory"
         case .l3Blocking:      return "Unable to continue"
+        case .l4Conflict:      return "Memory is being updated"
         }
     }
 
     private func errorMessage(for level: MemoryDetailViewModel.ErrorLevel) -> String {
         switch level {
         case .l2Recoverable(let msg),
-             .l3Blocking(let msg):
+             .l3Blocking(let msg),
+             .l4Conflict(let msg):
             return msg
         }
     }
@@ -745,7 +750,7 @@ struct MemoryDetailView: View {
     private func isRecoverable(_ level: MemoryDetailViewModel.ErrorLevel) -> Bool {
         switch level {
         case .l2Recoverable: return true
-        case .l3Blocking:    return false
+        case .l3Blocking, .l4Conflict: return false
         }
     }
 }

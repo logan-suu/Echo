@@ -3,7 +3,7 @@
   "actionId": "detail.saveEdit",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.saveEdit()",
-  "expectedOutcome": "When the production edit/re-index transaction boundary is connected, save edited fields atomically and re-index; otherwise fail visibly as unavailable. L4 conflict guard blocks save while syncing, and fixture mutation is not production evidence (US-AWK-007 AC-2/AC-3).",
+  "expectedOutcome": "Persist optional title, multiline plain-text description and normalized tags in MemoryUserEdit without overwriting source content; prepare and publish new FTS/representation/vector state before retiring the old version. L4 sync/conflict guards block save and failures keep the old version serviceable (US-AWK-007, ADR-017).",
   "requiresConfirmation": false,
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

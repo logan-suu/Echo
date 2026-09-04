@@ -11,7 +11,7 @@ US-AWK-005 的方向合理，但原文无法直接形成一致且可测的生产
 1. 原 AC 一方面说“Apple Music 已授权则推荐”，另一方面要求完全离线。Apple 官方将 MusicKit catalog/personal recommendation 定义为 Apple Music API Web Service；权限状态也不等于内容存在、订阅能力或本地可播。这与 Echo R-001/R-005 “数据不离开设备/运行时不下载”冲突。
 2. 原 AC 同时要求“限流时不显示音乐建议”与“降级到随包离线库”，降级行为自相矛盾。
 3. “`userFeelings` 数组”未区分领域投影与物理存储，可能导致将可编辑子实体嵌入 canonical JSON，使事务、级联删除和不可搜索边界变得模糊。
-4. `record` 的审计时机、`feelingAssociatedToSource` 类型、“下一张”顺序以及 card → Focus 与 `4.0e` source anchor 的任务边界均不可测。
+4. `record` 的审计时机、`feelingAssociatedToSource` 类型、“下一张”顺序以及 card → Focus 与后续 source anchor 的任务边界均不可测。
 
 ## 决策
 
@@ -45,7 +45,7 @@ US-AWK-005 的方向合理，但原文无法直接形成一致且可测的生产
 ### D-5 任务边界
 
 - `4.0d` 消费 `4.0a` 的稳定 Discovery card 和 `4.0b` 的 Focus 路由，负责唤醒卡交互、感受关系、离线音乐与 card → Focus intent。
-- `4.0e` 仍是 Focus 内真实 source anchor、原始来源删除、资产失效/撤权边界的唯一实现任务。
+- ADR-017 后续将该边界细分：`4.0h` 负责真实来源解析、PhotoKit 原始删除与资产失效/撤权，`4.0i` 负责复验 source anchor 和稳定 Detail 路由。
 - `4.2` 只消费并验证两者，不在测试任务中补写生产功能。
 
 ## 备选方案

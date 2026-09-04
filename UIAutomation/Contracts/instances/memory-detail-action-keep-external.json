@@ -3,7 +3,7 @@
   "actionId": "detail.keepExternal",
   "source": "user",
   "targetIntent": "MemoryDetailViewModel.resolveConflict(keep: .external)",
-  "expectedOutcome": "When the production conflict transaction boundary is connected, adopt and persist the external version; otherwise fail visibly as unavailable. Fixture mutation is not production evidence (US-AWK-007 AC-4).",
+  "expectedOutcome": "Adopt and re-index the external version, clear MemoryUserEdit and MemoryEditConflict, and set userLocked=false in the production transaction (US-AWK-007 AC-4, ADR-017).",
   "requiresConfirmation": false,
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

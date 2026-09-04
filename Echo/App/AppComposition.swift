@@ -3,11 +3,11 @@
 // 对应规格: docs/decisions/ADR-007-production-composition-consent.md §决策-1 (composition root),
 //            §决策-2 (deny-by-default 同意), §决策-3 (事务性撤回/清除), §决策-5 (不可用启动状态)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-PRV-001, US-PRV-008, US-RES-004
-// 任务: 3F.1 - Production composition、首次启动、同意与隐私
+// 任务: 3F.1 + 4.0e - Production composition、首次启动、同意与记忆编辑
 // AC 覆盖: ADR-007 §决策-1 (唯一依赖图 + 启动状态机), §决策-2 (同意闸门装配),
 //          §决策-3 (撤回 → 事务清除 → blocked), §决策-5 (model/route/index-unavailable/bootstrap-failed)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离), §8.1 (@MainActor @Observable), R-007 (禁止 unchecked Sendable)
-// 生成时间: 2026-08-04, 2026-08-05 (PR review 修复: bootstrapFailed 独立状态)
+// 生成时间: 2026-08-04 | 更新: 2026-09-03 (shared MemoryEditActor)
 // ==========================================
 
 import Foundation
@@ -57,6 +57,7 @@ public final class AppComposition {
     public let consentStore: ConsentStoreActor
     public let modelLoader: ModelLoaderActor
     public let generationRegistry: GenerationRegistryActor
+    public let memoryEditActor: MemoryEditActor
     /// 文本嵌入器（E5）— 生产摄入/检索文本路径（CR-10）
     public let textEmbedder: any EmbedderProtocol
     /// 视觉嵌入器（SigLIP2）— 图片/视频帧生产路径（CR-10）
@@ -106,6 +107,12 @@ public final class AppComposition {
         self.modelLoader = modelLoader
         self.generationRegistry = generationRegistry
         self.textEmbedder = textEmbedder
+        self.memoryEditActor = MemoryEditActor(
+            db: databaseManager,
+            privacyActor: privacyActor,
+            generationRegistry: generationRegistry,
+            embedder: textEmbedder
+        )
         self.visionEmbedder = visionEmbedder
         self.asrEngine = asrEngine
     }

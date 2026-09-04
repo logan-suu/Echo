@@ -1882,7 +1882,7 @@ xcodebuild test \
 - **SYN-001 — Stub:** Language picker is a fixture UI transition; no persisted policy or model prompt/retry integration.
 - **SYN-002 — Stub:** Detail UI can present fixture anchors, but no generated response/provenance production path.
 - **SYN-003 — Impossible/spec-invalid:** Creation UI is fixture-driven and the required direct Apple Notes creation/deep-link API is unavailable.
-- **SYN-004 — Impossible/spec-invalid:** Depends on unavailable People identity/Notes APIs and cannot guarantee scheduled background generation.
+- **SYN-004 — Phase 3F audit result (superseded by ADR-017):** The original exact-schedule/People/Notes formulation was not implementable. Phase 4 task `4.0j` now owns a persistent earliest-eligible scheduler that omits unavailable partitions and never claims exact background execution.
 - **SYN-005 — Stub:** Prompt editor UI exists; no bounded analysis pipeline or source enforcement.
 - **SYN-006 — Absent/unmapped:** No emotion-intervention synthesis/prompt implementation.
 - **SYN-007 — Absent/unmapped:** No term glossary runtime or Golden validation.

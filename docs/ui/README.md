@@ -2,7 +2,7 @@
 
 > **责任**：告诉 Agent 针对 UI 任务读取哪份文档，而不是让 Agent 重读 bootstrap 全文
 > **无需读取本文全文**：按任务选择下表对应文档即可
-> **最后同步**：2026-09-02，方案 B「平衡画布」+ 4.0d/ADR-016 唤醒卡全离线音乐与感受关系边界
+> **最后同步**：2026-09-03，ADR-017 将 Focus 生产边界拆为 4.0e/4.0h/4.0i/4.0j
 
 ---
 
@@ -31,6 +31,10 @@
 | Phase 4 渐进式权限（4.0f） | style + architecture + testing + Onboarding/Awakening Surface Contracts + PRV-008/SRC-001/AWK-001~003 AC 原文 |
 | Phase 4 真实断点恢复（4.0g） | architecture + testing + BackgroundTask/ResumeProgress Surface Contracts + SYS-001 AC 原文 |
 | Phase 4 交互式唤醒卡（4.0d） | style + architecture + testing + US-AWK-005 AC 原文 + ADR-016 + Home/Detail contracts；Bundle 离线音乐、MemoryFeeling 关系、card→Focus intent 属于生产功能闭环，不是第四种 surface family |
+| Phase 4 记忆编辑与冲突（4.0e） | architecture + testing + US-AWK-007 AC 原文 + ADR-010/017 + Memory Detail contracts |
+| Phase 4 来源解析与删除（4.0h） | architecture + testing + US-PRV-004/007 AC 原文 + ADR-017 + Memory Detail delete contracts |
+| Phase 4 引用与分享（4.0i） | architecture + testing + US-SYN-002/003/004 AC 原文 + ADR-013/017 + Detail/Creation contracts |
+| Phase 4 叙事调度（4.0j） | architecture + testing + US-SYN-004 AC 原文 + ADR-011/017 |
 | UI 测试 | `testing-and-artifacts.md` |
 | UI 交付 | `automation-workflow.md`（§批准点 — 含 UI 审查指南：页面清单/导航路径/未实现说明） |
 | 首次 bootstrap | `echo-readiness.md` + `automation-workflow.md` |

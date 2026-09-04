@@ -3,7 +3,7 @@
 > **上游权威**：用户批准的 `echo-memory-canvas` 设计配置，扩展 `apple-native` 基础
 > **物化来源**：`Echo SwiftUI UI Agent 自动化 Bootstrap 与执行规范.md` §7
 > **不得覆盖**：Core 领域逻辑、数据库 schema、模型集成、隐私声明、CI 门禁
-> **最后同步**：2026-09-02，4.0d 合理性评审补充全离线音乐、MemoryFeeling、确定性交互审计与 card→Focus 边界
+> **最后同步**：2026-09-03，ADR-017 补充 Focus 编辑、来源删除、引用/分享与叙事调度生产边界
 
 ---
 
