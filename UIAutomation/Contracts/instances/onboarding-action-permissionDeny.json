@@ -3,7 +3,7 @@
   "actionId": "onboarding.permissionDeny",
   "source": "user",
   "targetIntent": "onboarding.denyPermission",
-  "expectedOutcome": "permissions -> permissionDenied state for PhotoKit only; onboarding remains usable and no other system permission request is triggered",
+  "expectedOutcome": "Treat Not Now as a local skip: issue zero PhotoKit calls and advance to language without showing System Settings.",
   "requiresConfirmation": false,
   "version": "1.1.0"
 }

@@ -3,7 +3,7 @@
   "actionId": "awakening.toggleEmotion",
   "source": "user",
   "targetIntent": "AwakeningSettingsViewModel.toggleEmotionAwakening",
-  "expectedOutcome": "Emotion awakening toggle flips; gated by HealthKit authorization",
+  "expectedOutcome": "Enabling requests only the minimum HRV read scope. Completion records requestCompleted, never read granted/denied; no readable samples use local text-sentiment fallback. It never requests notifications.",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

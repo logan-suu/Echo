@@ -39,7 +39,7 @@ struct AwakeningSettingsViewModelTests {
 
     // MARK: - US-AWK-003 AC-1: HealthKit Permission Management
 
-    @Test("AC-1: emotion toggle is disabled without health permission")
+    @Test("AC-1: emotion fixture is disabled when no readable HealthKit samples exist")
     func emotionToggleDisabledWithoutHealth() throws {
         let loader = AwakeningSettingsFixtureLoader()
         let data = try loader.loadSettings(fixtureID: "no-permissions")
@@ -48,7 +48,7 @@ struct AwakeningSettingsViewModelTests {
         #expect(!data.isEmotionEnabled)
     }
 
-    @Test("AC-1: emotion toggle is enabled with health permission")
+    @Test("AC-1: emotion fixture is enabled when readable HealthKit samples exist")
     func emotionToggleEnabledWithHealth() throws {
         let loader = AwakeningSettingsFixtureLoader()
         let data = try loader.loadSettings(fixtureID: "full")
@@ -59,8 +59,8 @@ struct AwakeningSettingsViewModelTests {
 
     // MARK: - US-AWK-002 AC-1: Anniversary Toggle
 
-    @Test("AC-1: anniversary toggle follows notification permission")
-    func anniversaryToggleFollowsNotification() throws {
+    @Test("AC-1: fixtures preserve anniversary preference independently")
+    func anniversaryFixturePreferences() throws {
         let loader = AwakeningSettingsFixtureLoader()
 
         let full = try loader.loadSettings(fixtureID: "full")
@@ -98,7 +98,7 @@ struct AwakeningSettingsViewModelTests {
         let vm = AwakeningSettingsViewModel()
         await vm.loadSettings()
 
-        vm.toggleGeofenceAwakening(false)
+        await vm.toggleGeofenceAwakening(false)
 
         guard case .completed(let data) = vm.state else {
             Issue.record("Expected .completed, got \(vm.state)")
@@ -112,7 +112,7 @@ struct AwakeningSettingsViewModelTests {
         let vm = AwakeningSettingsViewModel()
         await vm.loadSettings()
 
-        vm.toggleEmotionAwakening(false)
+        await vm.toggleEmotionAwakening(false)
 
         guard case .completed(let data) = vm.state else {
             Issue.record("Expected .completed, got \(vm.state)")
@@ -126,7 +126,7 @@ struct AwakeningSettingsViewModelTests {
         let vm = AwakeningSettingsViewModel()
         await vm.loadSettings()
 
-        vm.toggleAnniversaryAwakening(false)
+        await vm.toggleAnniversaryAwakening(false)
 
         guard case .completed(let data) = vm.state else {
             Issue.record("Expected .completed, got \(vm.state)")
@@ -253,11 +253,11 @@ struct AwakeningSettingsViewModelTests {
     // MARK: - Edge Cases
 
     @Test("Toggle geofence while not in completed state is no-op")
-    func toggleGeofenceWhileIdleIsNoop() {
+    func toggleGeofenceWhileIdleIsNoop() async {
         let vm = AwakeningSettingsViewModel()
         #expect(vm.state == .idle)
 
-        vm.toggleGeofenceAwakening(false)
+        await vm.toggleGeofenceAwakening(false)
         #expect(vm.state == .idle)
     }
 }

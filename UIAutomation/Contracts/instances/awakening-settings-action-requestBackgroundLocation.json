@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "awakening.requestBackgroundLocation",
+  "source": "user",
+  "targetIntent": "AwakeningSettingsViewModel.requestBackgroundLocationAuthorization",
+  "expectedOutcome": "After When In Use is already granted and capability differences are visible, request Always exactly once and complete only after the authorization callback; request no notification or HealthKit permission",
+  "requiresConfirmation": true,
+  "version": "1.0.0"
+}

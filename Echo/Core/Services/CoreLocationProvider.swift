@@ -4,10 +4,10 @@
 //            决策-3 (系统适配器真实化 — CoreLocationProvider 接入生产)
 //            docs/01-spec/用户故事与验收标准规格书.md → US-AWK-001 (地理围栏进入/离开),
 //            US-AWK-002 (best-effort 日期窗口)
-// 任务: 3F.8 - Awakening 与 system adapters
+// Task: 3F.8 + 4.0f - Awakening system adapter and staged location authorization
 // AC 覆盖: US-AWK-001 AC-1 (仅 didEnter 触发), AC-2 (离开重置/永不重复推送),
 //          AC-5 (定位权限关闭静默禁用, 重开后不立即推送), AC-6 (.contextualAwakening 审计),
-//          ADR-012 决策-2 (denied/accepted 全状态处理), 决策-3 (真实 CLLocationManager 适配)
+//          4.0f AC-5 (When In Use first, separate explicit Always upgrade, callback completion)
 // 架构约束: AGENTS.md §4.2 (Actor 隔离 — 仅值类型跨边界传递),
 //           R-007 (禁止 unchecked Sendable 于业务代码; 系统框架边界采用 PhotoKit 同款
 //           @preconcurrency + MainActor 模式), 项目 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
@@ -15,7 +15,7 @@
 //       CLLocationManagerDelegate 为 nonisolated 同步回调，经 Task { @MainActor } 转发事件
 // PR Review fix (2026-08-11): onGeofenceEvent 回调 → AsyncStream<GeofenceEvent> eventStream,
 //          显式 @MainActor 协议+类隔离 — 修复 CI Xcode 16.4 'Sendable-conforming class is mutable'
-// 生成时间: 2026-08-11
+// Generated: 2026-08-11; updated: 2026-09-04 (4.0f)
 // ==========================================
 
 import Foundation
@@ -92,12 +92,20 @@ public protocol LocationProviding: AnyObject, Sendable {
     func currentAuthorizationState() async -> LocationAuthState
     /// 请求使用时定位授权（US-AWK-001 AC-5）
     func requestWhenInUseAuthorization() async -> LocationAuthState
+    /// Requests the separate Always upgrade after the user has enabled background awakening.
+    func requestAlwaysAuthorization() async -> LocationAuthState
     /// 开始监控地理围栏（US-AWK-001）
     func startMonitoring(region: GeofenceRegion) async throws
     /// 停止监控地理围栏
     func stopMonitoring(regionIdentifier: String) async
     /// 当前已注册的地理围栏
     func monitoredRegions() async -> [GeofenceRegion]
+}
+
+public extension LocationProviding {
+    func requestAlwaysAuthorization() async -> LocationAuthState {
+        await currentAuthorizationState()
+    }
 }
 
 // MARK: - Core Location Provider
@@ -117,6 +125,7 @@ public final class CoreLocationProvider: NSObject, LocationProviding, CLLocation
     /// 地理围栏事件流存储（AsyncStream.makeStream 全 let 模式，无可变存储 — 修复 CI Sendable 错误）
     private let eventStreamStorage: AsyncStream<GeofenceEvent>
     private let eventContinuation: AsyncStream<GeofenceEvent>.Continuation
+    private var authorizationContinuation: CheckedContinuation<LocationAuthState, Never>?
 
     // MARK: - Init
 
@@ -137,8 +146,29 @@ public final class CoreLocationProvider: NSObject, LocationProviding, CLLocation
     }
 
     public func requestWhenInUseAuthorization() async -> LocationAuthState {
-        manager.requestWhenInUseAuthorization()
-        return LocationAuthMapper.map(manager.authorizationStatus)
+        let current = LocationAuthMapper.map(manager.authorizationStatus)
+        guard current == .notDetermined else { return current }
+        return await waitForAuthorizationChange {
+            manager.requestWhenInUseAuthorization()
+        }
+    }
+
+    public func requestAlwaysAuthorization() async -> LocationAuthState {
+        let current = LocationAuthMapper.map(manager.authorizationStatus)
+        guard current == .authorizedWhenInUse else { return current }
+        return await waitForAuthorizationChange {
+            manager.requestAlwaysAuthorization()
+        }
+    }
+
+    private func waitForAuthorizationChange(_ request: () -> Void) async -> LocationAuthState {
+        guard authorizationContinuation == nil else {
+            return LocationAuthMapper.map(manager.authorizationStatus)
+        }
+        return await withCheckedContinuation { continuation in
+            authorizationContinuation = continuation
+            request()
+        }
     }
 
     public func startMonitoring(region: GeofenceRegion) async throws {
@@ -176,6 +206,16 @@ public final class CoreLocationProvider: NSObject, LocationProviding, CLLocation
     }
 
     // MARK: - CLLocationManagerDelegate
+
+    public nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let state = LocationAuthMapper.map(manager.authorizationStatus)
+        guard state != .notDetermined else { return }
+        Task { @MainActor [weak self] in
+            guard let self, let continuation = self.authorizationContinuation else { return }
+            self.authorizationContinuation = nil
+            continuation.resume(returning: state)
+        }
+    }
 
     public nonisolated func locationManager(
         _ manager: CLLocationManager,

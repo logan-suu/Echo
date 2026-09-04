@@ -3,7 +3,7 @@
   "actionId": "onboarding.privacyAgree",
   "source": "user",
   "targetIntent": "onboarding.acceptPrivacy",
-  "expectedOutcome": "privacyConsent -> permissions step (consent recorded)",
+  "expectedOutcome": "Persist PIPL consent first; only after persistence succeeds enter the optional Photos choice. While persisting or on failure, issue zero protected-data permission requests.",
   "requiresConfirmation": false,
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

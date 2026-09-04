@@ -39,7 +39,7 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 
 | Story | Baseline Status (2026-08-03) | Owner Task(s) | Baseline Evidence Note |
 | --- | --- | --- | --- |
-| SRC-001 | Partial | 3F.1, 3F.2, 4.0f, 4.2 | PhotoKit acquisition and production source wiring exist, but the 2026-09-02 review found launch-time permission chaining. 4.0f owns the consent-first, explicit Connect Photos trigger and no-repeat denial/skip behavior. |
+| SRC-001 | Partial | 3F.1, 3F.2, 4.0f, 4.2 | PhotoKit acquisition and production source wiring exist, but launch-time permission chaining and a consent-persistence race remain. 4.0f owns persisted-consent-first gating, the explicit Connect Photos trigger, Not Now zero-call behavior and limited/full/denied/restricted paths. |
 | SRC-002 | Impossible/spec-invalid | 3F.0 | Requires MessageUI to read iMessage history, which is not a public capability. |
 | SRC-003 | Absent/unmapped | 3F.2, 4.2 | No Share Extension target or import implementation found. |
 | SRC-004 | Stub | 3F.2, 4.2 | Settings toggles mutate fixture/UI state only; AppDelegate has no BG task registration. |
@@ -74,9 +74,9 @@ This file is the materialized `Appendix C` of the Phase 3F execution plan (`docs
 | SYN-006 | Absent/unmapped | 3F.9, 4.2 | No emotion-intervention synthesis/prompt implementation. |
 | SYN-007 | Absent/unmapped | 3F.9, 4.2 | No term glossary runtime or Golden validation. |
 | SYN-008 | Stub | 3F.9, 4.2 | Degradation template is display simulation, not a synthesis failure fallback. |
-| AWK-001 | Partial | 3F.8, 4.0f, 4.2 | Production geofence and notification adapters exist; 4.0f owns explicit feature opt-in before location/notification authorization and denial-safe UI behavior. |
-| AWK-002 | Partial | 3F.0, 3F.8, 4.0f, 4.2 | The exact 09:00 promise was corrected to an earliest-eligible best-effort window; 4.0f owns contextual notification opt-in and the UI must not promise an exact delivery time. |
-| AWK-003 | Partial | 3F.8, 4.0f, 4.2 | Production HealthKit and awakening adapters exist; 4.0f owns explicit health-context opt-in, minimum-scope authorization and non-inference of undisclosed read authorization. |
+| AWK-001 | Partial | 3F.8, 4.0f, 4.2 | Production geofence and notification adapters exist; 4.0f owns staged When In Use → separately confirmed Always authorization, callback-complete state updates, independent notification delivery opt-in and denial-safe behavior. |
+| AWK-002 | Partial | 3F.0, 3F.8, 4.0f, 4.2 | The exact 09:00 promise was corrected to an earliest-eligible best-effort window; 4.0f keeps anniversary enablement permission-free and notification delivery behind a separate explicit opt-in. |
+| AWK-003 | Partial | 3F.8, 4.0f, 4.2 | Production HealthKit and awakening adapters exist but currently misread write authorization as read authorization. 4.0f owns explicit HRV-read opt-in, request-completed/data-availability state and no-readable-sample fallback. |
 | AWK-004 | Deferred | DEF-001 (approved deferral) | Explicit P1 Phase-4 Widget/Live Activity deferral (DEF-001). |
 | AWK-005 | Partial | 3F.7, 3F.8, 4.0d, 4.0h, 4.0i, 4.2 | 4.0d owns real card media/music/feelings and card→typed-Focus routing. ADR-017 assigns Focus source resolution/deletion capability to 4.0h and verified source-anchor navigation to 4.0i; 4.2 verifies the joined loop. |
 | AWK-006 | Deferred | DEF-002 (approved deferral) | Explicit P1 Phase-4 Siri/App Intents deferral (DEF-002). |

@@ -11,7 +11,7 @@
 ## 决策
 
 1. **Best-effort 调度**：放弃精确时刻保证（ADR-006），采用 earliest-eligible/best-effort 窗口；启动后按最早可用机会投递。
-2. **权限感知**：denied/accepted 位置与健康权限全状态处理；权限拒绝则对应来源不投递且不查询（US-SRC-010 的 denied HealthKit 来源不得被查询）。
+2. **权限感知**：位置权限处理 denied/accepted 全状态；HealthKit 读取权限语义已由 ADR-018 取代，使用 request lifecycle 与实际样本可用性，不再断言不可观察的 read denied/accepted。
 3. **系统适配器真实化**：`CoreLocationProvider`、`HealthKitSystemProvider`、`LocalNotificationAdapter`、`NotificationResponseRouter` 接入生产；通知请求与响应路由分离。
 4. **HealthKit 数据最小化**：只取授权范围内的最小化时序样本（不存原始健康值）；`HealthKitSystemProvider` 符合 3F.6 注入 provider 协议，向 health+memory 融合提供时间窗口内样本并保留来源身份（`.crossAppSearch`）。
 5. **卡片持久化/去重**：`AwakeningCardRepositoryActor` 持久化卡片，重启去重；情感 fallback/debounce；日期窗口处理。
@@ -32,7 +32,7 @@
 
 - 唤醒投递（围栏/情绪/周年）、通知请求与响应路由、卡片持久化/去重全部可测。
 - US-SRC-010 的 live HealthKit 集成（授权→时序样本→3F.6 融合）证据路径确定。
-- denied HealthKit 来源不查询成为显式 E2E 断言（3F.11）。
+- HealthKit 的旧 “denied 来源不查询”断言已由 ADR-018 取代；E2E 改为验证 requestCompleted/unsupported 与 readable/empty samples。
 
 ### 负面
 

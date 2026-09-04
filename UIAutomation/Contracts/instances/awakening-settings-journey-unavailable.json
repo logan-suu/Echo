@@ -2,12 +2,28 @@
   "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
   "journeyId": "awakening-settings-unavailable",
   "steps": [
-    { "surfaceId": "awakening-settings", "stateId": "unavailable", "actionId": "awakening.openSystemSettings" }
+    {
+      "surfaceId": "awakening-settings",
+      "stateId": "unavailable",
+      "actionId": "awakening.openSystemSettings"
+    }
   ],
-  "preconditionFixtures": ["awakening-unavailable"],
+  "preconditionFixtures": [
+    "awakening-unavailable"
+  ],
   "assertions": [
-    { "type": "permission_state", "expected": "notification denied permanently" },
-    { "type": "open_settings", "expected": "open system settings button presented" }
+    {
+      "type": "notification_state",
+      "expected": "system delivery denied"
+    },
+    {
+      "type": "in_app_behavior",
+      "expected": "awakening preferences and in-app cards are not globally gated"
+    },
+    {
+      "type": "open_settings",
+      "expected": "system settings button is user initiated"
+    }
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

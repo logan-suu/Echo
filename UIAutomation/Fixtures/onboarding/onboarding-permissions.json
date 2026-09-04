@@ -18,24 +18,6 @@
         "systemImage": "photo.on.rectangle.angled",
         "icloudHint": "For complete memories, set iCloud Photos to 'Download and Keep Originals' or download before using Echo. Optimized storage may not be recognizable.",
         "icloudHintButton": "Open Settings"
-      },
-      {
-        "id": "notifications",
-        "title": "Notifications",
-        "purpose": "Echo sends local reminders to surface your memories.",
-        "systemImage": "bell.badge"
-      },
-      {
-        "id": "location",
-        "title": "Location",
-        "purpose": "Echo can wake with memories tied to where you are.",
-        "systemImage": "location"
-      },
-      {
-        "id": "health",
-        "title": "Health",
-        "purpose": "Echo reads health context to enrich memory awakening (raw values are not stored).",
-        "systemImage": "heart"
       }
     ]
   },

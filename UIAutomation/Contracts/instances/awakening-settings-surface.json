@@ -3,15 +3,15 @@
   "designProfileId": "echo-memory-canvas",
   "surfaceId": "awakening-settings",
   "surfaceFamily": "task",
-  "responsibility": "Render live awakening delivery settings and permission state without duplicating Core awakening rules; contextual notification, location and HealthKit request orchestration remains assigned to Task 4.0f",
+  "responsibility": "Render independent awakening preferences, notification delivery, staged location authorization and honest HealthKit request/data availability. Opening the surface is read-only; Task 4.0f owns production orchestration.",
   "inputs": {
-    "authorization": "Live notification, location and health authorization/availability values",
-    "settings": "Live geofence, emotion and anniversary enablement values",
+    "authorization": "Notification settings snapshot; location notDetermined/WhenInUse/Always/denied/restricted; HealthKit request lifecycle plus actual HRV sample availability (never inferred read granted/denied)",
+    "settings": "SQLite-backed independent geofence, emotion and anniversary preferences, notification-delivery intent, and HealthKit request lifecycle; system authorization snapshots remain live-only",
     "runtimeStatus": "Loading, error and unavailable states from the UI adapter"
   },
   "outputs": {
     "visibleContent": "Apple-native grouped permission and awakening-setting controls with shared status/action hierarchy",
-    "interactionTargets": "Available toggles change live awakening settings; unavailable location and HealthKit controls remain disabled and expose a user-initiated system-settings recovery action. Contextual in-app permission requests remain assigned to Task 4.0f.",
+    "interactionTargets": "Notification opt-in requests notification only; geofence enable requests When In Use only and a separate background action may request Always; emotion enable requests HRV read only; anniversary enable requests no system permission. Notification denial limits system delivery but not in-app cards.",
     "accessibilityTree": "Form reading order with stable labels, values, hints and permission status"
   },
   "systemContainer": "NavigationStack + Form + Sheet",
@@ -19,13 +19,39 @@
   "masonryEnabled": false,
   "fallbackConditions": [
     "Masonry is always forbidden for this Task surface",
-    "Unavailable system capabilities render an explanatory status instead of a disabled visual-only control",
-    "No notification, location or HealthKit request is issued merely because this surface or the app launches"
+    "Opening or re-entering the surface reads snapshots and never triggers a prompt",
+    "Notification denial disables system delivery only; awakening preferences and in-app cards remain available",
+    "HealthKit UI never claims read granted/denied and falls back when no readable samples exist"
   ],
   "description": "Awakening delivery settings — notification, location, health permissions and geofence/emotion/anniversary toggles",
-  "relatedStories": ["US-AWK-001", "US-AWK-002", "US-AWK-003"],
-  "states": ["loaded", "loading", "error", "empty-permissions", "all-disabled", "unavailable"],
-  "actions": ["toggleGeofence", "toggleEmotion", "toggleAnniversary", "requestNotification", "openSystemSettings", "showGeofenceDetail", "dismissGeofenceDetail", "retry"],
-  "journeys": ["awakening-settings-basic", "awakening-settings-no-permissions", "awakening-settings-unavailable"],
-  "version": "1.1.0"
+  "relatedStories": [
+    "US-AWK-001",
+    "US-AWK-002",
+    "US-AWK-003"
+  ],
+  "states": [
+    "loaded",
+    "loading",
+    "error",
+    "empty-permissions",
+    "all-disabled",
+    "unavailable"
+  ],
+  "actions": [
+    "toggleGeofence",
+    "toggleEmotion",
+    "toggleAnniversary",
+    "requestNotification",
+    "openSystemSettings",
+    "showGeofenceDetail",
+    "dismissGeofenceDetail",
+    "retry",
+    "requestBackgroundLocation"
+  ],
+  "journeys": [
+    "awakening-settings-basic",
+    "awakening-settings-no-permissions",
+    "awakening-settings-unavailable"
+  ],
+  "version": "1.2.0"
 }

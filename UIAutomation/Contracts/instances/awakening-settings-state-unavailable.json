@@ -2,16 +2,24 @@
   "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
   "surfaceId": "awakening-settings",
   "stateId": "unavailable",
-  "dataConditions": { "fixtureId": "awakening-unavailable", "notificationPermission": "denied-permanently" },
-  "allowedActions": ["awakening.openSystemSettings"],
+  "dataConditions": {
+    "fixtureId": "awakening-unavailable",
+    "notificationDelivery": "denied"
+  },
+  "allowedActions": [
+    "awakening.openSystemSettings",
+    "awakening.toggleGeofence",
+    "awakening.toggleEmotion",
+    "awakening.toggleAnniversary"
+  ],
   "fixtureId": "awakening-unavailable",
-  "description": "Notification permanently denied, all features gated",
+  "description": "System notification delivery is denied; awakening preferences and in-app card generation remain independently available",
   "expected": {
-    "notificationPermission": "denied-permanently",
-    "isGeofenceEnabled": false,
-    "isEmotionEnabled": false,
-    "isAnniversaryEnabled": false,
+    "notificationPermission": "denied",
+    "systemDeliveryAvailable": false,
+    "inAppCardGenerationAvailable": true,
+    "preferencesGloballyGated": false,
     "openSettingsButton": true
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -96,7 +96,7 @@ struct OnboardingView: View {
             get: {
                 switch viewModel.viewState {
                 case .welcome: return "welcome"
-                case .privacyConsent: return "privacyConsent"
+                case .privacyConsent, .consentPersisting, .consentPersistError: return "privacyConsent"
                 case .permissions, .permissionDenied: return "permissions"
                 case .language: return "language"
                 case .modelLoading, .modelLoadFailed, .completed: return "modelLoading"
@@ -173,28 +173,43 @@ struct OnboardingView: View {
             .background(EchoColorToken.groupedBackground.color)
             .frame(maxHeight: 280)
 
-            // 同意/拒绝同等醒目 (US-PRV-008 AC-3)
-            Button(action: { viewModel.acceptPrivacy() }) {
-                Text("Agree & Continue")
-                    .font(.callout)
-                    .fontWeight(.semibold)
+            if viewModel.viewState == .consentPersisting {
+                ProgressView("Saving your consent...")
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-            }
-            .buttonStyle(consentActionStyle)
-            .accessibilityIdentifier("onboarding-privacy-agree")
-            .accessibilityHint("Agree to the privacy policy and continue")
+                    .accessibilityIdentifier("onboarding-consent-persisting")
+            } else if viewModel.viewState == .consentPersistError {
+                EchoStatusPresentation(
+                    role: .warning,
+                    systemImage: "exclamationmark.triangle.fill",
+                    title: "Consent was not saved",
+                    message: "Echo has not requested access to any protected data. Retry to continue."
+                )
+                Button("Retry") { viewModel.retryConsentPersistence() }
+                    .buttonStyle(EchoActionButtonStyle(role: .recovery))
+                    .accessibilityIdentifier("onboarding-consent-retry")
+            } else {
+                Button(action: { viewModel.acceptPrivacy() }) {
+                    Text("Agree & Continue")
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(consentActionStyle)
+                .accessibilityIdentifier("onboarding-privacy-agree")
+                .accessibilityHint("Agree to the privacy policy and continue")
 
-            Button(action: { viewModel.declinePrivacy() }) {
-                Text("Decline")
-                    .font(.callout)
-                    .fontWeight(.regular)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                Button(action: { viewModel.declinePrivacy() }) {
+                    Text("Decline")
+                        .font(.callout)
+                        .fontWeight(.regular)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(consentActionStyle)
+                .accessibilityIdentifier("onboarding-privacy-decline")
+                .accessibilityHint("Decline the privacy policy; Echo cannot process your memories")
             }
-            .buttonStyle(consentActionStyle)
-            .accessibilityIdentifier("onboarding-privacy-decline")
-            .accessibilityHint("Decline the privacy policy; Echo cannot process your memories")
 
             Spacer().frame(height: 8)
         }
@@ -208,7 +223,7 @@ struct OnboardingView: View {
 
     // MARK: - Step 3: Permissions (§15.4, US-SRC-001 AC-6)
 
-    /// Step 3 权限页 — 逐项授权 (照片→通知→位置→健康)。
+    /// Step 3 permission page — optional Photos access only.
     @ViewBuilder
     private var permissionsPage: some View {
         switch viewModel.viewState {
@@ -274,7 +289,7 @@ struct OnboardingView: View {
                 .accessibilityIdentifier("onboarding-permission-allow")
                 .accessibilityHint(String(format: EchoStrings.tr("Allow %@ access"), EchoStrings.tr(permission.title)))
 
-                Button(action: { viewModel.denyPermission() }) {
+                Button(action: { viewModel.skipOptionalPhotos() }) {
                     Text("Not Now")
                         .font(.callout)
                         .frame(maxWidth: .infinity)

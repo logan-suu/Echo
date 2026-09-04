@@ -2,18 +2,32 @@
   "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
   "surfaceId": "awakening-settings",
   "stateId": "loaded",
-  "dataConditions": { "fixtureId": "awakening-loaded", "permissions": "granted", "geofenceCount": 3 },
-  "allowedActions": ["awakening.toggleGeofence", "awakening.toggleEmotion", "awakening.toggleAnniversary", "awakening.showGeofenceDetail", "awakening.dismissGeofenceDetail"],
+  "dataConditions": {
+    "fixtureId": "awakening-loaded",
+    "notificationDelivery": "authorized",
+    "location": "authorizedAlways",
+    "healthRequestState": "requestCompleted",
+    "healthDataState": "samplesAvailable",
+    "geofenceCount": 3
+  },
+  "allowedActions": [
+    "awakening.toggleGeofence",
+    "awakening.toggleEmotion",
+    "awakening.toggleAnniversary",
+    "awakening.showGeofenceDetail",
+    "awakening.dismissGeofenceDetail"
+  ],
   "fixtureId": "awakening-loaded",
   "description": "All permissions granted, all awakening types enabled, 3 geofences configured",
   "expected": {
     "notificationPermission": "granted",
     "locationPermission": "granted",
-    "healthPermission": "granted",
     "isGeofenceEnabled": true,
     "isEmotionEnabled": true,
     "isAnniversaryEnabled": true,
-    "geofenceCount": 3
+    "geofenceCount": 3,
+    "healthRequestState": "requestCompleted",
+    "healthDataState": "samplesAvailable"
   },
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/state/v1",
+  "stateId": "consentPersistError",
+  "surfaceId": "onboarding",
+  "dataConditions": {
+    "currentStep": "consentPersistError",
+    "privacyConsent": "not persisted"
+  },
+  "allowedActions": [
+    "onboarding.retryConsent",
+    "onboarding.privacyDecline"
+  ],
+  "expectedSemantics": {
+    "error": "Consent could not be saved; protected-data access remains denied",
+    "retry": "Explicit retry persists consent only",
+    "permissionGate": "No system permission request occurs"
+  },
+  "version": "1.0.0"
+}

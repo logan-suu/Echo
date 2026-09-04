@@ -209,7 +209,7 @@ enum State {
 - AppShell 统一 NavigationStack/TabView、toolbar 与页面背景；各功能域不得自定义一套 tab、back、search 或 modal chrome。
 - 4.0 只交付共享 DesignProfile/component 与 AppShell；4.0a 覆盖 Home/Search，4.0b 覆盖 Detail/Creation/Translation，4.0c 覆盖 Settings/Onboarding/Awakening/BackgroundTask/Degradation/ResumeProgress。4.2/4.7/4.14 通过逐 Surface contract audit 证明任务族合并后没有遗漏。
 - `4.0c` 仅允许修改六个 Task domain 的 View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移、系统权限语义、任务调度和领域副作用保持只读。生产依赖缺失时必须映射为明确不可用/错误，禁止回退 fixture 或伪造成功。
-- 权限编排是独立生产边界：PIPL consent gate 先于受保护数据请求；PhotoKit 仅由用户选择连接照片资料库触发；notification/location/HealthKit 仅由对应 Awakening opt-in 触发。该修正由 `4.0f` 交付，不得夹带进 `4.0c` 视觉切片。
+- 权限编排是独立生产边界：PIPL consent 持久化成功先于受保护数据请求；PhotoKit 仅由 Connect Photos 触发；通知投递独立 opt-in；geofence 采用 When In Use → 单独确认 Always；HealthKit 只表达 request lifecycle 与样本可用性。`AwakeningPreferenceActor` 持久化用户偏好/request lifecycle，系统授权仍由 adapter 实时读取。该修正由 `4.0f` 交付，不得夹带进 `4.0c` 视觉切片。
 - `TaskProgress` 只描述持久化进度，不能单独重建原始 queued job。继续/重新开始必须由任务类型注册表或 composition-owned launcher 重建同一类任务，并将用户选择、resume point、成功/失败写入既有审计边界；该生产闭环由 `4.0g` 交付，`4.0c`/`4.4` 不得以 prompt fixture 或只读进度证明完成。
 - Settings 迁移展示必须消费 ADR-008/ADR-010 的真实加密 migration service：`DeviceMigrationActor` 负责编排，`DeviceMigrationService.exportPackage` / `importPackage` 负责 ECHOMIG1 加密迁移包的导出与导入；禁止使用 `PhotoSearchMigrationActor` 代替设备迁移边界。迁移包与“导出全部原始媒体”是不同概念。ViewModel 不持有密钥、不推断分享目标，也不复制 package/merge/rollback 规则。
 - `4.0b` 仅允许修改 Focus View、UI 值类型/薄 adapter、fixtures、Surface Contracts 与相关测试；Core、数据库 schema/迁移和领域写语义保持只读。真实 adapter 缺少编辑重索引、冲突持久化或原始来源删除边界时，UI 必须映射为明确不可用/错误，不得在视觉切片中复制写规则或以 fixture 成功代替生产行为。

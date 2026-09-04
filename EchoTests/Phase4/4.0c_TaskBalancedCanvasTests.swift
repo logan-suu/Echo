@@ -189,7 +189,9 @@ struct TaskBalancedCanvasTests {
         )
         let awakeningOutputs = try #require(awakeningSurface["outputs"] as? [String: Any])
         let awakeningTargets = try #require(awakeningOutputs["interactionTargets"] as? String)
-        #expect(awakeningTargets.contains("Task 4.0f"))
+        #expect(awakeningTargets.contains("geofence enable requests When In Use only"))
+        #expect(awakeningTargets.contains("anniversary enable requests no system permission"))
+        #expect(awakeningTargets.contains("Notification denial limits system delivery but not in-app cards"))
 
         let deleteAction = try loadJSON(
             "UIAutomation/Contracts/instances/settings-action-startDeleteData.json"
@@ -216,9 +218,9 @@ struct TaskBalancedCanvasTests {
         )
         let onboardingOutputs = try #require(onboardingSurface["outputs"] as? [String: Any])
         let visibleContent = try #require(onboardingOutputs["visibleContent"] as? String)
-        #expect(visibleContent.contains(
-            "privacy consent -> optional Connect Photos choice -> language"
-        ))
+        #expect(visibleContent.contains("privacy consent -> consent persisting/error"))
+        #expect(visibleContent.contains("optional Connect Photos -> language"))
+        #expect(visibleContent.contains("Protected permission UI is unreachable until consent persistence succeeds"))
 
         let validator = try loadSource("Scripts/validate_accessibility_contracts.py")
         #expect(validator.contains("null actionId is allowed only on the final step"))

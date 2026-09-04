@@ -49,24 +49,6 @@ enum OnboardingContentDefaults {
             icloudHint: "For complete memories, set iCloud Photos to 'Download and Keep Originals' or download before using Echo. Optimized storage may not be recognizable.",
             openSettingsLabel: "Open Settings"
         ),
-        OnboardingPermission(
-            id: "notifications",
-            title: "Notifications",
-            purpose: "Echo sends local reminders to surface your memories at the right moment.",
-            systemImage: "bell.badge"
-        ),
-        OnboardingPermission(
-            id: "location",
-            title: "Location",
-            purpose: "Echo can wake with memories tied to where you are.",
-            systemImage: "location"
-        ),
-        OnboardingPermission(
-            id: "health",
-            title: "Health",
-            purpose: "Echo reads health context to enrich memory awakening. Raw values are not stored.",
-            systemImage: "heart"
-        ),
     ]
 }
 
@@ -75,46 +57,42 @@ enum OnboardingContentDefaults {
 @MainActor
 protocol OnboardingPermissionRequesting: AnyObject, Sendable {
     func request(_ permission: OnboardingPermission) async -> Bool
+    func requestPhotos() async -> OnboardingPhotoAccessState
+}
+
+enum OnboardingPhotoAccessState: Sendable, Equatable {
+    case notRequested
+    case authorized
+    case limited
+    case denied
+    case restricted
+
+    var allowsAccess: Bool { self == .authorized || self == .limited }
+}
+
+extension OnboardingPermissionRequesting {
+    func requestPhotos() async -> OnboardingPhotoAccessState {
+        await request(OnboardingContentDefaults.permissionSteps[0]) ? .authorized : .denied
+    }
 }
 
 /// Thin system boundary used only by production onboarding.
 @MainActor
 final class SystemOnboardingPermissionRequester: OnboardingPermissionRequesting {
-    private let notifications: any NotificationScheduling
-    private let location: any LocationProviding
-    private let health: any HealthStoreServing
-
-    init(
-        notifications: any NotificationScheduling = LocalNotificationAdapter(),
-        location: any LocationProviding = CoreLocationProvider(),
-        health: any HealthStoreServing = RealHealthStore()
-    ) {
-        self.notifications = notifications
-        self.location = location
-        self.health = health
+    func request(_ permission: OnboardingPermission) async -> Bool {
+        guard permission.id == "photos" else { return false }
+        return await requestPhotos().allowsAccess
     }
 
-    deinit {}
-
-    func request(_ permission: OnboardingPermission) async -> Bool {
-        switch permission.id {
-        case "photos":
-            let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-            return status == .authorized || status == .limited
-
-        case "notifications":
-            return await notifications.requestAuthorization() == .authorized
-
-        case "location":
-            let status = await location.requestWhenInUseAuthorization()
-            return status != .denied && status != .restricted
-
-        case "health":
-            guard health.isHealthDataAvailable() else { return false }
-            return await health.requestAuthorization() == .authorized
-
-        default:
-            return false
+    func requestPhotos() async -> OnboardingPhotoAccessState {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        switch status {
+        case .authorized: return .authorized
+        case .limited: return .limited
+        case .denied: return .denied
+        case .restricted: return .restricted
+        case .notDetermined: return .notRequested
+        @unknown default: return .restricted
         }
     }
 }
@@ -216,6 +194,10 @@ final class OnboardingViewModel {
         case welcome
         /// Step 2 PIPL 隐私同意
         case privacyConsent
+        /// Consent is being durably persisted; protected permission actions are unavailable.
+        case consentPersisting
+        /// Consent persistence failed; the user can retry without advancing.
+        case consentPersistError
         /// Step 3 权限序列 (当前权限索引)
         case permissions(Int)
         /// 权限被拒绝 → 前往设置 / 跳过
@@ -234,6 +216,7 @@ final class OnboardingViewModel {
         static func == (lhs: Self, rhs: Self) -> Bool {
             switch (lhs, rhs) {
             case (.welcome, .welcome), (.privacyConsent, .privacyConsent),
+                 (.consentPersisting, .consentPersisting), (.consentPersistError, .consentPersistError),
                  (.language, .language), (.modelLoadFailed, .modelLoadFailed),
                  (.completed, .completed), (.declined, .declined):
                 return true
@@ -290,6 +273,8 @@ final class OnboardingViewModel {
     /// Whether consent persistence failed (write errors surfaced for a retry UI)
     private(set) var consentPersistFailed = false
 
+    private(set) var photoAccessState: OnboardingPhotoAccessState = .notRequested
+
     /// Real per-model progress retained after completion for diagnostics and tests.
     private(set) var modelLoadProgress: OnboardingModelLoadProgress = .initial
 
@@ -298,6 +283,8 @@ final class OnboardingViewModel {
 
     /// Model loading task
     private var loadTask: Task<Void, Never>?
+    private var consentTask: Task<Void, Never>?
+    private var permissionTask: Task<Void, Never>?
 
     /// Fixture injection source for the UI-slice mode
     private var stubFixture: OnboardingFixture?
@@ -342,19 +329,38 @@ final class OnboardingViewModel {
     func acceptPrivacy() {
         guard viewState == .privacyConsent else { return }
         if let consentStore {
-            Task {
+            viewState = .consentPersisting
+            consentPersistFailed = false
+            consentTask = Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await consentStore.acceptConsent(consentVersion: 1, policyVersion: 1)
-                    consentPersisted = true
+                    self.consentPersisted = true
+                    self.advanceAfterConsent()
                 } catch {
-                    // Never swallow: mark persistence failure so the UI can surface a retry path
-                    consentPersistFailed = true
+                    self.consentPersistFailed = true
+                    self.viewState = .consentPersistError
                 }
             }
+        } else {
+            consentPersisted = true
+            advanceAfterConsent()
         }
+    }
+
+    func retryConsentPersistence() {
+        guard viewState == .consentPersistError else { return }
+        viewState = .privacyConsent
+        acceptPrivacy()
+    }
+
+    func waitForConsentPersistence() async {
+        await consentTask?.value
+    }
+
+    private func advanceAfterConsent() {
         if permissionSteps.isEmpty {
-            viewState = .language
-            applyDefaultLanguage()
+            enterLanguageStep()
         } else {
             viewState = .permissions(0)
         }
@@ -380,19 +386,23 @@ final class OnboardingViewModel {
             return
         }
 
-        let permission = permissionSteps[index]
         permissionRequestInFlight = true
-        Task { [weak self] in
+        permissionTask = Task { [weak self] in
             guard let self else { return }
-            let granted = await self.permissionRequester.request(permission)
+            let result = await self.permissionRequester.requestPhotos()
+            self.photoAccessState = result
             self.permissionRequestInFlight = false
             guard self.viewState == .permissions(index) else { return }
-            if granted {
+            if result.allowsAccess {
                 self.advancePermission(from: index)
             } else {
                 self.viewState = .permissionDenied(index)
             }
         }
+    }
+
+    func waitForPermissionRequest() async {
+        await permissionTask?.value
     }
 
     private func advancePermission(from index: Int) {
@@ -408,6 +418,16 @@ final class OnboardingViewModel {
     func denyPermission() {
         guard case .permissions(let index) = viewState else { return }
         viewState = .permissionDenied(index)
+    }
+
+    /// Skips the optional Photos step without touching the system authorization API.
+    func skipOptionalPhotos() {
+        switch viewState {
+        case .permissions(let index), .permissionDenied(let index):
+            advancePermission(from: index)
+        default:
+            return
+        }
     }
 
     /// permissionDenied: 打开系统设置 (US-SRC-001 AC-6)。
@@ -496,6 +516,8 @@ final class OnboardingViewModel {
     /// 重置到初始状态。
     func reset() {
         loadTask?.cancel()
+        consentTask?.cancel()
+        permissionTask?.cancel()
         loadTask = nil
         viewState = .welcome
         permissionSteps = OnboardingContentDefaults.permissionSteps
@@ -506,6 +528,9 @@ final class OnboardingViewModel {
         selectedLanguage = nil
         mappingHintVisible = false
         openSettingsRequested = false
+        consentPersisted = false
+        consentPersistFailed = false
+        photoAccessState = .notRequested
         modelLoadProgress = .initial
         stubFixture = nil
     }

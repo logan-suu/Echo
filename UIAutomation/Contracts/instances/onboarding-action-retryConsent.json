@@ -1,0 +1,9 @@
+{
+  "$schema": "https://echo-ui-automation/schemas/contracts/action/v1",
+  "actionId": "onboarding.retryConsent",
+  "source": "user",
+  "targetIntent": "OnboardingViewModel.retryConsentPersistence",
+  "expectedOutcome": "Retry only ConsentStore persistence; on success enter optional Photos choice, on failure remain in consentPersistError; issue zero protected-data permission requests before success",
+  "requiresConfirmation": false,
+  "version": "1.0.0"
+}

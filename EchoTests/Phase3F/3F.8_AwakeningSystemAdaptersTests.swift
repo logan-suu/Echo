@@ -367,11 +367,10 @@ struct AwakeningSystemAdaptersTests {
         #expect(mood == .negative)
     }
 
-    @Test("AC-1: HealthKit denied → no mood inferred, no query")
-    func healthKitDeniedNoQuery() async {
+    @Test("AC-1: no readable HealthKit samples produces no inferred mood")
+    func healthKitNoReadableSamples() async {
         let store = StubHealthStore()
-        store.authState = .denied
-        store.samples = [MinimizedHealthSample(timestamp: Date().timeIntervalSince1970, hrvValue: 80)]
+        store.samples = []
         let provider = HealthKitSystemProvider(store: store)
         let mood = await provider.inferMoodFromHRV()
         #expect(mood == nil)

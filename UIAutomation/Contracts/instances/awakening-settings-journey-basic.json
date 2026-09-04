@@ -2,17 +2,57 @@
   "$schema": "https://echo-ui-automation/schemas/contracts/journey/v1",
   "journeyId": "awakening-settings-basic",
   "steps": [
-    { "surfaceId": "awakening-settings", "stateId": "loaded", "actionId": "awakening.toggleGeofence" },
-    { "surfaceId": "awakening-settings", "stateId": "loaded", "actionId": "awakening.toggleEmotion" },
-    { "surfaceId": "awakening-settings", "stateId": "loaded", "actionId": "awakening.toggleAnniversary" },
-    { "surfaceId": "awakening-settings", "stateId": "loaded", "actionId": "awakening.showGeofenceDetail" },
-    { "surfaceId": "awakening-settings", "stateId": "loaded", "actionId": "awakening.dismissGeofenceDetail" }
+    {
+      "surfaceId": "awakening-settings",
+      "stateId": "loaded",
+      "actionId": "awakening.toggleGeofence"
+    },
+    {
+      "surfaceId": "awakening-settings",
+      "stateId": "loaded",
+      "actionId": "awakening.requestBackgroundLocation"
+    },
+    {
+      "surfaceId": "awakening-settings",
+      "stateId": "loaded",
+      "actionId": "awakening.toggleEmotion"
+    },
+    {
+      "surfaceId": "awakening-settings",
+      "stateId": "loaded",
+      "actionId": "awakening.toggleAnniversary"
+    },
+    {
+      "surfaceId": "awakening-settings",
+      "stateId": "loaded",
+      "actionId": "awakening.showGeofenceDetail"
+    },
+    {
+      "surfaceId": "awakening-settings",
+      "stateId": "loaded",
+      "actionId": "awakening.dismissGeofenceDetail"
+    }
   ],
-  "preconditionFixtures": ["awakening-loaded"],
+  "preconditionFixtures": [
+    "awakening-loaded"
+  ],
   "assertions": [
-    { "type": "permission_state", "expected": "all granted" },
-    { "type": "toggle_state", "expected": "all three toggles flip" },
-    { "type": "geofence_detail", "expected": "detail sheet opens and dismisses" }
+    {
+      "type": "request_order",
+      "expected": "geofence -> When In Use; separate confirmation -> Always"
+    },
+    {
+      "type": "health_state",
+      "expected": "requestCompleted plus samplesAvailable; never read granted/denied"
+    },
+    {
+      "type": "notification_independence",
+      "expected": "no toggle requests notification"
+    },
+    {
+      "type": "toggle_state",
+      "expected": "all three preferences persist independently"
+    }
   ],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
