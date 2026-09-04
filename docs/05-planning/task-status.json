@@ -2589,11 +2589,18 @@
             "通知 denied 仅停止系统投递，三个偏好与 App 内卡片仍可用；拒绝、撤权、重复进入与重启无自动 prompt",
             "双语、VoiceOver、Dynamic Type、Reduce Motion、schema validation 与双设备无媒体 Live Simulator Review"
           ],
-          "last_updated": "2026-09-04T15:09:43Z",
-          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior. Automatically promoted from backlog to ready after dependency 4.0c completed. 2026-09-04 reasonableness review (ADR-018) retained the progressive-permission direction but corrected four non-executable boundaries: persisted consent now gates protected requests; notification delivery is orthogonal to awakening preferences; geofence authorization is staged When In Use then separately confirmed Always; and HealthKit read authorization is represented by request lifecycle plus data availability rather than fabricated granted/denied. The review also requires adapters to await callbacks/final snapshots and adds contract states/actions for consent persistence and background-location elevation. Implementation completed on 2026-09-04: durable consent now hard-gates Photos; onboarding requests Photos only; awakening preferences and HealthKit request lifecycle persist in SQLite; notifications are independent; location authorization is staged; HealthKit read state is represented by request completion plus sample availability. Validation: 90 tests across ProgressivePermissionFlow, Onboarding, Awakening settings/system adapters, and cross-app Health passed; SwiftLint strict passed; 169 UI contracts validated; JSON and diff checks passed. Phase 4 cumulative regression through 4.0f also passed: 82 tests across 7 suites.",
+          "last_updated": "2026-09-04T15:25:03Z",
+          "notes": "Created by the 4.0c reasonableness review. The existing onboarding sequence requests photos, notifications, location and HealthKit in succession, which conflicts with consent minimization and contextual permission guidance. A visual task cannot silently change this production behavior. Automatically promoted from backlog to ready after dependency 4.0c completed. 2026-09-04 reasonableness review (ADR-018) retained the progressive-permission direction but corrected four non-executable boundaries: persisted consent now gates protected requests; notification delivery is orthogonal to awakening preferences; geofence authorization is staged When In Use then separately confirmed Always; and HealthKit read authorization is represented by request lifecycle plus data availability rather than fabricated granted/denied. The review also requires adapters to await callbacks/final snapshots and adds contract states/actions for consent persistence and background-location elevation. Implementation completed on 2026-09-04: durable consent now hard-gates Photos; onboarding requests Photos only; awakening preferences and HealthKit request lifecycle persist in SQLite; notifications are independent; location authorization is staged; HealthKit read state is represented by request completion plus sample availability. Validation: 90 tests across ProgressivePermissionFlow, Onboarding, Awakening settings/system adapters, and cross-app Health passed; SwiftLint strict passed; 169 UI contracts validated; JSON and diff checks passed. Phase 4 cumulative regression through 4.0f also passed: 82 tests across 7 suites. Pull request #74 opened against dev-1.0.",
           "started_at": "2026-09-04T14:48:31.538956Z",
           "status_transitions": {
             "review_at": "2026-09-04T15:09:43Z"
+          },
+          "pr": {
+            "number": 74,
+            "url": "https://github.com/logan-suu/Echo/pull/74",
+            "head": "feature/progressive-permissions-US-PRV-008",
+            "base": "dev-1.0",
+            "created_at": "2026-09-04T15:25:03Z"
           }
         },
         {
